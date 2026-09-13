@@ -421,6 +421,8 @@ const App = {
       this.setSection("general");
       return;
     }
+    if(!confirm("سيتم إرسال نسخة نهائية من هذا المسح إلى المسؤول ليتمكّن من الاطّلاع عليها. هل أنتِ متأكدة؟")) return;
+
     const payload = {
       school_name: g.schoolName || "",
       principal_name: g.principalName || "",
