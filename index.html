@@ -201,7 +201,7 @@ const LEADERSHIP_ROLES = [
 const SECTIONS = [
   {id:"general", label:"1. معطيات عامّة"},
   {id:"leadership", label:"2. قيادة وأصحاب وظائف"},
-  {id:"staff", label:"3. مستوى الطاقم"},
+  {id:"staff", label:"3. الطاقم"},
   {id:"students", label:"4. الصفوف"},
   {id:"principal", label:"5. مدير/ة المدرسة"},
   {id:"summary", label:"6. الخلاصة العامّة للمسح"},
@@ -609,7 +609,7 @@ const App = {
     const stats = this.computeMechanismStats();
     const markedStats = stats.filter(s => s.marked > 0);
     if(markedStats.length === 0){
-      alert("لم يتم تعليم أي مؤشر رمزور بعد لدى الطاقم — رجاءً عبّئي عمود \"مستوى الطاقم\" أولًا.");
+      alert("لم يتم تعليم أي مؤشر رمزور بعد لدى الطاقم — رجاءً عبّئي عمود \"الطاقم\" أولًا.");
       return;
     }
     const teacherCount = this.state.staff.length;
@@ -740,8 +740,8 @@ const App = {
       rightAlignRow(wsLead.addRow({role:r.label, name:v.personName, seniority:v.seniority, knowledge:v.knowledge, notes:v.notes}));
     });
 
-    // --- مستوى الطاقم (مع تلوين خلايا الرمزور) ---
-    const wsStaff = wb.addWorksheet("مستوى الطاقم", { views: rtlView });
+    // --- الطاقم (مع تلوين خلايا الرمزور) ---
+    const wsStaff = wb.addWorksheet("الطاقم", { views: rtlView });
     wsStaff.columns = [
       {header:"الصف", key:"className", width:12},
       {header:"اسم المعلّمة", key:"teacherName", width:16},
@@ -882,7 +882,7 @@ const App = {
           <h3 class="font-bold text-teal-700">تلخيص الوضع الحالي واقتراح نقاط أهداف وخطة عمل للمدرّبة</h3>
           <button onclick="App.generateSuggestion()" class="no-print bg-teal-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-teal-700">توليد اقتراح تلقائي</button>
         </div>
-        <p class="text-stone-500 text-xs mb-3 no-print">الاقتراح يُبنى تلقائيًا من مؤشرات الرمزور في قسم "مستوى الطاقم"، ويمكن تعديله بحريّة قبل التصدير.</p>
+        <p class="text-stone-500 text-xs mb-3 no-print">الاقتراح يُبنى تلقائيًا من مؤشرات الرمزور في قسم "الطاقم"، ويمكن تعديله بحريّة قبل التصدير.</p>
         <textarea rows="16" onchange="App.setInsightsText(this.value)" placeholder="اضغطي على 'توليد اقتراح تلقائي' لبناء الملخص، أو اكتبي هنا مباشرةً">${this.state.insights.suggestionText}</textarea>
       </div>
     </div>`;
@@ -967,7 +967,7 @@ const App = {
         </div>
       </div>`;
     }).join("");
-    sections.push({title:"مستوى الطاقم", html: staffHtml || "<p>لا توجد بيانات</p>"});
+    sections.push({title:"الطاقم", html: staffHtml || "<p>لا توجد بيانات</p>"});
 
     const studentsRows = state.students.map((s,i) => `
       <tr style="background:${i%2?'#f8fafa':'#fff'};">
@@ -1189,7 +1189,7 @@ const App = {
     }).join("");
     return `
     <div>
-      <h2 class="text-xl font-bold text-teal-800 mb-4">3. على مستوى الطاقم</h2>
+      <h2 class="text-xl font-bold text-teal-800 mb-4">3. على الطاقم</h2>
       ${cards}
       <button onclick="App.addStaffRow()" class="no-print bg-teal-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-teal-700">+ إضافة معلّمة</button>
     </div>`;
