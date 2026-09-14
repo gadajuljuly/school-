@@ -138,6 +138,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   .btn-red{background:#dc2626;}
   .btn-dark{background:#1c1917;}
   .btn-gray{background:#e7e5e4;color:#44403c;}
+  .btn-blue{background:#2563eb;}
   .btn-outline{background:#fff;color:#0f766e;border:1.5px solid #99f6e4;}
   .btn-outline:hover{background:#f0fdfa;filter:none;}
   .btn-row{display:flex;flex-wrap:wrap;gap:.5rem;}
@@ -307,7 +308,59 @@ const App = {
 
   setSection(id){ this.state.activeSection = id; this.render(); },
 
-  setGeneral(field, val){ this.state.general[field] = val; },
+  setGeneral(field, val){
+    this.state.general[field] = val;
+    if(field === "schoolName" && !this._draftCheckDone && val && val.trim()){
+      this._draftCheckDone = true;
+      this.tryLoadDraftForSchool(val);
+    }
+  },
+
+  normalizeSchoolKey(name){ return (name || "").trim().toLowerCase(); },
+
+  async saveDraft(){
+    const g = this.state.general;
+    const key = this.normalizeSchoolKey(g.schoolName);
+    if(!key){
+      alert("الرجاء إدخال اسم المدرسة أولاً قبل الحفظ.");
+      this.setSection("general");
+      return;
+    }
+    this._draftCheckDone = true;
+    const { ui, ...persisted } = this.state;
+    const payload = { school_key: key, updated_at: new Date().toISOString(), data: persisted };
+    try{
+      const existing = await sbRequest("drafts?select=id&school_key=eq." + encodeURIComponent(key), { method:"GET" });
+      if(existing && existing.length){
+        await sbRequest("drafts?id=eq." + existing[0].id, { method:"PATCH", body: JSON.stringify(payload) });
+      } else {
+        await sbRequest("drafts", { method:"POST", headers:{ "Prefer":"return=representation" }, body: JSON.stringify(payload) });
+      }
+      alert("تم حفظ بياناتك بنجاح ✅\n\nتقدري تكملي التعبئة من أي حاسوب أو جهاز آخر لاحقًا — بس افتحي نفس الرابط واكتبي نفس اسم المدرسة بالضبط بأول حقل، وبتظهرلك البيانات المحفوظة تلقائيًا.");
+    }catch(e){
+      alert("تعذّر الحفظ، حاولي مرة أخرى: " + (e && e.message ? e.message : e));
+    }
+  },
+
+  async tryLoadDraftForSchool(name){
+    const key = this.normalizeSchoolKey(name);
+    if(!key) return;
+    try{
+      const rows = await sbRequest("drafts?select=*&school_key=eq." + encodeURIComponent(key), { method:"GET" });
+      if(rows && rows.length){
+        const draftRow = rows[0];
+        let dateStr = draftRow.updated_at || "";
+        try{ dateStr = new Date(draftRow.updated_at).toLocaleString("ar"); }catch(e){}
+        if(confirm("وجدنا بيانات محفوظة مسبقًا لهذه المدرسة (آخر حفظ: " + dateStr + ").\nهل تريدين تحميلها والمتابعة من حيث توقّفتِ؟")){
+          const currentUi = this.state.ui;
+          this.state = Object.assign({}, this.state, draftRow.data, { ui: currentUi });
+          if(!this.state.staff.length) this.addStaffRow();
+          if(!this.state.students.length) this.addStudentRow();
+          this.render();
+        }
+      }
+    }catch(e){ console.error("tryLoadDraftForSchool error", e); }
+  },
   setLeadership(roleKey, field, val){ this.state.leadership[roleKey][field] = val; },
 
   addStaffRow(){
@@ -1084,6 +1137,7 @@ const App = {
     return `
     <div class="flex flex-wrap gap-2 mb-6 no-print">${tabs}</div>
     <div class="flex flex-wrap gap-2 mb-2 no-print">
+      <button onclick="App.saveDraft()" class="btn btn-blue">💾 حفظ</button>
       <button onclick="App.submitSurvey()" class="btn btn-indigo">📤 إرسال المسح النهائي</button>
       <button onclick="App.printDocument()" class="bg-rose-700 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-rose-800">طباعة / حفظ كـ PDF</button>
       <button onclick="App.exportExcel()" class="bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-emerald-800">تصدير إلى Excel</button>
@@ -1091,7 +1145,8 @@ const App = {
       <button onclick="App.installApp()" class="btn btn-outline">📲 تثبيت على الهاتف</button>
     </div>
     ${this.state.submitted ? `<p class="text-teal-700 text-xs font-semibold mb-2 no-print">✓ تمّ إرسال هذا المسح. يمكنك الاستمرار بالتعديل ثمّ الضغط على "إرسال المسح النهائي" مجددًا لتحديث النسخة المُرسلة.</p>` : ""}
-    <p class="text-stone-400 text-xs mb-6 no-print">✓ بياناتك تُحفظ تلقائيًا في هذا المتصفح على هذا الجهاز أثناء التعبئة — أغلقي الملف وافتحيه لاحقًا وستجدينها كما هي. اضغطي "إرسال المسح النهائي" لإرسال نسخة نهائية. للحصول على ملف PDF: عند فتح نافذة الطباعة، اختاري "Save as PDF" / "حفظ كـ PDF" من قائمة الطابعة بدل طابعة فعليّة.</p>`;
+    <p class="text-stone-400 text-xs mb-1 no-print">✓ بياناتك تُحفظ تلقائيًا بهذا الجهاز أثناء التعبئة. لمتابعة العمل من حاسوب أو جهاز آخر، اضغطي "💾 حفظ" — وبعدها اكتبي نفس اسم المدرسة بأي جهاز لاحقًا وبتظهرلك بياناتك المحفوظة تلقائيًا.</p>
+    <p class="text-stone-400 text-xs mb-6 no-print">اضغطي "إرسال المسح النهائي" لإرسال نسخة نهائية إلى المسؤول. للحصول على ملف PDF: عند فتح نافذة الطباعة، اختاري "Save as PDF" / "حفظ كـ PDF" من قائمة الطابعة بدل طابعة فعليّة.</p>`;
   },
 
   renderSection(){
