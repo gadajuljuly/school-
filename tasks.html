@@ -384,7 +384,7 @@
       <ol class="task-list" id="taskList"></ol>
       <div class="empty-state" id="emptyState" style="display:none;">אין שורות בפרויקט הזה עדיין</div>
       <form class="add-row" id="addForm">
-        <span class="row-mark" aria-hidden="true"><svg viewBox="0 0 20 18" xmlns="http://www.w3.org/2000/svg"><path d="M16 3 L4 15 M1.5 3 L6.5 3 M13.5 3 L18.5 3 M1.5 15 L6.5 15 M13.5 15 L18.5 15" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg></span>
+        <span class="row-mark" aria-hidden="true"><svg viewBox="0 0 20 18" xmlns="http://www.w3.org/2000/svg"><path d="M4 3 L16 15 M1.5 3 L6.5 3 M13.5 3 L18.5 3 M1.5 15 L6.5 15 M13.5 15 L18.5 15" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg></span>
         <input type="text" id="taskInput" placeholder="כתבו כאן שורה חדשה..." maxlength="200" required autocomplete="off">
         <button type="submit" class="add-btn" title="הוספה">+</button>
       </form>
@@ -395,9 +395,9 @@
 <script>
 (function () {
   var STORAGE_KEY = "daily-tasks-sheets-v1";
-  var ROW_MARK_BASE_D = "M16 3 L4 15 M1.5 3 L6.5 3 M13.5 3 L18.5 3 M1.5 15 L6.5 15 M13.5 15 L18.5 15";
-  var ROW_MARK_HALF_D = "M4 3 L10 9";
-  var ROW_MARK_FULL_D = "M4 3 L16 15";
+  var ROW_MARK_BASE_D = "M4 3 L16 15 M1.5 3 L6.5 3 M13.5 3 L18.5 3 M1.5 15 L6.5 15 M13.5 15 L18.5 15";
+  var ROW_MARK_HALF_D = "M16 3 L10 9";
+  var ROW_MARK_FULL_D = "M16 3 L4 15";
 
   function rowMarkSvg(status) {
     var progressD = status === 2 ? ROW_MARK_FULL_D : status === 1 ? ROW_MARK_HALF_D : "";
