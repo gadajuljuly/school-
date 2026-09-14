@@ -76,11 +76,43 @@
     justify-content: space-between;
     padding: 16px 20px 10px;
   }
+  .notebook-date-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+  }
   .notebook-date {
     font-family: "Rubik", "Assistant", sans-serif;
     font-weight: 700;
     font-size: 1.05rem;
     letter-spacing: 0.02em;
+    background: none;
+    border: none;
+    color: var(--ink);
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 6px;
+  }
+  .notebook-date:hover { background: var(--paper-alt); }
+  .date-input-hidden {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .today-btn {
+    font-size: 0.72rem;
+    border-radius: 6px;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    background: none;
+    padding: 3px 8px;
+    cursor: pointer;
+    font-family: inherit;
   }
   .head-right {
     display: flex;
@@ -330,6 +362,8 @@
     height: 36px;
     line-height: 36px;
   }
+  .add-row[hidden] { display: none; }
+  li.task.readonly { cursor: default; }
   .add-row .row-mark { opacity: 0.4; }
   .add-row input[type="text"] {
     flex: 1;
@@ -421,7 +455,11 @@
 <div class="app">
   <div class="notebook">
     <div class="notebook-head">
-      <span class="notebook-date" id="dateLabel"></span>
+      <span class="notebook-date-wrap">
+        <button type="button" class="notebook-date" id="dateLabel" title="לחצו לבחירת תאריך"></button>
+        <input type="date" id="dateInput" class="date-input-hidden">
+        <button type="button" class="today-btn" id="todayBtn" hidden>היום</button>
+      </span>
       <div class="head-right">
         <span class="notebook-progress" id="progressText"></span>
         <button class="menu-btn" id="menuBtn" title="תפריט" aria-haspopup="true" aria-expanded="false">&#9776;</button>
@@ -548,7 +586,7 @@
 
   var data = loadData();
   if (applyDailyRollover(data)) saveData();
-  var state = { filter: "all", renamingSheetId: null, menuOpen: false, editingTaskId: null };
+  var state = { filter: "all", renamingSheetId: null, menuOpen: false, editingTaskId: null, viewDate: todayISO() };
 
   var dateLabel = document.getElementById("dateLabel");
   var sheetsBar = document.getElementById("sheetsBar");
@@ -587,13 +625,33 @@
     if (e.target === confirmOverlay) closeConfirm();
   });
 
-  function todayLabel() {
-    var d = new Date();
-    var day = String(d.getDate()).padStart(2, "0");
-    var month = String(d.getMonth() + 1).padStart(2, "0");
-    return day + "/" + month + "/" + d.getFullYear();
+  function isoToFullDisplay(iso) {
+    var parts = iso.split("-");
+    return parts[2] + "/" + parts[1] + "/" + parts[0];
   }
-  dateLabel.textContent = todayLabel();
+
+  var dateInput = document.getElementById("dateInput");
+  var todayBtn = document.getElementById("todayBtn");
+
+  dateLabel.addEventListener("click", function () {
+    dateInput.value = state.viewDate;
+    dateInput.max = todayISO();
+    if (dateInput.showPicker) {
+      try { dateInput.showPicker(); } catch (e) { dateInput.focus(); }
+    } else {
+      dateInput.focus();
+    }
+  });
+  dateInput.addEventListener("change", function () {
+    if (dateInput.value) {
+      state.viewDate = dateInput.value;
+      render();
+    }
+  });
+  todayBtn.addEventListener("click", function () {
+    state.viewDate = todayISO();
+    render();
+  });
 
   function activeSheet() {
     var sheet = data.sheets.find(function (s) { return s.id === data.activeSheetId; });
@@ -795,7 +853,12 @@
 
     var STATUS_LABEL = { 0: "לחצו כדי לסמן טיפול חלקי", 1: "לחצו כדי לסמן כהושלם", 2: "לחצו כדי לאפס" };
 
-    var sheetTasks = activeSheet().tasks;
+    var isToday = state.viewDate === todayISO();
+    dateLabel.textContent = isoToFullDisplay(state.viewDate);
+    todayBtn.hidden = isToday;
+    addForm.hidden = !isToday;
+
+    var sheetTasks = activeSheet().tasks.filter(function (t) { return t.date === state.viewDate; });
     var sorted = sheetTasks.slice().sort(function (a, b) {
       return a.createdAt - b.createdAt;
     });
@@ -809,8 +872,8 @@
     taskList.innerHTML = "";
     visible.forEach(function (t) {
       var li = document.createElement("li");
-      li.className = "task" + (t.status === 1 ? " partial" : "") + (t.status === 2 ? " done" : "");
-      li.addEventListener("click", function () { cycleStatus(t.id); });
+      li.className = "task" + (t.status === 1 ? " partial" : "") + (t.status === 2 ? " done" : "") + (isToday ? "" : " readonly");
+      if (isToday) li.addEventListener("click", function () { cycleStatus(t.id); });
 
       var check = document.createElement("span");
       check.className = "row-mark";
@@ -822,13 +885,15 @@
       dot.className = "urgent-toggle" + (t.urgent ? " urgent" : "");
       dot.title = t.urgent ? "לחצו לביטול הדחיפות" : "לחצו לסימון כדחוף";
       dot.innerHTML = t.urgent ? URGENT_MARK_SVG : URGENT_CIRCLE_SVG;
-      dot.addEventListener("click", function (e) {
-        e.stopPropagation();
-        toggleUrgent(t.id);
-      });
+      if (isToday) {
+        dot.addEventListener("click", function (e) {
+          e.stopPropagation();
+          toggleUrgent(t.id);
+        });
+      }
 
       var textEl;
-      if (state.editingTaskId === t.id) {
+      if (isToday && state.editingTaskId === t.id) {
         textEl = document.createElement("input");
         textEl.type = "text";
         textEl.className = "task-text-input";
@@ -859,15 +924,18 @@
         textEl.className = "task-text";
         textEl.textContent = t.text;
         textEl.title = t.text;
-        textEl.addEventListener("click", function (e) {
-          e.stopPropagation();
-          state.editingTaskId = t.id;
-          render();
-        });
+        if (isToday) {
+          textEl.addEventListener("click", function (e) {
+            e.stopPropagation();
+            state.editingTaskId = t.id;
+            render();
+          });
+        }
       }
 
       var actions = document.createElement("span");
       actions.className = "task-actions";
+      if (!isToday) actions.hidden = true;
       var delBtn = document.createElement("button");
       delBtn.innerHTML = "&#10005;";
       delBtn.title = "מחיקה";
@@ -902,6 +970,7 @@
       }
     });
 
+    emptyState.textContent = isToday ? "אין שורות בפרויקט הזה עדיין" : "אין שורות מהתאריך הזה בפרויקט הזה";
     emptyState.style.display = visible.length ? "none" : "block";
 
     var total = sheetTasks.length;
