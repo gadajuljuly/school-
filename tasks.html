@@ -9,344 +9,386 @@
 <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700&family=Rubik:wght@600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #f4f5fb;
-    --card: #ffffff;
-    --text: #23263a;
-    --muted: #6c7089;
-    --border: #e2e4f0;
-    --primary: #4f46e5;
-    --primary-dark: #4338ca;
-    --danger: #ef4444;
-    --success: #16a34a;
-    --high: #ef4444;
-    --medium: #f59e0b;
-    --low: #22c55e;
+    --desk: #e7e2d3;
+    --paper: #fbf7ee;
+    --paper-alt: #eee6d2;
+    --rule: #c2d9ec;
+    --margin: #d98a90;
+    --ink: #2c2a24;
+    --ink-muted: #918a78;
+    --accent: #35618f;
+    --accent-contrast: #fdfbf5;
+    --danger: #b6473f;
+    --high: #c0392b;
+    --medium: #b8811f;
+    --low: #3c8a5c;
+    --shadow: rgba(44, 42, 36, 0.18);
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg: #14151f;
-      --card: #1d1f2c;
-      --text: #e7e8f3;
-      --muted: #9a9dbb;
-      --border: #2e3044;
+      --desk: #101114;
+      --paper: #242219;
+      --paper-alt: #2c2a20;
+      --rule: #3a4652;
+      --margin: #8a4b50;
+      --ink: #ece5d6;
+      --ink-muted: #a49a85;
+      --accent: #7fb0e0;
+      --accent-contrast: #16181c;
+      --shadow: rgba(0, 0, 0, 0.5);
     }
   }
   :root[data-theme="dark"] {
-    --bg: #14151f;
-    --card: #1d1f2c;
-    --text: #e7e8f3;
-    --muted: #9a9dbb;
-    --border: #2e3044;
+    --desk: #101114;
+    --paper: #242219;
+    --paper-alt: #2c2a20;
+    --rule: #3a4652;
+    --margin: #8a4b50;
+    --ink: #ece5d6;
+    --ink-muted: #a49a85;
+    --accent: #7fb0e0;
+    --accent-contrast: #16181c;
+    --shadow: rgba(0, 0, 0, 0.5);
   }
   * { box-sizing: border-box; }
   body {
     margin: 0;
     font-family: "Assistant", "Segoe UI", Tahoma, Arial, sans-serif;
-    background: var(--bg);
-    color: var(--text);
+    background: var(--desk);
+    color: var(--ink);
     min-height: 100vh;
-    padding: 16px;
+    padding: 24px 16px;
   }
   .app {
-    max-width: 640px;
+    max-width: 620px;
     margin: 0 auto;
   }
-  header {
-    text-align: center;
-    margin-bottom: 20px;
-  }
-  header h1 {
-    font-family: "Rubik", "Assistant", "Segoe UI", Tahoma, Arial, sans-serif;
-    font-size: 1.7rem;
-    font-weight: 700;
-    margin: 0 0 4px;
-    text-wrap: balance;
-  }
-  header p {
-    color: var(--muted);
-    margin: 0;
-    font-size: 0.9rem;
+
+  .notebook {
+    background: var(--paper);
+    border-radius: 10px;
+    box-shadow: 0 18px 40px var(--shadow);
   }
 
+  .notebook-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px 10px;
+  }
+  .notebook-date {
+    font-family: "Rubik", "Assistant", sans-serif;
+    font-weight: 700;
+    font-size: 1.05rem;
+    letter-spacing: 0.02em;
+  }
+  .head-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+  }
+  .notebook-progress {
+    font-size: 0.8rem;
+    color: var(--ink-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .menu-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    border: 1px solid var(--rule);
+    background: none;
+    color: var(--ink);
+    font-size: 1.05rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .menu-btn:hover { background: var(--paper-alt); }
+
+  .menu-panel {
+    position: absolute;
+    top: 42px;
+    left: 0;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    box-shadow: 0 10px 26px var(--shadow);
+    padding: 10px;
+    width: 200px;
+    z-index: 5;
+  }
+  .menu-panel[hidden] { display: none; }
+  .menu-section + .menu-section {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--rule);
+  }
+  .menu-label {
+    font-size: 0.72rem;
+    color: var(--ink-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 6px;
+  }
+  .menu-panel .filters { display: flex; flex-direction: column; gap: 4px; }
+  .menu-panel button {
+    width: 100%;
+    text-align: right;
+    padding: 7px 10px;
+    border-radius: 6px;
+    border: none;
+    background: none;
+    color: var(--ink);
+    cursor: pointer;
+    font-size: 0.88rem;
+    font-family: inherit;
+  }
+  .menu-panel button:hover { background: var(--paper-alt); }
+  .menu-panel button.active {
+    background: var(--accent);
+    color: var(--accent-contrast);
+  }
+  .menu-panel button.danger { color: var(--danger); }
+
+  .sheets-row {
+    padding: 0 12px;
+    display: flex;
+    align-items: flex-end;
+  }
   .sheets-bar {
     display: flex;
-    align-items: center;
-    gap: 8px;
+    align-items: flex-end;
+    gap: 4px;
     overflow-x: auto;
-    padding: 2px 2px 8px;
-    margin-bottom: 12px;
+    flex: 1;
+    scrollbar-width: none;
   }
-  .sheets-bar::-webkit-scrollbar { height: 6px; }
-  .sheets-bar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  .sheets-bar::-webkit-scrollbar { display: none; }
   .sheet-tab {
-    display: flex;
-    align-items: center;
-    gap: 6px;
     flex-shrink: 0;
-    padding: 8px 12px;
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    background: var(--card);
-    color: var(--muted);
+    clip-path: polygon(16% 0, 84% 0, 100% 100%, 0% 100%);
+    padding: 9px 20px 8px;
+    background: var(--paper-alt);
+    color: var(--ink-muted);
+    font-size: 0.85rem;
     cursor: pointer;
-    font-size: 0.9rem;
     white-space: nowrap;
-  }
-  .sheet-tab.active {
-    background: var(--primary);
-    border-color: var(--primary);
-    color: #ffffff;
-    font-weight: 600;
-  }
-  .sheet-tab .tab-name {
     max-width: 140px;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  .sheet-tab.active {
+    background: var(--paper);
+    color: var(--ink);
+    font-weight: 700;
   }
   .sheet-tab input.rename-input {
     border: none;
     background: transparent;
     color: inherit;
     font: inherit;
-    width: 90px;
+    width: 80px;
     outline: none;
     border-bottom: 1px solid currentColor;
   }
-  .sheet-tab .tab-action {
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: inherit;
-    font-size: 0.85rem;
-    line-height: 1;
-    padding: 2px;
-    opacity: 0.8;
-  }
-  .sheet-tab .tab-action:hover { opacity: 1; }
-  .add-sheet-btn {
+  .add-sheet-tab {
     flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 8px 12px;
-    border-radius: 10px;
-    border: 1px dashed var(--border);
+    clip-path: polygon(16% 0, 84% 0, 100% 100%, 0% 100%);
+    padding: 9px 16px 8px;
     background: none;
-    color: var(--primary);
-    cursor: pointer;
-    font-size: 0.9rem;
-  }
-  .add-sheet-btn:hover { background: var(--card); }
-
-  .progress {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 12px 14px;
-    margin-bottom: 16px;
-  }
-  .progress-top {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.85rem;
-    color: var(--muted);
-    margin-bottom: 6px;
-  }
-  .progress-bar {
-    height: 8px;
-    background: var(--border);
-    border-radius: 4px;
-    overflow: hidden;
-  }
-  .progress-bar > div {
-    height: 100%;
-    background: var(--success);
-    transition: width 0.25s ease;
-  }
-  form.add-form {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 14px;
-    margin-bottom: 16px;
-  }
-  .add-form .row {
-    display: flex;
-    gap: 8px;
-  }
-  .add-form input[type="text"] {
-    flex: 1;
-    padding: 10px 12px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    font-size: 0.95rem;
-    background: var(--card);
-    color: var(--text);
-  }
-  .add-form select {
-    padding: 10px 8px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    background: white;
-    font-size: 0.9rem;
-  }
-  .add-form button.submit {
-    background: var(--primary);
-    color: white;
     border: none;
-    border-radius: 8px;
-    padding: 10px 18px;
-    font-size: 0.95rem;
+    color: var(--accent);
+    font-size: 1rem;
+    font-weight: 700;
     cursor: pointer;
+    font-family: inherit;
   }
-  .add-form button.submit:hover { background: var(--primary-dark); }
+  .add-sheet-tab:hover { background: var(--paper-alt); }
 
-  .filters {
-    display: flex;
-    gap: 6px;
-    margin-bottom: 12px;
+  .ruled-body {
+    position: relative;
+    background-image: repeating-linear-gradient(
+      var(--paper) 0,
+      var(--paper) 35px,
+      var(--rule) 35px,
+      var(--rule) 36px
+    );
+    border-radius: 0 0 10px 10px;
+    padding: 20px 22px 4px 44px;
   }
-  .filters button {
-    flex: 1;
-    padding: 8px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    background: var(--card);
-    cursor: pointer;
-    font-size: 0.85rem;
-    color: var(--muted);
-  }
-  .filters button.active {
-    background: var(--primary);
-    border-color: var(--primary);
-    color: white;
+  .ruled-body::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 32px;
+    width: 2px;
+    background: var(--margin);
+    opacity: 0.55;
   }
 
-  ul.task-list {
+  ol.task-list {
     list-style: none;
+    counter-reset: rownum;
     margin: 0;
     padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
   }
   li.task {
+    counter-increment: rownum;
     display: flex;
-    align-items: center;
-    gap: 10px;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 10px 12px;
+    align-items: baseline;
+    gap: 6px;
+    height: 36px;
+    line-height: 36px;
+    cursor: pointer;
   }
+  li.task::before {
+    content: counter(rownum) "-";
+    font-family: "Rubik", "Assistant", sans-serif;
+    font-weight: 700;
+    color: var(--ink-muted);
+    flex-shrink: 0;
+  }
+  li.task.done { cursor: pointer; }
   li.task.done .task-text {
     text-decoration: line-through;
-    color: var(--muted);
+    color: var(--ink-muted);
   }
-  .checkbox {
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    border: 2px solid var(--border);
-    flex-shrink: 0;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: none;
-    padding: 0;
-  }
-  li.task.done .checkbox {
-    background: var(--success);
-    border-color: var(--success);
-    color: white;
-  }
+  li.task.done::before { opacity: 0.55; }
   .priority-dot {
-    width: 8px;
-    height: 8px;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
     flex-shrink: 0;
   }
   .priority-high { background: var(--high); }
   .priority-medium { background: var(--medium); }
   .priority-low { background: var(--low); }
-
-  .task-body {
+  .task-text {
     flex: 1;
     min-width: 0;
-  }
-  .task-text {
-    font-size: 0.95rem;
-    word-break: break-word;
-  }
-  .task-meta {
-    font-size: 0.75rem;
-    color: var(--muted);
-    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .task-actions button {
     background: none;
     border: none;
     cursor: pointer;
-    font-size: 1rem;
-    color: var(--muted);
-    padding: 4px;
+    font-size: 0.85rem;
+    color: var(--ink-muted);
+    opacity: 0.55;
+    padding: 0 2px;
+    flex-shrink: 0;
   }
-  .task-actions button:hover { color: var(--danger); }
+  .task-actions button:hover { opacity: 1; color: var(--danger); }
+
+  .add-row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    height: 36px;
+    line-height: 36px;
+  }
+  .add-row .row-number {
+    font-family: "Rubik", "Assistant", sans-serif;
+    font-weight: 700;
+    color: var(--ink-muted);
+    flex-shrink: 0;
+  }
+  .add-row input[type="text"] {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: transparent;
+    font: inherit;
+    color: var(--ink);
+    outline: none;
+    padding: 0;
+  }
+  .add-row input[type="text"]::placeholder { color: var(--ink-muted); }
+  .add-row select {
+    border: none;
+    background: transparent;
+    color: var(--ink-muted);
+    font-size: 0.8rem;
+    font-family: inherit;
+    flex-shrink: 0;
+  }
+  .add-row button.add-btn {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: none;
+    background: var(--accent);
+    color: var(--accent-contrast);
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+  }
 
   .empty-state {
-    text-align: center;
-    color: var(--muted);
-    padding: 30px 10px;
-    font-size: 0.9rem;
+    color: var(--ink-muted);
+    padding: 4px 0 16px;
+    font-size: 0.88rem;
   }
 
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) .add-form select { background: var(--card); color: var(--text); }
+  @media (max-width: 420px) {
+    .sheet-tab { max-width: 100px; }
+    .notebook-date { font-size: 0.95rem; }
   }
-  :root[data-theme="dark"] .add-form select { background: var(--card); color: var(--text); }
 </style>
 </head>
 <body>
 <div class="app">
-  <header>
-    <h1>גיליונות משימות</h1>
-    <p>צרו גיליון לכל נושא או יום, תנו לו שם, ונהלו את השורות שבתוכו</p>
-  </header>
-
-  <div class="sheets-bar" id="sheetsBar"></div>
-
-  <div class="progress">
-    <div class="progress-top">
-      <span id="progressText">0 מתוך 0 הושלמו</span>
-      <span id="progressPercent">0%</span>
+  <div class="notebook">
+    <div class="notebook-head">
+      <span class="notebook-date" id="dateLabel"></span>
+      <div class="head-right">
+        <span class="notebook-progress" id="progressText"></span>
+        <button class="menu-btn" id="menuBtn" title="תפריט" aria-haspopup="true" aria-expanded="false">&#9776;</button>
+        <div class="menu-panel" id="menuPanel" hidden>
+          <div class="menu-section">
+            <div class="menu-label">תצוגה</div>
+            <div class="filters">
+              <button data-filter="all" class="active">הכל</button>
+              <button data-filter="active">פעילות</button>
+              <button data-filter="done">הושלמו</button>
+            </div>
+          </div>
+          <div class="menu-section">
+            <div class="menu-label">הגיליון הנוכחי</div>
+            <button id="renameSheetBtn">שינוי שם</button>
+            <button id="deleteSheetBtn" class="danger">מחיקת גיליון</button>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="progress-bar"><div id="progressFill" style="width:0%"></div></div>
-  </div>
 
-  <form class="add-form" id="addForm">
-    <div class="row">
-      <input type="text" id="taskInput" placeholder="הוסף שורה חדשה..." maxlength="200" required autocomplete="off">
-      <select id="prioritySelect" title="עדיפות">
-        <option value="medium">בינונית</option>
-        <option value="high">גבוהה</option>
-        <option value="low">נמוכה</option>
-      </select>
+    <div class="sheets-row">
+      <div class="sheets-bar" id="sheetsBar"></div>
+      <button class="add-sheet-tab" id="addSheetBtn" title="הוספת גיליון">+</button>
     </div>
-    <button type="submit" class="submit">הוספת שורה</button>
-  </form>
 
-  <div class="filters">
-    <button data-filter="all" class="active">הכל</button>
-    <button data-filter="active">פעילות</button>
-    <button data-filter="done">הושלמו</button>
+    <div class="ruled-body">
+      <ol class="task-list" id="taskList"></ol>
+      <div class="empty-state" id="emptyState" style="display:none;">אין שורות בגיליון הזה עדיין</div>
+      <form class="add-row" id="addForm">
+        <span class="row-number" id="nextNumber">1-</span>
+        <input type="text" id="taskInput" placeholder="כתבו כאן שורה חדשה..." maxlength="200" required autocomplete="off">
+        <select id="prioritySelect" title="עדיפות">
+          <option value="medium">בינונית</option>
+          <option value="high">גבוהה</option>
+          <option value="low">נמוכה</option>
+        </select>
+        <button type="submit" class="add-btn" title="הוספה">+</button>
+      </form>
+    </div>
   </div>
-
-  <ul class="task-list" id="taskList"></ul>
-  <div class="empty-state" id="emptyState" style="display:none;">אין שורות בגיליון הזה עדיין</div>
 </div>
 
 <script>
@@ -379,18 +421,31 @@
   }
 
   var data = loadData();
-  var state = { filter: "all", renamingSheetId: null };
+  var state = { filter: "all", renamingSheetId: null, menuOpen: false };
 
+  var dateLabel = document.getElementById("dateLabel");
   var sheetsBar = document.getElementById("sheetsBar");
+  var addSheetBtn = document.getElementById("addSheetBtn");
   var taskInput = document.getElementById("taskInput");
   var prioritySelect = document.getElementById("prioritySelect");
   var addForm = document.getElementById("addForm");
+  var nextNumber = document.getElementById("nextNumber");
   var taskList = document.getElementById("taskList");
   var emptyState = document.getElementById("emptyState");
   var progressText = document.getElementById("progressText");
-  var progressPercent = document.getElementById("progressPercent");
-  var progressFill = document.getElementById("progressFill");
+  var menuBtn = document.getElementById("menuBtn");
+  var menuPanel = document.getElementById("menuPanel");
   var filterButtons = document.querySelectorAll(".filters button");
+  var renameSheetBtn = document.getElementById("renameSheetBtn");
+  var deleteSheetBtn = document.getElementById("deleteSheetBtn");
+
+  function todayLabel() {
+    var d = new Date();
+    var day = String(d.getDate()).padStart(2, "0");
+    var month = String(d.getMonth() + 1).padStart(2, "0");
+    return day + "/" + month + "/" + d.getFullYear();
+  }
+  dateLabel.textContent = todayLabel();
 
   function activeSheet() {
     var sheet = data.sheets.find(function (s) { return s.id === data.activeSheetId; });
@@ -406,18 +461,13 @@
     saveData();
     render();
   }
+  addSheetBtn.addEventListener("click", addSheet);
 
   function selectSheet(id) {
     if (data.activeSheetId === id) return;
     data.activeSheetId = id;
     state.filter = "all";
-    filterButtons.forEach(function (b) { b.classList.toggle("active", b.dataset.filter === "all"); });
     saveData();
-    render();
-  }
-
-  function startRename(id) {
-    state.renamingSheetId = id;
     render();
   }
 
@@ -448,6 +498,28 @@
     render();
   }
 
+  renameSheetBtn.addEventListener("click", function () {
+    state.menuOpen = false;
+    state.renamingSheetId = activeSheet().id;
+    render();
+  });
+  deleteSheetBtn.addEventListener("click", function () {
+    state.menuOpen = false;
+    deleteSheet(activeSheet().id);
+  });
+
+  menuBtn.addEventListener("click", function (e) {
+    e.stopPropagation();
+    state.menuOpen = !state.menuOpen;
+    render();
+  });
+  document.addEventListener("click", function (e) {
+    if (state.menuOpen && !menuPanel.contains(e.target) && e.target !== menuBtn) {
+      state.menuOpen = false;
+      render();
+    }
+  });
+
   function renderSheetsBar() {
     sheetsBar.innerHTML = "";
     data.sheets.forEach(function (sheet) {
@@ -472,43 +544,11 @@
         return;
       }
 
+      tab.textContent = sheet.name;
+      tab.title = sheet.name;
       tab.addEventListener("click", function () { selectSheet(sheet.id); });
-
-      var nameEl = document.createElement("span");
-      nameEl.className = "tab-name";
-      nameEl.textContent = sheet.name;
-      tab.appendChild(nameEl);
-
-      if (sheet.id === data.activeSheetId) {
-        var renameBtn = document.createElement("button");
-        renameBtn.className = "tab-action";
-        renameBtn.innerHTML = "✎";
-        renameBtn.title = "שינוי שם הגיליון";
-        renameBtn.addEventListener("click", function (e) {
-          e.stopPropagation();
-          startRename(sheet.id);
-        });
-        tab.appendChild(renameBtn);
-
-        var delBtn = document.createElement("button");
-        delBtn.className = "tab-action";
-        delBtn.innerHTML = "✕";
-        delBtn.title = "מחיקת הגיליון";
-        delBtn.addEventListener("click", function (e) {
-          e.stopPropagation();
-          deleteSheet(sheet.id);
-        });
-        tab.appendChild(delBtn);
-      }
-
       sheetsBar.appendChild(tab);
     });
-
-    var addBtn = document.createElement("button");
-    addBtn.className = "add-sheet-btn";
-    addBtn.innerHTML = "+ גיליון חדש";
-    addBtn.addEventListener("click", addSheet);
-    sheetsBar.appendChild(addBtn);
   }
 
   addForm.addEventListener("submit", function (e) {
@@ -558,6 +598,10 @@
   function render() {
     renderSheetsBar();
 
+    menuPanel.hidden = !state.menuOpen;
+    menuBtn.setAttribute("aria-expanded", String(state.menuOpen));
+    filterButtons.forEach(function (b) { b.classList.toggle("active", b.dataset.filter === state.filter); });
+
     var sheetTasks = activeSheet().tasks;
     var sorted = sheetTasks.slice().sort(function (a, b) {
       var order = { high: 0, medium: 1, low: 2 };
@@ -576,51 +620,40 @@
     visible.forEach(function (t) {
       var li = document.createElement("li");
       li.className = "task" + (t.done ? " done" : "");
-
-      var checkBtn = document.createElement("button");
-      checkBtn.className = "checkbox";
-      checkBtn.innerHTML = t.done ? "✓" : "";
-      checkBtn.title = t.done ? "סמן כלא הושלם" : "סמן כהושלם";
-      checkBtn.addEventListener("click", function () { toggleDone(t.id); });
+      li.addEventListener("click", function () { toggleDone(t.id); });
 
       var dot = document.createElement("span");
       dot.className = "priority-dot priority-" + t.priority;
       dot.title = "עדיפות " + PRIORITY_LABEL[t.priority];
 
-      var body = document.createElement("div");
-      body.className = "task-body";
-      var textEl = document.createElement("div");
+      var textEl = document.createElement("span");
       textEl.className = "task-text";
       textEl.textContent = t.text;
-      var metaEl = document.createElement("div");
-      metaEl.className = "task-meta";
-      metaEl.textContent = "עדיפות " + PRIORITY_LABEL[t.priority];
-      body.appendChild(textEl);
-      body.appendChild(metaEl);
+      textEl.title = t.text;
 
-      var actions = document.createElement("div");
+      var actions = document.createElement("span");
       actions.className = "task-actions";
       var delBtn = document.createElement("button");
-      delBtn.innerHTML = "🗑";
+      delBtn.innerHTML = "&#10005;";
       delBtn.title = "מחיקה";
-      delBtn.addEventListener("click", function () { removeTask(t.id); });
+      delBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        removeTask(t.id);
+      });
       actions.appendChild(delBtn);
 
-      li.appendChild(checkBtn);
       li.appendChild(dot);
-      li.appendChild(body);
+      li.appendChild(textEl);
       li.appendChild(actions);
       taskList.appendChild(li);
     });
 
     emptyState.style.display = visible.length ? "none" : "block";
+    nextNumber.textContent = (sheetTasks.length + 1) + "-";
 
     var total = sheetTasks.length;
     var doneCount = sheetTasks.filter(function (t) { return t.done; }).length;
-    var pct = total ? Math.round((doneCount / total) * 100) : 0;
-    progressText.textContent = doneCount + " מתוך " + total + " הושלמו";
-    progressPercent.textContent = pct + "%";
-    progressFill.style.width = pct + "%";
+    progressText.textContent = doneCount + "/" + total + " הושלמו";
   }
 
   render();
