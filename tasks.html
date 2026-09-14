@@ -530,6 +530,29 @@
     color: var(--ink);
   }
 
+  .install-fab {
+    position: fixed;
+    left: 50%;
+    bottom: 20px;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 999px;
+    background: var(--accent);
+    color: var(--accent-contrast);
+    font-family: inherit;
+    font-size: 0.92rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 10px 30px var(--shadow);
+    z-index: 15;
+  }
+  .install-fab[hidden] { display: none; }
+  .install-fab:hover { background: var(--accent); opacity: 0.9; }
+
   @media (max-width: 420px) {
     .sheet-tab { max-width: 100px; }
     .notebook-date { font-size: 0.95rem; }
@@ -596,6 +619,22 @@
       <div class="modal-actions">
         <button type="button" class="modal-btn modal-btn-yes" id="confirmYesBtn">כן</button>
         <button type="button" class="modal-btn modal-btn-no" id="confirmNoBtn">לא</button>
+      </div>
+    </div>
+  </div>
+
+  <button type="button" class="install-fab" id="installBtn" hidden>&#128241; התקן אפליקציה</button>
+
+  <div class="modal-overlay" id="iosInstallOverlay" hidden>
+    <div class="modal-box" role="alertdialog" aria-modal="true">
+      <p class="modal-message">
+        כדי להתקין את האפליקציה באייפון:<br><br>
+        1. הקש על כפתור השיתוף <strong>􀩦</strong> בסרגל הדפדפן (בדרך כלל למטה)<br>
+        2. גלול ובחר <strong>"הוסף למסך הבית"</strong> (Add to Home Screen)<br>
+        3. הקש <strong>"הוסף"</strong> למעלה
+      </p>
+      <div class="modal-actions">
+        <button type="button" class="modal-btn modal-btn-yes" id="iosInstallCloseBtn">הבנתי</button>
       </div>
     </div>
   </div>
@@ -741,6 +780,48 @@
   confirmOverlay.addEventListener("click", function (e) {
     if (e.target === confirmOverlay) closeConfirm();
   });
+
+  (function setupInstallPrompt() {
+    var installBtn = document.getElementById("installBtn");
+    var iosOverlay = document.getElementById("iosInstallOverlay");
+    var iosCloseBtn = document.getElementById("iosInstallCloseBtn");
+    var deferredPrompt = null;
+
+    var isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+    if (isStandalone) return;
+
+    var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+
+    window.addEventListener("beforeinstallprompt", function (e) {
+      e.preventDefault();
+      deferredPrompt = e;
+      installBtn.hidden = false;
+    });
+
+    window.addEventListener("appinstalled", function () {
+      installBtn.hidden = true;
+      deferredPrompt = null;
+    });
+
+    if (isIOS) {
+      installBtn.hidden = false;
+    }
+
+    installBtn.addEventListener("click", function () {
+      if (deferredPrompt) {
+        installBtn.hidden = true;
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(function () { deferredPrompt = null; });
+      } else if (isIOS) {
+        iosOverlay.hidden = false;
+      }
+    });
+
+    iosCloseBtn.addEventListener("click", function () { iosOverlay.hidden = true; });
+    iosOverlay.addEventListener("click", function (e) {
+      if (e.target === iosOverlay) iosOverlay.hidden = true;
+    });
+  })();
 
   function isoToFullDisplay(iso) {
     var parts = iso.split("-");
