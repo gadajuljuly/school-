@@ -553,6 +553,87 @@
   .install-fab[hidden] { display: none; }
   .install-fab:hover { background: var(--accent); opacity: 0.9; }
 
+  .auth-gate {
+    position: fixed;
+    inset: 0;
+    background: var(--desk);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 30;
+  }
+  .auth-gate[hidden] { display: none; }
+  .auth-box {
+    background: var(--paper);
+    border-radius: 14px;
+    box-shadow: 0 20px 50px var(--shadow);
+    padding: 28px 24px;
+    width: 100%;
+    max-width: 340px;
+  }
+  .auth-title {
+    font-family: "Rubik", "Assistant", sans-serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin: 0 0 4px;
+    text-align: center;
+    color: var(--ink);
+  }
+  .auth-subtitle {
+    text-align: center;
+    color: var(--ink-muted);
+    font-size: 0.85rem;
+    margin: 0 0 20px;
+  }
+  .auth-input {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 11px 12px;
+    margin-bottom: 10px;
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    background: var(--paper-alt);
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.95rem;
+    outline: none;
+  }
+  .auth-input:focus { border-color: var(--accent); }
+  .auth-error {
+    color: var(--danger);
+    font-size: 0.83rem;
+    margin: 0 0 10px;
+    text-align: center;
+  }
+  .auth-error[hidden] { display: none; }
+  .auth-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 4px;
+  }
+  .auth-btn {
+    flex: 1;
+    padding: 11px;
+    border-radius: 8px;
+    font-size: 0.92rem;
+    font-family: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .auth-btn-primary {
+    border: none;
+    background: var(--accent);
+    color: var(--accent-contrast);
+  }
+  .auth-btn-secondary {
+    border: 1px solid var(--rule);
+    background: var(--paper-alt);
+    color: var(--ink);
+  }
+  .auth-btn[disabled] { opacity: 0.6; cursor: default; }
+
   @media (max-width: 420px) {
     .sheet-tab { max-width: 100px; }
     .notebook-date { font-size: 0.95rem; }
@@ -560,7 +641,23 @@
 </style>
 </head>
 <body>
-<div class="app">
+<div class="auth-gate" id="authGate">
+  <div class="auth-box">
+    <h1 class="auth-title">פרויקטי משימות</h1>
+    <p class="auth-subtitle">התחברו כדי לראות את המשימות שלכם</p>
+    <form id="authForm">
+      <input type="text" id="authUsername" class="auth-input" placeholder="שם משתמש" autocomplete="username" required>
+      <input type="password" id="authPassword" class="auth-input" placeholder="סיסמה" autocomplete="current-password" required minlength="6">
+      <p class="auth-error" id="authError" hidden></p>
+      <div class="auth-actions">
+        <button type="submit" class="auth-btn auth-btn-primary" id="authLoginBtn">התחברות</button>
+        <button type="button" class="auth-btn auth-btn-secondary" id="authSignupBtn">הרשמה</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="app" id="appRoot" hidden>
   <div class="notebook">
     <div class="notebook-head">
       <span class="notebook-date-wrap">
@@ -586,6 +683,10 @@
             <div class="menu-label">הפרויקט הנוכחי</div>
             <button id="renameSheetBtn">שינוי שם</button>
             <button id="deleteSheetBtn" class="danger">מחיקת פרויקט</button>
+          </div>
+          <div class="menu-section" id="accountMenuSection">
+            <div class="menu-label" id="menuUsernameLabel"></div>
+            <button id="logoutBtn">התנתקות</button>
           </div>
         </div>
       </div>
@@ -638,6 +739,9 @@
 <script>
 (function () {
   var STORAGE_KEY = "daily-tasks-sheets-v1";
+  function localStorageKey() {
+    return SUPABASE_ROW_ID ? (STORAGE_KEY + ":" + SUPABASE_ROW_ID) : STORAGE_KEY;
+  }
   var ROW_MARK_BASE_D = "M4 3 L16 15 M1.5 3 L6.5 3 M13.5 3 L18.5 3 M1.5 15 L6.5 15 M13.5 15 L18.5 15";
   var ROW_MARK_HALF_D = "M16 3 L10 9";
   var ROW_MARK_FULL_D = "M16 3 L4 15";
@@ -705,23 +809,29 @@
   }
   function loadLocalData() {
     try {
-      return normalizeData(JSON.parse(localStorage.getItem(STORAGE_KEY)));
+      return normalizeData(JSON.parse(localStorage.getItem(localStorageKey())));
     } catch (e) {
       return null;
     }
   }
   function saveLocalData() {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      localStorage.setItem(localStorageKey(), JSON.stringify(data));
     } catch (e) {}
   }
 
   var SUPABASE_URL = "https://oqvqrqhtywcqdnftaovk.supabase.co";
   var SUPABASE_KEY = "sb_publishable_K6dRlzpWSRV7O-Dy_C8ypA_Yep2P3x7";
-  var SUPABASE_ROW_ID = "main";
+  var FAKE_EMAIL_DOMAIN = "users.itask-app.local";
+  var SUPABASE_ROW_ID = null;
   var supabaseClient = (window.supabase && SUPABASE_URL && SUPABASE_KEY)
     ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
     : null;
+
+  function usernameToEmail(username) {
+    var clean = username.trim().toLowerCase().replace(/[^a-z0-9_.-]/g, "");
+    return clean + "@" + FAKE_EMAIL_DOMAIN;
+  }
 
   function saveData() {
     saveLocalData();
@@ -1301,10 +1411,110 @@
       .catch(startLocalOnly);
   }
 
-  if (supabaseClient) {
+  var authGate = document.getElementById("authGate");
+  var appRoot = document.getElementById("appRoot");
+  var authForm = document.getElementById("authForm");
+  var authUsername = document.getElementById("authUsername");
+  var authPassword = document.getElementById("authPassword");
+  var authError = document.getElementById("authError");
+  var authLoginBtn = document.getElementById("authLoginBtn");
+  var authSignupBtn = document.getElementById("authSignupBtn");
+  var logoutBtn = document.getElementById("logoutBtn");
+  var menuUsernameLabel = document.getElementById("menuUsernameLabel");
+
+  function showApp(user) {
+    SUPABASE_ROW_ID = user.id;
+    var uname = (user.email || "").split("@")[0];
+    menuUsernameLabel.textContent = "מחובר/ת בתור " + uname;
+    authGate.hidden = true;
+    appRoot.hidden = false;
     startWithSupabase();
-  } else {
+  }
+
+  function showAuthGate() {
+    appRoot.hidden = true;
+    authGate.hidden = false;
+  }
+
+  function setAuthBusy(busy) {
+    authLoginBtn.disabled = busy;
+    authSignupBtn.disabled = busy;
+  }
+  function showAuthError(msg) {
+    authError.textContent = msg;
+    authError.hidden = false;
+  }
+  function clearAuthError() {
+    authError.hidden = true;
+  }
+
+  if (!supabaseClient) {
+    appRoot.hidden = false;
+    authGate.hidden = true;
+    document.getElementById("accountMenuSection").hidden = true;
     startLocalOnly();
+  } else {
+    supabaseClient.auth.getSession().then(function (result) {
+      var session = result && result.data && result.data.session;
+      if (session && session.user) {
+        showApp(session.user);
+      } else {
+        showAuthGate();
+      }
+    }).catch(showAuthGate);
+
+    authForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      clearAuthError();
+      var username = authUsername.value.trim();
+      var password = authPassword.value;
+      if (!username || !password) return;
+      setAuthBusy(true);
+      supabaseClient.auth.signInWithPassword({ email: usernameToEmail(username), password: password })
+        .then(function (result) {
+          setAuthBusy(false);
+          if (result.error) {
+            showAuthError("שם משתמש או סיסמה שגויים");
+            return;
+          }
+          showApp(result.data.user);
+        }, function () {
+          setAuthBusy(false);
+          showAuthError("שגיאת התחברות. בדקו את החיבור לאינטרנט.");
+        });
+    });
+
+    authSignupBtn.addEventListener("click", function () {
+      clearAuthError();
+      var username = authUsername.value.trim();
+      var password = authPassword.value;
+      if (!username || !password || password.length < 6) {
+        showAuthError("מלאו שם משתמש וסיסמה (לפחות 6 תווים)");
+        return;
+      }
+      setAuthBusy(true);
+      supabaseClient.auth.signUp({ email: usernameToEmail(username), password: password })
+        .then(function (result) {
+          setAuthBusy(false);
+          if (result.error) {
+            var already = result.error.message && result.error.message.toLowerCase().indexOf("already") !== -1;
+            showAuthError(already ? "שם המשתמש הזה כבר תפוס" : "שגיאה בהרשמה");
+            return;
+          }
+          if (result.data.session && result.data.user) {
+            showApp(result.data.user);
+          } else {
+            showAuthError("ההרשמה בוצעה. נסו להתחבר עכשיו.");
+          }
+        }, function () {
+          setAuthBusy(false);
+          showAuthError("שגיאת הרשמה. בדקו את החיבור לאינטרנט.");
+        });
+    });
+
+    logoutBtn.addEventListener("click", function () {
+      supabaseClient.auth.signOut().then(function () { location.reload(); }, function () { location.reload(); });
+    });
   }
 
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
