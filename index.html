@@ -258,6 +258,7 @@ const App = {
     summary: { text:"" },
     insights: { suggestionText:"" },
     ui: {
+      gateEntered:false, gatePhoneInput:"",
       adminOpen:false, adminAuthed:false, adminPasswordInput:"", adminError:"",
       submissions:[], submissionsLoaded:false, viewingSubmissionId:null, adminSearch:""
     }
@@ -273,11 +274,8 @@ const App = {
       this.addStaffRow();
       this.addStudentRow();
     }
+    this.state.ui.gatePhoneInput = this.state.general.coachPhone || "";
     this.render();
-    if(this.state.general.coachPhone && this.state.general.coachPhone.trim()){
-      this._draftCheckDone = true;
-      this.tryLoadDraftForPhone(this.state.general.coachPhone);
-    }
   },
 
   saveToLocalStorage(){
@@ -312,12 +310,21 @@ const App = {
 
   setSection(id){ this.state.activeSection = id; this.render(); },
 
-  setGeneral(field, val){
-    this.state.general[field] = val;
-    if(field === "coachPhone" && !this._draftCheckDone && val && val.trim()){
-      this._draftCheckDone = true;
-      this.tryLoadDraftForPhone(val);
+  setGeneral(field, val){ this.state.general[field] = val; },
+
+  setGatePhoneInput(val){ this.state.ui.gatePhoneInput = val; },
+
+  async enterForm(){
+    const phone = (this.state.ui.gatePhoneInput || "").trim();
+    if(!phone){
+      alert("الرجاء إدخال رقم هاتف المدرّبة للدخول إلى الاستمارة.");
+      return;
     }
+    this.state.general.coachPhone = phone;
+    this.state.ui.gateEntered = true;
+    this._draftCheckDone = true;
+    this.render();
+    await this.tryLoadDraftForPhone(phone);
   },
 
   normalizePhoneKey(phone){ return (phone || "").replace(/\D/g, ""); },
@@ -340,7 +347,7 @@ const App = {
       } else {
         await sbRequest("drafts", { method:"POST", headers:{ "Prefer":"return=representation" }, body: JSON.stringify(payload) });
       }
-      alert("تم حفظ بياناتك بنجاح ✅\n\nتقدري تكملي التعبئة من أي حاسوب أو جهاز آخر لاحقًا — بس افتحي نفس الرابط واكتبي نفس رقم هاتفك بالضبط بحقل \"رقم هاتف المدرّبة\"، وبتظهرلك البيانات المحفوظة تلقائيًا.");
+      alert("تم حفظ بياناتك بنجاح ✅\n\nتقدري تكملي التعبئة من أي حاسوب أو جهاز آخر لاحقًا — بس افتحي نفس الرابط وأدخلي نفس رقم هاتفك بصفحة الدخول، وبتظهرلك البيانات المحفوظة تلقائيًا.");
     }catch(e){
       alert("تعذّر الحفظ، حاولي مرة أخرى: " + (e && e.message ? e.message : e));
     }
@@ -1081,8 +1088,28 @@ const App = {
   },
 
   render(){
+    if(!this.state.ui.gateEntered && this.state.activeSection !== "__admin__"){
+      document.getElementById("app").innerHTML = this.renderGate() + (this.state.ui.adminOpen ? this.renderAdminModal() : "") + this.renderAdminFab();
+      return;
+    }
     document.getElementById("app").innerHTML = this.renderHeader() + this.renderTabs() + this.renderSection() + (this.state.ui.adminOpen ? this.renderAdminModal() : "") + this.renderAdminFab();
     this.saveToLocalStorage();
+  },
+
+  renderGate(){
+    return `
+    <div style="max-width:420px;margin:3rem auto;padding:0 .5rem;">
+      <div class="card p-6" style="text-align:center;">
+        <h1 class="text-2xl font-bold text-teal-800 mb-1">بوصلة المدرّبة</h1>
+        <p class="text-stone-500 text-sm mb-5">مسح بداية السنة وخطة عمل المدرّبة</p>
+        <div style="text-align:right;">
+          <label class="field-label">رقم هاتف المدرّبة</label>
+          <input type="text" value="${this.state.ui.gatePhoneInput}" oninput="App.setGatePhoneInput(this.value)" onkeydown="if(event.key==='Enter'){ App.enterForm(); }" placeholder="مثال: 0591234567" autofocus>
+        </div>
+        <button onclick="App.enterForm()" class="btn btn-indigo" style="width:100%;margin-top:1rem;">الدخول إلى الاستمارة</button>
+        <p class="text-stone-400 text-xs" style="margin-top:.75rem;">رقم هاتفك بيسمحلك تكملي تعبئة الاستمارة لاحقًا من أي جهاز آخر بنفس الرقم.</p>
+      </div>
+    </div>`;
   },
 
   renderAdminFab(){
@@ -1115,7 +1142,6 @@ const App = {
         ${f("اسم المدرسة","schoolName")}
         ${f("اسم المدير/ة","principalName")}
         ${f("اسم المدرّبة","coachName")}
-        ${f("رقم هاتف المدرّبة","coachPhone")}
         ${f("مؤشر النموّ","growthIndex")}
         ${f("عدد التلاميذ في المدرسة","studentsCount","number")}
         ${f("عدد المعلّمين في المدرسة","teachersCount","number")}
@@ -1150,7 +1176,7 @@ const App = {
       <button onclick="App.installApp()" class="btn btn-outline">📲 تثبيت على الهاتف</button>
     </div>
     ${this.state.submitted ? `<p class="text-teal-700 text-xs font-semibold mb-2 no-print">✓ تمّ إرسال هذا المسح. يمكنك الاستمرار بالتعديل ثمّ الضغط على "إرسال المسح النهائي" مجددًا لتحديث النسخة المُرسلة.</p>` : ""}
-    <p class="text-stone-400 text-xs mb-1 no-print">✓ بياناتك تُحفظ تلقائيًا بهذا الجهاز أثناء التعبئة. لمتابعة العمل من حاسوب أو جهاز آخر، عبّي "رقم هاتف المدرّبة" واضغطي "💾 حفظ" — وبعدها اكتبي نفس رقم الهاتف بأي جهاز لاحقًا وبتظهرلك بياناتك المحفوظة تلقائيًا.</p>
+    <p class="text-stone-400 text-xs mb-1 no-print">✓ بياناتك تُحفظ تلقائيًا بهذا الجهاز أثناء التعبئة. لمتابعة العمل من حاسوب أو جهاز آخر، اضغطي "💾 حفظ" — وبعدها ادخلي بنفس رقم هاتفك من أي جهاز لاحقًا وبتظهرلك بياناتك المحفوظة تلقائيًا.</p>
     <p class="text-stone-400 text-xs mb-6 no-print">اضغطي "إرسال المسح النهائي" لإرسال نسخة نهائية إلى المسؤول. للحصول على ملف PDF: عند فتح نافذة الطباعة، اختاري "Save as PDF" / "حفظ كـ PDF" من قائمة الطابعة بدل طابعة فعليّة.</p>`;
   },
 
