@@ -433,6 +433,47 @@ const App = {
   setPrincipal(field, val){ this.state.principal[field] = val; },
   setSummary(val){ this.state.summary.text = val; },
 
+  generateSummary(){
+    const g = this.state.general;
+    const stats = this.computeMechanismStats().filter(s => s.marked > 0);
+    if(!stats.length){
+      alert("لم يتم تعليم أي مؤشر بعد لدى الطاقم — رجاءً عبّئي قسم \"الطاقم\" أولًا لتوليد خلاصة مبنية على المعطيات.");
+      return;
+    }
+    const staffCount = this.state.staff.length;
+    const classesCount = this.state.students.length;
+    const totalStudents = this.state.students.reduce((sum, s) => sum + (parseInt(s.studentsCount) || 0), 0);
+    const totalNotCompleted = this.state.students.reduce((sum, s) => sum + (parseInt(s.notCompletedReading) || 0), 0);
+
+    const avgPct = Math.round(stats.reduce((a, s) => a + s.greenPct, 0) / stats.length);
+    const sortedDesc = [...stats].sort((a, b) => b.greenPct - a.greenPct);
+    const sortedAsc = [...stats].sort((a, b) => a.greenPct - b.greenPct);
+    const strongest = sortedDesc.slice(0, 2).map(s => s.label);
+    const weakest = sortedAsc.slice(0, 2).map(s => s.label);
+
+    let text = `خلاصة عامّة لمسح بداية السنة${g.schoolName ? " – " + g.schoolName : ""}\n\n`;
+
+    text += `تشير معطيات المسح إلى أنّ المدرسة تضمّ ${staffCount} معلّمة/صفًّا شاركوا في المسح`;
+    if(classesCount) text += `، موزّعين على ${classesCount} شعبة`;
+    if(g.programSeniority) text += `، وذلك في ظلّ أقدميّة ${g.programSeniority} في البرنامج`;
+    text += ".\n\n";
+
+    text += `على مستوى تطبيق آليّات المنهج والاستراتيجيات المرفقة بالبرنامج، بلغ متوسط نسبة التطبيق الجيّد لدى الطاقم ${avgPct}%. `;
+    if(strongest.length) text += `وتُعدّ آليّتا "${strongest[0]}"${strongest[1] ? ` و"${strongest[1]}"` : ""} من أكثر الآليّات رسوخًا في الممارسة الصفّية الحالية. `;
+    if(weakest.length) text += `في المقابل، تحتاج آليّتا "${weakest[0]}"${weakest[1] ? ` و"${weakest[1]}"` : ""} إلى تركيز ومرافقة إضافية خلال هذه السنة.\n\n`;
+
+    if(classesCount){
+      text += `من حيث المستوى القرائي للتلاميذ، أشارت معطيات الصفوف إلى وجود ${totalNotCompleted} تلميذًا/ة لم ينهوا اكتساب القراءة بعد`;
+      if(totalStudents) text += ` من أصل ${totalStudents} تلميذًا/ة`;
+      text += "، ما يستدعي متابعة فرديّة مركّزة لهذه الفئة ضمن خطّة العمل.\n\n";
+    }
+
+    text += "وقد تمّ توثيق نقاط القوّة والتحدّيات الخاصّة بكل معلّمة ضمن قسم \"الطاقم\"، وتُشكّل هذه المعطيات مجتمعة أساسًا لبلورة أولويّات التدريب والمرافقة ضمن خطّة عمل المدرّبة الموضّحة في القسم التالي.";
+
+    this.state.summary.text = text;
+    this.render();
+  },
+
   // ===== إدارة المسؤول وإرسال المسوحات =====
   openAdminLogin(){
     this.state.ui.adminOpen = true;
@@ -1352,7 +1393,12 @@ const App = {
     <div>
       <h2 class="text-xl font-bold text-teal-800 mb-4">6. الخلاصة العامّة للمسح (نقاط القوّة، التحدّيات، والتّبصّرات)</h2>
       <div class="card p-5">
-        <textarea rows="10" onchange="App.setSummary(this.value)">${this.state.summary.text}</textarea>
+        <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
+          <h3 class="font-bold text-teal-700">خلاصة عامّة مبنيّة على معطيات المنهج والاستراتيجيات المرفقة</h3>
+          <button onclick="App.generateSummary()" class="no-print bg-teal-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-teal-700">توليد اقتراح تلقائي</button>
+        </div>
+        <p class="text-stone-500 text-xs mb-3 no-print">الاقتراح يُبنى تلقائيًا من معطيات المدرسة ومؤشرات "الطاقم" و"الصفوف"، بلغة معياريّة تربويّة، ويمكن تعديله بحريّة قبل التصدير.</p>
+        <textarea rows="10" onchange="App.setSummary(this.value)" placeholder="اضغطي على 'توليد اقتراح تلقائي' لبناء الخلاصة، أو اكتبي هنا مباشرةً">${this.state.summary.text}</textarea>
       </div>
     </div>`;
   },
