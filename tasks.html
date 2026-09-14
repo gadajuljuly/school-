@@ -154,14 +154,17 @@
   .menu-panel button.danger { color: var(--danger); }
 
   .sheets-row {
-    padding: 0 12px;
+    background: var(--paper-alt);
+    border-bottom: 1px solid var(--rule);
+    padding: 8px 10px 0;
     display: flex;
     align-items: flex-end;
+    gap: 6px;
   }
   .sheets-bar {
     display: flex;
     align-items: flex-end;
-    gap: 4px;
+    gap: 2px;
     overflow-x: auto;
     flex: 1;
     scrollbar-width: none;
@@ -169,21 +172,29 @@
   .sheets-bar::-webkit-scrollbar { display: none; }
   .sheet-tab {
     flex-shrink: 0;
-    clip-path: polygon(16% 0, 84% 0, 100% 100%, 0% 100%);
-    padding: 9px 20px 8px;
-    background: var(--paper-alt);
+    padding: 7px 16px;
+    margin-bottom: -1px;
+    background: transparent;
     color: var(--ink-muted);
-    font-size: 0.85rem;
+    font-size: 0.83rem;
     cursor: pointer;
     white-space: nowrap;
-    max-width: 140px;
+    max-width: 130px;
     overflow: hidden;
     text-overflow: ellipsis;
+    border: 1px solid transparent;
+    border-bottom: 1px solid var(--rule);
+    border-radius: 5px 5px 0 0;
+  }
+  .sheet-tab:hover:not(.active) {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--ink);
   }
   .sheet-tab.active {
     background: var(--paper);
     color: var(--ink);
     font-weight: 700;
+    border-color: var(--rule) var(--rule) var(--paper);
   }
   .sheet-tab input.rename-input {
     border: none;
@@ -196,17 +207,25 @@
   }
   .add-sheet-tab {
     flex-shrink: 0;
-    clip-path: polygon(16% 0, 84% 0, 100% 100%, 0% 100%);
-    padding: 9px 16px 8px;
+    width: 28px;
+    height: 28px;
+    margin-bottom: 1px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     background: none;
-    border: none;
+    border: 1px solid transparent;
+    border-radius: 5px;
     color: var(--accent);
-    font-size: 1rem;
+    font-size: 1.05rem;
     font-weight: 700;
     cursor: pointer;
     font-family: inherit;
   }
-  .add-sheet-tab:hover { background: var(--paper-alt); }
+  .add-sheet-tab:hover {
+    background: rgba(0, 0, 0, 0.06);
+    border-color: var(--rule);
+  }
 
   .ruled-body {
     position: relative;
@@ -547,6 +566,12 @@
       tab.textContent = sheet.name;
       tab.title = sheet.name;
       tab.addEventListener("click", function () { selectSheet(sheet.id); });
+      tab.addEventListener("dblclick", function (e) {
+        e.stopPropagation();
+        data.activeSheetId = sheet.id;
+        state.renamingSheetId = sheet.id;
+        render();
+      });
       sheetsBar.appendChild(tab);
     });
   }
