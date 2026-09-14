@@ -14,6 +14,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700&family=Rubik:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root {
     --desk: #e7e2d3;
@@ -681,10 +682,20 @@
     } catch (e) {}
   }
 
-  var dbRef = null;
+  var SUPABASE_URL = "https://oqvqrqhtywcqdnftaovk.supabase.co";
+  var SUPABASE_KEY = "sb_publishable_K6dRlzpWSRV7O-Dy_C8ypA_Yep2P3x7";
+  var SUPABASE_ROW_ID = "main";
+  var supabaseClient = (window.supabase && SUPABASE_URL && SUPABASE_KEY)
+    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+    : null;
+
   function saveData() {
     saveLocalData();
-    if (dbRef) dbRef.set(data).catch(function () {});
+    if (supabaseClient) {
+      supabaseClient.from("app_state")
+        .upsert({ id: SUPABASE_ROW_ID, data: data, updated_at: new Date().toISOString() })
+        .then(function () {}, function () {});
+    }
   }
 
   var data = defaultData();
@@ -1178,39 +1189,21 @@
     render();
   }
 
-  function startWithDb(dbApi) {
-    var ref = dbApi.doc("app/state");
-    ref.get().then(function (snap) {
-      var remote = snap.exists ? normalizeData(snap.data()) : null;
-      data = remote || loadFromLocalOrDefault();
-      dbRef = ref;
-      var rolled = applyDailyRollover(data);
-      if (rolled || !remote) saveData();
-
-      ref.onSnapshot(function (snap2) {
-        if (snap2.metadata.hasPendingWrites) return;
-        if (state.editingTaskId || state.renamingSheetId) return;
-        var incoming = normalizeData(snap2.data());
-        if (!incoming) return;
-        data = incoming;
-        if (!data.sheets.some(function (s) { return s.id === data.activeSheetId; })) {
-          data.activeSheetId = data.sheets[0].id;
-        }
+  function startWithSupabase() {
+    supabaseClient.from("app_state").select("data").eq("id", SUPABASE_ROW_ID).maybeSingle()
+      .then(function (result) {
+        var row = result && result.data;
+        var remote = row && row.data ? normalizeData(row.data) : null;
+        data = remote || loadFromLocalOrDefault();
+        var rolled = applyDailyRollover(data);
+        if (rolled || !remote) saveData();
         render();
-      }, function () {});
-
-      render();
-    }).catch(startLocalOnly);
+      }, startLocalOnly)
+      .catch(startLocalOnly);
   }
 
-  if (window.claude && window.claude.use) {
-    window.claude.use("db").then(function (dbApi) {
-      if (dbApi) {
-        startWithDb(dbApi);
-      } else {
-        startLocalOnly();
-      }
-    }).catch(startLocalOnly);
+  if (supabaseClient) {
+    startWithSupabase();
   } else {
     startLocalOnly();
   }
