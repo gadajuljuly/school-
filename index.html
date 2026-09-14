@@ -274,6 +274,10 @@ const App = {
       this.addStudentRow();
     }
     this.render();
+    if(this.state.general.schoolName && this.state.general.schoolName.trim()){
+      this._draftCheckDone = true;
+      this.tryLoadDraftForSchool(this.state.general.schoolName);
+    }
   },
 
   saveToLocalStorage(){
