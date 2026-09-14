@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>גיליונות משימות</title>
+<title>פרויקטי משימות</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700&family=Rubik:wght@600;700&display=swap" rel="stylesheet">
@@ -380,9 +380,9 @@
             </div>
           </div>
           <div class="menu-section">
-            <div class="menu-label">הגיליון הנוכחי</div>
+            <div class="menu-label">הפרויקט הנוכחי</div>
             <button id="renameSheetBtn">שינוי שם</button>
-            <button id="deleteSheetBtn" class="danger">מחיקת גיליון</button>
+            <button id="deleteSheetBtn" class="danger">מחיקת פרויקט</button>
           </div>
         </div>
       </div>
@@ -390,12 +390,12 @@
 
     <div class="sheets-row">
       <div class="sheets-bar" id="sheetsBar"></div>
-      <button class="add-sheet-tab" id="addSheetBtn" title="הוספת גיליון">+</button>
+      <button class="add-sheet-tab" id="addSheetBtn" title="הוספת פרויקט">+</button>
     </div>
 
     <div class="ruled-body">
       <ol class="task-list" id="taskList"></ol>
-      <div class="empty-state" id="emptyState" style="display:none;">אין שורות בגיליון הזה עדיין</div>
+      <div class="empty-state" id="emptyState" style="display:none;">אין שורות בפרויקט הזה עדיין</div>
       <form class="add-row" id="addForm">
         <span class="row-number" id="nextNumber">1-</span>
         <input type="text" id="taskInput" placeholder="כתבו כאן שורה חדשה..." maxlength="200" required autocomplete="off">
@@ -421,7 +421,7 @@
   function defaultData() {
     var sheetId = uid();
     return {
-      sheets: [{ id: sheetId, name: "גיליון 1", tasks: [] }],
+      sheets: [{ id: sheetId, name: "פרויקט 1", tasks: [] }],
       activeSheetId: sheetId
     };
   }
@@ -472,7 +472,7 @@
   }
 
   function addSheet() {
-    var name = "גיליון " + (data.sheets.length + 1);
+    var name = "פרויקט " + (data.sheets.length + 1);
     var sheet = { id: uid(), name: name, tasks: [] };
     data.sheets.push(sheet);
     data.activeSheetId = sheet.id;
@@ -503,11 +503,11 @@
 
   function deleteSheet(id) {
     if (data.sheets.length <= 1) {
-      alert("חייב להישאר לפחות גיליון אחד.");
+      alert("חייב להישאר לפחות פרויקט אחד.");
       return;
     }
     var sheet = data.sheets.find(function (s) { return s.id === id; });
-    var msg = sheet ? "למחוק את הגיליון \"" + sheet.name + "\" ואת כל השורות שבו?" : "למחוק את הגיליון?";
+    var msg = sheet ? "למחוק את הפרויקט \"" + sheet.name + "\" ואת כל השורות שבו?" : "למחוק את הפרויקט?";
     if (!confirm(msg)) return;
     data.sheets = data.sheets.filter(function (s) { return s.id !== id; });
     if (data.activeSheetId === id) {
