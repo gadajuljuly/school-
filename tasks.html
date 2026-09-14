@@ -316,6 +316,12 @@
     flex-shrink: 0;
   }
   .task-actions button:hover { opacity: 1; color: var(--danger); }
+  .row-date {
+    flex-shrink: 0;
+    font-size: 0.72rem;
+    color: var(--ink-muted);
+    font-variant-numeric: tabular-nums;
+  }
 
   .add-row {
     display: flex;
@@ -482,6 +488,31 @@
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   }
 
+  function todayISO() {
+    var d = new Date();
+    var y = d.getFullYear();
+    var m = String(d.getMonth() + 1).padStart(2, "0");
+    var day = String(d.getDate()).padStart(2, "0");
+    return y + "-" + m + "-" + day;
+  }
+  function isoToDisplay(iso) {
+    var parts = iso.split("-");
+    return parts[2] + "/" + parts[1];
+  }
+
+  function applyDailyRollover(data) {
+    var today = todayISO();
+    if (data.lastRolloverDate === today) return false;
+    data.sheets.forEach(function (sheet) {
+      (sheet.tasks || []).forEach(function (t) {
+        if (typeof t.date !== "string") t.date = today;
+        if (t.status !== 2) t.date = today;
+      });
+    });
+    data.lastRolloverDate = today;
+    return true;
+  }
+
   function defaultData() {
     var sheetId = uid();
     return {
@@ -516,6 +547,7 @@
   }
 
   var data = loadData();
+  if (applyDailyRollover(data)) saveData();
   var state = { filter: "all", renamingSheetId: null, menuOpen: false, editingTaskId: null };
 
   var dateLabel = document.getElementById("dateLabel");
@@ -697,6 +729,7 @@
       text: text,
       status: 0,
       urgent: false,
+      date: todayISO(),
       createdAt: Date.now()
     });
     saveData();
@@ -853,6 +886,13 @@
 
       li.appendChild(lead);
       li.appendChild(textEl);
+      if (t.status === 2 && t.date) {
+        var dateBadge = document.createElement("span");
+        dateBadge.className = "row-date";
+        dateBadge.textContent = isoToDisplay(t.date);
+        dateBadge.title = "הושלם בתאריך " + isoToDisplay(t.date);
+        li.appendChild(dateBadge);
+      }
       li.appendChild(actions);
       taskList.appendChild(li);
 
