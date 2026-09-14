@@ -128,6 +128,11 @@
     color: var(--ink-muted);
     font-variant-numeric: tabular-nums;
   }
+  .icon-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
   .menu-btn {
     width: 34px;
     height: 34px;
@@ -145,7 +150,7 @@
 
   .menu-panel {
     position: absolute;
-    top: 42px;
+    top: 80px;
     left: 0;
     background: var(--paper);
     border: 1px solid var(--rule);
@@ -156,6 +161,71 @@
     z-index: 5;
   }
   .menu-panel[hidden] { display: none; }
+
+  .search-panel {
+    position: absolute;
+    top: 80px;
+    left: 0;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    box-shadow: 0 10px 26px var(--shadow);
+    padding: 10px;
+    width: 260px;
+    max-width: calc(100vw - 40px);
+    z-index: 6;
+  }
+  .search-panel[hidden] { display: none; }
+  .search-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    background: var(--paper-alt);
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.88rem;
+    outline: none;
+  }
+  .search-input:focus { border-color: var(--accent); }
+  .search-results {
+    margin-top: 8px;
+    max-height: 260px;
+    overflow-y: auto;
+  }
+  .search-empty {
+    color: var(--ink-muted);
+    font-size: 0.82rem;
+    padding: 8px 2px;
+  }
+  .search-result {
+    display: block;
+    width: 100%;
+    text-align: right;
+    background: none;
+    border: none;
+    border-radius: 6px;
+    padding: 7px 8px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .search-result:hover { background: var(--paper-alt); }
+  .search-result-text {
+    display: block;
+    color: var(--ink);
+    font-size: 0.88rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .search-result-meta {
+    display: block;
+    color: var(--ink-muted);
+    font-size: 0.72rem;
+    margin-top: 2px;
+    font-variant-numeric: tabular-nums;
+  }
   .menu-section + .menu-section {
     margin-top: 10px;
     padding-top: 10px;
@@ -467,7 +537,14 @@
       </span>
       <div class="head-right">
         <span class="notebook-progress" id="progressText"></span>
-        <button class="menu-btn" id="menuBtn" title="תפריט" aria-haspopup="true" aria-expanded="false">&#9776;</button>
+        <div class="icon-stack">
+          <button class="menu-btn" id="menuBtn" title="תפריט" aria-haspopup="true" aria-expanded="false">&#9776;</button>
+          <button class="menu-btn" id="searchBtn" title="חיפוש משימות" aria-haspopup="true" aria-expanded="false">&#128269;</button>
+        </div>
+        <div class="search-panel" id="searchPanel" hidden>
+          <input type="text" id="searchInput" class="search-input" placeholder="חיפוש משימות בכל הפרויקטים..." autocomplete="off">
+          <div class="search-results" id="searchResults"></div>
+        </div>
         <div class="menu-panel" id="menuPanel" hidden>
           <div class="menu-section">
             <div class="menu-label">תצוגה</div>
@@ -591,7 +668,7 @@
 
   var data = loadData();
   if (applyDailyRollover(data)) saveData();
-  var state = { filter: "all", renamingSheetId: null, menuOpen: false, editingTaskId: null, viewDate: todayISO() };
+  var state = { filter: "all", renamingSheetId: null, menuOpen: false, editingTaskId: null, viewDate: todayISO(), searchOpen: false };
 
   var dateLabel = document.getElementById("dateLabel");
   var sheetsBar = document.getElementById("sheetsBar");
@@ -602,6 +679,10 @@
   var progressText = document.getElementById("progressText");
   var menuBtn = document.getElementById("menuBtn");
   var menuPanel = document.getElementById("menuPanel");
+  var searchBtn = document.getElementById("searchBtn");
+  var searchPanel = document.getElementById("searchPanel");
+  var searchInput = document.getElementById("searchInput");
+  var searchResults = document.getElementById("searchResults");
   var filterButtons = document.querySelectorAll(".filters button");
   var renameSheetBtn = document.getElementById("renameSheetBtn");
   var deleteSheetBtn = document.getElementById("deleteSheetBtn");
@@ -712,6 +793,7 @@
 
   menuBtn.addEventListener("click", function (e) {
     e.stopPropagation();
+    if (!state.menuOpen) closeSearch();
     state.menuOpen = !state.menuOpen;
     render();
   });
@@ -719,6 +801,89 @@
     if (state.menuOpen && !menuPanel.contains(e.target) && e.target !== menuBtn) {
       state.menuOpen = false;
       render();
+    }
+  });
+
+  function runSearch(query) {
+    searchResults.innerHTML = "";
+    var q = query.trim().toLowerCase();
+    if (!q) {
+      searchResults.innerHTML = '<div class="search-empty">הקלידו כדי לחפש</div>';
+      return;
+    }
+    var matches = [];
+    data.sheets.forEach(function (sheet) {
+      sheet.tasks.forEach(function (t) {
+        if (t.text.toLowerCase().indexOf(q) !== -1) {
+          matches.push({ task: t, sheetId: sheet.id, sheetName: sheet.name });
+        }
+      });
+    });
+    matches.sort(function (a, b) { return b.task.createdAt - a.task.createdAt; });
+    matches = matches.slice(0, 30);
+    if (!matches.length) {
+      searchResults.innerHTML = '<div class="search-empty">לא נמצאו תוצאות</div>';
+      return;
+    }
+    matches.forEach(function (m) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "search-result";
+
+      var textEl = document.createElement("span");
+      textEl.className = "search-result-text";
+      textEl.textContent = m.task.text;
+
+      var metaEl = document.createElement("span");
+      metaEl.className = "search-result-meta";
+      metaEl.textContent = m.sheetName + " · " + isoToFullDisplay(m.task.date);
+
+      btn.appendChild(textEl);
+      btn.appendChild(metaEl);
+      btn.addEventListener("click", function () {
+        data.activeSheetId = m.sheetId;
+        state.viewDate = m.task.date;
+        state.filter = "all";
+        closeSearch();
+        render();
+      });
+      searchResults.appendChild(btn);
+    });
+  }
+
+  function openSearch() {
+    state.searchOpen = true;
+    searchPanel.hidden = false;
+    searchBtn.setAttribute("aria-expanded", "true");
+    runSearch(searchInput.value);
+    searchInput.focus();
+  }
+  function closeSearch() {
+    state.searchOpen = false;
+    searchPanel.hidden = true;
+    searchBtn.setAttribute("aria-expanded", "false");
+  }
+
+  searchBtn.addEventListener("click", function (e) {
+    e.stopPropagation();
+    if (state.searchOpen) {
+      closeSearch();
+    } else {
+      state.menuOpen = false;
+      menuPanel.hidden = true;
+      menuBtn.setAttribute("aria-expanded", "false");
+      openSearch();
+    }
+  });
+  searchInput.addEventListener("click", function (e) { e.stopPropagation(); });
+  searchInput.addEventListener("input", function () { runSearch(searchInput.value); });
+  searchInput.addEventListener("keydown", function (e) {
+    e.stopPropagation();
+    if (e.key === "Escape") closeSearch();
+  });
+  document.addEventListener("click", function (e) {
+    if (state.searchOpen && !searchPanel.contains(e.target) && e.target !== searchBtn) {
+      closeSearch();
     }
   });
 
