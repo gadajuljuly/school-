@@ -238,32 +238,36 @@
 
   ol.task-list {
     list-style: none;
-    counter-reset: rownum;
     margin: 0;
     padding: 0;
   }
   li.task {
-    counter-increment: rownum;
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 6px;
     height: 36px;
     line-height: 36px;
     cursor: pointer;
   }
-  li.task::before {
-    content: counter(rownum) "-";
-    font-family: "Rubik", "Assistant", sans-serif;
-    font-weight: 700;
-    color: var(--ink-muted);
+  .row-check {
+    width: 18px;
+    height: 16px;
     flex-shrink: 0;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+  }
+  .row-check svg {
+    width: 100%;
+    height: 100%;
+    display: block;
   }
   li.task.done { cursor: pointer; }
   li.task.done .task-text {
     text-decoration: line-through;
     color: var(--ink-muted);
   }
-  li.task.done::before { opacity: 0.55; }
+  li.task.done .row-check { opacity: 0.5; }
   .priority-dot {
     width: 7px;
     height: 7px;
@@ -294,17 +298,12 @@
 
   .add-row {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 6px;
     height: 36px;
     line-height: 36px;
   }
-  .add-row .row-number {
-    font-family: "Rubik", "Assistant", sans-serif;
-    font-weight: 700;
-    color: var(--ink-muted);
-    flex-shrink: 0;
-  }
+  .add-row .row-check { opacity: 0.4; }
   .add-row input[type="text"] {
     flex: 1;
     min-width: 0;
@@ -383,7 +382,7 @@
       <ol class="task-list" id="taskList"></ol>
       <div class="empty-state" id="emptyState" style="display:none;">אין שורות בפרויקט הזה עדיין</div>
       <form class="add-row" id="addForm">
-        <span class="row-number" id="nextNumber">1-</span>
+        <span class="row-check" aria-hidden="true"><svg viewBox="0 0 18 16" xmlns="http://www.w3.org/2000/svg"><path d="M2.5 8.5c1.3 1.6 2.4 3 3 3.9C7.7 8.8 10.6 4.6 15 1.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
         <input type="text" id="taskInput" placeholder="כתבו כאן שורה חדשה..." maxlength="200" required autocomplete="off">
         <select id="prioritySelect" title="עדיפות">
           <option value="medium">בינונית</option>
@@ -399,6 +398,7 @@
 <script>
 (function () {
   var STORAGE_KEY = "daily-tasks-sheets-v1";
+  var ROW_CHECK_SVG = '<svg viewBox="0 0 18 16" xmlns="http://www.w3.org/2000/svg"><path d="M2.5 8.5c1.3 1.6 2.4 3 3 3.9C7.7 8.8 10.6 4.6 15 1.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
   function uid() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -433,7 +433,6 @@
   var taskInput = document.getElementById("taskInput");
   var prioritySelect = document.getElementById("prioritySelect");
   var addForm = document.getElementById("addForm");
-  var nextNumber = document.getElementById("nextNumber");
   var taskList = document.getElementById("taskList");
   var emptyState = document.getElementById("emptyState");
   var progressText = document.getElementById("progressText");
@@ -646,6 +645,11 @@
       li.className = "task" + (t.done ? " done" : "");
       li.addEventListener("click", function () { toggleDone(t.id); });
 
+      var check = document.createElement("span");
+      check.className = "row-check";
+      check.setAttribute("aria-hidden", "true");
+      check.innerHTML = ROW_CHECK_SVG;
+
       var dot = document.createElement("span");
       dot.className = "priority-dot priority-" + t.priority;
       dot.title = "עדיפות " + PRIORITY_LABEL[t.priority];
@@ -666,6 +670,7 @@
       });
       actions.appendChild(delBtn);
 
+      li.appendChild(check);
       li.appendChild(dot);
       li.appendChild(textEl);
       li.appendChild(actions);
@@ -673,7 +678,6 @@
     });
 
     emptyState.style.display = visible.length ? "none" : "block";
-    nextNumber.textContent = (sheetTasks.length + 1) + "-";
 
     var total = sheetTasks.length;
     var doneCount = sheetTasks.filter(function (t) { return t.done; }).length;
