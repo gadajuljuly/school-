@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ניהול משימות יומיות</title>
+<style>
+  :root {
+    --bg: #f5f6fa;
+    --card: #ffffff;
+    --text: #1f2430;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --primary: #4f46e5;
+    --primary-dark: #4338ca;
+    --danger: #ef4444;
+    --success: #16a34a;
+    --high: #ef4444;
+    --medium: #f59e0b;
+    --low: #22c55e;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 16px;
+  }
+  .app {
+    max-width: 640px;
+    margin: 0 auto;
+  }
+  header {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  header h1 {
+    font-size: 1.6rem;
+    margin: 0 0 4px;
+  }
+  header p {
+    color: var(--muted);
+    margin: 0;
+    font-size: 0.9rem;
+  }
+  .date-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    gap: 8px;
+  }
+  .date-bar button {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    width: 34px;
+    height: 34px;
+    font-size: 1rem;
+    cursor: pointer;
+    color: var(--text);
+  }
+  .date-bar .date-label {
+    font-weight: 600;
+    flex: 1;
+    text-align: center;
+    cursor: pointer;
+  }
+  .date-bar input[type="date"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    width: 0;
+    height: 0;
+  }
+  .today-btn {
+    font-size: 0.75rem;
+    border-radius: 8px;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    background: none;
+    padding: 4px 8px;
+    cursor: pointer;
+    width: auto !important;
+    height: auto !important;
+  }
+  .progress {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 16px;
+  }
+  .progress-top {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .progress-bar {
+    height: 8px;
+    background: var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .progress-bar > div {
+    height: 100%;
+    background: var(--success);
+    transition: width 0.25s ease;
+  }
+  form.add-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 16px;
+  }
+  .add-form .row {
+    display: flex;
+    gap: 8px;
+  }
+  .add-form input[type="text"] {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.95rem;
+  }
+  .add-form select {
+    padding: 10px 8px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: white;
+    font-size: 0.9rem;
+  }
+  .add-form button.submit {
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-size: 0.95rem;
+    cursor: pointer;
+  }
+  .add-form button.submit:hover { background: var(--primary-dark); }
+
+  .filters {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+  .filters button {
+    flex: 1;
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .filters button.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+  }
+
+  ul.task-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  li.task {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+  li.task.done .task-text {
+    text-decoration: line-through;
+    color: var(--muted);
+  }
+  .checkbox {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    flex-shrink: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    padding: 0;
+  }
+  li.task.done .checkbox {
+    background: var(--success);
+    border-color: var(--success);
+    color: white;
+  }
+  .priority-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .priority-high { background: var(--high); }
+  .priority-medium { background: var(--medium); }
+  .priority-low { background: var(--low); }
+
+  .task-body {
+    flex: 1;
+    min-width: 0;
+  }
+  .task-text {
+    font-size: 0.95rem;
+    word-break: break-word;
+  }
+  .task-meta {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .task-actions button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    color: var(--muted);
+    padding: 4px;
+  }
+  .task-actions button:hover { color: var(--danger); }
+
+  .empty-state {
+    text-align: center;
+    color: var(--muted);
+    padding: 30px 10px;
+    font-size: 0.9rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12141c;
+      --card: #1c1f2a;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --border: #2c303d;
+    }
+    .add-form select { background: #1c1f2a; color: var(--text); }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>ניהול משימות יומיות</h1>
+    <p>סדר, עקוב והשלם את המשימות שלך כל יום</p>
+  </header>
+
+  <div class="date-bar">
+    <button id="prevDay" title="יום קודם">&#8250;</button>
+    <div style="flex:1; display:flex; align-items:center; justify-content:center; gap:8px; position:relative;">
+      <span class="date-label" id="dateLabel"></span>
+      <input type="date" id="datePicker">
+      <button class="today-btn" id="todayBtn">היום</button>
+    </div>
+    <button id="nextDay" title="יום הבא">&#8249;</button>
+  </div>
+
+  <div class="progress">
+    <div class="progress-top">
+      <span id="progressText">0 מתוך 0 הושלמו</span>
+      <span id="progressPercent">0%</span>
+    </div>
+    <div class="progress-bar"><div id="progressFill" style="width:0%"></div></div>
+  </div>
+
+  <form class="add-form" id="addForm">
+    <div class="row">
+      <input type="text" id="taskInput" placeholder="הוסף משימה חדשה..." maxlength="200" required autocomplete="off">
+      <select id="prioritySelect" title="עדיפות">
+        <option value="medium">בינונית</option>
+        <option value="high">גבוהה</option>
+        <option value="low">נמוכה</option>
+      </select>
+    </div>
+    <button type="submit" class="submit">הוספת משימה</button>
+  </form>
+
+  <div class="filters">
+    <button data-filter="all" class="active">הכל</button>
+    <button data-filter="active">פעילות</button>
+    <button data-filter="done">הושלמו</button>
+  </div>
+
+  <ul class="task-list" id="taskList"></ul>
+  <div class="empty-state" id="emptyState" style="display:none;">אין משימות ליום הזה 🎉</div>
+</div>
+
+<script>
+(function () {
+  var STORAGE_KEY = "daily-tasks-v1";
+  var state = {
+    date: formatDate(new Date()),
+    filter: "all"
+  };
+
+  function loadTasks() {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    } catch (e) {
+      return [];
+    }
+  }
+  function saveTasks(tasks) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+  }
+  var tasks = loadTasks();
+
+  function formatDate(d) {
+    var y = d.getFullYear();
+    var m = String(d.getMonth() + 1).padStart(2, "0");
+    var day = String(d.getDate()).padStart(2, "0");
+    return y + "-" + m + "-" + day;
+  }
+  function parseDate(str) {
+    var parts = str.split("-");
+    return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  }
+  var HEBREW_WEEKDAYS = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
+  var HEBREW_MONTHS = ["ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"];
+  function formatLabel(str) {
+    var d = parseDate(str);
+    var today = formatDate(new Date());
+    var label = HEBREW_WEEKDAYS[d.getDay()] + ", " + d.getDate() + " ב" + HEBREW_MONTHS[d.getMonth()];
+    if (str === today) label = "היום · " + label;
+    return label;
+  }
+
+  function uid() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  }
+
+  var taskInput = document.getElementById("taskInput");
+  var prioritySelect = document.getElementById("prioritySelect");
+  var addForm = document.getElementById("addForm");
+  var taskList = document.getElementById("taskList");
+  var emptyState = document.getElementById("emptyState");
+  var dateLabel = document.getElementById("dateLabel");
+  var datePicker = document.getElementById("datePicker");
+  var progressText = document.getElementById("progressText");
+  var progressPercent = document.getElementById("progressPercent");
+  var progressFill = document.getElementById("progressFill");
+  var filterButtons = document.querySelectorAll(".filters button");
+
+  addForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var text = taskInput.value.trim();
+    if (!text) return;
+    tasks.push({
+      id: uid(),
+      text: text,
+      done: false,
+      priority: prioritySelect.value,
+      date: state.date,
+      createdAt: Date.now()
+    });
+    saveTasks(tasks);
+    taskInput.value = "";
+    render();
+    taskInput.focus();
+  });
+
+  filterButtons.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      filterButtons.forEach(function (b) { b.classList.remove("active"); });
+      btn.classList.add("active");
+      state.filter = btn.dataset.filter;
+      render();
+    });
+  });
+
+  document.getElementById("prevDay").addEventListener("click", function () {
+    shiftDate(-1);
+  });
+  document.getElementById("nextDay").addEventListener("click", function () {
+    shiftDate(1);
+  });
+  document.getElementById("todayBtn").addEventListener("click", function () {
+    state.date = formatDate(new Date());
+    render();
+  });
+  dateLabel.addEventListener("click", function () {
+    datePicker.value = state.date;
+    if (datePicker.showPicker) {
+      try { datePicker.showPicker(); } catch (e) { datePicker.focus(); }
+    } else {
+      datePicker.focus();
+    }
+  });
+  datePicker.addEventListener("change", function () {
+    if (datePicker.value) {
+      state.date = datePicker.value;
+      render();
+    }
+  });
+
+  function shiftDate(delta) {
+    var d = parseDate(state.date);
+    d.setDate(d.getDate() + delta);
+    state.date = formatDate(d);
+    render();
+  }
+
+  function toggleDone(id) {
+    var t = tasks.find(function (x) { return x.id === id; });
+    if (t) {
+      t.done = !t.done;
+      saveTasks(tasks);
+      render();
+    }
+  }
+
+  function removeTask(id) {
+    tasks = tasks.filter(function (x) { return x.id !== id; });
+    saveTasks(tasks);
+    render();
+  }
+
+  var PRIORITY_LABEL = { high: "גבוהה", medium: "בינונית", low: "נמוכה" };
+
+  function render() {
+    dateLabel.textContent = formatLabel(state.date);
+
+    var dayTasks = tasks.filter(function (t) { return t.date === state.date; });
+    dayTasks.sort(function (a, b) {
+      var order = { high: 0, medium: 1, low: 2 };
+      if (a.done !== b.done) return a.done ? 1 : -1;
+      if (order[a.priority] !== order[b.priority]) return order[a.priority] - order[b.priority];
+      return a.createdAt - b.createdAt;
+    });
+
+    var visible = dayTasks.filter(function (t) {
+      if (state.filter === "active") return !t.done;
+      if (state.filter === "done") return t.done;
+      return true;
+    });
+
+    taskList.innerHTML = "";
+    visible.forEach(function (t) {
+      var li = document.createElement("li");
+      li.className = "task" + (t.done ? " done" : "");
+
+      var checkBtn = document.createElement("button");
+      checkBtn.className = "checkbox";
+      checkBtn.innerHTML = t.done ? "✓" : "";
+      checkBtn.title = t.done ? "סמן כלא הושלם" : "סמן כהושלם";
+      checkBtn.addEventListener("click", function () { toggleDone(t.id); });
+
+      var dot = document.createElement("span");
+      dot.className = "priority-dot priority-" + t.priority;
+      dot.title = "עדיפות " + PRIORITY_LABEL[t.priority];
+
+      var body = document.createElement("div");
+      body.className = "task-body";
+      var textEl = document.createElement("div");
+      textEl.className = "task-text";
+      textEl.textContent = t.text;
+      var metaEl = document.createElement("div");
+      metaEl.className = "task-meta";
+      metaEl.textContent = "עדיפות " + PRIORITY_LABEL[t.priority];
+      body.appendChild(textEl);
+      body.appendChild(metaEl);
+
+      var actions = document.createElement("div");
+      actions.className = "task-actions";
+      var delBtn = document.createElement("button");
+      delBtn.innerHTML = "🗑";
+      delBtn.title = "מחיקה";
+      delBtn.addEventListener("click", function () { removeTask(t.id); });
+      actions.appendChild(delBtn);
+
+      li.appendChild(checkBtn);
+      li.appendChild(dot);
+      li.appendChild(body);
+      li.appendChild(actions);
+      taskList.appendChild(li);
+    });
+
+    emptyState.style.display = visible.length ? "none" : "block";
+
+    var total = dayTasks.length;
+    var doneCount = dayTasks.filter(function (t) { return t.done; }).length;
+    var pct = total ? Math.round((doneCount / total) * 100) : 0;
+    progressText.textContent = doneCount + " מתוך " + total + " הושלמו";
+    progressPercent.textContent = pct + "%";
+    progressFill.style.width = pct + "%";
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
