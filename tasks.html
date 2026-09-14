@@ -249,7 +249,7 @@
     line-height: 36px;
     cursor: pointer;
   }
-  .row-check {
+  .row-mark {
     width: 18px;
     height: 16px;
     flex-shrink: 0;
@@ -257,7 +257,7 @@
     display: flex;
     align-items: center;
   }
-  .row-check svg {
+  .row-mark svg {
     width: 100%;
     height: 100%;
     display: block;
@@ -267,7 +267,7 @@
     text-decoration: line-through;
     color: var(--ink-muted);
   }
-  li.task.done .row-check { opacity: 0.5; }
+  li.task.done .row-mark { opacity: 0.5; }
   .priority-dot {
     width: 7px;
     height: 7px;
@@ -303,7 +303,7 @@
     height: 36px;
     line-height: 36px;
   }
-  .add-row .row-check { opacity: 0.4; }
+  .add-row .row-mark { opacity: 0.4; }
   .add-row input[type="text"] {
     flex: 1;
     min-width: 0;
@@ -382,7 +382,7 @@
       <ol class="task-list" id="taskList"></ol>
       <div class="empty-state" id="emptyState" style="display:none;">אין שורות בפרויקט הזה עדיין</div>
       <form class="add-row" id="addForm">
-        <span class="row-check" aria-hidden="true"><svg viewBox="0 0 18 16" xmlns="http://www.w3.org/2000/svg"><path d="M2.5 8.5c1.3 1.6 2.4 3 3 3.9C7.7 8.8 10.6 4.6 15 1.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span class="row-mark" aria-hidden="true"><svg viewBox="0 0 18 16" xmlns="http://www.w3.org/2000/svg"><path d="M2.5 2 L15.5 13.7 M15.3 2.2 L3 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></span>
         <input type="text" id="taskInput" placeholder="כתבו כאן שורה חדשה..." maxlength="200" required autocomplete="off">
         <select id="prioritySelect" title="עדיפות">
           <option value="medium">בינונית</option>
@@ -398,7 +398,7 @@
 <script>
 (function () {
   var STORAGE_KEY = "daily-tasks-sheets-v1";
-  var ROW_CHECK_SVG = '<svg viewBox="0 0 18 16" xmlns="http://www.w3.org/2000/svg"><path d="M2.5 8.5c1.3 1.6 2.4 3 3 3.9C7.7 8.8 10.6 4.6 15 1.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var ROW_MARK_SVG = '<svg viewBox="0 0 18 16" xmlns="http://www.w3.org/2000/svg"><path d="M2.5 2 L15.5 13.7 M15.3 2.2 L3 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
 
   function uid() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -646,9 +646,9 @@
       li.addEventListener("click", function () { toggleDone(t.id); });
 
       var check = document.createElement("span");
-      check.className = "row-check";
+      check.className = "row-mark";
       check.setAttribute("aria-hidden", "true");
-      check.innerHTML = ROW_CHECK_SVG;
+      check.innerHTML = ROW_MARK_SVG;
 
       var dot = document.createElement("span");
       dot.className = "priority-dot priority-" + t.priority;
