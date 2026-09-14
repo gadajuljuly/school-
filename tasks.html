@@ -645,33 +645,42 @@
     };
   }
 
-  function loadData() {
-    try {
-      var parsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      if (parsed && Array.isArray(parsed.sheets) && parsed.sheets.length) {
-        parsed.sheets.forEach(function (sheet) {
-          (sheet.tasks || []).forEach(function (t) {
-            if (typeof t.status !== "number") {
-              t.status = t.done ? 2 : 0;
-            }
-            if (typeof t.urgent !== "boolean") {
-              t.urgent = t.priority === "high";
-            }
-            delete t.done;
-            delete t.priority;
-          });
-        });
-        return parsed;
-      }
-    } catch (e) {}
-    return defaultData();
+  function normalizeData(parsed) {
+    if (!parsed || !Array.isArray(parsed.sheets) || !parsed.sheets.length) return null;
+    parsed.sheets.forEach(function (sheet) {
+      (sheet.tasks || []).forEach(function (t) {
+        if (typeof t.status !== "number") {
+          t.status = t.done ? 2 : 0;
+        }
+        if (typeof t.urgent !== "boolean") {
+          t.urgent = t.priority === "high";
+        }
+        delete t.done;
+        delete t.priority;
+      });
+    });
+    return parsed;
   }
-  function saveData() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  function loadLocalData() {
+    try {
+      return normalizeData(JSON.parse(localStorage.getItem(STORAGE_KEY)));
+    } catch (e) {
+      return null;
+    }
+  }
+  function saveLocalData() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch (e) {}
   }
 
-  var data = loadData();
-  if (applyDailyRollover(data)) saveData();
+  var dbRef = null;
+  function saveData() {
+    saveLocalData();
+    if (dbRef) dbRef.set(data).catch(function () {});
+  }
+
+  var data = defaultData();
   var state = { filter: "all", renamingSheetId: null, menuOpen: false, editingTaskId: null, viewDate: todayISO(), searchOpen: false };
 
   var dateLabel = document.getElementById("dateLabel");
@@ -1152,7 +1161,52 @@
     progressText.textContent = doneCount + "/" + total + " הושלמו";
   }
 
-  render();
+  function loadFromLocalOrDefault() {
+    return loadLocalData() || defaultData();
+  }
+
+  function startLocalOnly() {
+    data = loadFromLocalOrDefault();
+    if (applyDailyRollover(data)) saveData();
+    render();
+  }
+
+  function startWithDb(dbApi) {
+    var ref = dbApi.doc("app/state");
+    ref.get().then(function (snap) {
+      var remote = snap.exists ? normalizeData(snap.data()) : null;
+      data = remote || loadFromLocalOrDefault();
+      dbRef = ref;
+      var rolled = applyDailyRollover(data);
+      if (rolled || !remote) saveData();
+
+      ref.onSnapshot(function (snap2) {
+        if (snap2.metadata.hasPendingWrites) return;
+        if (state.editingTaskId || state.renamingSheetId) return;
+        var incoming = normalizeData(snap2.data());
+        if (!incoming) return;
+        data = incoming;
+        if (!data.sheets.some(function (s) { return s.id === data.activeSheetId; })) {
+          data.activeSheetId = data.sheets[0].id;
+        }
+        render();
+      }, function () {});
+
+      render();
+    }).catch(startLocalOnly);
+  }
+
+  if (window.claude && window.claude.use) {
+    window.claude.use("db").then(function (dbApi) {
+      if (dbApi) {
+        startWithDb(dbApi);
+      } else {
+        startLocalOnly();
+      }
+    }).catch(startLocalOnly);
+  } else {
+    startLocalOnly();
+  }
 })();
 </script>
 </body>
