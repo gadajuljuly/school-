@@ -277,7 +277,7 @@
   .sheets-bar::-webkit-scrollbar { display: none; }
   .sheet-tab {
     flex-shrink: 0;
-    padding: 7px 16px;
+    padding: 7px 16px 7px 22px;
     margin-bottom: -1px;
     background: transparent;
     color: var(--ink-muted);
@@ -290,6 +290,7 @@
     border: 1px solid transparent;
     border-bottom: 1px solid var(--rule);
     border-radius: 5px 5px 0 0;
+    clip-path: polygon(10px 0, 100% 0, 100% 100%, 0 100%);
   }
   .sheet-tab:hover:not(.active) {
     background: rgba(0, 0, 0, 0.05);
