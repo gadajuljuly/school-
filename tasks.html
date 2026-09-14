@@ -3,14 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ניהול משימות יומיות</title>
+<title>משימות היום</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700&family=Rubik:wght@600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #f5f6fa;
+    --bg: #f4f5fb;
     --card: #ffffff;
-    --text: #1f2430;
-    --muted: #6b7280;
-    --border: #e5e7eb;
+    --text: #23263a;
+    --muted: #6c7089;
+    --border: #e2e4f0;
     --primary: #4f46e5;
     --primary-dark: #4338ca;
     --danger: #ef4444;
@@ -19,10 +22,26 @@
     --medium: #f59e0b;
     --low: #22c55e;
   }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14151f;
+      --card: #1d1f2c;
+      --text: #e7e8f3;
+      --muted: #9a9dbb;
+      --border: #2e3044;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14151f;
+    --card: #1d1f2c;
+    --text: #e7e8f3;
+    --muted: #9a9dbb;
+    --border: #2e3044;
+  }
   * { box-sizing: border-box; }
   body {
     margin: 0;
-    font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+    font-family: "Assistant", "Segoe UI", Tahoma, Arial, sans-serif;
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
@@ -37,8 +56,11 @@
     margin-bottom: 20px;
   }
   header h1 {
-    font-size: 1.6rem;
+    font-family: "Rubik", "Assistant", "Segoe UI", Tahoma, Arial, sans-serif;
+    font-size: 1.7rem;
+    font-weight: 700;
     margin: 0 0 4px;
+    text-wrap: balance;
   }
   header p {
     color: var(--muted);
@@ -135,6 +157,8 @@
     border: 1px solid var(--border);
     border-radius: 8px;
     font-size: 0.95rem;
+    background: var(--card);
+    color: var(--text);
   }
   .add-form select {
     padding: 10px 8px;
@@ -255,15 +279,9 @@
   }
 
   @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #12141c;
-      --card: #1c1f2a;
-      --text: #e5e7eb;
-      --muted: #9ca3af;
-      --border: #2c303d;
-    }
-    .add-form select { background: #1c1f2a; color: var(--text); }
+    :root:not([data-theme="light"]) .add-form select { background: var(--card); color: var(--text); }
   }
+  :root[data-theme="dark"] .add-form select { background: var(--card); color: var(--text); }
 </style>
 </head>
 <body>
