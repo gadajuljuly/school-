@@ -331,7 +331,7 @@ const App = {
       return;
     }
     this._draftCheckDone = true;
-    const { ui, ...persisted } = this.state;
+    const { ui, lastSubmissionId, submitted, ...persisted } = this.state;
     const payload = { school_key: key, updated_at: new Date().toISOString(), data: persisted };
     try{
       const existing = await sbRequest("drafts?select=id&school_key=eq." + encodeURIComponent(key), { method:"GET" });
