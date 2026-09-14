@@ -549,7 +549,7 @@
     data.sheets.forEach(function (sheet) {
       (sheet.tasks || []).forEach(function (t) {
         if (typeof t.date !== "string") t.date = today;
-        if (t.status !== 2) t.date = today;
+        if (t.status !== 2 && t.date < today) t.date = today;
       });
     });
     data.lastRolloverDate = today;
@@ -637,7 +637,6 @@
 
   var dateInput = document.getElementById("dateInput");
   var todayBtn = document.getElementById("todayBtn");
-  dateInput.max = todayISO();
 
   dateInput.addEventListener("change", function () {
     if (dateInput.value) {
@@ -784,7 +783,7 @@
       text: text,
       status: 0,
       urgent: false,
-      date: todayISO(),
+      date: state.viewDate,
       createdAt: Date.now()
     });
     saveData();
@@ -850,11 +849,15 @@
 
     var STATUS_LABEL = { 0: "לחצו כדי לסמן טיפול חלקי", 1: "לחצו כדי לסמן כהושלם", 2: "לחצו כדי לאפס" };
 
-    var isToday = state.viewDate === todayISO();
+    var today = todayISO();
+    var isToday = state.viewDate === today;
+    var isPast = state.viewDate < today;
+    var isFuture = state.viewDate > today;
+    var editable = !isPast;
     dateLabel.textContent = isoToFullDisplay(state.viewDate);
     dateInput.value = state.viewDate;
     todayBtn.hidden = isToday;
-    addForm.hidden = !isToday;
+    addForm.hidden = isPast;
 
     var sheetTasks = activeSheet().tasks.filter(function (t) { return t.date === state.viewDate; });
     var sorted = sheetTasks.slice().sort(function (a, b) {
@@ -870,8 +873,8 @@
     taskList.innerHTML = "";
     visible.forEach(function (t) {
       var li = document.createElement("li");
-      li.className = "task" + (t.status === 1 ? " partial" : "") + (t.status === 2 ? " done" : "") + (isToday ? "" : " readonly");
-      if (isToday) li.addEventListener("click", function () { cycleStatus(t.id); });
+      li.className = "task" + (t.status === 1 ? " partial" : "") + (t.status === 2 ? " done" : "") + (editable ? "" : " readonly");
+      if (editable) li.addEventListener("click", function () { cycleStatus(t.id); });
 
       var check = document.createElement("span");
       check.className = "row-mark";
@@ -883,7 +886,7 @@
       dot.className = "urgent-toggle" + (t.urgent ? " urgent" : "");
       dot.title = t.urgent ? "לחצו לביטול הדחיפות" : "לחצו לסימון כדחוף";
       dot.innerHTML = t.urgent ? URGENT_MARK_SVG : URGENT_CIRCLE_SVG;
-      if (isToday) {
+      if (editable) {
         dot.addEventListener("click", function (e) {
           e.stopPropagation();
           toggleUrgent(t.id);
@@ -891,7 +894,7 @@
       }
 
       var textEl;
-      if (isToday && state.editingTaskId === t.id) {
+      if (editable && state.editingTaskId === t.id) {
         textEl = document.createElement("input");
         textEl.type = "text";
         textEl.className = "task-text-input";
@@ -922,7 +925,7 @@
         textEl.className = "task-text";
         textEl.textContent = t.text;
         textEl.title = t.text;
-        if (isToday) {
+        if (editable) {
           textEl.addEventListener("click", function (e) {
             e.stopPropagation();
             state.editingTaskId = t.id;
@@ -933,7 +936,7 @@
 
       var actions = document.createElement("span");
       actions.className = "task-actions";
-      if (!isToday) actions.hidden = true;
+      if (!editable) actions.hidden = true;
       var delBtn = document.createElement("button");
       delBtn.innerHTML = "&#10005;";
       delBtn.title = "מחיקה";
@@ -968,7 +971,11 @@
       }
     });
 
-    emptyState.textContent = isToday ? "אין שורות בפרויקט הזה עדיין" : "אין שורות מהתאריך הזה בפרויקט הזה";
+    emptyState.textContent = isToday
+      ? "אין שורות בפרויקט הזה עדיין"
+      : isFuture
+        ? "אין עדיין משימות מתוכננות לתאריך הזה"
+        : "אין שורות מהתאריך הזה בפרויקט הזה";
     emptyState.style.display = visible.length ? "none" : "block";
 
     var total = sheetTasks.length;
