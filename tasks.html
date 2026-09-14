@@ -564,8 +564,15 @@
       }
 
       tab.textContent = sheet.name;
-      tab.title = sheet.name;
-      tab.addEventListener("click", function () { selectSheet(sheet.id); });
+      tab.title = sheet.id === data.activeSheetId ? "לחצו לשינוי שם" : sheet.name;
+      tab.addEventListener("click", function () {
+        if (sheet.id === data.activeSheetId) {
+          state.renamingSheetId = sheet.id;
+          render();
+        } else {
+          selectSheet(sheet.id);
+        }
+      });
       tab.addEventListener("dblclick", function (e) {
         e.stopPropagation();
         data.activeSheetId = sheet.id;
