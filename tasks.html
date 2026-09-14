@@ -700,7 +700,9 @@
       delBtn.title = "מחיקה";
       delBtn.addEventListener("click", function (e) {
         e.stopPropagation();
-        removeTask(t.id);
+        if (confirm('למחוק את השורה "' + t.text + '"?')) {
+          removeTask(t.id);
+        }
       });
       actions.appendChild(delBtn);
 
