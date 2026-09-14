@@ -627,12 +627,7 @@
 
   <div class="modal-overlay" id="iosInstallOverlay" hidden>
     <div class="modal-box" role="alertdialog" aria-modal="true">
-      <p class="modal-message">
-        כדי להתקין את האפליקציה באייפון:<br><br>
-        1. הקש על כפתור השיתוף <strong>􀩦</strong> בסרגל הדפדפן (בדרך כלל למטה)<br>
-        2. גלול ובחר <strong>"הוסף למסך הבית"</strong> (Add to Home Screen)<br>
-        3. הקש <strong>"הוסף"</strong> למעלה
-      </p>
+      <p class="modal-message" id="installInstructions"></p>
       <div class="modal-actions">
         <button type="button" class="modal-btn modal-btn-yes" id="iosInstallCloseBtn">הבנתי</button>
       </div>
@@ -783,14 +778,40 @@
 
   (function setupInstallPrompt() {
     var installBtn = document.getElementById("installBtn");
-    var iosOverlay = document.getElementById("iosInstallOverlay");
-    var iosCloseBtn = document.getElementById("iosInstallCloseBtn");
+    var instructionsOverlay = document.getElementById("iosInstallOverlay");
+    var instructionsCloseBtn = document.getElementById("iosInstallCloseBtn");
+    var instructionsText = document.getElementById("installInstructions");
     var deferredPrompt = null;
 
     var isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
     if (isStandalone) return;
 
-    var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+    var ua = navigator.userAgent;
+    var isIOS = /iphone|ipad|ipod/i.test(ua) && !window.MSStream;
+    var isAndroid = /android/i.test(ua);
+
+    var INSTRUCTIONS_IOS =
+      "כדי להתקין את האפליקציה באייפון:<br><br>" +
+      "1. הקש על כפתור השיתוף בסרגל הדפדפן (בדרך כלל למטה, ריבוע עם חץ)<br>" +
+      "2. גלול ובחר ב-טופסים על \"הוסף למסך הבית\" (Add to Home Screen)<br>" +
+      "3. הקש \"הוסף\" למעלה";
+    var INSTRUCTIONS_ANDROID =
+      "כדי להתקין את האפליקציה:<br><br>" +
+      "1. הקש על תפריט שלוש הנקודות (⋮) למעלה בדפדפן<br>" +
+      "2. בחר \"הוספה למסך הבית\" או \"התקן אפליקציה\"<br>" +
+      "3. אשר את ההתקנה";
+    var INSTRUCTIONS_DESKTOP =
+      "כדי להתקין את האפליקציה:<br><br>" +
+      "1. חפש סמל התקנה (⊕ או מחשב עם חץ) בצד ימין של שורת הכתובת<br>" +
+      "2. אם אינך רואה אותו — פתח את תפריט שלוש הנקודות (⋮) ובחר \"התקן אפליקציה\"";
+
+    function fallbackInstructions() {
+      if (isIOS) return INSTRUCTIONS_IOS;
+      if (isAndroid) return INSTRUCTIONS_ANDROID;
+      return INSTRUCTIONS_DESKTOP;
+    }
+
+    installBtn.hidden = false;
 
     window.addEventListener("beforeinstallprompt", function (e) {
       e.preventDefault();
@@ -803,23 +824,20 @@
       deferredPrompt = null;
     });
 
-    if (isIOS) {
-      installBtn.hidden = false;
-    }
-
     installBtn.addEventListener("click", function () {
       if (deferredPrompt) {
         installBtn.hidden = true;
         deferredPrompt.prompt();
         deferredPrompt.userChoice.then(function () { deferredPrompt = null; });
-      } else if (isIOS) {
-        iosOverlay.hidden = false;
+      } else {
+        instructionsText.innerHTML = fallbackInstructions();
+        instructionsOverlay.hidden = false;
       }
     });
 
-    iosCloseBtn.addEventListener("click", function () { iosOverlay.hidden = true; });
-    iosOverlay.addEventListener("click", function (e) {
-      if (e.target === iosOverlay) iosOverlay.hidden = true;
+    instructionsCloseBtn.addEventListener("click", function () { instructionsOverlay.hidden = true; });
+    instructionsOverlay.addEventListener("click", function (e) {
+      if (e.target === instructionsOverlay) instructionsOverlay.hidden = true;
     });
   })();
 
