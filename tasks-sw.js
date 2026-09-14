@@ -1,4 +1,4 @@
-var CACHE_NAME = "tasks-app-v1";
+var CACHE_NAME = "tasks-app-v2";
 var CORE_ASSETS = [
   "./tasks.html",
   "./tasks-manifest.json",
@@ -28,11 +28,33 @@ self.addEventListener("activate", function (event) {
 
 self.addEventListener("fetch", function (event) {
   if (event.request.method !== "GET") return;
+  var isSameOrigin = event.request.url.indexOf(self.location.origin) === 0;
 
+  // The HTML page itself: always try the network first so a new deploy
+  // shows up immediately; fall back to the cached copy only when offline.
+  if (event.request.mode === "navigate" || event.request.destination === "document") {
+    event.respondWith(
+      fetch(event.request).then(function (response) {
+        if (response && response.ok && isSameOrigin) {
+          var copy = response.clone();
+          caches.open(CACHE_NAME).then(function (cache) { cache.put(event.request, copy); });
+        }
+        return response;
+      }).catch(function () {
+        return caches.match(event.request).then(function (cached) {
+          return cached || caches.match("./tasks.html");
+        });
+      })
+    );
+    return;
+  }
+
+  // Static assets (manifest, icons, fonts): serve from cache instantly,
+  // refresh the cache in the background for next time.
   event.respondWith(
     caches.match(event.request).then(function (cached) {
       var network = fetch(event.request).then(function (response) {
-        if (response && response.ok && event.request.url.indexOf(self.location.origin) === 0) {
+        if (response && response.ok && isSameOrigin) {
           var copy = response.clone();
           caches.open(CACHE_NAME).then(function (cache) { cache.put(event.request, copy); });
         }
