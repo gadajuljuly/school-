@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>משימות היום</title>
+<title>גיליונות משימות</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700&family=Rubik:wght@600;700&display=swap" rel="stylesheet">
@@ -67,51 +67,77 @@
     margin: 0;
     font-size: 0.9rem;
   }
-  .date-bar {
+
+  .sheets-bar {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 10px 14px;
-    margin-bottom: 16px;
     gap: 8px;
+    overflow-x: auto;
+    padding: 2px 2px 8px;
+    margin-bottom: 12px;
   }
-  .date-bar button {
-    background: none;
+  .sheets-bar::-webkit-scrollbar { height: 6px; }
+  .sheets-bar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  .sheet-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    padding: 8px 12px;
+    border-radius: 10px;
     border: 1px solid var(--border);
-    border-radius: 8px;
-    width: 34px;
-    height: 34px;
-    font-size: 1rem;
+    background: var(--card);
+    color: var(--muted);
     cursor: pointer;
-    color: var(--text);
+    font-size: 0.9rem;
+    white-space: nowrap;
   }
-  .date-bar .date-label {
+  .sheet-tab.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #ffffff;
     font-weight: 600;
-    flex: 1;
-    text-align: center;
-    cursor: pointer;
   }
-  .date-bar input[type="date"] {
-    position: absolute;
-    opacity: 0;
-    pointer-events: none;
-    width: 0;
-    height: 0;
+  .sheet-tab .tab-name {
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
-  .today-btn {
-    font-size: 0.75rem;
-    border-radius: 8px;
-    border: 1px solid var(--primary);
-    color: var(--primary);
+  .sheet-tab input.rename-input {
+    border: none;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    width: 90px;
+    outline: none;
+    border-bottom: 1px solid currentColor;
+  }
+  .sheet-tab .tab-action {
     background: none;
-    padding: 4px 8px;
+    border: none;
     cursor: pointer;
-    width: auto !important;
-    height: auto !important;
+    color: inherit;
+    font-size: 0.85rem;
+    line-height: 1;
+    padding: 2px;
+    opacity: 0.8;
   }
+  .sheet-tab .tab-action:hover { opacity: 1; }
+  .add-sheet-btn {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px dashed var(--border);
+    background: none;
+    color: var(--primary);
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+  .add-sheet-btn:hover { background: var(--card); }
+
   .progress {
     background: var(--card);
     border: 1px solid var(--border);
@@ -287,19 +313,11 @@
 <body>
 <div class="app">
   <header>
-    <h1>ניהול משימות יומיות</h1>
-    <p>סדר, עקוב והשלם את המשימות שלך כל יום</p>
+    <h1>גיליונות משימות</h1>
+    <p>צרו גיליון לכל נושא או יום, תנו לו שם, ונהלו את השורות שבתוכו</p>
   </header>
 
-  <div class="date-bar">
-    <button id="prevDay" title="יום קודם">&#8250;</button>
-    <div style="flex:1; display:flex; align-items:center; justify-content:center; gap:8px; position:relative;">
-      <span class="date-label" id="dateLabel"></span>
-      <input type="date" id="datePicker">
-      <button class="today-btn" id="todayBtn">היום</button>
-    </div>
-    <button id="nextDay" title="יום הבא">&#8249;</button>
-  </div>
+  <div class="sheets-bar" id="sheetsBar"></div>
 
   <div class="progress">
     <div class="progress-top">
@@ -311,14 +329,14 @@
 
   <form class="add-form" id="addForm">
     <div class="row">
-      <input type="text" id="taskInput" placeholder="הוסף משימה חדשה..." maxlength="200" required autocomplete="off">
+      <input type="text" id="taskInput" placeholder="הוסף שורה חדשה..." maxlength="200" required autocomplete="off">
       <select id="prioritySelect" title="עדיפות">
         <option value="medium">בינונית</option>
         <option value="high">גבוהה</option>
         <option value="low">נמוכה</option>
       </select>
     </div>
-    <button type="submit" class="submit">הוספת משימה</button>
+    <button type="submit" class="submit">הוספת שורה</button>
   </form>
 
   <div class="filters">
@@ -328,78 +346,183 @@
   </div>
 
   <ul class="task-list" id="taskList"></ul>
-  <div class="empty-state" id="emptyState" style="display:none;">אין משימות ליום הזה 🎉</div>
+  <div class="empty-state" id="emptyState" style="display:none;">אין שורות בגיליון הזה עדיין</div>
 </div>
 
 <script>
 (function () {
-  var STORAGE_KEY = "daily-tasks-v1";
-  var state = {
-    date: formatDate(new Date()),
-    filter: "all"
-  };
-
-  function loadTasks() {
-    try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-    } catch (e) {
-      return [];
-    }
-  }
-  function saveTasks(tasks) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-  }
-  var tasks = loadTasks();
-
-  function formatDate(d) {
-    var y = d.getFullYear();
-    var m = String(d.getMonth() + 1).padStart(2, "0");
-    var day = String(d.getDate()).padStart(2, "0");
-    return y + "-" + m + "-" + day;
-  }
-  function parseDate(str) {
-    var parts = str.split("-");
-    return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-  }
-  var HEBREW_WEEKDAYS = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
-  var HEBREW_MONTHS = ["ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"];
-  function formatLabel(str) {
-    var d = parseDate(str);
-    var today = formatDate(new Date());
-    var label = HEBREW_WEEKDAYS[d.getDay()] + ", " + d.getDate() + " ב" + HEBREW_MONTHS[d.getMonth()];
-    if (str === today) label = "היום · " + label;
-    return label;
-  }
+  var STORAGE_KEY = "daily-tasks-sheets-v1";
 
   function uid() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   }
 
+  function defaultData() {
+    var sheetId = uid();
+    return {
+      sheets: [{ id: sheetId, name: "גיליון 1", tasks: [] }],
+      activeSheetId: sheetId
+    };
+  }
+
+  function loadData() {
+    try {
+      var parsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      if (parsed && Array.isArray(parsed.sheets) && parsed.sheets.length) {
+        return parsed;
+      }
+    } catch (e) {}
+    return defaultData();
+  }
+  function saveData() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+
+  var data = loadData();
+  var state = { filter: "all", renamingSheetId: null };
+
+  var sheetsBar = document.getElementById("sheetsBar");
   var taskInput = document.getElementById("taskInput");
   var prioritySelect = document.getElementById("prioritySelect");
   var addForm = document.getElementById("addForm");
   var taskList = document.getElementById("taskList");
   var emptyState = document.getElementById("emptyState");
-  var dateLabel = document.getElementById("dateLabel");
-  var datePicker = document.getElementById("datePicker");
   var progressText = document.getElementById("progressText");
   var progressPercent = document.getElementById("progressPercent");
   var progressFill = document.getElementById("progressFill");
   var filterButtons = document.querySelectorAll(".filters button");
 
+  function activeSheet() {
+    var sheet = data.sheets.find(function (s) { return s.id === data.activeSheetId; });
+    return sheet || data.sheets[0];
+  }
+
+  function addSheet() {
+    var name = "גיליון " + (data.sheets.length + 1);
+    var sheet = { id: uid(), name: name, tasks: [] };
+    data.sheets.push(sheet);
+    data.activeSheetId = sheet.id;
+    state.renamingSheetId = sheet.id;
+    saveData();
+    render();
+  }
+
+  function selectSheet(id) {
+    if (data.activeSheetId === id) return;
+    data.activeSheetId = id;
+    state.filter = "all";
+    filterButtons.forEach(function (b) { b.classList.toggle("active", b.dataset.filter === "all"); });
+    saveData();
+    render();
+  }
+
+  function startRename(id) {
+    state.renamingSheetId = id;
+    render();
+  }
+
+  function commitRename(id, value) {
+    var sheet = data.sheets.find(function (s) { return s.id === id; });
+    var trimmed = value.trim();
+    if (sheet && trimmed) {
+      sheet.name = trimmed.slice(0, 40);
+    }
+    state.renamingSheetId = null;
+    saveData();
+    render();
+  }
+
+  function deleteSheet(id) {
+    if (data.sheets.length <= 1) {
+      alert("חייב להישאר לפחות גיליון אחד.");
+      return;
+    }
+    var sheet = data.sheets.find(function (s) { return s.id === id; });
+    var msg = sheet ? "למחוק את הגיליון \"" + sheet.name + "\" ואת כל השורות שבו?" : "למחוק את הגיליון?";
+    if (!confirm(msg)) return;
+    data.sheets = data.sheets.filter(function (s) { return s.id !== id; });
+    if (data.activeSheetId === id) {
+      data.activeSheetId = data.sheets[0].id;
+    }
+    saveData();
+    render();
+  }
+
+  function renderSheetsBar() {
+    sheetsBar.innerHTML = "";
+    data.sheets.forEach(function (sheet) {
+      var tab = document.createElement("div");
+      tab.className = "sheet-tab" + (sheet.id === data.activeSheetId ? " active" : "");
+
+      if (state.renamingSheetId === sheet.id) {
+        var input = document.createElement("input");
+        input.className = "rename-input";
+        input.value = sheet.name;
+        input.maxLength = 40;
+        input.addEventListener("click", function (e) { e.stopPropagation(); });
+        input.addEventListener("keydown", function (e) {
+          if (e.key === "Enter") { commitRename(sheet.id, input.value); }
+          if (e.key === "Escape") { state.renamingSheetId = null; render(); }
+        });
+        input.addEventListener("blur", function () { commitRename(sheet.id, input.value); });
+        tab.appendChild(input);
+        sheetsBar.appendChild(tab);
+        input.focus();
+        input.select();
+        return;
+      }
+
+      tab.addEventListener("click", function () { selectSheet(sheet.id); });
+
+      var nameEl = document.createElement("span");
+      nameEl.className = "tab-name";
+      nameEl.textContent = sheet.name;
+      tab.appendChild(nameEl);
+
+      if (sheet.id === data.activeSheetId) {
+        var renameBtn = document.createElement("button");
+        renameBtn.className = "tab-action";
+        renameBtn.innerHTML = "✎";
+        renameBtn.title = "שינוי שם הגיליון";
+        renameBtn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          startRename(sheet.id);
+        });
+        tab.appendChild(renameBtn);
+
+        var delBtn = document.createElement("button");
+        delBtn.className = "tab-action";
+        delBtn.innerHTML = "✕";
+        delBtn.title = "מחיקת הגיליון";
+        delBtn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          deleteSheet(sheet.id);
+        });
+        tab.appendChild(delBtn);
+      }
+
+      sheetsBar.appendChild(tab);
+    });
+
+    var addBtn = document.createElement("button");
+    addBtn.className = "add-sheet-btn";
+    addBtn.innerHTML = "+ גיליון חדש";
+    addBtn.addEventListener("click", addSheet);
+    sheetsBar.appendChild(addBtn);
+  }
+
   addForm.addEventListener("submit", function (e) {
     e.preventDefault();
     var text = taskInput.value.trim();
     if (!text) return;
-    tasks.push({
+    activeSheet().tasks.push({
       id: uid(),
       text: text,
       done: false,
       priority: prioritySelect.value,
-      date: state.date,
       createdAt: Date.now()
     });
-    saveTasks(tasks);
+    saveData();
     taskInput.value = "";
     render();
     taskInput.focus();
@@ -414,67 +537,36 @@
     });
   });
 
-  document.getElementById("prevDay").addEventListener("click", function () {
-    shiftDate(-1);
-  });
-  document.getElementById("nextDay").addEventListener("click", function () {
-    shiftDate(1);
-  });
-  document.getElementById("todayBtn").addEventListener("click", function () {
-    state.date = formatDate(new Date());
-    render();
-  });
-  dateLabel.addEventListener("click", function () {
-    datePicker.value = state.date;
-    if (datePicker.showPicker) {
-      try { datePicker.showPicker(); } catch (e) { datePicker.focus(); }
-    } else {
-      datePicker.focus();
-    }
-  });
-  datePicker.addEventListener("change", function () {
-    if (datePicker.value) {
-      state.date = datePicker.value;
-      render();
-    }
-  });
-
-  function shiftDate(delta) {
-    var d = parseDate(state.date);
-    d.setDate(d.getDate() + delta);
-    state.date = formatDate(d);
-    render();
-  }
-
   function toggleDone(id) {
-    var t = tasks.find(function (x) { return x.id === id; });
+    var t = activeSheet().tasks.find(function (x) { return x.id === id; });
     if (t) {
       t.done = !t.done;
-      saveTasks(tasks);
+      saveData();
       render();
     }
   }
 
   function removeTask(id) {
-    tasks = tasks.filter(function (x) { return x.id !== id; });
-    saveTasks(tasks);
+    var sheet = activeSheet();
+    sheet.tasks = sheet.tasks.filter(function (x) { return x.id !== id; });
+    saveData();
     render();
   }
 
   var PRIORITY_LABEL = { high: "גבוהה", medium: "בינונית", low: "נמוכה" };
 
   function render() {
-    dateLabel.textContent = formatLabel(state.date);
+    renderSheetsBar();
 
-    var dayTasks = tasks.filter(function (t) { return t.date === state.date; });
-    dayTasks.sort(function (a, b) {
+    var sheetTasks = activeSheet().tasks;
+    var sorted = sheetTasks.slice().sort(function (a, b) {
       var order = { high: 0, medium: 1, low: 2 };
       if (a.done !== b.done) return a.done ? 1 : -1;
       if (order[a.priority] !== order[b.priority]) return order[a.priority] - order[b.priority];
       return a.createdAt - b.createdAt;
     });
 
-    var visible = dayTasks.filter(function (t) {
+    var visible = sorted.filter(function (t) {
       if (state.filter === "active") return !t.done;
       if (state.filter === "done") return t.done;
       return true;
@@ -523,8 +615,8 @@
 
     emptyState.style.display = visible.length ? "none" : "block";
 
-    var total = dayTasks.length;
-    var doneCount = dayTasks.filter(function (t) { return t.done; }).length;
+    var total = sheetTasks.length;
+    var doneCount = sheetTasks.filter(function (t) { return t.done; }).length;
     var pct = total ? Math.round((doneCount / total) * 100) : 0;
     progressText.textContent = doneCount + " מתוך " + total + " הושלמו";
     progressPercent.textContent = pct + "%";
