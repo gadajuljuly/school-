@@ -260,7 +260,6 @@
 
   .sheets-row {
     background: var(--paper-alt);
-    border-bottom: 1px solid var(--rule);
     padding: 8px 10px 0;
     display: flex;
     align-items: flex-end;
@@ -278,7 +277,6 @@
   .sheet-tab {
     flex-shrink: 0;
     padding: 7px 16px 7px 22px;
-    margin-bottom: -1px;
     background: transparent;
     color: var(--ink-muted);
     font-size: 0.83rem;
@@ -288,7 +286,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     border: 1px solid transparent;
-    border-bottom: 1px solid var(--rule);
     border-radius: 5px 5px 0 0;
     clip-path: polygon(10px 0, 100% 0, 100% 100%, 0 100%);
   }
@@ -300,7 +297,7 @@
     background: var(--paper);
     color: var(--ink);
     font-weight: 700;
-    border-color: var(--rule) var(--rule) var(--paper);
+    border-color: var(--rule);
   }
   .sheet-tab input.rename-input {
     border: none;
@@ -324,12 +321,12 @@
     position: relative;
     background-image: repeating-linear-gradient(
       var(--paper) 0,
-      var(--paper) 20px,
-      var(--rule) 20px,
-      var(--rule) 21px,
-      var(--paper) 21px,
-      var(--paper) 36px
+      var(--paper) 35px,
+      var(--rule) 35px,
+      var(--rule) 36px
     );
+    background-origin: content-box;
+    background-clip: content-box;
     border-radius: 0 0 10px 10px;
     padding: 20px 22px 4px 44px;
   }
