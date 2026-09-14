@@ -207,24 +207,20 @@
   }
   .add-sheet-tab {
     flex-shrink: 0;
-    width: 28px;
-    height: 28px;
-    margin-bottom: 1px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: none;
+    padding: 7px 16px;
+    margin-bottom: -1px;
+    background: transparent;
     border: 1px solid transparent;
-    border-radius: 5px;
+    border-bottom: 1px solid var(--rule);
+    border-radius: 5px 5px 0 0;
     color: var(--accent);
-    font-size: 1.05rem;
+    font-size: 1rem;
     font-weight: 700;
     cursor: pointer;
     font-family: inherit;
   }
   .add-sheet-tab:hover {
-    background: rgba(0, 0, 0, 0.06);
-    border-color: var(--rule);
+    background: rgba(0, 0, 0, 0.05);
   }
 
   .ruled-body {
@@ -390,7 +386,6 @@
 
     <div class="sheets-row">
       <div class="sheets-bar" id="sheetsBar"></div>
-      <button class="add-sheet-tab" id="addSheetBtn" title="הוספת פרויקט">+</button>
     </div>
 
     <div class="ruled-body">
@@ -444,7 +439,6 @@
 
   var dateLabel = document.getElementById("dateLabel");
   var sheetsBar = document.getElementById("sheetsBar");
-  var addSheetBtn = document.getElementById("addSheetBtn");
   var taskInput = document.getElementById("taskInput");
   var prioritySelect = document.getElementById("prioritySelect");
   var addForm = document.getElementById("addForm");
@@ -480,7 +474,6 @@
     saveData();
     render();
   }
-  addSheetBtn.addEventListener("click", addSheet);
 
   function selectSheet(id) {
     if (data.activeSheetId === id) return;
@@ -581,6 +574,14 @@
       });
       sheetsBar.appendChild(tab);
     });
+
+    var addBtn = document.createElement("button");
+    addBtn.className = "add-sheet-tab";
+    addBtn.type = "button";
+    addBtn.title = "הוספת פרויקט";
+    addBtn.textContent = "+";
+    addBtn.addEventListener("click", addSheet);
+    sheetsBar.appendChild(addBtn);
   }
 
   addForm.addEventListener("submit", function (e) {
