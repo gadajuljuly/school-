@@ -657,7 +657,6 @@
 
     var sheetTasks = activeSheet().tasks;
     var sorted = sheetTasks.slice().sort(function (a, b) {
-      if (a.status !== b.status) return a.status - b.status;
       return a.createdAt - b.createdAt;
     });
 
