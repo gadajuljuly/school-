@@ -80,29 +80,32 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    position: relative;
   }
+  .date-click-area {
+    position: relative;
+    display: inline-flex;
+    border-radius: 6px;
+  }
+  .date-click-area:hover { background: var(--paper-alt); }
   .notebook-date {
     font-family: "Rubik", "Assistant", sans-serif;
     font-weight: 700;
     font-size: 1.05rem;
     letter-spacing: 0.02em;
-    background: none;
-    border: none;
     color: var(--ink);
-    cursor: pointer;
     padding: 2px 4px;
-    border-radius: 6px;
-  }
-  .notebook-date:hover { background: var(--paper-alt); }
-  .date-input-hidden {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    width: 1px;
-    height: 1px;
-    opacity: 0;
     pointer-events: none;
+  }
+  .date-input-overlay {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    border: none;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
   }
   .today-btn {
     font-size: 0.72rem;
@@ -456,8 +459,10 @@
   <div class="notebook">
     <div class="notebook-head">
       <span class="notebook-date-wrap">
-        <button type="button" class="notebook-date" id="dateLabel" title="לחצו לבחירת תאריך"></button>
-        <input type="date" id="dateInput" class="date-input-hidden">
+        <span class="date-click-area">
+          <span class="notebook-date" id="dateLabel"></span>
+          <input type="date" id="dateInput" class="date-input-overlay" title="לחצו לבחירת תאריך">
+        </span>
         <button type="button" class="today-btn" id="todayBtn" hidden>היום</button>
       </span>
       <div class="head-right">
@@ -632,16 +637,8 @@
 
   var dateInput = document.getElementById("dateInput");
   var todayBtn = document.getElementById("todayBtn");
+  dateInput.max = todayISO();
 
-  dateLabel.addEventListener("click", function () {
-    dateInput.value = state.viewDate;
-    dateInput.max = todayISO();
-    if (dateInput.showPicker) {
-      try { dateInput.showPicker(); } catch (e) { dateInput.focus(); }
-    } else {
-      dateInput.focus();
-    }
-  });
   dateInput.addEventListener("change", function () {
     if (dateInput.value) {
       state.viewDate = dateInput.value;
@@ -855,6 +852,7 @@
 
     var isToday = state.viewDate === todayISO();
     dateLabel.textContent = isoToFullDisplay(state.viewDate);
+    dateInput.value = state.viewDate;
     todayBtn.hidden = isToday;
     addForm.hidden = !isToday;
 
