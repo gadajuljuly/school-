@@ -1107,6 +1107,7 @@ const App = {
           <input type="text" value="${this.state.ui.gatePhoneInput}" oninput="App.setGatePhoneInput(this.value)" onkeydown="if(event.key==='Enter'){ App.enterForm(); }" placeholder="مثال: 0591234567" autofocus>
         </div>
         <button onclick="App.enterForm()" class="btn btn-indigo" style="width:100%;margin-top:1rem;">الدخول إلى الاستمارة</button>
+        <button onclick="App.installApp()" class="btn btn-outline" style="width:100%;margin-top:.5rem;">📲 تثبيت على الهاتف</button>
         <p class="text-stone-400 text-xs" style="margin-top:.75rem;">رقم هاتفك بيسمحلك تكملي تعبئة الاستمارة لاحقًا من أي جهاز آخر بنفس الرقم.</p>
       </div>
     </div>`;
