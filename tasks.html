@@ -288,16 +288,22 @@
     border: 1px solid transparent;
     border-radius: 5px 5px 0 0;
     clip-path: polygon(10px 0, 100% 0, 100% 100%, 0 100%);
+    position: relative;
+  }
+  .sheet-tab:not(:first-child) {
+    margin-right: -10px;
   }
   .sheet-tab:hover:not(.active) {
     background: rgba(0, 0, 0, 0.05);
     color: var(--ink);
+    z-index: 1;
   }
   .sheet-tab.active {
     background: var(--paper);
     color: var(--ink);
     font-weight: 700;
     border-color: var(--rule);
+    z-index: 2;
   }
   .sheet-tab input.rename-input {
     border: none;
