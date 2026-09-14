@@ -128,10 +128,10 @@
     color: var(--ink-muted);
     font-variant-numeric: tabular-nums;
   }
-  .icon-stack {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
+  .sheets-search {
+    position: relative;
+    flex-shrink: 0;
+    margin-bottom: 1px;
   }
   .menu-btn {
     width: 34px;
@@ -150,7 +150,7 @@
 
   .menu-panel {
     position: absolute;
-    top: 80px;
+    top: 42px;
     left: 0;
     background: var(--paper);
     border: 1px solid var(--rule);
@@ -164,7 +164,7 @@
 
   .search-panel {
     position: absolute;
-    top: 80px;
+    top: 40px;
     left: 0;
     background: var(--paper);
     border: 1px solid var(--rule);
@@ -537,14 +537,7 @@
       </span>
       <div class="head-right">
         <span class="notebook-progress" id="progressText"></span>
-        <div class="icon-stack">
-          <button class="menu-btn" id="menuBtn" title="תפריט" aria-haspopup="true" aria-expanded="false">&#9776;</button>
-          <button class="menu-btn" id="searchBtn" title="חיפוש משימות" aria-haspopup="true" aria-expanded="false">&#128269;</button>
-        </div>
-        <div class="search-panel" id="searchPanel" hidden>
-          <input type="text" id="searchInput" class="search-input" placeholder="חיפוש משימות בכל הפרויקטים..." autocomplete="off">
-          <div class="search-results" id="searchResults"></div>
-        </div>
+        <button class="menu-btn" id="menuBtn" title="תפריט" aria-haspopup="true" aria-expanded="false">&#9776;</button>
         <div class="menu-panel" id="menuPanel" hidden>
           <div class="menu-section">
             <div class="menu-label">תצוגה</div>
@@ -565,6 +558,13 @@
 
     <div class="sheets-row">
       <div class="sheets-bar" id="sheetsBar"></div>
+      <div class="sheets-search">
+        <button class="menu-btn" id="searchBtn" title="חיפוש משימות" aria-haspopup="true" aria-expanded="false">&#128269;</button>
+        <div class="search-panel" id="searchPanel" hidden>
+          <input type="text" id="searchInput" class="search-input" placeholder="חיפוש משימות בכל הפרויקטים..." autocomplete="off">
+          <div class="search-results" id="searchResults"></div>
+        </div>
+      </div>
     </div>
 
     <div class="ruled-body">
