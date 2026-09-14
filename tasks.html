@@ -251,6 +251,12 @@
     line-height: 36px;
     cursor: pointer;
   }
+  .row-lead {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
   .row-mark {
     width: 20px;
     height: 18px;
@@ -695,8 +701,12 @@
       });
       actions.appendChild(delBtn);
 
-      li.appendChild(dot);
-      li.appendChild(check);
+      var lead = document.createElement("span");
+      lead.className = "row-lead";
+      lead.appendChild(dot);
+      lead.appendChild(check);
+
+      li.appendChild(lead);
       li.appendChild(textEl);
       li.appendChild(actions);
       taskList.appendChild(li);
