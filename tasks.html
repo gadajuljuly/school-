@@ -553,6 +553,42 @@
   .install-fab[hidden] { display: none; }
   .install-fab:hover { background: var(--accent); opacity: 0.9; }
 
+  .splash-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    background: linear-gradient(160deg, #3f6d9c 0%, #2c4f78 100%);
+    transition: opacity 0.5s ease;
+  }
+  .splash-screen.splash-hide {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .splash-screen[hidden] { display: none; }
+  .splash-logo {
+    width: 120px;
+    height: 120px;
+    border-radius: 26px;
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.35);
+    animation: splash-pop 0.5s ease;
+  }
+  .splash-app-name {
+    font-family: "Rubik", "Assistant", sans-serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fbf7ee;
+    animation: splash-pop 0.5s ease;
+  }
+  @keyframes splash-pop {
+    from { transform: scale(0.75); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
   .auth-gate {
     position: fixed;
     inset: 0;
@@ -641,6 +677,11 @@
 </style>
 </head>
 <body>
+<div class="splash-screen" id="splashScreen">
+  <img src="tasks-icon-512.png" class="splash-logo" alt="פרויקטי משימות">
+  <div class="splash-app-name">פרויקטי משימות</div>
+</div>
+
 <div class="auth-gate" id="authGate">
   <div class="auth-box">
     <h1 class="auth-title">פרויקטי משימות</h1>
@@ -751,6 +792,14 @@
 
 <script>
 (function () {
+  var splashScreen = document.getElementById("splashScreen");
+  if (splashScreen) {
+    setTimeout(function () {
+      splashScreen.classList.add("splash-hide");
+      setTimeout(function () { splashScreen.hidden = true; }, 500);
+    }, 3000);
+  }
+
   var STORAGE_KEY = "daily-tasks-sheets-v1";
   function localStorageKey() {
     return SUPABASE_ROW_ID ? (STORAGE_KEY + ":" + SUPABASE_ROW_ID) : STORAGE_KEY;
