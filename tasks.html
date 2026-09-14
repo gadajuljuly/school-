@@ -293,6 +293,18 @@
     white-space: nowrap;
     line-height: 16px;
   }
+  .task-text-input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    border-bottom: 1px solid var(--accent);
+    background: transparent;
+    font: inherit;
+    color: var(--ink);
+    outline: none;
+    padding: 0;
+    line-height: 16px;
+  }
   .task-actions button {
     background: none;
     border: none;
@@ -445,7 +457,7 @@
   }
 
   var data = loadData();
-  var state = { filter: "all", renamingSheetId: null, menuOpen: false };
+  var state = { filter: "all", renamingSheetId: null, menuOpen: false, editingTaskId: null };
 
   var dateLabel = document.getElementById("dateLabel");
   var sheetsBar = document.getElementById("sheetsBar");
@@ -643,6 +655,17 @@
     }
   }
 
+  function commitTaskText(id, value) {
+    var t = activeSheet().tasks.find(function (x) { return x.id === id; });
+    var trimmed = value.trim();
+    if (t && trimmed) {
+      t.text = trimmed.slice(0, 200);
+    }
+    state.editingTaskId = null;
+    saveData();
+    render();
+  }
+
   var URGENT_CIRCLE_SVG = '<svg viewBox="0 0 11 11" xmlns="http://www.w3.org/2000/svg"><circle cx="5.5" cy="5.5" r="4" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
   var URGENT_MARK_SVG = '<svg viewBox="0 0 11 11" xmlns="http://www.w3.org/2000/svg"><line x1="5.5" y1="0.8" x2="5.5" y2="6.9" stroke="var(--danger)" stroke-width="2.6" stroke-linecap="round"/><circle cx="5.5" cy="9.4" r="1.5" fill="var(--danger)"/></svg>';
 
@@ -687,10 +710,44 @@
         toggleUrgent(t.id);
       });
 
-      var textEl = document.createElement("span");
-      textEl.className = "task-text";
-      textEl.textContent = t.text;
-      textEl.title = t.text;
+      var textEl;
+      if (state.editingTaskId === t.id) {
+        textEl = document.createElement("input");
+        textEl.type = "text";
+        textEl.className = "task-text-input";
+        textEl.value = t.text;
+        textEl.maxLength = 200;
+        var editResolved = false;
+        textEl.addEventListener("click", function (e) { e.stopPropagation(); });
+        textEl.addEventListener("keydown", function (e) {
+          e.stopPropagation();
+          if (e.key === "Enter") {
+            editResolved = true;
+            commitTaskText(t.id, textEl.value);
+          }
+          if (e.key === "Escape") {
+            editResolved = true;
+            state.editingTaskId = null;
+            render();
+          }
+        });
+        textEl.addEventListener("blur", function () {
+          if (!editResolved) {
+            editResolved = true;
+            commitTaskText(t.id, textEl.value);
+          }
+        });
+      } else {
+        textEl = document.createElement("span");
+        textEl.className = "task-text";
+        textEl.textContent = t.text;
+        textEl.title = t.text;
+        textEl.addEventListener("click", function (e) {
+          e.stopPropagation();
+          state.editingTaskId = t.id;
+          render();
+        });
+      }
 
       var actions = document.createElement("span");
       actions.className = "task-actions";
@@ -714,6 +771,11 @@
       li.appendChild(textEl);
       li.appendChild(actions);
       taskList.appendChild(li);
+
+      if (state.editingTaskId === t.id) {
+        textEl.focus();
+        textEl.select();
+      }
     });
 
     emptyState.style.display = visible.length ? "none" : "block";
