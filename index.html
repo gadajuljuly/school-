@@ -1114,7 +1114,7 @@ const App = {
 
   renderAdminFab(){
     if(this.state.ui.adminAuthed || this.state.activeSection === "__admin__") return "";
-    return `<div class="admin-fab no-print"><button onclick="App.openAdminLogin()" class="btn btn-dark btn-sm" title="دخول المسؤول">🔒 دخول المسؤول</button></div>`;
+    return `<div class="admin-fab no-print"><button onclick="App.openAdminLogin()" class="btn btn-dark btn-sm" title="دخول">🔒 دخول</button></div>`;
   },
 
   renderHeader(){
@@ -1338,7 +1338,7 @@ const App = {
     return `
     <div class="modal-overlay no-print" onclick="if(event.target===this) App.closeAdminModal()">
       <div class="modal-box">
-        <h3 class="font-bold text-teal-800 mb-1">دخول المسؤول</h3>
+        <h3 class="font-bold text-teal-800 mb-1">دخول</h3>
         <p class="text-stone-500 text-xs mb-3">أدخلي كلمة المرور الخاصة بالمسؤول لعرض جميع المسوحات المُرسلة من كل المدارس.</p>
         <input type="password" value="${this.state.ui.adminPasswordInput}" oninput="App.setAdminPasswordInput(this.value)" onkeydown="if(event.key==='Enter'){ App.submitAdminPassword(); }" placeholder="كلمة المرور" autofocus>
         ${this.state.ui.adminError ? `<p style="color:#dc2626;" class="text-xs mt-1">${this.state.ui.adminError}</p>` : ""}
