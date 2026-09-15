@@ -301,16 +301,20 @@
     display: inline-block;
     white-space: nowrap;
   }
-  .sheet-tab-marquee-track {
+  .marquee-track {
     display: inline-flex;
     gap: 24px;
-    animation-name: sheet-tab-marquee;
+    animation-name: marquee-scroll;
     animation-timing-function: linear;
     animation-iteration-count: infinite;
   }
-  @keyframes sheet-tab-marquee {
+  @keyframes marquee-scroll {
     0% { transform: translateX(0); }
     100% { transform: translateX(var(--marquee-segment, 0)); }
+  }
+  .task-text-label {
+    display: inline-block;
+    white-space: nowrap;
   }
   .sheet-tab:not(:first-child) {
     margin-right: -10px;
@@ -1486,7 +1490,7 @@
       if (overflowPx > 2) {
         var gapPx = 24;
         var track = document.createElement("span");
-        track.className = "sheet-tab-marquee-track";
+        track.className = "marquee-track";
         tab.insertBefore(track, label);
         track.appendChild(label);
         var clone = label.cloneNode(true);
@@ -1736,8 +1740,11 @@
       } else {
         textEl = document.createElement("span");
         textEl.className = "task-text";
-        textEl.textContent = t.text;
         textEl.title = t.text;
+        var textLabel = document.createElement("span");
+        textLabel.className = "task-text-label";
+        textLabel.textContent = t.text;
+        textEl.appendChild(textLabel);
         if (editable) {
           textEl.addEventListener("click", function (e) {
             e.stopPropagation();
@@ -1781,6 +1788,24 @@
       }
       li.appendChild(actions);
       taskList.appendChild(li);
+
+      if (!(editable && state.editingTaskId === t.id)) {
+        var textOverflowPx = textLabel.scrollWidth - textEl.clientWidth;
+        if (textOverflowPx > 2) {
+          var textGapPx = 32;
+          var textTrack = document.createElement("span");
+          textTrack.className = "marquee-track";
+          textEl.insertBefore(textTrack, textLabel);
+          textTrack.appendChild(textLabel);
+          var textClone = textLabel.cloneNode(true);
+          textClone.setAttribute("aria-hidden", "true");
+          textTrack.appendChild(textClone);
+
+          var textSegment = textLabel.scrollWidth + textGapPx;
+          textTrack.style.setProperty("--marquee-segment", textSegment + "px");
+          textTrack.style.animationDuration = Math.max(4, textSegment / 40) + "s";
+        }
+      }
 
       if (state.editingTaskId === t.id) {
         textEl.focus();
