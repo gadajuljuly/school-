@@ -315,6 +315,55 @@
   .sheet-tab:not(:first-child) {
     margin-right: -10px;
   }
+  .move-task-mode {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .move-task-mode button {
+    flex: 1;
+    padding: 9px;
+    border-radius: 8px;
+    border: 1px solid var(--rule);
+    background: var(--paper-alt);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .move-task-mode button.active {
+    background: var(--accent);
+    color: var(--accent-contrast);
+    border-color: var(--accent);
+  }
+  .move-task-projects {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 220px;
+    overflow-y: auto;
+    margin-bottom: 14px;
+  }
+  .move-task-projects button {
+    width: 100%;
+    text-align: right;
+    padding: 9px 12px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: var(--paper-alt);
+    color: var(--ink);
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-family: inherit;
+  }
+  .move-task-projects button:hover { background: var(--rule); }
+  .move-task-empty {
+    color: var(--ink-muted);
+    font-size: 0.85rem;
+    text-align: center;
+    padding: 10px 0;
+  }
   .sheet-tab:hover:not(.active) {
     background: rgba(0, 0, 0, 0.05);
     color: var(--ink);
@@ -789,6 +838,20 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="moveTaskOverlay" hidden>
+    <div class="modal-box" role="alertdialog" aria-modal="true">
+      <p class="modal-message">העברה או העתקה של המשימה</p>
+      <div class="move-task-mode">
+        <button type="button" class="active" id="moveModeMoveBtn">העברה</button>
+        <button type="button" id="moveModeCopyBtn">העתקה</button>
+      </div>
+      <div class="move-task-projects" id="moveTaskProjects"></div>
+      <div class="modal-actions">
+        <button type="button" class="modal-btn modal-btn-no" id="moveTaskCancelBtn">ביטול</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="changeUsernameOverlay" hidden>
     <div class="modal-box" role="alertdialog" aria-modal="true">
       <p class="modal-message">שינוי שם משתמש</p>
@@ -978,6 +1041,88 @@
   confirmNoBtn.addEventListener("click", closeConfirm);
   confirmOverlay.addEventListener("click", function (e) {
     if (e.target === confirmOverlay) closeConfirm();
+  });
+
+  var moveTaskOverlay = document.getElementById("moveTaskOverlay");
+  var moveTaskProjects = document.getElementById("moveTaskProjects");
+  var moveModeMoveBtn = document.getElementById("moveModeMoveBtn");
+  var moveModeCopyBtn = document.getElementById("moveModeCopyBtn");
+  var moveTaskCancelBtn = document.getElementById("moveTaskCancelBtn");
+  var pendingMoveTaskId = null;
+  var moveTaskMode = "move";
+
+  function moveOrCopyTask(taskId, targetSheetId, mode) {
+    var sourceSheet = activeSheet();
+    var idx = sourceSheet.tasks.findIndex(function (x) { return x.id === taskId; });
+    if (idx === -1) return;
+    var task = sourceSheet.tasks[idx];
+    var targetSheet = data.sheets.find(function (s) { return s.id === targetSheetId; });
+    if (!targetSheet) return;
+
+    if (mode === "copy") {
+      targetSheet.tasks.push({
+        id: uid(),
+        text: task.text,
+        status: task.status,
+        urgent: task.urgent,
+        date: task.date,
+        createdAt: Date.now()
+      });
+    } else {
+      sourceSheet.tasks.splice(idx, 1);
+      targetSheet.tasks.push(task);
+    }
+    saveData();
+    render();
+  }
+
+  function renderMoveTaskProjects() {
+    moveTaskProjects.innerHTML = "";
+    var others = data.sheets.filter(function (s) { return s.id !== data.activeSheetId; });
+    if (!others.length) {
+      var empty = document.createElement("div");
+      empty.className = "move-task-empty";
+      empty.textContent = "אין פרויקטים אחרים";
+      moveTaskProjects.appendChild(empty);
+      return;
+    }
+    others.forEach(function (s) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = s.name;
+      btn.addEventListener("click", function () {
+        moveOrCopyTask(pendingMoveTaskId, s.id, moveTaskMode);
+        closeMoveTask();
+      });
+      moveTaskProjects.appendChild(btn);
+    });
+  }
+
+  function openMoveTaskModal(taskId) {
+    pendingMoveTaskId = taskId;
+    moveTaskMode = "move";
+    moveModeMoveBtn.classList.add("active");
+    moveModeCopyBtn.classList.remove("active");
+    renderMoveTaskProjects();
+    moveTaskOverlay.hidden = false;
+  }
+  function closeMoveTask() {
+    moveTaskOverlay.hidden = true;
+    pendingMoveTaskId = null;
+  }
+  moveModeMoveBtn.addEventListener("click", function () {
+    moveTaskMode = "move";
+    moveModeMoveBtn.classList.add("active");
+    moveModeCopyBtn.classList.remove("active");
+  });
+  moveModeCopyBtn.addEventListener("click", function () {
+    moveTaskMode = "copy";
+    moveModeCopyBtn.classList.add("active");
+    moveModeMoveBtn.classList.remove("active");
+  });
+  moveTaskCancelBtn.addEventListener("click", closeMoveTask);
+  moveTaskOverlay.addEventListener("click", function (e) {
+    if (e.target === moveTaskOverlay) closeMoveTask();
   });
 
   (function setupInstallPrompt() {
@@ -1435,7 +1580,44 @@
     visible.forEach(function (t) {
       var li = document.createElement("li");
       li.className = "task" + (t.status === 1 ? " partial" : "") + (t.status === 2 ? " done" : "") + (editable ? "" : " readonly");
-      if (editable) li.addEventListener("click", function () { cycleStatus(t.id); });
+      var longPressFired = false;
+      if (editable) {
+        li.addEventListener("click", function () {
+          if (longPressFired) { longPressFired = false; return; }
+          cycleStatus(t.id);
+        });
+
+        var pressTimer = null;
+        var pressStartX = 0, pressStartY = 0;
+        var startPress = function (e) {
+          if (e.target.closest("input, button")) return;
+          var point = e.touches ? e.touches[0] : e;
+          pressStartX = point.clientX;
+          pressStartY = point.clientY;
+          longPressFired = false;
+          clearTimeout(pressTimer);
+          pressTimer = setTimeout(function () {
+            longPressFired = true;
+            openMoveTaskModal(t.id);
+          }, 550);
+        };
+        var cancelPress = function () {
+          clearTimeout(pressTimer);
+        };
+        var movePress = function (e) {
+          var point = e.touches ? e.touches[0] : e;
+          if (Math.abs(point.clientX - pressStartX) > 10 || Math.abs(point.clientY - pressStartY) > 10) {
+            cancelPress();
+          }
+        };
+        li.addEventListener("mousedown", startPress);
+        li.addEventListener("mouseup", cancelPress);
+        li.addEventListener("mouseleave", cancelPress);
+        li.addEventListener("mousemove", movePress);
+        li.addEventListener("touchstart", startPress, { passive: true });
+        li.addEventListener("touchend", cancelPress);
+        li.addEventListener("touchmove", movePress, { passive: true });
+      }
 
       var check = document.createElement("span");
       check.className = "row-mark";
