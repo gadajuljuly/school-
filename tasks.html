@@ -1246,7 +1246,9 @@
     var resizeTimer = null;
     window.addEventListener("resize", function () {
       clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(renderSheetsBar, 200);
+      resizeTimer = setTimeout(function () {
+        if (state.renamingSheetId === null) renderSheetsBar();
+      }, 200);
     });
   })();
 
