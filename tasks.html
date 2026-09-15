@@ -301,15 +301,16 @@
     display: inline-block;
     white-space: nowrap;
   }
-  .sheet-tab.marquee .sheet-tab-label {
+  .sheet-tab-marquee-track {
+    display: inline-flex;
+    gap: 24px;
     animation-name: sheet-tab-marquee;
     animation-timing-function: linear;
     animation-iteration-count: infinite;
   }
   @keyframes sheet-tab-marquee {
-    0%, 20% { transform: translateX(0); }
-    50%, 70% { transform: translateX(var(--marquee-distance, 0)); }
-    100% { transform: translateX(0); }
+    0% { transform: translateX(0); }
+    100% { transform: translateX(var(--marquee-segment, 0)); }
   }
   .sheet-tab:not(:first-child) {
     margin-right: -10px;
@@ -1310,9 +1311,19 @@
       var availableWidth = tab.clientWidth - parseFloat(tabStyle.paddingLeft) - parseFloat(tabStyle.paddingRight);
       var overflowPx = label.scrollWidth - availableWidth;
       if (overflowPx > 2) {
-        tab.classList.add("marquee");
-        tab.style.setProperty("--marquee-distance", (-(overflowPx + 4)) + "px");
-        label.style.animationDuration = Math.max(4, 2 + overflowPx / 25) + "s";
+        var gapPx = 24;
+        var track = document.createElement("span");
+        track.className = "sheet-tab-marquee-track";
+        tab.insertBefore(track, label);
+        track.appendChild(label);
+        var clone = label.cloneNode(true);
+        clone.classList.add("sheet-tab-label-clone");
+        clone.setAttribute("aria-hidden", "true");
+        track.appendChild(clone);
+
+        var segment = label.scrollWidth + gapPx;
+        track.style.setProperty("--marquee-segment", segment + "px");
+        track.style.animationDuration = Math.max(4, segment / 40) + "s";
       }
     });
 
