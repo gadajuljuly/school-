@@ -339,6 +339,29 @@ const App = {
       alert("الرجاء إدخال رقم هاتف المدرّبة للدخول إلى الاستمارة.");
       return;
     }
+    const previousPhoneKey = this.normalizePhoneKey(this.state.general.coachPhone);
+    const newPhoneKey = this.normalizePhoneKey(phone);
+    if(previousPhoneKey && previousPhoneKey !== newPhoneKey){
+      // بيانات محلّية محفوظة تخصّ رقم هاتف مختلف على هذا الجهاز — لا نعرضها لصاحبة الرقم الجديد
+      this.state.general = {
+        schoolName:"", principalName:"", coachName:"", coachPhone:"", growthIndex:"",
+        studentsCount:"", teachersCount:"", programSeniority:"",
+        arabicCoordinator:"", gradeCoordinator:"", assessmentCoordinator:"", pedagogicalCoordinator:""
+      };
+      this.state.leadership = LEADERSHIP_ROLES.reduce((acc, r) => {
+        acc[r.key] = { personName:"", seniority:"", knowledge:"", notes:"" };
+        return acc;
+      }, {});
+      this.state.staff = [];
+      this.state.students = [];
+      this.state.principal = { meetingFrequency:"", importantTopics:"", workPlan:"" };
+      this.state.summary = { text:"" };
+      this.state.insights = { suggestionText:"" };
+      this.state.submitted = false;
+      this.state.lastSubmissionId = null;
+      this.addStaffRow();
+      this.addStudentRow();
+    }
     this.state.general.coachPhone = phone;
     this.state.ui.gateEntered = true;
     this._draftCheckDone = true;
