@@ -455,6 +455,15 @@
     color: var(--ink-muted);
   }
   li.task.done .row-mark { opacity: 0.5; }
+  .note-time {
+    flex-shrink: 0;
+    min-width: 34px;
+    text-align: center;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--ink-muted);
+    font-variant-numeric: tabular-nums;
+  }
   .urgent-toggle {
     width: 11px;
     height: 11px;
@@ -825,6 +834,19 @@
         <input type="text" id="taskInput" placeholder="חדש..." maxlength="200" required autocomplete="off">
         <button type="submit" class="add-btn" title="הוספה">+</button>
       </form>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="addTypeOverlay" hidden>
+    <div class="modal-box" role="alertdialog" aria-modal="true">
+      <p class="modal-message">איך להוסיף את השורה?</p>
+      <div class="move-task-mode">
+        <button type="button" id="addTypeTaskBtn">משימה</button>
+        <button type="button" id="addTypeNoteBtn">מזכרת</button>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="modal-btn modal-btn-no" id="addTypeCancelBtn">ביטול</button>
+      </div>
     </div>
   </div>
 
@@ -1484,22 +1506,55 @@
     sheetsBar.appendChild(addBtn);
   }
 
+  function currentTimeHHMM() {
+    var d = new Date();
+    return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+  }
+
+  var addTypeOverlay = document.getElementById("addTypeOverlay");
+  var addTypeTaskBtn = document.getElementById("addTypeTaskBtn");
+  var addTypeNoteBtn = document.getElementById("addTypeNoteBtn");
+  var addTypeCancelBtn = document.getElementById("addTypeCancelBtn");
+  var pendingNewTaskText = null;
+
+  function closeAddTypeModal() {
+    addTypeOverlay.hidden = true;
+    pendingNewTaskText = null;
+  }
+
+  function addPendingTask(type) {
+    if (!pendingNewTaskText) return;
+    var newTask = {
+      id: uid(),
+      text: pendingNewTaskText,
+      status: 0,
+      urgent: false,
+      type: type,
+      date: state.viewDate,
+      createdAt: Date.now()
+    };
+    if (type === "note") newTask.time = currentTimeHHMM();
+    activeSheet().tasks.push(newTask);
+    saveData();
+    taskInput.value = "";
+    closeAddTypeModal();
+    render();
+    taskInput.focus();
+  }
+
+  addTypeTaskBtn.addEventListener("click", function () { addPendingTask("task"); });
+  addTypeNoteBtn.addEventListener("click", function () { addPendingTask("note"); });
+  addTypeCancelBtn.addEventListener("click", closeAddTypeModal);
+  addTypeOverlay.addEventListener("click", function (e) {
+    if (e.target === addTypeOverlay) closeAddTypeModal();
+  });
+
   addForm.addEventListener("submit", function (e) {
     e.preventDefault();
     var text = taskInput.value.trim();
     if (!text) return;
-    activeSheet().tasks.push({
-      id: uid(),
-      text: text,
-      status: 0,
-      urgent: false,
-      date: state.viewDate,
-      createdAt: Date.now()
-    });
-    saveData();
-    taskInput.value = "";
-    render();
-    taskInput.focus();
+    pendingNewTaskText = text;
+    addTypeOverlay.hidden = false;
   });
 
   filterButtons.forEach(function (btn) {
@@ -1582,12 +1637,14 @@
 
     taskList.innerHTML = "";
     visible.forEach(function (t) {
+      var isNote = t.type === "note";
       var li = document.createElement("li");
       li.className = "task" + (t.status === 1 ? " partial" : "") + (t.status === 2 ? " done" : "") + (editable ? "" : " readonly");
       var longPressFired = false;
       if (editable && state.editingTaskId !== t.id) {
         li.addEventListener("click", function () {
           if (longPressFired) { longPressFired = false; return; }
+          if (isNote) return;
           cycleStatus(t.id);
         });
 
@@ -1622,21 +1679,28 @@
         li.addEventListener("touchmove", movePress, { passive: true });
       }
 
-      var check = document.createElement("span");
-      check.className = "row-mark";
-      check.setAttribute("aria-hidden", "true");
-      check.title = STATUS_LABEL[t.status];
-      check.innerHTML = rowMarkSvg(t.status);
+      var check, dot, timeLabel;
+      if (isNote) {
+        timeLabel = document.createElement("span");
+        timeLabel.className = "note-time";
+        timeLabel.textContent = t.time || "";
+      } else {
+        check = document.createElement("span");
+        check.className = "row-mark";
+        check.setAttribute("aria-hidden", "true");
+        check.title = STATUS_LABEL[t.status];
+        check.innerHTML = rowMarkSvg(t.status);
 
-      var dot = document.createElement("span");
-      dot.className = "urgent-toggle" + (t.urgent ? " urgent" : "");
-      dot.title = t.urgent ? "לחצו לביטול הדחיפות" : "לחצו לסימון כדחוף";
-      dot.innerHTML = t.urgent ? "" : URGENT_CIRCLE_SVG;
-      if (editable) {
-        dot.addEventListener("click", function (e) {
-          e.stopPropagation();
-          toggleUrgent(t.id);
-        });
+        dot = document.createElement("span");
+        dot.className = "urgent-toggle" + (t.urgent ? " urgent" : "");
+        dot.title = t.urgent ? "לחצו לביטול הדחיפות" : "לחצו לסימון כדחוף";
+        dot.innerHTML = t.urgent ? "" : URGENT_CIRCLE_SVG;
+        if (editable) {
+          dot.addEventListener("click", function (e) {
+            e.stopPropagation();
+            toggleUrgent(t.id);
+          });
+        }
       }
 
       var textEl;
@@ -1696,8 +1760,12 @@
 
       var lead = document.createElement("span");
       lead.className = "row-lead";
-      lead.appendChild(dot);
-      lead.appendChild(check);
+      if (isNote) {
+        lead.appendChild(timeLabel);
+      } else {
+        lead.appendChild(dot);
+        lead.appendChild(check);
+      }
 
       li.appendChild(lead);
       li.appendChild(textEl);
