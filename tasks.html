@@ -1077,7 +1077,7 @@
       var dy = touch.clientY - startY;
       var elapsed = Date.now() - startTime;
       if (elapsed < 800 && Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-        state.viewDate = addDaysToISO(state.viewDate, dx < 0 ? 1 : -1);
+        state.viewDate = addDaysToISO(state.viewDate, dx < 0 ? -1 : 1);
         render();
       }
     }, { passive: true });
