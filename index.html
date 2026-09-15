@@ -535,11 +535,27 @@ const App = {
 
   async loadSubmissions(){
     try{
-      const rows = await sbRequest("submissions?select=*&order=submitted_at.desc", { method:"GET" });
-      this.state.ui.submissions = (rows || []).map(r => ({
-        id: r.id, schoolName: r.school_name, principalName: r.principal_name, coachName: r.coach_name,
-        teachersCount: r.teachers_count, studentsCount: r.students_count, submittedAt: r.submitted_at, survey: r.survey
+      const [subRows, draftRows] = await Promise.all([
+        sbRequest("submissions?select=*&order=submitted_at.desc", { method:"GET" }),
+        sbRequest("drafts?select=*&order=updated_at.desc", { method:"GET" })
+      ]);
+      const submitted = (subRows || []).map(r => ({
+        id: "sub_" + r.id, rawId: r.id, status: "submitted",
+        schoolName: r.school_name, principalName: r.principal_name, coachName: r.coach_name,
+        teachersCount: r.teachers_count, studentsCount: r.students_count,
+        submittedAt: r.submitted_at, survey: r.survey
       }));
+      const drafts = (draftRows || []).map(r => {
+        const d = r.data || {};
+        const g = d.general || {};
+        return {
+          id: "draft_" + r.id, rawId: r.id, status: "draft",
+          schoolName: g.schoolName, principalName: g.principalName, coachName: g.coachName,
+          teachersCount: g.teachersCount, studentsCount: g.studentsCount,
+          submittedAt: r.updated_at, survey: d
+        };
+      });
+      this.state.ui.submissions = submitted.concat(drafts).sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
       this.state.ui.submissionsLoaded = true;
       this.render();
     }catch(e){
@@ -624,9 +640,13 @@ const App = {
     this.render();
   },
   async deleteSubmission(id){
-    if(!confirm("سيتم حذف هذا المسح نهائيًا من قائمة المسؤول. متابعة؟")) return;
+    const sub = (this.state.ui.submissions || []).find(s => s.id === id);
+    if(!sub) return;
+    const label = sub.status === "draft" ? "هذه المسودة" : "هذا المسح";
+    if(!confirm("سيتم حذف " + label + " نهائيًا من قائمة المسؤول. متابعة؟")) return;
     try{
-      await sbRequest("submissions?id=eq." + id, { method: "DELETE" });
+      const table = sub.status === "draft" ? "drafts" : "submissions";
+      await sbRequest(table + "?id=eq." + sub.rawId, { method: "DELETE" });
       this.state.ui.submissions = (this.state.ui.submissions || []).filter(s => s.id !== id);
       if(this.state.ui.viewingSubmissionId === id) this.state.ui.viewingSubmissionId = null;
       this.render();
@@ -1470,11 +1490,18 @@ const App = {
       if(sub) return this.renderSubmissionDetail(sub);
     }
     const list = this.filteredSubmissions();
+    const submittedCount = list.filter(s => s.status !== "draft").length;
+    const draftCount = list.filter(s => s.status === "draft").length;
     const rows = list.map(sub => {
       let dateStr = sub.submittedAt || "";
       try{ dateStr = new Date(sub.submittedAt).toLocaleString("ar"); }catch(e){}
+      const isDraft = sub.status === "draft";
+      const badge = isDraft
+        ? `<span style="display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600;background:#fef3c7;color:#92400e;">مسودة قيد التعبئة</span>`
+        : `<span style="display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600;background:#d1fae5;color:#065f46;">مُرسل نهائي</span>`;
       return `
       <tr>
+        <td>${badge}</td>
         <td class="text-right font-semibold">${sub.schoolName || "—"}</td>
         <td>${sub.principalName || "—"}</td>
         <td>${sub.coachName || "—"}</td>
@@ -1493,7 +1520,7 @@ const App = {
     return `
     <div>
       <div class="admin-toolbar">
-        <h2>لوحة الإدارة — كل المسوحات المُرسلة (${list.length})</h2>
+        <h2>لوحة الإدارة — كل المعطيات (${list.length}) — مُرسلة نهائيًا: ${submittedCount} · مسودات قيد التعبئة: ${draftCount}</h2>
         <div class="btn-row no-print">
           <button onclick="App.loadSubmissions()" class="btn btn-outline btn-sm">↻ تحديث</button>
           <button onclick="App.exportAllSubmissionsOverview()" class="btn btn-emerald btn-sm">تصدير نظرة عامة (Excel)</button>
@@ -1504,12 +1531,12 @@ const App = {
       </div>
       <div class="card p-4 overflow-x-auto">
         ${!this.state.ui.submissionsLoaded
-          ? `<p class="admin-empty">جارٍ تحميل المسوحات المُرسلة...</p>`
+          ? `<p class="admin-empty">جارٍ تحميل كل المعطيات...</p>`
           : (list.length
               ? `<table class="stat-table"><thead><tr>
-                  <th>اسم المدرسة</th><th>المدير/ة</th><th>المدرّبة</th><th>عدد المعلّمين</th><th>عدد التلاميذ</th><th>تاريخ الإرسال</th><th class="no-print">إجراءات</th>
+                  <th>الحالة</th><th>اسم المدرسة</th><th>المدير/ة</th><th>المدرّبة</th><th>عدد المعلّمين</th><th>عدد التلاميذ</th><th>آخر تحديث</th><th class="no-print">إجراءات</th>
                  </tr></thead><tbody>${rows}</tbody></table>`
-              : `<p class="admin-empty">لا توجد مسوحات مُرسلة بعد.</p>`)}
+              : `<p class="admin-empty">لا توجد أي معطيات بعد — لم تبدأ أي مدرّبة بتعبئة الاستمارة.</p>`)}
       </div>
     </div>`;
   },
@@ -1517,6 +1544,10 @@ const App = {
   renderSubmissionDetail(sub){
     let dateStr = sub.submittedAt || "";
     try{ dateStr = new Date(sub.submittedAt).toLocaleString("ar"); }catch(e){}
+    const isDraft = sub.status === "draft";
+    const statusNote = isDraft
+      ? `<span style="display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600;background:#fef3c7;color:#92400e;margin-inline-start:8px;">مسودة قيد التعبئة — لم تُرسل نهائيًا بعد</span>`
+      : `<span style="display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600;background:#d1fae5;color:#065f46;margin-inline-start:8px;">مُرسل نهائي</span>`;
     return `
     <div>
       <div class="detail-toolbar no-print">
@@ -1527,7 +1558,7 @@ const App = {
           <button onclick="App.deleteSubmission('${sub.id}')" class="btn btn-red">حذف</button>
         </div>
       </div>
-      <p class="detail-date no-print">أُرسل بتاريخ: ${dateStr}</p>
+      <p class="detail-date no-print">${isDraft ? "آخر حفظ" : "أُرسل"} بتاريخ: ${dateStr} ${statusNote}</p>
       ${this.buildPrintHTML(sub.survey)}
     </div>`;
   }
