@@ -318,13 +318,18 @@ const App = {
   },
 
   async installApp(){
-    if(!deferredInstallPrompt){
-      alert("التثبيت التلقائي غير متاح الآن على هذا المتصفح.\n\nعلى أندرويد (Chrome): افتحي قائمة المتصفح (⋮) بالأعلى واختاري \"تثبيت التطبيق\" أو \"إضافة إلى الشاشة الرئيسية\".\nعلى آيفون (Safari): اضغطي زر المشاركة ⬆️ ثم \"إضافة إلى الشاشة الرئيسية\".");
+    if(deferredInstallPrompt){
+      deferredInstallPrompt.prompt();
+      await deferredInstallPrompt.userChoice;
+      deferredInstallPrompt = null;
       return;
     }
-    deferredInstallPrompt.prompt();
-    await deferredInstallPrompt.userChoice;
-    deferredInstallPrompt = null;
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    if(isIOS){
+      alert("للتثبيت على آيفون:\n\n1. تأكّدي إنّك تفتحي هذا الرابط من متصفح Safari (وليس Chrome أو أي متصفح آخر).\n2. دوسي زر المشاركة ⬆️ (بالأسفل أو الأعلى حسب نوع الجهاز).\n3. مرّري لتحت واختاري \"إضافة إلى الشاشة الرئيسية\" (Add to Home Screen).\n4. دوسي \"إضافة\".\n\nملاحظة: آيفون لا يسمح بتثبيت تلقائي بضغطة واحدة من الموقع نفسه — هذا قيد من Apple على كل المواقع.");
+    } else {
+      alert("التثبيت التلقائي غير متاح الآن على هذا المتصفح.\n\nعلى أندرويد (Chrome): افتحي قائمة المتصفح (⋮) بالأعلى واختاري \"تثبيت التطبيق\" أو \"إضافة إلى الشاشة الرئيسية\".");
+    }
   },
 
   setSection(id){ this.state.activeSection = id; this.render(); },
