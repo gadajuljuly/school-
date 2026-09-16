@@ -169,9 +169,30 @@ window.addEventListener("beforeinstallprompt", (e) => {
 });
 if("serviceWorker" in navigator){
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js").catch(() => {});
+    navigator.serviceWorker.register("sw.js").then((reg) => {
+      setInterval(() => { reg.update().catch(() => {}); }, 60000);
+    }).catch(() => {});
   });
 }
+
+const APP_BUILD_VERSION = "2026-09-16T19:06:11Z";
+async function checkForAppUpdate(){
+  try{
+    const res = await fetch("version.json?t=" + Date.now(), { cache: "no-store" });
+    if(!res.ok) return;
+    const data = await res.json();
+    if(data && data.version && data.version !== APP_BUILD_VERSION){
+      window.dispatchEvent(new Event("app-update-available"));
+    }
+  }catch(e){ /* لا مشكلة، سنحاول مجددًا لاحقًا */ }
+}
+window.addEventListener("load", () => {
+  checkForAppUpdate();
+  setInterval(checkForAppUpdate, 120000);
+  document.addEventListener("visibilitychange", () => {
+    if(document.visibilityState === "visible") checkForAppUpdate();
+  });
+});
 
 const MECHANISMS = [
   {key:"sys", label:"أنظمة"},
@@ -282,7 +303,8 @@ const App = {
     ui: {
       gateEntered:false, gatePhoneInput:"",
       adminOpen:false, adminAuthed:false, adminPasswordInput:"", adminError:"",
-      submissions:[], submissionsLoaded:false, submissionsError:"", viewingSubmissionId:null, adminSearch:""
+      submissions:[], submissionsLoaded:false, submissionsError:"", viewingSubmissionId:null, adminSearch:"",
+      updateAvailable:false
     }
   },
 
@@ -1228,13 +1250,20 @@ const App = {
 
   render(){
     if(this.state.activeSection === "__admin__" && !this.state.ui.adminAuthed) this.state.activeSection = "general";
+    const updateBanner = this.state.ui.updateAvailable ? `
+      <div class="no-print" style="position:sticky;top:0;z-index:50;background:#0f766e;color:#fff;padding:.6rem 1rem;text-align:center;font-size:.85rem;font-weight:600;display:flex;align-items:center;justify-content:center;gap:.75rem;flex-wrap:wrap;">
+        <span>🔄 يتوفّر تحديث جديد للتطبيق</span>
+        <button onclick="App.reloadForUpdate()" style="background:#fff;color:#0f766e;border:none;border-radius:.4rem;padding:.25rem .75rem;font-weight:700;cursor:pointer;">إعادة التحميل الآن</button>
+      </div>` : "";
     if(!this.state.ui.gateEntered && this.state.activeSection !== "__admin__"){
-      document.getElementById("app").innerHTML = this.renderGate() + (this.state.ui.adminOpen ? this.renderAdminModal() : "") + this.renderAdminFab();
+      document.getElementById("app").innerHTML = updateBanner + this.renderGate() + (this.state.ui.adminOpen ? this.renderAdminModal() : "") + this.renderAdminFab();
       return;
     }
-    document.getElementById("app").innerHTML = this.renderHeader() + this.renderTabs() + this.renderSection() + (this.state.ui.adminOpen ? this.renderAdminModal() : "") + this.renderAdminFab();
+    document.getElementById("app").innerHTML = updateBanner + this.renderHeader() + this.renderTabs() + this.renderSection() + (this.state.ui.adminOpen ? this.renderAdminModal() : "") + this.renderAdminFab();
     this.saveToLocalStorage();
   },
+
+  reloadForUpdate(){ location.reload(); },
 
   renderGate(){
     return `
@@ -1576,6 +1605,10 @@ const App = {
     </div>`;
   }
 };
+window.addEventListener("app-update-available", () => {
+  App.state.ui.updateAvailable = true;
+  App.render();
+});
 App.init();
 </script>
 </body>
