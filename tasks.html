@@ -1374,18 +1374,18 @@
   }
 
   function endSheet(id) {
-    var visibleSheets = data.sheets.filter(function (s) { return !s.ended; });
-    if (visibleSheets.length <= 1) {
+    if (visibleSheets().length <= 1) {
       alert("חייב להישאר לפחות פרויקט פעיל אחד.");
       return;
     }
     var sheet = data.sheets.find(function (s) { return s.id === id; });
-    var msg = sheet ? "לסמן את הפרויקט \"" + sheet.name + "\" כמסתיים? הוא לא יופיע יותר ברשימת הפרויקטים." : "לסמן את הפרויקט כמסתיים?";
+    var msg = sheet ? "לסמן את הפרויקט \"" + sheet.name + "\" כמסתיים? הוא לא יופיע יותר בימים הבאים (ימשיך להופיע בימים הקודמים)." : "לסמן את הפרויקט כמסתיים?";
     askConfirm(msg, function () {
       sheet.ended = true;
+      sheet.endedDate = todayISO();
       if (data.activeSheetId === id) {
-        var nextVisible = data.sheets.find(function (s) { return !s.ended; });
-        data.activeSheetId = nextVisible.id;
+        var nextVisible = visibleSheets().find(function (s) { return s.id !== id; });
+        if (nextVisible) data.activeSheetId = nextVisible.id;
       }
       saveData();
       render();
@@ -1590,7 +1590,9 @@
   });
 
   function visibleSheets() {
-    return data.sheets.filter(function (s) { return !s.ended; });
+    return data.sheets.filter(function (s) {
+      return !s.ended || state.viewDate <= s.endedDate;
+    });
   }
 
   function renderSheetsBar() {
@@ -1815,6 +1817,10 @@
 
   function render() {
     clearTimeout(longPressTimer);
+    var visibleForDate = visibleSheets();
+    if (visibleForDate.length && !visibleForDate.some(function (s) { return s.id === data.activeSheetId; })) {
+      data.activeSheetId = visibleForDate[0].id;
+    }
     renderSheetsBar();
 
     menuPanel.hidden = !state.menuOpen;
