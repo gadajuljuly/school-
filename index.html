@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>مسح بداية السنة - معطيات المدرسة</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0f766e">
@@ -301,6 +304,7 @@ const App = {
   saveToLocalStorage(){
     try{
       const { ui, ...persisted } = this.state;
+      if(persisted.activeSection === "__admin__") persisted.activeSection = "general";
       localStorage.setItem(STORAGE_KEY, JSON.stringify(persisted));
     }catch(e){ /* التخزين غير متاح في هذا المتصفح - لا مشكلة، باقي الميزات تعمل بشكل طبيعي */ }
   },
