@@ -293,6 +293,7 @@ const App = {
       this.addStaffRow();
       this.addStudentRow();
     }
+    if(this.state.activeSection === "__admin__") this.state.activeSection = "general";
     this.state.ui.gatePhoneInput = this.state.general.coachPhone || "";
     this.render();
   },
@@ -1222,6 +1223,7 @@ const App = {
   },
 
   render(){
+    if(this.state.activeSection === "__admin__" && !this.state.ui.adminAuthed) this.state.activeSection = "general";
     if(!this.state.ui.gateEntered && this.state.activeSection !== "__admin__"){
       document.getElementById("app").innerHTML = this.renderGate() + (this.state.ui.adminOpen ? this.renderAdminModal() : "") + this.renderAdminFab();
       return;
