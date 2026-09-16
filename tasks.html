@@ -998,7 +998,7 @@
     data.sheets.forEach(function (sheet) {
       (sheet.tasks || []).forEach(function (t) {
         if (typeof t.date !== "string") t.date = today;
-        if (t.status !== 2 && t.date < today) t.date = today;
+        if (t.type !== "note" && t.status !== 2 && t.date < today) t.date = today;
       });
     });
     data.lastRolloverDate = today;
