@@ -279,7 +279,7 @@ const App = {
     ui: {
       gateEntered:false, gatePhoneInput:"",
       adminOpen:false, adminAuthed:false, adminPasswordInput:"", adminError:"",
-      submissions:[], submissionsLoaded:false, viewingSubmissionId:null, adminSearch:""
+      submissions:[], submissionsLoaded:false, submissionsError:"", viewingSubmissionId:null, adminSearch:""
     }
   },
 
@@ -534,35 +534,41 @@ const App = {
   },
 
   async loadSubmissions(){
+    const errors = [];
+    let subRows = [];
+    let draftRows = [];
     try{
-      const [subRows, draftRows] = await Promise.all([
-        sbRequest("submissions?select=*&order=submitted_at.desc", { method:"GET" }),
-        sbRequest("drafts?select=*&order=updated_at.desc", { method:"GET" })
-      ]);
-      const submitted = (subRows || []).map(r => ({
-        id: "sub_" + r.id, rawId: r.id, status: "submitted",
-        schoolName: r.school_name, principalName: r.principal_name, coachName: r.coach_name,
-        teachersCount: r.teachers_count, studentsCount: r.students_count,
-        submittedAt: r.submitted_at, survey: r.survey
-      }));
-      const drafts = (draftRows || []).map(r => {
-        const d = r.data || {};
-        const g = d.general || {};
-        return {
-          id: "draft_" + r.id, rawId: r.id, status: "draft",
-          schoolName: g.schoolName, principalName: g.principalName, coachName: g.coachName,
-          teachersCount: g.teachersCount, studentsCount: g.studentsCount,
-          submittedAt: r.updated_at, survey: d
-        };
-      });
-      this.state.ui.submissions = submitted.concat(drafts).sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
-      this.state.ui.submissionsLoaded = true;
-      this.render();
+      subRows = await sbRequest("submissions?select=*&order=submitted_at.desc", { method:"GET" }) || [];
     }catch(e){
-      console.error("loadSubmissions error", e);
-      this.state.ui.submissionsLoaded = true;
-      this.render();
+      console.error("loadSubmissions (submissions) error", e);
+      errors.push("المسوحات المُرسلة: " + (e && e.message ? e.message : e));
     }
+    try{
+      draftRows = await sbRequest("drafts?select=*&order=updated_at.desc", { method:"GET" }) || [];
+    }catch(e){
+      console.error("loadSubmissions (drafts) error", e);
+      errors.push("المسودات: " + (e && e.message ? e.message : e));
+    }
+    const submitted = subRows.map(r => ({
+      id: "sub_" + r.id, rawId: r.id, status: "submitted",
+      schoolName: r.school_name, principalName: r.principal_name, coachName: r.coach_name,
+      teachersCount: r.teachers_count, studentsCount: r.students_count,
+      submittedAt: r.submitted_at, survey: r.survey
+    }));
+    const drafts = draftRows.map(r => {
+      const d = r.data || {};
+      const g = d.general || {};
+      return {
+        id: "draft_" + r.id, rawId: r.id, status: "draft",
+        schoolName: g.schoolName, principalName: g.principalName, coachName: g.coachName,
+        teachersCount: g.teachersCount, studentsCount: g.studentsCount,
+        submittedAt: r.updated_at, survey: d
+      };
+    });
+    this.state.ui.submissions = submitted.concat(drafts).sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
+    this.state.ui.submissionsError = errors.join(" | ");
+    this.state.ui.submissionsLoaded = true;
+    this.render();
   },
 
   subscribeSubmissions(){
@@ -1529,6 +1535,7 @@ const App = {
       <div class="admin-search no-print">
         <input type="text" value="${this.state.ui.adminSearch}" oninput="App.setAdminSearch(this.value)" placeholder="بحث باسم المدرسة / المدير/ة / المدرّبة">
       </div>
+      ${this.state.ui.submissionsError ? `<div style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;border-radius:10px;padding:10px 14px;margin-bottom:10px;font-size:14px;" class="no-print">⚠️ حدث خطأ أثناء تحميل بعض البيانات، لذلك القائمة قد تكون ناقصة: ${this.state.ui.submissionsError}</div>` : ""}
       <div class="card p-4 overflow-x-auto">
         ${!this.state.ui.submissionsLoaded
           ? `<p class="admin-empty">جارٍ تحميل كل المعطيات...</p>`
