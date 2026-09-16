@@ -2064,7 +2064,7 @@
         showAuthError("מלאו שם משתמש וסיסמה (לפחות 6 תווים)");
         return;
       }
-      if (!phone || phone.replace(/\D/g, "").length < 7) {
+      if (!phone || phone.replace(/\D/g, "").length < 10) {
         showAuthError("יש להזין מספר טלפון תקין - שדה חובה להרשמה");
         return;
       }
