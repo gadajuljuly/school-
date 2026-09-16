@@ -1096,6 +1096,7 @@
   var moveTaskCancelBtn = document.getElementById("moveTaskCancelBtn");
   var pendingMoveTaskId = null;
   var longPressTimer = null;
+  var lastScrolledSheetId = null;
   var moveTaskMode = "move";
 
   function moveOrCopyTask(taskId, targetSheetId, mode) {
@@ -1528,6 +1529,7 @@
     data.sheets.forEach(function (sheet) {
       var tab = document.createElement("div");
       tab.className = "sheet-tab" + (sheet.id === data.activeSheetId ? " active" : "");
+      tab.dataset.sheetId = sheet.id;
 
       if (state.renamingSheetId === sheet.id) {
         var input = document.createElement("input");
@@ -1628,6 +1630,18 @@
     addBtn.textContent = "+";
     addBtn.addEventListener("click", addSheet);
     sheetsBar.appendChild(addBtn);
+
+    if (data.activeSheetId !== lastScrolledSheetId) {
+      lastScrolledSheetId = data.activeSheetId;
+      var activeIndex = data.sheets.findIndex(function (s) { return s.id === data.activeSheetId; });
+      var anchorSheet = activeIndex > 0 ? data.sheets[activeIndex - 1] : data.sheets[activeIndex];
+      if (anchorSheet) {
+        var anchorTabEl = sheetsBar.querySelector('[data-sheet-id="' + anchorSheet.id + '"]');
+        if (anchorTabEl) {
+          anchorTabEl.scrollIntoView({ inline: "start", block: "nearest", behavior: "smooth" });
+        }
+      }
+    }
   }
 
   function currentTimeHHMM() {
