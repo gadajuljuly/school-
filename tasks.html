@@ -824,6 +824,10 @@
             <button id="changePasswordBtn">שינוי סיסמה</button>
             <button id="logoutBtn">התנתקות</button>
           </div>
+          <div class="menu-section">
+            <div class="menu-label">האפליקציה</div>
+            <button id="shareAppBtn">שיתוף קישור להתקנה</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1440,6 +1444,25 @@
   deleteSheetBtn.addEventListener("click", function () {
     state.menuOpen = false;
     deleteSheet(activeSheet().id);
+  });
+
+  var shareAppBtn = document.getElementById("shareAppBtn");
+  shareAppBtn.addEventListener("click", function () {
+    state.menuOpen = false;
+    render();
+    var url = location.origin + location.pathname;
+    var shareData = { title: "פרויקטי משימות", text: "אפליקציית ניהול משימות - לחצו כדי להתקין", url: url };
+    if (navigator.share) {
+      navigator.share(shareData).catch(function () {});
+    } else if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(function () {
+        alert("הקישור הועתק ללוח: " + url);
+      }, function () {
+        alert("הקישור להתקנה: " + url);
+      });
+    } else {
+      alert("הקישור להתקנה: " + url);
+    }
   });
 
   menuBtn.addEventListener("click", function (e) {
