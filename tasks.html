@@ -321,11 +321,13 @@
   }
   .move-task-mode {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
     margin-bottom: 14px;
   }
   .move-task-mode button {
     flex: 1;
+    min-width: 80px;
     padding: 9px;
     border-radius: 8px;
     border: 1px solid var(--rule);
@@ -873,6 +875,7 @@
       <div class="move-task-mode">
         <button type="button" class="danger-btn" id="sheetActionDeleteBtn">מחיקה</button>
         <button type="button" id="sheetActionShareBtn">שיתוף</button>
+        <button type="button" id="sheetActionEndBtn">הפרויקט הסתיים</button>
       </div>
       <div class="modal-actions">
         <button type="button" class="modal-btn modal-btn-no" id="sheetActionCancelBtn">ביטול</button>
@@ -1370,6 +1373,25 @@
     });
   }
 
+  function endSheet(id) {
+    var visibleSheets = data.sheets.filter(function (s) { return !s.ended; });
+    if (visibleSheets.length <= 1) {
+      alert("חייב להישאר לפחות פרויקט פעיל אחד.");
+      return;
+    }
+    var sheet = data.sheets.find(function (s) { return s.id === id; });
+    var msg = sheet ? "לסמן את הפרויקט \"" + sheet.name + "\" כמסתיים? הוא לא יופיע יותר ברשימת הפרויקטים." : "לסמן את הפרויקט כמסתיים?";
+    askConfirm(msg, function () {
+      sheet.ended = true;
+      if (data.activeSheetId === id) {
+        var nextVisible = data.sheets.find(function (s) { return !s.ended; });
+        data.activeSheetId = nextVisible.id;
+      }
+      saveData();
+      render();
+    });
+  }
+
   function buildSheetShareText(sheet) {
     var byDate = {};
     sheet.tasks.forEach(function (t) {
@@ -1410,6 +1432,7 @@
   var sheetActionOverlay = document.getElementById("sheetActionOverlay");
   var sheetActionDeleteBtn = document.getElementById("sheetActionDeleteBtn");
   var sheetActionShareBtn = document.getElementById("sheetActionShareBtn");
+  var sheetActionEndBtn = document.getElementById("sheetActionEndBtn");
   var sheetActionCancelBtn = document.getElementById("sheetActionCancelBtn");
   var pendingSheetActionId = null;
 
@@ -1430,6 +1453,11 @@
     var id = pendingSheetActionId;
     closeSheetActionModal();
     shareSheet(id);
+  });
+  sheetActionEndBtn.addEventListener("click", function () {
+    var id = pendingSheetActionId;
+    closeSheetActionModal();
+    endSheet(id);
   });
   sheetActionCancelBtn.addEventListener("click", closeSheetActionModal);
   sheetActionOverlay.addEventListener("click", function (e) {
@@ -1561,10 +1589,14 @@
     }
   });
 
+  function visibleSheets() {
+    return data.sheets.filter(function (s) { return !s.ended; });
+  }
+
   function renderSheetsBar() {
     clearTimeout(longPressTimer);
     sheetsBar.innerHTML = "";
-    data.sheets.forEach(function (sheet) {
+    visibleSheets().forEach(function (sheet) {
       var tab = document.createElement("div");
       tab.className = "sheet-tab" + (sheet.id === data.activeSheetId ? " active" : "");
       tab.dataset.sheetId = sheet.id;
@@ -1671,8 +1703,9 @@
 
     if (data.activeSheetId !== lastScrolledSheetId) {
       lastScrolledSheetId = data.activeSheetId;
-      var activeIndex = data.sheets.findIndex(function (s) { return s.id === data.activeSheetId; });
-      var anchorSheet = activeIndex > 0 ? data.sheets[activeIndex - 1] : data.sheets[activeIndex];
+      var visible = visibleSheets();
+      var activeIndex = visible.findIndex(function (s) { return s.id === data.activeSheetId; });
+      var anchorSheet = activeIndex > 0 ? visible[activeIndex - 1] : visible[activeIndex];
       if (anchorSheet) {
         var anchorTabEl = sheetsBar.querySelector('[data-sheet-id="' + anchorSheet.id + '"]');
         if (anchorTabEl) {
