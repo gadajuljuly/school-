@@ -781,6 +781,7 @@
     <form id="authForm">
       <input type="text" id="authUsername" class="auth-input" placeholder="שם משתמש" autocomplete="username" required>
       <input type="password" id="authPassword" class="auth-input" placeholder="סיסמה" autocomplete="current-password" required minlength="6">
+      <input type="tel" id="authPhone" class="auth-input" placeholder="מספר טלפון (נדרש להרשמה)" autocomplete="tel">
       <p class="auth-error" id="authError" hidden></p>
       <div class="auth-actions">
         <button type="submit" class="auth-btn auth-btn-primary" id="authLoginBtn">התחברות</button>
@@ -1984,6 +1985,7 @@
   var authForm = document.getElementById("authForm");
   var authUsername = document.getElementById("authUsername");
   var authPassword = document.getElementById("authPassword");
+  var authPhone = document.getElementById("authPhone");
   var authError = document.getElementById("authError");
   var authLoginBtn = document.getElementById("authLoginBtn");
   var authSignupBtn = document.getElementById("authSignupBtn");
@@ -2057,12 +2059,17 @@
       clearAuthError();
       var username = authUsername.value.trim();
       var password = authPassword.value;
+      var phone = authPhone.value.trim();
       if (!username || !password || password.length < 6) {
         showAuthError("מלאו שם משתמש וסיסמה (לפחות 6 תווים)");
         return;
       }
+      if (!phone || phone.replace(/\D/g, "").length < 7) {
+        showAuthError("יש להזין מספר טלפון תקין - שדה חובה להרשמה");
+        return;
+      }
       setAuthBusy(true);
-      supabaseClient.auth.signUp({ email: usernameToEmail(username), password: password })
+      supabaseClient.auth.signUp({ email: usernameToEmail(username), password: password, options: { data: { phone: phone } } })
         .then(function (result) {
           setAuthBusy(false);
           if (result.error) {
