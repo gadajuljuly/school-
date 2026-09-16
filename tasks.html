@@ -821,6 +821,7 @@
           <div class="menu-section" id="accountMenuSection">
             <div class="menu-label" id="menuUsernameLabel"></div>
             <button id="changeUsernameBtn">שינוי שם משתמש</button>
+            <button id="changePasswordBtn">שינוי סיסמה</button>
             <button id="logoutBtn">התנתקות</button>
           </div>
         </div>
@@ -895,6 +896,19 @@
       <div class="move-task-projects" id="moveTaskProjects"></div>
       <div class="modal-actions">
         <button type="button" class="modal-btn modal-btn-no" id="moveTaskCancelBtn">ביטול</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="changePasswordOverlay" hidden>
+    <div class="modal-box" role="alertdialog" aria-modal="true">
+      <p class="modal-message">שינוי סיסמה</p>
+      <input type="password" id="newPasswordInput" class="auth-input" placeholder="סיסמה חדשה (לפחות 6 תווים)" autocomplete="new-password" minlength="6">
+      <input type="password" id="confirmPasswordInput" class="auth-input" placeholder="אימות סיסמה חדשה" autocomplete="new-password" minlength="6">
+      <p class="auth-error" id="changePasswordError" hidden></p>
+      <div class="modal-actions">
+        <button type="button" class="modal-btn modal-btn-yes" id="changePasswordSaveBtn">שמירה</button>
+        <button type="button" class="modal-btn modal-btn-no" id="changePasswordCancelBtn">ביטול</button>
       </div>
     </div>
   </div>
@@ -2153,6 +2167,72 @@
         }, function () {
           changeUsernameSaveBtn.disabled = false;
           showChangeUsernameError("שגיאת רשת. בדקו את החיבור לאינטרנט.");
+        });
+    });
+
+    var changePasswordBtn = document.getElementById("changePasswordBtn");
+    var changePasswordOverlay = document.getElementById("changePasswordOverlay");
+    var newPasswordInput = document.getElementById("newPasswordInput");
+    var confirmPasswordInput = document.getElementById("confirmPasswordInput");
+    var changePasswordError = document.getElementById("changePasswordError");
+    var changePasswordSaveBtn = document.getElementById("changePasswordSaveBtn");
+    var changePasswordCancelBtn = document.getElementById("changePasswordCancelBtn");
+
+    function showChangePasswordError(msg) {
+      changePasswordError.textContent = msg;
+      changePasswordError.hidden = false;
+    }
+    function closeChangePassword() {
+      changePasswordOverlay.hidden = true;
+      changePasswordError.hidden = true;
+      changePasswordSaveBtn.disabled = false;
+      newPasswordInput.value = "";
+      confirmPasswordInput.value = "";
+    }
+
+    changePasswordBtn.addEventListener("click", function () {
+      state.menuOpen = false;
+      render();
+      changePasswordError.hidden = true;
+      newPasswordInput.value = "";
+      confirmPasswordInput.value = "";
+      changePasswordOverlay.hidden = false;
+      newPasswordInput.focus();
+    });
+    changePasswordCancelBtn.addEventListener("click", closeChangePassword);
+    changePasswordOverlay.addEventListener("click", function (e) {
+      if (e.target === changePasswordOverlay) closeChangePassword();
+    });
+    [newPasswordInput, confirmPasswordInput].forEach(function (input) {
+      input.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") closeChangePassword();
+        if (e.key === "Enter") { e.preventDefault(); changePasswordSaveBtn.click(); }
+      });
+    });
+    changePasswordSaveBtn.addEventListener("click", function () {
+      var newPassword = newPasswordInput.value;
+      var confirmPassword = confirmPasswordInput.value;
+      changePasswordError.hidden = true;
+      if (!newPassword || newPassword.length < 6) {
+        showChangePasswordError("הסיסמה חייבת להכיל לפחות 6 תווים");
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        showChangePasswordError("הסיסמאות אינן תואמות");
+        return;
+      }
+      changePasswordSaveBtn.disabled = true;
+      supabaseClient.auth.updateUser({ password: newPassword })
+        .then(function (result) {
+          changePasswordSaveBtn.disabled = false;
+          if (result.error) {
+            showChangePasswordError("שגיאה בשינוי הסיסמה");
+            return;
+          }
+          closeChangePassword();
+        }, function () {
+          changePasswordSaveBtn.disabled = false;
+          showChangePasswordError("שגיאת רשת. בדקו את החיבור לאינטרנט.");
         });
     });
   }
