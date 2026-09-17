@@ -454,11 +454,11 @@
     background-color: var(--paper);
   }
   .page-turn-clone.page-turn-out-fwd {
-    animation: page-turn-out-fwd 0.26s cubic-bezier(0.45, 0.05, 0.55, 0.95) forwards;
+    animation: page-turn-out-fwd 0.42s cubic-bezier(0.45, 0.05, 0.55, 0.95) forwards;
     transform-origin: right center;
   }
   .page-turn-clone.page-turn-out-bwd {
-    animation: page-turn-out-bwd 0.26s cubic-bezier(0.45, 0.05, 0.55, 0.95) forwards;
+    animation: page-turn-out-bwd 0.42s cubic-bezier(0.45, 0.05, 0.55, 0.95) forwards;
     transform-origin: left center;
   }
   @keyframes page-turn-out-fwd {
@@ -1449,7 +1449,7 @@
     clone.classList.add(outClass);
     setTimeout(function () {
       clone.remove();
-    }, 270);
+    }, 430);
   }
 
   function selectSheet(id) {
