@@ -455,6 +455,14 @@
     opacity: 0.55;
   }
 
+  .sheet-title {
+    text-align: center;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--ink);
+    height: 36px;
+    line-height: 36px;
+  }
   ol.task-list {
     list-style: none;
     margin: 0;
@@ -879,6 +887,7 @@
     </div>
 
     <div class="ruled-body">
+      <div class="sheet-title" id="sheetTitle"></div>
       <ol class="task-list" id="taskList"></ol>
       <div class="empty-state" id="emptyState" style="display:none;">אין שורות בפרויקט הזה עדיין</div>
       <form class="add-row" id="addForm">
@@ -1111,6 +1120,7 @@
   var addForm = document.getElementById("addForm");
   var taskList = document.getElementById("taskList");
   var emptyState = document.getElementById("emptyState");
+  var sheetTitle = document.getElementById("sheetTitle");
   var progressText = document.getElementById("progressText");
   var menuBtn = document.getElementById("menuBtn");
   var menuPanel = document.getElementById("menuPanel");
@@ -2076,6 +2086,8 @@
         textEl.select();
       }
     });
+
+    sheetTitle.textContent = activeSheet().name;
 
     emptyState.textContent = isToday
       ? "אין שורות בפרויקט הזה עדיין"
