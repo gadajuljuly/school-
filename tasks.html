@@ -443,6 +443,39 @@
     background-origin: content-box;
     background-clip: content-box;
     padding: 20px 22px 4px 44px;
+    transform-style: preserve-3d;
+  }
+  .page-turn-out-fwd {
+    animation: page-turn-out-fwd 0.16s ease-in forwards;
+    transform-origin: right center;
+  }
+  .page-turn-in-fwd {
+    animation: page-turn-in-fwd 0.2s ease-out forwards;
+    transform-origin: right center;
+  }
+  .page-turn-out-bwd {
+    animation: page-turn-out-bwd 0.16s ease-in forwards;
+    transform-origin: left center;
+  }
+  .page-turn-in-bwd {
+    animation: page-turn-in-bwd 0.2s ease-out forwards;
+    transform-origin: left center;
+  }
+  @keyframes page-turn-out-fwd {
+    from { transform: perspective(700px) rotateY(0deg); opacity: 1; }
+    to { transform: perspective(700px) rotateY(-85deg); opacity: 0.3; }
+  }
+  @keyframes page-turn-in-fwd {
+    from { transform: perspective(700px) rotateY(85deg); opacity: 0.3; }
+    to { transform: perspective(700px) rotateY(0deg); opacity: 1; }
+  }
+  @keyframes page-turn-out-bwd {
+    from { transform: perspective(700px) rotateY(0deg); opacity: 1; }
+    to { transform: perspective(700px) rotateY(85deg); opacity: 0.3; }
+  }
+  @keyframes page-turn-in-bwd {
+    from { transform: perspective(700px) rotateY(-85deg); opacity: 0.3; }
+    to { transform: perspective(700px) rotateY(0deg); opacity: 1; }
   }
   .ruled-body::before {
     content: "";
@@ -1403,12 +1436,34 @@
     render();
   }
 
+  function animatePageTurn(direction, applyChange) {
+    var page = document.querySelector(".ruled-body");
+    if (!page) { applyChange(); return; }
+    var outClass = direction > 0 ? "page-turn-out-fwd" : "page-turn-out-bwd";
+    var inClass = direction > 0 ? "page-turn-in-fwd" : "page-turn-in-bwd";
+    page.classList.add(outClass);
+    setTimeout(function () {
+      applyChange();
+      page.classList.remove(outClass);
+      page.classList.add(inClass);
+      setTimeout(function () {
+        page.classList.remove(inClass);
+      }, 200);
+    }, 160);
+  }
+
   function selectSheet(id) {
     if (data.activeSheetId === id) return;
-    data.activeSheetId = id;
-    state.filter = "all";
-    saveData();
-    render();
+    var visible = visibleSheets();
+    var oldIndex = visible.findIndex(function (s) { return s.id === data.activeSheetId; });
+    var newIndex = visible.findIndex(function (s) { return s.id === id; });
+    var direction = newIndex > oldIndex ? 1 : -1;
+    animatePageTurn(direction, function () {
+      data.activeSheetId = id;
+      state.filter = "all";
+      saveData();
+      render();
+    });
   }
 
   function commitRename(id, value) {
