@@ -288,6 +288,23 @@
     color: var(--accent-contrast);
   }
   .menu-panel button.danger { color: var(--danger); }
+  .reminder-select {
+    width: 100%;
+    padding: 7px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--rule);
+    background: var(--paper-alt);
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.88rem;
+    cursor: pointer;
+  }
+  .reminder-status {
+    font-size: 0.72rem;
+    color: var(--ink-muted);
+    margin: 6px 0 0;
+  }
+  .reminder-status[hidden] { display: none; }
 
   .sheets-row {
     background: var(--paper-alt);
@@ -894,6 +911,18 @@
             <button id="changeUsernameBtn">שינוי שם משתמש</button>
             <button id="changePasswordBtn">שינוי סיסמה</button>
             <button id="logoutBtn">התנתקות</button>
+          </div>
+          <div class="menu-section" id="reminderMenuSection">
+            <div class="menu-label">תזכורות משימות</div>
+            <select id="reminderFrequencySelect" class="reminder-select">
+              <option value="">כבוי</option>
+              <option value="15">כל 15 דקות</option>
+              <option value="30">כל 30 דקות</option>
+              <option value="60">כל שעה</option>
+              <option value="120">כל שעתיים</option>
+              <option value="240">כל 4 שעות</option>
+            </select>
+            <p class="reminder-status" id="reminderStatus" hidden></p>
           </div>
           <div class="menu-section">
             <div class="menu-label">האפליקציה</div>
@@ -1596,6 +1625,110 @@
     deleteSheet(activeSheet().id);
   });
 
+  var VAPID_PUBLIC_KEY = "BPdpuz8Hlv_j8NYip_kdmzpj6h6fhbhjY3_NeeLyBIoVo7K1qJiouH3RtdyOTNV6riNdmGB_X6u7qL_jVwejDrM";
+
+  function urlBase64ToUint8Array(base64String) {
+    var padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+    var base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+    var rawData = atob(base64);
+    var outputArray = new Uint8Array(rawData.length);
+    for (var i = 0; i < rawData.length; i++) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  }
+
+  var reminderFrequencySelect = document.getElementById("reminderFrequencySelect");
+  var reminderStatus = document.getElementById("reminderStatus");
+
+  function showReminderStatus(msg) {
+    reminderStatus.textContent = msg;
+    reminderStatus.hidden = false;
+  }
+
+  function initReminderSettings() {
+    if (!supabaseClient || !("serviceWorker" in navigator) || !("PushManager" in window)) {
+      if (reminderFrequencySelect) reminderFrequencySelect.disabled = true;
+      return;
+    }
+    navigator.serviceWorker.ready.then(function (reg) {
+      return reg.pushManager.getSubscription();
+    }).then(function (sub) {
+      if (!sub) return;
+      return supabaseClient.from("push_subscriptions").select("frequency_minutes").eq("endpoint", sub.endpoint).maybeSingle()
+        .then(function (result) {
+          var row = result && result.data;
+          if (row && row.frequency_minutes) {
+            reminderFrequencySelect.value = String(row.frequency_minutes);
+            showReminderStatus("תזכורות פעילות");
+          }
+        });
+    }).catch(function () {});
+  }
+
+  reminderFrequencySelect.addEventListener("change", function () {
+    var value = reminderFrequencySelect.value;
+    reminderStatus.hidden = true;
+    if (!supabaseClient || !SUPABASE_ROW_ID) return;
+
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+      showReminderStatus("התראות לא נתמכות בדפדפן הזה");
+      reminderFrequencySelect.value = "";
+      return;
+    }
+
+    if (!value) {
+      navigator.serviceWorker.ready.then(function (reg) {
+        return reg.pushManager.getSubscription();
+      }).then(function (sub) {
+        if (sub) {
+          supabaseClient.from("push_subscriptions").delete().eq("endpoint", sub.endpoint).then(function () {});
+          return sub.unsubscribe();
+        }
+      }).then(function () {
+        showReminderStatus("התזכורות כבויות");
+      }).catch(function () {});
+      return;
+    }
+
+    if (Notification.permission === "denied") {
+      showReminderStatus("ההתראות חסומות בדפדפן - יש לאשר אותן בהגדרות");
+      reminderFrequencySelect.value = "";
+      return;
+    }
+
+    Notification.requestPermission().then(function (permission) {
+      if (permission !== "granted") {
+        showReminderStatus("לא אושרה הרשאת התראות");
+        reminderFrequencySelect.value = "";
+        return;
+      }
+      return navigator.serviceWorker.ready.then(function (reg) {
+        return reg.pushManager.getSubscription().then(function (existing) {
+          return existing || reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+          });
+        });
+      }).then(function (sub) {
+        var keys = sub.toJSON().keys;
+        return supabaseClient.from("push_subscriptions").upsert({
+          user_id: SUPABASE_ROW_ID,
+          endpoint: sub.endpoint,
+          p256dh: keys.p256dh,
+          auth: keys.auth,
+          frequency_minutes: Number(value),
+          last_sent_at: null
+        }, { onConflict: "endpoint" });
+      }).then(function () {
+        showReminderStatus("תזכורות פעילות");
+      });
+    }).catch(function () {
+      showReminderStatus("שגיאה בהפעלת תזכורות");
+      reminderFrequencySelect.value = "";
+    });
+  });
+
   var shareAppBtn = document.getElementById("shareAppBtn");
   shareAppBtn.addEventListener("click", function () {
     state.menuOpen = false;
@@ -2200,6 +2333,7 @@
     authGate.hidden = true;
     appRoot.hidden = false;
     startWithSupabase();
+    initReminderSettings();
   }
 
   function showAuthGate() {
@@ -2223,6 +2357,7 @@
     appRoot.hidden = false;
     authGate.hidden = true;
     document.getElementById("accountMenuSection").hidden = true;
+    document.getElementById("reminderMenuSection").hidden = true;
     startLocalOnly();
   } else {
     supabaseClient.auth.getSession().then(function (result) {
