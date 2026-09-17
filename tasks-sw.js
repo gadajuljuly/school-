@@ -1,4 +1,4 @@
-var CACHE_NAME = "tasks-app-v7";
+var CACHE_NAME = "tasks-app-v8";
 var CORE_ASSETS = [
   "./tasks.html",
   "./tasks-manifest.json",
@@ -101,10 +101,16 @@ self.addEventListener("notificationclick", function (event) {
       for (var i = 0; i < clientList.length; i++) {
         var client = clientList[i];
         if ("navigate" in client && "focus" in client) {
-          return client.navigate(targetUrl).then(function (navigated) { return navigated.focus(); });
+          return client.navigate(targetUrl).then(function (navigated) {
+            return navigated.focus();
+          }).catch(function () {
+            return self.clients.openWindow(targetUrl);
+          });
         }
       }
-      if (self.clients.openWindow) return self.clients.openWindow(targetUrl);
+      return self.clients.openWindow(targetUrl);
+    }).catch(function () {
+      return self.clients.openWindow(targetUrl);
     })
   );
 });
