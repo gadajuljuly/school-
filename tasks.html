@@ -1291,16 +1291,33 @@
     render();
   });
 
-  (function setupSwipeDateNav() {
+  function switchSheetBySwipe(direction) {
+    var visible = visibleSheets();
+    var idx = visible.findIndex(function (s) { return s.id === data.activeSheetId; });
+    if (idx === -1) return;
+    var newIdx = idx + direction;
+    if (newIdx < 0 || newIdx >= visible.length) return;
+    selectSheet(visible[newIdx].id);
+  }
+
+  (function setupSwipeGestures() {
     var notebookEl = document.querySelector(".notebook");
     if (!notebookEl) return;
-    var startX = 0, startY = 0, startTime = 0, tracking = false;
+    var startX = 0, startY = 0, startTime = 0, tracking = false, zone = null;
 
     notebookEl.addEventListener("touchstart", function (e) {
       var target = e.target;
       if (state.menuOpen || state.searchOpen || e.touches.length !== 1 ||
           target.closest(".sheets-bar") || target.closest(".menu-panel") ||
           target.closest(".search-panel") || target.closest("input") || target.closest("textarea")) {
+        tracking = false;
+        return;
+      }
+      if (target.closest(".notebook-head")) {
+        zone = "date";
+      } else if (target.closest(".ruled-body")) {
+        zone = "sheet";
+      } else {
         tracking = false;
         return;
       }
@@ -1318,8 +1335,12 @@
       var dy = touch.clientY - startY;
       var elapsed = Date.now() - startTime;
       if (elapsed < 800 && Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-        state.viewDate = addDaysToISO(state.viewDate, dx < 0 ? -1 : 1);
-        render();
+        if (zone === "date") {
+          state.viewDate = addDaysToISO(state.viewDate, dx < 0 ? -1 : 1);
+          render();
+        } else if (zone === "sheet") {
+          switchSheetBySwipe(dx < 0 ? -1 : 1);
+        }
       }
     }, { passive: true });
   })();
