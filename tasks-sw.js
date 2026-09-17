@@ -1,4 +1,4 @@
-var CACHE_NAME = "tasks-app-v5";
+var CACHE_NAME = "tasks-app-v6";
 var CORE_ASSETS = [
   "./tasks.html",
   "./tasks-manifest.json",
@@ -77,16 +77,8 @@ self.addEventListener("push", function (event) {
       body: payload.body,
       icon: "./tasks-icon-192.png",
       badge: "./tasks-icon-192.png",
-      tag: "task-reminder"
-    }).then(function () {
-      return new Promise(function (resolve) {
-        setTimeout(function () {
-          self.registration.getNotifications({ tag: "task-reminder" }).then(function (notifications) {
-            notifications.forEach(function (n) { n.close(); });
-            resolve();
-          });
-        }, 5000);
-      });
+      tag: "task-reminder",
+      renotify: true
     })
   );
 });
