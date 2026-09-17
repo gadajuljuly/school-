@@ -1721,11 +1721,18 @@
           frequency_minutes: Number(value),
           last_sent_at: null
         }, { onConflict: "endpoint" });
-      }).then(function () {
+      }).then(function (result) {
+        if (result && result.error) {
+          console.error("push_subscriptions upsert failed:", result.error);
+          showReminderStatus("שגיאה בשמירת המנוי: " + result.error.message);
+          reminderFrequencySelect.value = "";
+          return;
+        }
         showReminderStatus("תזכורות פעילות");
       });
-    }).catch(function () {
-      showReminderStatus("שגיאה בהפעלת תזכורות");
+    }).catch(function (err) {
+      console.error("reminder subscribe failed:", err);
+      showReminderStatus("שגיאה בהפעלת תזכורות: " + (err && err.message ? err.message : err));
       reminderFrequencySelect.value = "";
     });
   });
