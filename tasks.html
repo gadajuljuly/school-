@@ -864,6 +864,7 @@
 </style>
 </head>
 <body>
+<div id="navDebugToast" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#222;color:#fff;font-size:13px;line-height:1.4;padding:8px 12px;direction:rtl;display:none;white-space:pre-wrap;"></div>
 <div class="splash-screen" id="splashScreen">
   <img src="tasks-icon-512.png" class="splash-logo" alt="פרויקטי משימות">
   <div class="splash-app-name">פרויקטי משימות</div>
@@ -2318,6 +2319,14 @@
     }
   }
 
+  function showNavDebugToast(source, sheetId, date, taskId) {
+    var el = document.getElementById("navDebugToast");
+    if (!el) return;
+    el.textContent = "DEBUG [" + source + "]: sheet=" + sheetId + " date=" + date + " task=" + taskId;
+    el.style.display = "block";
+    setTimeout(function () { el.style.display = "none"; }, 8000);
+  }
+
   function navigateToTaskLink(sheetId, date, taskId) {
     if (sheetId) data.activeSheetId = sheetId;
     if (date) state.viewDate = date;
@@ -2330,6 +2339,7 @@
     var date = params.get("date");
     var taskId = params.get("task");
     if (!sheetId && !date && !taskId) return;
+    showNavDebugToast("URL", sheetId, date, taskId);
     navigateToTaskLink(sheetId, date, taskId);
     history.replaceState(null, "", location.pathname);
   }
@@ -2338,6 +2348,7 @@
     navigator.serviceWorker.addEventListener("message", function (event) {
       var msg = event.data || {};
       if (msg.type !== "navigate-task") return;
+      showNavDebugToast("message", msg.sheetId, msg.date, msg.taskId);
       navigateToTaskLink(msg.sheetId, msg.date, msg.taskId);
       render();
     });
