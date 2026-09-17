@@ -85,6 +85,7 @@
     flex: 1;
     display: flex;
     flex-direction: column;
+    position: relative;
   }
 
   .notebook-head {
@@ -445,41 +446,30 @@
     padding: 20px 22px 4px 44px;
     backface-visibility: hidden;
   }
-  .page-turn-out-fwd {
+  .page-turn-clone {
+    position: absolute;
+    margin: 0;
+    z-index: 5;
+    pointer-events: none;
+    background-color: var(--paper);
+  }
+  .page-turn-clone.page-turn-out-fwd {
     animation: page-turn-out-fwd 0.26s cubic-bezier(0.45, 0.05, 0.55, 0.95) forwards;
     transform-origin: right center;
   }
-  .page-turn-in-fwd {
-    animation: page-turn-in-fwd 0.26s cubic-bezier(0.25, 0.8, 0.5, 1) forwards;
-    transform-origin: right center;
-  }
-  .page-turn-out-bwd {
+  .page-turn-clone.page-turn-out-bwd {
     animation: page-turn-out-bwd 0.26s cubic-bezier(0.45, 0.05, 0.55, 0.95) forwards;
     transform-origin: left center;
   }
-  .page-turn-in-bwd {
-    animation: page-turn-in-bwd 0.26s cubic-bezier(0.25, 0.8, 0.5, 1) forwards;
-    transform-origin: left center;
-  }
   @keyframes page-turn-out-fwd {
-    0%   { transform: perspective(1400px) rotateY(0deg) scaleY(1) translateY(0); opacity: 1; }
-    40%  { transform: perspective(1400px) rotateY(22deg) scaleY(1.05) translateY(-3%); opacity: 1; }
-    100% { transform: perspective(1400px) rotateY(95deg) scaleY(1) translateY(0); opacity: 0.15; }
-  }
-  @keyframes page-turn-in-fwd {
-    0%   { transform: perspective(1400px) rotateY(-95deg) scaleY(1) translateY(0); opacity: 0.15; }
-    60%  { transform: perspective(1400px) rotateY(-18deg) scaleY(1.04) translateY(-2%); opacity: 0.85; }
-    100% { transform: perspective(1400px) rotateY(0deg) scaleY(1) translateY(0); opacity: 1; }
+    0%   { transform: perspective(1400px) rotateY(0deg) scaleY(1) translateY(0); opacity: 1; box-shadow: none; }
+    40%  { transform: perspective(1400px) rotateY(22deg) scaleY(1.05) translateY(-3%); opacity: 1; box-shadow: 10px 6px 18px var(--shadow); }
+    100% { transform: perspective(1400px) rotateY(95deg) scaleY(1) translateY(0); opacity: 0; box-shadow: none; }
   }
   @keyframes page-turn-out-bwd {
-    0%   { transform: perspective(1400px) rotateY(0deg) scaleY(1) translateY(0); opacity: 1; }
-    40%  { transform: perspective(1400px) rotateY(-22deg) scaleY(1.05) translateY(-3%); opacity: 1; }
-    100% { transform: perspective(1400px) rotateY(-95deg) scaleY(1) translateY(0); opacity: 0.15; }
-  }
-  @keyframes page-turn-in-bwd {
-    0%   { transform: perspective(1400px) rotateY(95deg) scaleY(1) translateY(0); opacity: 0.15; }
-    60%  { transform: perspective(1400px) rotateY(18deg) scaleY(1.04) translateY(-2%); opacity: 0.85; }
-    100% { transform: perspective(1400px) rotateY(0deg) scaleY(1) translateY(0); opacity: 1; }
+    0%   { transform: perspective(1400px) rotateY(0deg) scaleY(1) translateY(0); opacity: 1; box-shadow: none; }
+    40%  { transform: perspective(1400px) rotateY(-22deg) scaleY(1.05) translateY(-3%); opacity: 1; box-shadow: -10px 6px 18px var(--shadow); }
+    100% { transform: perspective(1400px) rotateY(-95deg) scaleY(1) translateY(0); opacity: 0; box-shadow: none; }
   }
   .ruled-body::before {
     content: "";
@@ -1443,17 +1433,23 @@
   function animatePageTurn(direction, applyChange) {
     var page = document.querySelector(".ruled-body");
     if (!page) { applyChange(); return; }
+
+    var clone = page.cloneNode(true);
+    clone.classList.add("page-turn-clone");
+    clone.querySelectorAll("[id]").forEach(function (el) { el.removeAttribute("id"); });
+    clone.style.top = page.offsetTop + "px";
+    clone.style.left = page.offsetLeft + "px";
+    clone.style.width = page.offsetWidth + "px";
+    clone.style.height = page.offsetHeight + "px";
+    page.parentNode.appendChild(clone);
+
+    applyChange();
+
     var outClass = direction > 0 ? "page-turn-out-fwd" : "page-turn-out-bwd";
-    var inClass = direction > 0 ? "page-turn-in-fwd" : "page-turn-in-bwd";
-    page.classList.add(outClass);
+    clone.classList.add(outClass);
     setTimeout(function () {
-      applyChange();
-      page.classList.remove(outClass);
-      page.classList.add(inClass);
-      setTimeout(function () {
-        page.classList.remove(inClass);
-      }, 260);
-    }, 260);
+      clone.remove();
+    }, 270);
   }
 
   function selectSheet(id) {
