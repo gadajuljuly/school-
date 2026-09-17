@@ -2318,16 +2318,29 @@
     }
   }
 
+  function navigateToTaskLink(sheetId, date, taskId) {
+    if (sheetId) data.activeSheetId = sheetId;
+    if (date) state.viewDate = date;
+    if (taskId) state.highlightTaskId = taskId;
+  }
+
   function applyTaskLinkFromURL() {
     var params = new URLSearchParams(location.search);
     var sheetId = params.get("sheet");
     var date = params.get("date");
     var taskId = params.get("task");
     if (!sheetId && !date && !taskId) return;
-    if (sheetId) data.activeSheetId = sheetId;
-    if (date) state.viewDate = date;
-    if (taskId) state.highlightTaskId = taskId;
+    navigateToTaskLink(sheetId, date, taskId);
     history.replaceState(null, "", location.pathname);
+  }
+
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.addEventListener("message", function (event) {
+      var msg = event.data || {};
+      if (msg.type !== "navigate-task") return;
+      navigateToTaskLink(msg.sheetId, msg.date, msg.taskId);
+      render();
+    });
   }
 
   function loadFromLocalOrDefault() {
