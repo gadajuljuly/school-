@@ -1,4 +1,4 @@
-var CACHE_NAME = "tasks-app-v6";
+var CACHE_NAME = "tasks-app-v7";
 var CORE_ASSETS = [
   "./tasks.html",
   "./tasks-manifest.json",
@@ -78,19 +78,33 @@ self.addEventListener("push", function (event) {
       icon: "./tasks-icon-192.png",
       badge: "./tasks-icon-192.png",
       tag: "task-reminder",
-      renotify: true
+      renotify: true,
+      data: payload.data || null
     })
   );
 });
 
 self.addEventListener("notificationclick", function (event) {
   event.notification.close();
+  var taskData = event.notification.data || {};
+  var url = "./tasks.html";
+  if (taskData.sheetId || taskData.date || taskData.taskId) {
+    var params = new URLSearchParams();
+    if (taskData.sheetId) params.set("sheet", taskData.sheetId);
+    if (taskData.date) params.set("date", taskData.date);
+    if (taskData.taskId) params.set("task", taskData.taskId);
+    url = "./tasks.html?" + params.toString();
+  }
+  var targetUrl = new URL(url, self.location.href).href;
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(function (clientList) {
       for (var i = 0; i < clientList.length; i++) {
-        if ("focus" in clientList[i]) return clientList[i].focus();
+        var client = clientList[i];
+        if ("navigate" in client && "focus" in client) {
+          return client.navigate(targetUrl).then(function (navigated) { return navigated.focus(); });
+        }
       }
-      if (self.clients.openWindow) return self.clients.openWindow("./tasks.html");
+      if (self.clients.openWindow) return self.clients.openWindow(targetUrl);
     })
   );
 });

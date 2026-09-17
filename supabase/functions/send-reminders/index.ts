@@ -19,15 +19,17 @@ webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
-function pickIncompleteTask(appData: any): { taskText: string; sheetName: string } | null {
+function pickIncompleteTask(
+  appData: any,
+): { taskText: string; sheetName: string; taskId: string; sheetId: string; date: string } | null {
   if (!appData || !Array.isArray(appData.sheets)) return null;
-  const candidates: { taskText: string; sheetName: string }[] = [];
+  const candidates: { taskText: string; sheetName: string; taskId: string; sheetId: string; date: string }[] = [];
   for (const sheet of appData.sheets) {
     if (sheet.ended) continue;
     for (const t of sheet.tasks || []) {
       if (t.type === "note") continue;
       if (t.status === 2) continue;
-      candidates.push({ taskText: t.text, sheetName: sheet.name });
+      candidates.push({ taskText: t.text, sheetName: sheet.name, taskId: t.id, sheetId: sheet.id, date: t.date });
     }
   }
   if (!candidates.length) return null;
@@ -72,6 +74,7 @@ Deno.serve(async () => {
     const payload = JSON.stringify({
       title: pick.sheetName,
       body: pick.taskText,
+      data: { taskId: pick.taskId, sheetId: pick.sheetId, date: pick.date },
     });
 
     try {
