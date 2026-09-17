@@ -93,6 +93,14 @@
     justify-content: space-between;
     padding: 16px 20px 10px;
   }
+  .notebook-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px 16px;
+    flex-shrink: 0;
+    border-radius: 0 0 10px 10px;
+  }
   .notebook-date-wrap {
     display: flex;
     align-items: center;
@@ -429,7 +437,6 @@
     );
     background-origin: content-box;
     background-clip: content-box;
-    border-radius: 0 0 10px 10px;
     padding: 20px 22px 4px 44px;
   }
   .ruled-body::before {
@@ -875,6 +882,7 @@
         <button type="submit" class="add-btn" title="הוספה">+</button>
       </form>
     </div>
+    <div class="notebook-footer" id="notebookFooter"></div>
   </div>
 
   <div class="modal-overlay" id="addTypeOverlay" hidden>
