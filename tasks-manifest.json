@@ -1,6 +1,6 @@
 {
-  "name": "פרויקטי משימות",
-  "short_name": "משימות",
+  "name": "ITASK",
+  "short_name": "ITASK",
   "description": "אפליקציית ניהול משימות יומיות בעיצוב דף מחברת, עם פרויקטים וסנכרון בין מכשירים",
   "start_url": "./tasks.html",
   "id": "./tasks.html",

@@ -1,4 +1,4 @@
-var CACHE_NAME = "tasks-app-v9";
+var CACHE_NAME = "tasks-app-v10";
 var CORE_ASSETS = [
   "./tasks.html",
   "./tasks-manifest.json",
@@ -68,7 +68,7 @@ self.addEventListener("fetch", function (event) {
 });
 
 self.addEventListener("push", function (event) {
-  var payload = { title: "פרויקטי משימות", body: "יש לך משימה שלא הושלמה" };
+  var payload = { title: "ITASK", body: "יש לך משימה שלא הושלמה" };
   if (event.data) {
     try { payload = event.data.json(); } catch (e) {}
   }

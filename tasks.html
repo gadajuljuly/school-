@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>פרויקטי משימות</title>
+<title>ITASK</title>
 <link rel="manifest" href="tasks-manifest.json">
 <meta name="theme-color" content="#35618f">
 <meta name="mobile-web-app-capable" content="yes">
@@ -866,13 +866,13 @@
 <body>
 <div id="navDebugToast" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#222;color:#fff;font-size:13px;line-height:1.4;padding:8px 12px;direction:rtl;display:none;white-space:pre-wrap;"></div>
 <div class="splash-screen" id="splashScreen">
-  <img src="tasks-icon-512.png" class="splash-logo" alt="פרויקטי משימות">
-  <div class="splash-app-name">פרויקטי משימות</div>
+  <img src="tasks-icon-512.png" class="splash-logo" alt="ITASK">
+  <div class="splash-app-name">ITASK</div>
 </div>
 
 <div class="auth-gate" id="authGate">
   <div class="auth-box">
-    <h1 class="auth-title">פרויקטי משימות</h1>
+    <h1 class="auth-title">ITASK</h1>
     <p class="auth-subtitle">התחברו כדי לראות את המשימות שלכם</p>
     <form id="authForm">
       <input type="text" id="authUsername" class="auth-input" placeholder="שם משתמש" autocomplete="username" required>
@@ -1751,7 +1751,7 @@
     state.menuOpen = false;
     render();
     var url = location.origin + location.pathname;
-    var shareData = { title: "פרויקטי משימות", text: "אפליקציית ניהול משימות - לחצו כדי להתקין", url: url };
+    var shareData = { title: "ITASK", text: "אפליקציית ניהול משימות - לחצו כדי להתקין", url: url };
     if (navigator.share) {
       navigator.share(shareData).catch(function () {});
     } else if (navigator.clipboard && navigator.clipboard.writeText) {
