@@ -872,16 +872,22 @@
 
 <div class="auth-gate" id="authGate">
   <div class="auth-box">
+    <select id="authLangSelect" class="reminder-select" style="width:100%;margin-bottom:12px;">
+      <option value="he">עברית</option>
+      <option value="en">English</option>
+      <option value="ar">العربية</option>
+      <option value="ru">Русский</option>
+    </select>
     <h1 class="auth-title">ITASK</h1>
-    <p class="auth-subtitle">התחברו כדי לראות את המשימות שלכם</p>
+    <p class="auth-subtitle" data-i18n="authSubtitle">התחברו כדי לראות את המשימות שלכם</p>
     <form id="authForm">
-      <input type="text" id="authUsername" class="auth-input" placeholder="שם משתמש" autocomplete="username" required>
-      <input type="password" id="authPassword" class="auth-input" placeholder="סיסמה" autocomplete="current-password" required minlength="6">
-      <input type="tel" id="authPhone" class="auth-input" placeholder="מספר טלפון (נדרש להרשמה)" autocomplete="tel">
+      <input type="text" id="authUsername" class="auth-input" data-i18n-ph="authUsernamePlaceholder" placeholder="שם משתמש" autocomplete="username" required>
+      <input type="password" id="authPassword" class="auth-input" data-i18n-ph="authPasswordPlaceholder" placeholder="סיסמה" autocomplete="current-password" required minlength="6">
+      <input type="tel" id="authPhone" class="auth-input" data-i18n-ph="authPhonePlaceholder" placeholder="מספר טלפון (נדרש להרשמה)" autocomplete="tel">
       <p class="auth-error" id="authError" hidden></p>
       <div class="auth-actions">
-        <button type="submit" class="auth-btn auth-btn-primary" id="authLoginBtn">התחברות</button>
-        <button type="button" class="auth-btn auth-btn-secondary" id="authSignupBtn">הרשמה</button>
+        <button type="submit" class="auth-btn auth-btn-primary" id="authLoginBtn" data-i18n="authLoginBtn">התחברות</button>
+        <button type="button" class="auth-btn auth-btn-secondary" id="authSignupBtn" data-i18n="authSignupBtn">הרשמה</button>
       </div>
     </form>
   </div>
@@ -893,50 +899,59 @@
       <span class="notebook-date-wrap">
         <span class="date-click-area">
           <span class="notebook-date" id="dateLabel"></span>
-          <input type="date" id="dateInput" class="date-input-overlay" title="לחצו לבחירת תאריך">
+          <input type="date" id="dateInput" class="date-input-overlay" data-i18n-title="dateInputTitle" title="לחצו לבחירת תאריך">
         </span>
-        <button type="button" class="today-btn" id="todayBtn" hidden>היום</button>
+        <button type="button" class="today-btn" id="todayBtn" data-i18n="todayBtn" hidden>היום</button>
       </span>
       <div class="head-right">
         <span class="notebook-progress" id="progressText"></span>
-        <button class="menu-btn" id="menuBtn" title="תפריט" aria-haspopup="true" aria-expanded="false">&#9776;</button>
+        <button class="menu-btn" id="menuBtn" data-i18n-title="menuBtnTitle" title="תפריט" aria-haspopup="true" aria-expanded="false">&#9776;</button>
         <div class="menu-panel" id="menuPanel" hidden>
           <div class="menu-section">
-            <div class="menu-label">תצוגה</div>
+            <div class="menu-label" data-i18n="menuLabelView">תצוגה</div>
             <div class="filters">
-              <button data-filter="all" class="active">הכל</button>
-              <button data-filter="active">פעילות</button>
-              <button data-filter="done">הושלמו</button>
+              <button data-filter="all" class="active" data-i18n="filterAll">הכל</button>
+              <button data-filter="active" data-i18n="filterActive">פעילות</button>
+              <button data-filter="done" data-i18n="filterDone">הושלמו</button>
             </div>
           </div>
           <div class="menu-section">
-            <div class="menu-label">הפרויקט הנוכחי</div>
-            <button id="renameSheetBtn">שינוי שם</button>
-            <button id="deleteSheetBtn" class="danger">מחיקת פרויקט</button>
+            <div class="menu-label" data-i18n="menuLabelCurrentProject">הפרויקט הנוכחי</div>
+            <button id="renameSheetBtn" data-i18n="renameSheetBtn">שינוי שם</button>
+            <button id="deleteSheetBtn" class="danger" data-i18n="deleteSheetBtn">מחיקת פרויקט</button>
           </div>
           <div class="menu-section" id="accountMenuSection">
             <div class="menu-label" id="menuUsernameLabel"></div>
-            <button id="changeUsernameBtn">שינוי שם משתמש</button>
-            <button id="changePasswordBtn">שינוי סיסמה</button>
-            <button id="logoutBtn">התנתקות</button>
+            <button id="changeUsernameBtn" data-i18n="changeUsernameBtn">שינוי שם משתמש</button>
+            <button id="changePasswordBtn" data-i18n="changePasswordBtn">שינוי סיסמה</button>
+            <button id="logoutBtn" data-i18n="logoutBtn">התנתקות</button>
           </div>
           <div class="menu-section" id="reminderMenuSection">
-            <div class="menu-label">תזכורות משימות</div>
+            <div class="menu-label" data-i18n="menuLabelReminders">תזכורות משימות</div>
             <select id="reminderFrequencySelect" class="reminder-select">
-              <option value="">כבוי</option>
-              <option value="1">כל דקה</option>
-              <option value="5">כל 5 דקות</option>
-              <option value="15">כל 15 דקות</option>
-              <option value="30">כל 30 דקות</option>
-              <option value="60">כל שעה</option>
-              <option value="120">כל שעתיים</option>
-              <option value="240">כל 4 שעות</option>
+              <option value="" data-i18n="reminderOff">כבוי</option>
+              <option value="1" data-i18n="reminderEvery1">כל דקה</option>
+              <option value="5" data-i18n="reminderEvery5">כל 5 דקות</option>
+              <option value="15" data-i18n="reminderEvery15">כל 15 דקות</option>
+              <option value="30" data-i18n="reminderEvery30">כל 30 דקות</option>
+              <option value="60" data-i18n="reminderEveryHour">כל שעה</option>
+              <option value="120" data-i18n="reminderEvery2Hours">כל שעתיים</option>
+              <option value="240" data-i18n="reminderEvery4Hours">כל 4 שעות</option>
             </select>
             <p class="reminder-status" id="reminderStatus" hidden></p>
           </div>
           <div class="menu-section">
-            <div class="menu-label">האפליקציה</div>
-            <button id="shareAppBtn">שיתוף קישור להתקנה</button>
+            <div class="menu-label" data-i18n="menuLabelApp">האפליקציה</div>
+            <button id="shareAppBtn" data-i18n="shareAppBtn">שיתוף קישור להתקנה</button>
+          </div>
+          <div class="menu-section">
+            <div class="menu-label" data-i18n="menuLabelLanguage">שפה</div>
+            <select id="langSelect" class="reminder-select">
+              <option value="he">עברית</option>
+              <option value="en">English</option>
+              <option value="ar">العربية</option>
+              <option value="ru">Русский</option>
+            </select>
           </div>
         </div>
       </div>
@@ -945,9 +960,9 @@
     <div class="sheets-row">
       <div class="sheets-bar" id="sheetsBar"></div>
       <div class="sheets-search">
-        <button class="menu-btn" id="searchBtn" title="חיפוש משימות" aria-haspopup="true" aria-expanded="false">&#128269;</button>
+        <button class="menu-btn" id="searchBtn" data-i18n-title="searchBtnTitle" title="חיפוש משימות" aria-haspopup="true" aria-expanded="false">&#128269;</button>
         <div class="search-panel" id="searchPanel" hidden>
-          <input type="text" id="searchInput" class="search-input" placeholder="חיפוש משימות בכל הפרויקטים..." autocomplete="off">
+          <input type="text" id="searchInput" class="search-input" data-i18n-ph="searchInputPlaceholder" placeholder="חיפוש משימות בכל הפרויקטים..." autocomplete="off">
           <div class="search-results" id="searchResults"></div>
         </div>
       </div>
@@ -956,11 +971,11 @@
     <div class="ruled-body">
       <div class="sheet-title" id="sheetTitle"></div>
       <ol class="task-list" id="taskList"></ol>
-      <div class="empty-state" id="emptyState" style="display:none;">אין שורות בפרויקט הזה עדיין</div>
+      <div class="empty-state" id="emptyState" data-i18n="emptyStateToday" style="display:none;">אין שורות בפרויקט הזה עדיין</div>
       <form class="add-row" id="addForm">
         <span class="row-mark" aria-hidden="true"><svg viewBox="0 0 20 18" xmlns="http://www.w3.org/2000/svg"><path d="M4 3 L16 15 M1.5 3 L6.5 3 M13.5 3 L18.5 3 M1.5 15 L6.5 15 M13.5 15 L18.5 15" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg></span>
-        <input type="text" id="taskInput" placeholder="חדש..." maxlength="200" required autocomplete="off">
-        <button type="submit" class="add-btn" title="הוספה">+</button>
+        <input type="text" id="taskInput" data-i18n-ph="taskInputPlaceholder" placeholder="חדש..." maxlength="200" required autocomplete="off">
+        <button type="submit" class="add-btn" data-i18n-title="addBtnTitle" title="הוספה">+</button>
       </form>
     </div>
     <div class="footer-divider"></div>
@@ -969,27 +984,27 @@
 
   <div class="modal-overlay" id="addTypeOverlay" hidden>
     <div class="modal-box" role="alertdialog" aria-modal="true">
-      <p class="modal-message">איך להוסיף את השורה?</p>
+      <p class="modal-message" data-i18n="addTypeModalMessage">איך להוסיף את השורה?</p>
       <div class="move-task-mode">
-        <button type="button" id="addTypeTaskBtn">משימה</button>
-        <button type="button" id="addTypeNoteBtn">מזכרת</button>
+        <button type="button" id="addTypeTaskBtn" data-i18n="addTypeTaskBtn">משימה</button>
+        <button type="button" id="addTypeNoteBtn" data-i18n="addTypeNoteBtn">מזכרת</button>
       </div>
       <div class="modal-actions">
-        <button type="button" class="modal-btn modal-btn-no" id="addTypeCancelBtn">ביטול</button>
+        <button type="button" class="modal-btn modal-btn-no" id="addTypeCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </div>
   </div>
 
   <div class="modal-overlay" id="sheetActionOverlay" hidden>
     <div class="modal-box" role="alertdialog" aria-modal="true">
-      <p class="modal-message">מה לעשות עם הפרויקט?</p>
+      <p class="modal-message" data-i18n="sheetActionModalMessage">מה לעשות עם הפרויקט?</p>
       <div class="move-task-mode">
-        <button type="button" class="danger-btn" id="sheetActionDeleteBtn">מחיקה</button>
-        <button type="button" id="sheetActionShareBtn">שיתוף</button>
-        <button type="button" id="sheetActionEndBtn">הפרויקט הסתיים</button>
+        <button type="button" class="danger-btn" id="sheetActionDeleteBtn" data-i18n="deleteBtn">מחיקה</button>
+        <button type="button" id="sheetActionShareBtn" data-i18n="shareBtn">שיתוף</button>
+        <button type="button" id="sheetActionEndBtn" data-i18n="sheetActionEndBtn">הפרויקט הסתיים</button>
       </div>
       <div class="modal-actions">
-        <button type="button" class="modal-btn modal-btn-no" id="sheetActionCancelBtn">ביטול</button>
+        <button type="button" class="modal-btn modal-btn-no" id="sheetActionCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </div>
   </div>
@@ -998,58 +1013,58 @@
     <div class="modal-box" role="alertdialog" aria-modal="true">
       <p class="modal-message" id="confirmMessage"></p>
       <div class="modal-actions">
-        <button type="button" class="modal-btn modal-btn-yes" id="confirmYesBtn">כן</button>
-        <button type="button" class="modal-btn modal-btn-no" id="confirmNoBtn">לא</button>
+        <button type="button" class="modal-btn modal-btn-yes" id="confirmYesBtn" data-i18n="confirmYesBtn">כן</button>
+        <button type="button" class="modal-btn modal-btn-no" id="confirmNoBtn" data-i18n="confirmNoBtn">לא</button>
       </div>
     </div>
   </div>
 
   <div class="modal-overlay" id="moveTaskOverlay" hidden>
     <div class="modal-box" role="alertdialog" aria-modal="true">
-      <p class="modal-message">העברה או העתקה של המשימה</p>
+      <p class="modal-message" data-i18n="moveTaskModalMessage">העברה או העתקה של המשימה</p>
       <div class="move-task-mode">
-        <button type="button" class="active" id="moveModeMoveBtn">העברה</button>
-        <button type="button" id="moveModeCopyBtn">העתקה</button>
+        <button type="button" class="active" id="moveModeMoveBtn" data-i18n="moveModeMoveBtn">העברה</button>
+        <button type="button" id="moveModeCopyBtn" data-i18n="moveModeCopyBtn">העתקה</button>
       </div>
       <div class="move-task-projects" id="moveTaskProjects"></div>
       <div class="modal-actions">
-        <button type="button" class="modal-btn modal-btn-no" id="moveTaskCancelBtn">ביטול</button>
+        <button type="button" class="modal-btn modal-btn-no" id="moveTaskCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </div>
   </div>
 
   <div class="modal-overlay" id="changePasswordOverlay" hidden>
     <div class="modal-box" role="alertdialog" aria-modal="true">
-      <p class="modal-message">שינוי סיסמה</p>
-      <input type="password" id="newPasswordInput" class="auth-input" placeholder="סיסמה חדשה (לפחות 6 תווים)" autocomplete="new-password" minlength="6">
-      <input type="password" id="confirmPasswordInput" class="auth-input" placeholder="אימות סיסמה חדשה" autocomplete="new-password" minlength="6">
+      <p class="modal-message" data-i18n="changePasswordBtn">שינוי סיסמה</p>
+      <input type="password" id="newPasswordInput" class="auth-input" data-i18n-ph="newPasswordPlaceholder" placeholder="סיסמה חדשה (לפחות 6 תווים)" autocomplete="new-password" minlength="6">
+      <input type="password" id="confirmPasswordInput" class="auth-input" data-i18n-ph="confirmPasswordPlaceholder" placeholder="אימות סיסמה חדשה" autocomplete="new-password" minlength="6">
       <p class="auth-error" id="changePasswordError" hidden></p>
       <div class="modal-actions">
-        <button type="button" class="modal-btn modal-btn-yes" id="changePasswordSaveBtn">שמירה</button>
-        <button type="button" class="modal-btn modal-btn-no" id="changePasswordCancelBtn">ביטול</button>
+        <button type="button" class="modal-btn modal-btn-yes" id="changePasswordSaveBtn" data-i18n="saveBtn">שמירה</button>
+        <button type="button" class="modal-btn modal-btn-no" id="changePasswordCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </div>
   </div>
 
   <div class="modal-overlay" id="changeUsernameOverlay" hidden>
     <div class="modal-box" role="alertdialog" aria-modal="true">
-      <p class="modal-message">שינוי שם משתמש</p>
-      <input type="text" id="newUsernameInput" class="auth-input" placeholder="שם משתמש חדש" autocomplete="username">
+      <p class="modal-message" data-i18n="changeUsernameBtn">שינוי שם משתמש</p>
+      <input type="text" id="newUsernameInput" class="auth-input" data-i18n-ph="newUsernamePlaceholder" placeholder="שם משתמש חדש" autocomplete="username">
       <p class="auth-error" id="changeUsernameError" hidden></p>
       <div class="modal-actions">
-        <button type="button" class="modal-btn modal-btn-yes" id="changeUsernameSaveBtn">שמירה</button>
-        <button type="button" class="modal-btn modal-btn-no" id="changeUsernameCancelBtn">ביטול</button>
+        <button type="button" class="modal-btn modal-btn-yes" id="changeUsernameSaveBtn" data-i18n="saveBtn">שמירה</button>
+        <button type="button" class="modal-btn modal-btn-no" id="changeUsernameCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </div>
   </div>
 
-  <button type="button" class="install-fab" id="installBtn" hidden>&#128241; התקן אפליקציה</button>
+  <button type="button" class="install-fab" id="installBtn" data-i18n="installFab" hidden>&#128241; התקן אפליקציה</button>
 
   <div class="modal-overlay" id="iosInstallOverlay" hidden>
     <div class="modal-box" role="alertdialog" aria-modal="true">
       <p class="modal-message" id="installInstructions"></p>
       <div class="modal-actions">
-        <button type="button" class="modal-btn modal-btn-yes" id="iosInstallCloseBtn">הבנתי</button>
+        <button type="button" class="modal-btn modal-btn-yes" id="iosInstallCloseBtn" data-i18n="iosInstallCloseBtn">הבנתי</button>
       </div>
     </div>
   </div>
@@ -1057,6 +1072,172 @@
 
 <script>
 (function () {
+  var TRANSLATIONS = {
+    authSubtitle: { he: "התחברו כדי לראות את המשימות שלכם", en: "Log in to see your tasks", ar: "سجّل الدخول لرؤية مهامك", ru: "Войдите, чтобы увидеть свои задачи" },
+    authUsernamePlaceholder: { he: "שם משתמש", en: "Username", ar: "اسم المستخدم", ru: "Имя пользователя" },
+    authPasswordPlaceholder: { he: "סיסמה", en: "Password", ar: "كلمة المرور", ru: "Пароль" },
+    authPhonePlaceholder: { he: "מספר טלפון (נדרש להרשמה)", en: "Phone number (required for signup)", ar: "رقم الهاتف (مطلوب للتسجيل)", ru: "Номер телефона (обязателен при регистрации)" },
+    authLoginBtn: { he: "התחברות", en: "Log in", ar: "تسجيل الدخول", ru: "Войти" },
+    authSignupBtn: { he: "הרשמה", en: "Sign up", ar: "إنشاء حساب", ru: "Регистрация" },
+    dateInputTitle: { he: "לחצו לבחירת תאריך", en: "Click to pick a date", ar: "اضغط لاختيار التاريخ", ru: "Нажмите, чтобы выбрать дату" },
+    todayBtn: { he: "היום", en: "Today", ar: "اليوم", ru: "Сегодня" },
+    menuBtnTitle: { he: "תפריט", en: "Menu", ar: "القائمة", ru: "Меню" },
+    menuLabelView: { he: "תצוגה", en: "View", ar: "العرض", ru: "Вид" },
+    filterAll: { he: "הכל", en: "All", ar: "الكل", ru: "Все" },
+    filterActive: { he: "פעילות", en: "Active", ar: "نشطة", ru: "Активные" },
+    filterDone: { he: "הושלמו", en: "Done", ar: "مكتملة", ru: "Готово" },
+    menuLabelCurrentProject: { he: "הפרויקט הנוכחי", en: "Current project", ar: "المشروع الحالي", ru: "Текущий проект" },
+    renameSheetBtn: { he: "שינוי שם", en: "Rename", ar: "تغيير الاسم", ru: "Переименовать" },
+    deleteSheetBtn: { he: "מחיקת פרויקט", en: "Delete project", ar: "حذف المشروع", ru: "Удалить проект" },
+    changeUsernameBtn: { he: "שינוי שם משתמש", en: "Change username", ar: "تغيير اسم المستخدم", ru: "Изменить имя пользователя" },
+    changePasswordBtn: { he: "שינוי סיסמה", en: "Change password", ar: "تغيير كلمة المرور", ru: "Изменить пароль" },
+    logoutBtn: { he: "התנתקות", en: "Log out", ar: "تسجيل الخروج", ru: "Выйти" },
+    menuLabelReminders: { he: "תזכורות משימות", en: "Task reminders", ar: "تذكيرات المهام", ru: "Напоминания о задачах" },
+    reminderOff: { he: "כבוי", en: "Off", ar: "إيقاف", ru: "Выкл" },
+    reminderEvery1: { he: "כל דקה", en: "Every minute", ar: "كل دقيقة", ru: "Каждую минуту" },
+    reminderEvery5: { he: "כל 5 דקות", en: "Every 5 minutes", ar: "كل 5 دقائق", ru: "Каждые 5 минут" },
+    reminderEvery15: { he: "כל 15 דקות", en: "Every 15 minutes", ar: "كل 15 دقيقة", ru: "Каждые 15 минут" },
+    reminderEvery30: { he: "כל 30 דקות", en: "Every 30 minutes", ar: "كل 30 دقيقة", ru: "Каждые 30 минут" },
+    reminderEveryHour: { he: "כל שעה", en: "Every hour", ar: "كل ساعة", ru: "Каждый час" },
+    reminderEvery2Hours: { he: "כל שעתיים", en: "Every 2 hours", ar: "كل ساعتين", ru: "Каждые 2 часа" },
+    reminderEvery4Hours: { he: "כל 4 שעות", en: "Every 4 hours", ar: "كل 4 ساعات", ru: "Каждые 4 часа" },
+    menuLabelApp: { he: "האפליקציה", en: "App", ar: "التطبيق", ru: "Приложение" },
+    shareAppBtn: { he: "שיתוף קישור להתקנה", en: "Share install link", ar: "مشاركة رابط التثبيت", ru: "Поделиться ссылкой на установку" },
+    menuLabelLanguage: { he: "שפה", en: "Language", ar: "اللغة", ru: "Язык" },
+    searchBtnTitle: { he: "חיפוש משימות", en: "Search tasks", ar: "البحث عن المهام", ru: "Поиск задач" },
+    searchInputPlaceholder: { he: "חיפוש משימות בכל הפרויקטים...", en: "Search tasks across all projects...", ar: "ابحث عن المهام في جميع المشاريع...", ru: "Поиск задач по всем проектам..." },
+    searchEmptyPrompt: { he: "הקלידו כדי לחפש", en: "Type to search", ar: "اكتب للبحث", ru: "Введите текст для поиска" },
+    searchNoResults: { he: "לא נמצאו תוצאות", en: "No results found", ar: "لم يتم العثور على نتائج", ru: "Ничего не найдено" },
+    emptyStateToday: { he: "אין שורות בפרויקט הזה עדיין", en: "No rows in this project yet", ar: "لا توجد عناصر في هذا المشروع بعد", ru: "В этом проекте пока нет записей" },
+    emptyStateFuture: { he: "אין עדיין משימות מתוכננות לתאריך הזה", en: "No tasks planned for this date yet", ar: "لا توجد مهام مخططة لهذا التاريخ بعد", ru: "На эту дату пока нет запланированных задач" },
+    emptyStatePast: { he: "אין שורות מהתאריך הזה בפרויקט הזה", en: "No rows from this date in this project", ar: "لا توجد عناصر من هذا التاريخ في هذا المشروع", ru: "Нет записей за эту дату в этом проекте" },
+    taskInputPlaceholder: { he: "חדש...", en: "New...", ar: "جديد...", ru: "Новое..." },
+    addBtnTitle: { he: "הוספה", en: "Add", ar: "إضافة", ru: "Добавить" },
+    addTypeModalMessage: { he: "איך להוסיף את השורה?", en: "How would you like to add this row?", ar: "كيف تريد إضافة هذا العنصر؟", ru: "Как добавить эту запись?" },
+    addTypeTaskBtn: { he: "משימה", en: "Task", ar: "مهمة", ru: "Задача" },
+    addTypeNoteBtn: { he: "מזכרת", en: "Note", ar: "ملاحظة", ru: "Заметка" },
+    cancelBtn: { he: "ביטול", en: "Cancel", ar: "إلغاء", ru: "Отмена" },
+    sheetActionModalMessage: { he: "מה לעשות עם הפרויקט?", en: "What would you like to do with this project?", ar: "ماذا تريد أن تفعل بهذا المشروع؟", ru: "Что сделать с этим проектом?" },
+    deleteBtn: { he: "מחיקה", en: "Delete", ar: "حذف", ru: "Удалить" },
+    shareBtn: { he: "שיתוף", en: "Share", ar: "مشاركة", ru: "Поделиться" },
+    sheetActionEndBtn: { he: "הפרויקט הסתיים", en: "Project finished", ar: "انتهى المشروع", ru: "Проект завершён" },
+    confirmYesBtn: { he: "כן", en: "Yes", ar: "نعم", ru: "Да" },
+    confirmNoBtn: { he: "לא", en: "No", ar: "لا", ru: "Нет" },
+    moveTaskModalMessage: { he: "העברה או העתקה של המשימה", en: "Move or copy this task", ar: "نقل أو نسخ هذه المهمة", ru: "Переместить или скопировать задачу" },
+    moveModeMoveBtn: { he: "העברה", en: "Move", ar: "نقل", ru: "Переместить" },
+    moveModeCopyBtn: { he: "העתקה", en: "Copy", ar: "نسخ", ru: "Копировать" },
+    newPasswordPlaceholder: { he: "סיסמה חדשה (לפחות 6 תווים)", en: "New password (at least 6 characters)", ar: "كلمة مرور جديدة (6 أحرف على الأقل)", ru: "Новый пароль (не менее 6 символов)" },
+    confirmPasswordPlaceholder: { he: "אימות סיסמה חדשה", en: "Confirm new password", ar: "تأكيد كلمة المرور الجديدة", ru: "Подтвердите новый пароль" },
+    saveBtn: { he: "שמירה", en: "Save", ar: "حفظ", ru: "Сохранить" },
+    newUsernamePlaceholder: { he: "שם משתמש חדש", en: "New username", ar: "اسم مستخدم جديد", ru: "Новое имя пользователя" },
+    installFab: { he: "📱 התקן אפליקציה", en: "📱 Install app", ar: "📱 تثبيت التطبيق", ru: "📱 Установить приложение" },
+    iosInstallCloseBtn: { he: "הבנתי", en: "Got it", ar: "فهمت", ru: "Понятно" },
+    projectWord: { he: "פרויקט", en: "Project", ar: "مشروع", ru: "Проект" },
+    noOtherProjects: { he: "אין פרויקטים אחרים", en: "No other projects", ar: "لا توجد مشاريع أخرى", ru: "Нет других проектов" },
+    mustHaveOneProject: { he: "חייב להישאר לפחות פרויקט אחד.", en: "At least one project must remain.", ar: "يجب أن يبقى مشروع واحد على الأقل.", ru: "Должен остаться хотя бы один проект." },
+    mustHaveOneActiveProject: { he: "חייב להישאר לפחות פרויקט פעיל אחד.", en: "At least one active project must remain.", ar: "يجب أن يبقى مشروع نشط واحد على الأقل.", ru: "Должен остаться хотя бы один активный проект." },
+    confirmDeleteProjectNamed: { he: 'למחוק את הפרויקט "{name}" ואת כל השורות שבו?', en: 'Delete the project "{name}" and all its rows?', ar: 'هل تريد حذف المشروع "{name}" وجميع عناصره؟', ru: 'Удалить проект «{name}» и все его записи?' },
+    confirmDeleteProjectGeneric: { he: "למחוק את הפרויקט?", en: "Delete the project?", ar: "هل تريد حذف المشروع؟", ru: "Удалить проект?" },
+    confirmEndProjectNamed: { he: 'לסמן את הפרויקט "{name}" כמסתיים? הוא לא יופיע יותר בימים הבאים (ימשיך להופיע בימים הקודמים).', en: 'Mark the project "{name}" as finished? It will no longer appear on future days (it will still appear on past days).', ar: 'هل تريد وضع علامة "منتهٍ" على المشروع "{name}"؟ لن يظهر بعد الآن في الأيام القادمة (سيستمر بالظهور في الأيام السابقة).', ru: 'Отметить проект «{name}» как завершённый? Он больше не будет отображаться в будущие дни (но останется виден в прошедших днях).' },
+    confirmEndProjectGeneric: { he: "לסמן את הפרויקט כמסתיים?", en: "Mark the project as finished?", ar: "هل تريد وضع علامة \"منتهٍ\" على هذا المشروع؟", ru: "Отметить проект как завершённый?" },
+    confirmShareProject: { he: 'לשתף את הפרויקט "{name}"?', en: 'Share the project "{name}"?', ar: 'هل تريد مشاركة المشروع "{name}"؟', ru: 'Поделиться проектом «{name}»?' },
+    projectContentCopied: { he: "תוכן הפרויקט הועתק ללוח", en: "Project content copied to clipboard", ar: "تم نسخ محتوى المشروع إلى الحافظة", ru: "Содержимое проекта скопировано в буфер обмена" },
+    shareNotSupported: { he: "השיתוף לא נתמך בדפדפן הזה", en: "Sharing isn't supported in this browser", ar: "المشاركة غير مدعومة في هذا المتصفح", ru: "Обмен не поддерживается в этом браузере" },
+    remindersActive: { he: "תזכורות פעילות", en: "Reminders active", ar: "التذكيرات نشطة", ru: "Напоминания включены" },
+    remindersOffStatus: { he: "התזכורות כבויות", en: "Reminders are off", ar: "التذكيرات متوقفة", ru: "Напоминания выключены" },
+    notificationsNotSupported: { he: "התראות לא נתמכות בדפדפן הזה", en: "Notifications aren't supported in this browser", ar: "الإشعارات غير مدعومة في هذا المتصفح", ru: "Уведомления не поддерживаются в этом браузере" },
+    notificationsBlocked: { he: "ההתראות חסומות בדפדפן - יש לאשר אותן בהגדרות", en: "Notifications are blocked - allow them in settings", ar: "الإشعارات محظورة - يجب السماح بها من الإعدادات", ru: "Уведомления заблокированы - разрешите их в настройках" },
+    notificationPermissionDenied: { he: "לא אושרה הרשאת התראות", en: "Notification permission was not granted", ar: "لم يتم منح إذن الإشعارات", ru: "Разрешение на уведомления не получено" },
+    errorSavingSubscription: { he: "שגיאה בשמירת המנוי: ", en: "Error saving subscription: ", ar: "خطأ في حفظ الاشتراك: ", ru: "Ошибка сохранения подписки: " },
+    errorEnablingReminders: { he: "שגיאה בהפעלת תזכורות: ", en: "Error enabling reminders: ", ar: "خطأ في تفعيل التذكيرات: ", ru: "Ошибка включения напоминаний: " },
+    shareAppText: { he: "אפליקציית ניהול משימות - לחצו כדי להתקין", en: "Task management app - tap to install", ar: "تطبيق لإدارة المهام - اضغط للتثبيت", ru: "Приложение для управления задачами - нажмите, чтобы установить" },
+    linkCopied: { he: "הקישור הועתק ללוח: ", en: "Link copied to clipboard: ", ar: "تم نسخ الرابط إلى الحافظة: ", ru: "Ссылка скопирована в буфер обмена: " },
+    installLink: { he: "הקישור להתקנה: ", en: "Install link: ", ar: "رابط التثبيت: ", ru: "Ссылка для установки: " },
+    clickToRename: { he: "לחצו לשינוי שם", en: "Click to rename", ar: "اضغط لتغيير الاسم", ru: "Нажмите, чтобы переименовать" },
+    addProjectTitle: { he: "הוספת פרויקט", en: "Add project", ar: "إضافة مشروع", ru: "Добавить проект" },
+    statusPartial: { he: "לחצו כדי לסמן טיפול חלקי", en: "Click to mark as partially done", ar: "اضغط للتعليم كمنفذ جزئيًا", ru: "Нажмите, чтобы отметить как частично выполненное" },
+    statusDone: { he: "לחצו כדי לסמן כהושלם", en: "Click to mark as done", ar: "اضغط للتعليم كمكتمل", ru: "Нажмите, чтобы отметить как выполненное" },
+    statusReset: { he: "לחצו כדי לאפס", en: "Click to reset", ar: "اضغط لإعادة التعيين", ru: "Нажмите, чтобы сбросить" },
+    unmarkUrgent: { he: "לחצו לביטול הדחיפות", en: "Click to unmark as urgent", ar: "اضغط لإلغاء وضع الاستعجال", ru: "Нажмите, чтобы снять срочность" },
+    markUrgent: { he: "לחצו לסימון כדחוף", en: "Click to mark as urgent", ar: "اضغط للتعليم كعاجل", ru: "Нажмите, чтобы отметить как срочное" },
+    confirmDeleteTask: { he: 'למחוק את השורה "{name}"?', en: 'Delete the row "{name}"?', ar: 'هل تريد حذف العنصر "{name}"؟', ru: 'Удалить запись «{name}»?' },
+    completedOn: { he: "הושלם בתאריך ", en: "Completed on ", ar: "اكتمل بتاريخ ", ru: "Выполнено " },
+    completedCount: { he: " הושלמו", en: " done", ar: " مكتملة", ru: " выполнено" },
+    loggedInAs: { he: "מחובר/ת בתור ", en: "Logged in as ", ar: "تم تسجيل الدخول باسم ", ru: "Вы вошли как " },
+    wrongCredentials: { he: "שם משתמש או סיסמה שגויים", en: "Incorrect username or password", ar: "اسم المستخدم أو كلمة المرور غير صحيحة", ru: "Неверное имя пользователя или пароль" },
+    loginError: { he: "שגיאת התחברות. בדקו את החיבור לאינטרנט.", en: "Login error. Check your internet connection.", ar: "خطأ في تسجيل الدخول. تحقق من اتصالك بالإنترنت.", ru: "Ошибка входа. Проверьте подключение к интернету." },
+    fillUsernamePassword: { he: "מלאו שם משתמש וסיסמה (לפחות 6 תווים)", en: "Fill in username and password (at least 6 characters)", ar: "املأ اسم المستخدم وكلمة المرور (6 أحرف على الأقل)", ru: "Заполните имя пользователя и пароль (не менее 6 символов)" },
+    validPhoneRequired: { he: "יש להזין מספר טלפון תקין - שדה חובה להרשמה", en: "Please enter a valid phone number - required for signup", ar: "يرجى إدخال رقم هاتف صالح - حقل مطلوب للتسجيل", ru: "Введите корректный номер телефона - обязательное поле для регистрации" },
+    usernameTaken: { he: "שם המשתמש הזה כבר תפוס", en: "This username is already taken", ar: "اسم المستخدم هذا مستخدم بالفعل", ru: "Это имя пользователя уже занято" },
+    signupError: { he: "שגיאה בהרשמה", en: "Signup error", ar: "خطأ في التسجيل", ru: "Ошибка регистрации" },
+    signupSuccess: { he: "ההרשמה בוצעה. נסו להתחבר עכשיו.", en: "Signup complete. Try logging in now.", ar: "تم التسجيل بنجاح. حاول تسجيل الدخول الآن.", ru: "Регистрация завершена. Попробуйте войти сейчас." },
+    signupNetworkError: { he: "שגיאת הרשמה. בדקו את החיבור לאינטרנט.", en: "Signup error. Check your internet connection.", ar: "خطأ في التسجيل. تحقق من اتصالك بالإنترنت.", ru: "Ошибка регистрации. Проверьте подключение к интернету." },
+    enterUsername: { he: "יש להזין שם משתמש", en: "Please enter a username", ar: "يرجى إدخال اسم مستخدم", ru: "Введите имя пользователя" },
+    usernameChangeError: { he: "שגיאה בשינוי שם המשתמש", en: "Error changing username", ar: "خطأ في تغيير اسم المستخدم", ru: "Ошибка изменения имени пользователя" },
+    networkError: { he: "שגיאת רשת. בדקו את החיבור לאינטרנט.", en: "Network error. Check your internet connection.", ar: "خطأ في الشبكة. تحقق من اتصالك بالإنترنت.", ru: "Ошибка сети. Проверьте подключение к интернету." },
+    passwordTooShort: { he: "הסיסמה חייבת להכיל לפחות 6 תווים", en: "Password must be at least 6 characters", ar: "يجب أن تتكون كلمة المرور من 6 أحرف على الأقل", ru: "Пароль должен содержать не менее 6 символов" },
+    passwordsDontMatch: { he: "הסיסמאות אינן תואמות", en: "Passwords don't match", ar: "كلمتا المرور غير متطابقتين", ru: "Пароли не совпадают" },
+    passwordChangeError: { he: "שגיאה בשינוי הסיסמה", en: "Error changing password", ar: "خطأ في تغيير كلمة المرور", ru: "Ошибка изменения пароля" },
+    installInstructionsIOS: {
+      he: "כדי להתקין את האפליקציה באייפון:<br><br>1. הקש על כפתור השיתוף בסרגל הדפדפן (בדרך כלל למטה, ריבוע עם חץ)<br>2. גלול ובחר ב-\"הוסף למסך הבית\" (Add to Home Screen)<br>3. הקש \"הוסף\" למעלה",
+      en: "To install the app on iPhone:<br><br>1. Tap the Share button in the browser toolbar (usually a square with an arrow)<br>2. Scroll and choose \"Add to Home Screen\"<br>3. Tap \"Add\" at the top",
+      ar: "لتثبيت التطبيق على الآيفون:<br><br>1. اضغط على زر المشاركة في شريط أدوات المتصفح (عادة مربع بسهم)<br>2. مرّر واختر \"إضافة إلى الشاشة الرئيسية\"<br>3. اضغط \"إضافة\" في الأعلى",
+      ru: "Чтобы установить приложение на iPhone:<br><br>1. Нажмите кнопку «Поделиться» на панели браузера (обычно квадрат со стрелкой)<br>2. Прокрутите и выберите «На экран «Домой»»<br>3. Нажмите «Добавить» вверху"
+    },
+    installInstructionsAndroid: {
+      he: "כדי להתקין את האפליקציה:<br><br>1. הקש על תפריט שלוש הנקודות (⋮) למעלה בדפדפן<br>2. בחר \"הוספה למסך הבית\" או \"התקן אפליקציה\"<br>3. אשר את ההתקנה",
+      en: "To install the app:<br><br>1. Tap the three-dot menu (⋮) at the top of the browser<br>2. Choose \"Add to Home Screen\" or \"Install app\"<br>3. Confirm the installation",
+      ar: "لتثبيت التطبيق:<br><br>1. اضغط على قائمة النقاط الثلاث (⋮) أعلى المتصفح<br>2. اختر \"إضافة إلى الشاشة الرئيسية\" أو \"تثبيت التطبيق\"<br>3. أكّد التثبيت",
+      ru: "Чтобы установить приложение:<br><br>1. Нажмите на меню из трёх точек (⋮) вверху браузера<br>2. Выберите «Добавить на главный экран» или «Установить приложение»<br>3. Подтвердите установку"
+    },
+    installInstructionsDesktop: {
+      he: "כדי להתקין את האפליקציה:<br><br>1. חפש סמל התקנה (⊕ או מחשב עם חץ) בצד ימין של שורת הכתובת<br>2. אם אינך רואה אותו — פתח את תפריט שלוש הנקודות (⋮) ובחר \"התקן אפליקציה\"",
+      en: "To install the app:<br><br>1. Look for an install icon (⊕ or a monitor with an arrow) on the right side of the address bar<br>2. If you don't see it — open the three-dot menu (⋮) and choose \"Install app\"",
+      ar: "لتثبيت التطبيق:<br><br>1. ابحث عن أيقونة التثبيت (⊕ أو شاشة بسهم) على يمين شريط العنوان<br>2. إذا لم تجدها — افتح قائمة النقاط الثلاث (⋮) واختر \"تثبيت التطبيق\"",
+      ru: "Чтобы установить приложение:<br><br>1. Найдите значок установки (⊕ или монитор со стрелкой) справа в адресной строке<br>2. Если не видите его — откройте меню из трёх точек (⋮) и выберите «Установить приложение»"
+    }
+  };
+
+  var LANG_STORAGE_KEY = "itask-lang";
+  var currentLang = (function () {
+    try {
+      var saved = localStorage.getItem(LANG_STORAGE_KEY);
+      if (saved && TRANSLATIONS.authLoginBtn[saved]) return saved;
+    } catch (e) {}
+    return "he";
+  })();
+  var RTL_LANGS = { he: true, ar: true };
+  document.documentElement.lang = currentLang;
+  document.documentElement.dir = RTL_LANGS[currentLang] ? "rtl" : "ltr";
+
+  function tr(key) {
+    var entry = TRANSLATIONS[key];
+    if (!entry) return "";
+    return entry[currentLang] || entry.he || "";
+  }
+
+  function applyStaticTranslations() {
+    document.querySelectorAll("[data-i18n]").forEach(function (el) {
+      el.textContent = tr(el.getAttribute("data-i18n"));
+    });
+    document.querySelectorAll("[data-i18n-ph]").forEach(function (el) {
+      el.setAttribute("placeholder", tr(el.getAttribute("data-i18n-ph")));
+    });
+    document.querySelectorAll("[data-i18n-title]").forEach(function (el) {
+      el.setAttribute("title", tr(el.getAttribute("data-i18n-title")));
+    });
+  }
+
+  function setLang(lang) {
+    if (!TRANSLATIONS.authLoginBtn[lang]) lang = "he";
+    currentLang = lang;
+    try { localStorage.setItem(LANG_STORAGE_KEY, lang); } catch (e) {}
+    document.documentElement.lang = lang;
+    document.documentElement.dir = RTL_LANGS[lang] ? "rtl" : "ltr";
+    applyStaticTranslations();
+    if (typeof render === "function" && typeof data !== "undefined") render();
+  }
+
   var splashScreen = document.getElementById("splashScreen");
   if (splashScreen) {
     setTimeout(function () {
@@ -1122,7 +1303,7 @@
   function defaultData() {
     var sheetId = uid();
     return {
-      sheets: [{ id: sheetId, name: "פרויקט 1", tasks: [] }],
+      sheets: [{ id: sheetId, name: tr("projectWord") + " 1", tasks: [] }],
       activeSheetId: sheetId
     };
   }
@@ -1264,7 +1445,7 @@
     if (!others.length) {
       var empty = document.createElement("div");
       empty.className = "move-task-empty";
-      empty.textContent = "אין פרויקטים אחרים";
+      empty.textContent = tr("noOtherProjects");
       moveTaskProjects.appendChild(empty);
       return;
     }
@@ -1321,25 +1502,10 @@
     var isIOS = /iphone|ipad|ipod/i.test(ua) && !window.MSStream;
     var isAndroid = /android/i.test(ua);
 
-    var INSTRUCTIONS_IOS =
-      "כדי להתקין את האפליקציה באייפון:<br><br>" +
-      "1. הקש על כפתור השיתוף בסרגל הדפדפן (בדרך כלל למטה, ריבוע עם חץ)<br>" +
-      "2. גלול ובחר ב-טופסים על \"הוסף למסך הבית\" (Add to Home Screen)<br>" +
-      "3. הקש \"הוסף\" למעלה";
-    var INSTRUCTIONS_ANDROID =
-      "כדי להתקין את האפליקציה:<br><br>" +
-      "1. הקש על תפריט שלוש הנקודות (⋮) למעלה בדפדפן<br>" +
-      "2. בחר \"הוספה למסך הבית\" או \"התקן אפליקציה\"<br>" +
-      "3. אשר את ההתקנה";
-    var INSTRUCTIONS_DESKTOP =
-      "כדי להתקין את האפליקציה:<br><br>" +
-      "1. חפש סמל התקנה (⊕ או מחשב עם חץ) בצד ימין של שורת הכתובת<br>" +
-      "2. אם אינך רואה אותו — פתח את תפריט שלוש הנקודות (⋮) ובחר \"התקן אפליקציה\"";
-
     function fallbackInstructions() {
-      if (isIOS) return INSTRUCTIONS_IOS;
-      if (isAndroid) return INSTRUCTIONS_ANDROID;
-      return INSTRUCTIONS_DESKTOP;
+      if (isIOS) return tr("installInstructionsIOS");
+      if (isAndroid) return tr("installInstructionsAndroid");
+      return tr("installInstructionsDesktop");
     }
 
     installBtn.hidden = false;
@@ -1461,7 +1627,7 @@
   }
 
   function addSheet() {
-    var name = "פרויקט " + (data.sheets.length + 1);
+    var name = tr("projectWord") + " " + (data.sheets.length + 1);
     var sheet = { id: uid(), name: name, tasks: [] };
     data.sheets.push(sheet);
     data.activeSheetId = sheet.id;
@@ -1519,11 +1685,11 @@
 
   function deleteSheet(id) {
     if (data.sheets.length <= 1) {
-      alert("חייב להישאר לפחות פרויקט אחד.");
+      alert(tr("mustHaveOneProject"));
       return;
     }
     var sheet = data.sheets.find(function (s) { return s.id === id; });
-    var msg = sheet ? "למחוק את הפרויקט \"" + sheet.name + "\" ואת כל השורות שבו?" : "למחוק את הפרויקט?";
+    var msg = sheet ? tr("confirmDeleteProjectNamed").replace("{name}", sheet.name) : tr("confirmDeleteProjectGeneric");
     askConfirm(msg, function () {
       data.sheets = data.sheets.filter(function (s) { return s.id !== id; });
       if (data.activeSheetId === id) {
@@ -1536,11 +1702,11 @@
 
   function endSheet(id) {
     if (visibleSheets().length <= 1) {
-      alert("חייב להישאר לפחות פרויקט פעיל אחד.");
+      alert(tr("mustHaveOneActiveProject"));
       return;
     }
     var sheet = data.sheets.find(function (s) { return s.id === id; });
-    var msg = sheet ? "לסמן את הפרויקט \"" + sheet.name + "\" כמסתיים? הוא לא יופיע יותר בימים הבאים (ימשיך להופיע בימים הקודמים)." : "לסמן את הפרויקט כמסתיים?";
+    var msg = sheet ? tr("confirmEndProjectNamed").replace("{name}", sheet.name) : tr("confirmEndProjectGeneric");
     askConfirm(msg, function () {
       sheet.ended = true;
       sheet.endedDate = todayISO();
@@ -1574,18 +1740,18 @@
   function shareSheet(id) {
     var sheet = data.sheets.find(function (s) { return s.id === id; });
     if (!sheet) return;
-    askConfirm('לשתף את הפרויקט "' + sheet.name + '"?', function () {
+    askConfirm(tr("confirmShareProject").replace("{name}", sheet.name), function () {
       var text = buildSheetShareText(sheet);
       if (navigator.share) {
         navigator.share({ title: sheet.name, text: text }).catch(function () {});
       } else if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(text).then(function () {
-          alert("תוכן הפרויקט הועתק ללוח");
+          alert(tr("projectContentCopied"));
         }, function () {
-          alert("השיתוף לא נתמך בדפדפן הזה");
+          alert(tr("shareNotSupported"));
         });
       } else {
-        alert("השיתוף לא נתמך בדפדפן הזה");
+        alert(tr("shareNotSupported"));
       }
     });
   }
@@ -1651,6 +1817,22 @@
   var reminderFrequencySelect = document.getElementById("reminderFrequencySelect");
   var reminderStatus = document.getElementById("reminderStatus");
 
+  var langSelect = document.getElementById("langSelect");
+  langSelect.value = currentLang;
+  langSelect.addEventListener("change", function () {
+    setLang(langSelect.value);
+    authLangSelect.value = currentLang;
+  });
+
+  var authLangSelect = document.getElementById("authLangSelect");
+  authLangSelect.value = currentLang;
+  authLangSelect.addEventListener("change", function () {
+    setLang(authLangSelect.value);
+    langSelect.value = currentLang;
+  });
+
+  applyStaticTranslations();
+
   function showReminderStatus(msg) {
     reminderStatus.textContent = msg;
     reminderStatus.hidden = false;
@@ -1670,7 +1852,7 @@
           var row = result && result.data;
           if (row && row.frequency_minutes) {
             reminderFrequencySelect.value = String(row.frequency_minutes);
-            showReminderStatus("תזכורות פעילות");
+            showReminderStatus(tr("remindersActive"));
           }
         });
     }).catch(function () {});
@@ -1682,7 +1864,7 @@
     if (!supabaseClient || !SUPABASE_ROW_ID) return;
 
     if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-      showReminderStatus("התראות לא נתמכות בדפדפן הזה");
+      showReminderStatus(tr("notificationsNotSupported"));
       reminderFrequencySelect.value = "";
       return;
     }
@@ -1696,20 +1878,20 @@
           return sub.unsubscribe();
         }
       }).then(function () {
-        showReminderStatus("התזכורות כבויות");
+        showReminderStatus(tr("remindersOffStatus"));
       }).catch(function () {});
       return;
     }
 
     if (Notification.permission === "denied") {
-      showReminderStatus("ההתראות חסומות בדפדפן - יש לאשר אותן בהגדרות");
+      showReminderStatus(tr("notificationsBlocked"));
       reminderFrequencySelect.value = "";
       return;
     }
 
     Notification.requestPermission().then(function (permission) {
       if (permission !== "granted") {
-        showReminderStatus("לא אושרה הרשאת התראות");
+        showReminderStatus(tr("notificationPermissionDenied"));
         reminderFrequencySelect.value = "";
         return;
       }
@@ -1733,15 +1915,15 @@
       }).then(function (result) {
         if (result && result.error) {
           console.error("push_subscriptions upsert failed:", result.error);
-          showReminderStatus("שגיאה בשמירת המנוי: " + result.error.message);
+          showReminderStatus(tr("errorSavingSubscription") + result.error.message);
           reminderFrequencySelect.value = "";
           return;
         }
-        showReminderStatus("תזכורות פעילות");
+        showReminderStatus(tr("remindersActive"));
       });
     }).catch(function (err) {
       console.error("reminder subscribe failed:", err);
-      showReminderStatus("שגיאה בהפעלת תזכורות: " + (err && err.message ? err.message : err));
+      showReminderStatus(tr("errorEnablingReminders") + (err && err.message ? err.message : err));
       reminderFrequencySelect.value = "";
     });
   });
@@ -1751,17 +1933,17 @@
     state.menuOpen = false;
     render();
     var url = location.origin + location.pathname;
-    var shareData = { title: "ITASK", text: "אפליקציית ניהול משימות - לחצו כדי להתקין", url: url };
+    var shareData = { title: "ITASK", text: tr("shareAppText"), url: url };
     if (navigator.share) {
       navigator.share(shareData).catch(function () {});
     } else if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(url).then(function () {
-        alert("הקישור הועתק ללוח: " + url);
+        alert(tr("linkCopied") + url);
       }, function () {
-        alert("הקישור להתקנה: " + url);
+        alert(tr("installLink") + url);
       });
     } else {
-      alert("הקישור להתקנה: " + url);
+      alert(tr("installLink") + url);
     }
   });
 
@@ -1782,7 +1964,7 @@
     searchResults.innerHTML = "";
     var q = query.trim().toLowerCase();
     if (!q) {
-      searchResults.innerHTML = '<div class="search-empty">הקלידו כדי לחפש</div>';
+      searchResults.innerHTML = '<div class="search-empty">' + tr("searchEmptyPrompt") + '</div>';
       return;
     }
     var matches = [];
@@ -1796,7 +1978,7 @@
     matches.sort(function (a, b) { return b.task.createdAt - a.task.createdAt; });
     matches = matches.slice(0, 30);
     if (!matches.length) {
-      searchResults.innerHTML = '<div class="search-empty">לא נמצאו תוצאות</div>';
+      searchResults.innerHTML = '<div class="search-empty">' + tr("searchNoResults") + '</div>';
       return;
     }
     matches.forEach(function (m) {
@@ -1897,7 +2079,7 @@
       label.className = "sheet-tab-label";
       label.textContent = sheet.name;
       tab.appendChild(label);
-      tab.title = sheet.id === data.activeSheetId ? "לחצו לשינוי שם" : sheet.name;
+      tab.title = sheet.id === data.activeSheetId ? tr("clickToRename") : sheet.name;
 
       var tabLongPressFired = false;
       tab.addEventListener("click", function () {
@@ -1970,7 +2152,7 @@
     var addBtn = document.createElement("button");
     addBtn.className = "sheet-tab add-sheet-tab";
     addBtn.type = "button";
-    addBtn.title = "הוספת פרויקט";
+    addBtn.title = tr("addProjectTitle");
     addBtn.textContent = "+";
     addBtn.addEventListener("click", addSheet);
     sheetsBar.appendChild(addBtn);
@@ -2099,7 +2281,7 @@
     menuBtn.setAttribute("aria-expanded", String(state.menuOpen));
     filterButtons.forEach(function (b) { b.classList.toggle("active", b.dataset.filter === state.filter); });
 
-    var STATUS_LABEL = { 0: "לחצו כדי לסמן טיפול חלקי", 1: "לחצו כדי לסמן כהושלם", 2: "לחצו כדי לאפס" };
+    var STATUS_LABEL = { 0: tr("statusPartial"), 1: tr("statusDone"), 2: tr("statusReset") };
 
     var today = todayISO();
     var isToday = state.viewDate === today;
@@ -2181,7 +2363,7 @@
 
         dot = document.createElement("span");
         dot.className = "urgent-toggle" + (t.urgent ? " urgent" : "");
-        dot.title = t.urgent ? "לחצו לביטול הדחיפות" : "לחצו לסימון כדחוף";
+        dot.title = t.urgent ? tr("unmarkUrgent") : tr("markUrgent");
         dot.innerHTML = t.urgent ? "" : URGENT_CIRCLE_SVG;
         if (editable) {
           dot.addEventListener("click", function (e) {
@@ -2240,10 +2422,10 @@
       if (!editable) actions.hidden = true;
       var delBtn = document.createElement("button");
       delBtn.innerHTML = "&#10005;";
-      delBtn.title = "מחיקה";
+      delBtn.title = tr("deleteBtn");
       delBtn.addEventListener("click", function (e) {
         e.stopPropagation();
-        askConfirm('למחוק את השורה "' + t.text + '"?', function () {
+        askConfirm(tr("confirmDeleteTask").replace("{name}", t.text), function () {
           removeTask(t.id);
         });
       });
@@ -2264,7 +2446,7 @@
         var dateBadge = document.createElement("span");
         dateBadge.className = "row-date";
         dateBadge.textContent = isoToDisplay(t.date);
-        dateBadge.title = "הושלם בתאריך " + isoToDisplay(t.date);
+        dateBadge.title = tr("completedOn") + isoToDisplay(t.date);
         li.appendChild(dateBadge);
       }
       li.appendChild(actions);
@@ -2297,15 +2479,15 @@
     sheetTitle.textContent = activeSheet().name;
 
     emptyState.textContent = isToday
-      ? "אין שורות בפרויקט הזה עדיין"
+      ? tr("emptyStateToday")
       : isFuture
-        ? "אין עדיין משימות מתוכננות לתאריך הזה"
-        : "אין שורות מהתאריך הזה בפרויקט הזה";
+        ? tr("emptyStateFuture")
+        : tr("emptyStatePast");
     emptyState.style.display = visible.length ? "none" : "block";
 
     var total = sheetTasks.length;
     var doneCount = sheetTasks.filter(function (t) { return t.status === 2; }).length;
-    progressText.textContent = doneCount + "/" + total + " הושלמו";
+    progressText.textContent = doneCount + "/" + total + tr("completedCount");
 
     if (state.highlightTaskId) {
       var highlightId = state.highlightTaskId;
@@ -2395,7 +2577,7 @@
     SUPABASE_ROW_ID = user.id;
     var uname = (user.email || "").split("@")[0];
     currentUsername = uname;
-    menuUsernameLabel.textContent = "מחובר/ת בתור " + uname;
+    menuUsernameLabel.textContent = tr("loggedInAs") + uname;
     authGate.hidden = true;
     appRoot.hidden = false;
     startWithSupabase();
@@ -2446,13 +2628,13 @@
         .then(function (result) {
           setAuthBusy(false);
           if (result.error) {
-            showAuthError("שם משתמש או סיסמה שגויים");
+            showAuthError(tr("wrongCredentials"));
             return;
           }
           showApp(result.data.user);
         }, function () {
           setAuthBusy(false);
-          showAuthError("שגיאת התחברות. בדקו את החיבור לאינטרנט.");
+          showAuthError(tr("loginError"));
         });
     });
 
@@ -2462,11 +2644,11 @@
       var password = authPassword.value;
       var phone = authPhone.value.trim();
       if (!username || !password || password.length < 6) {
-        showAuthError("מלאו שם משתמש וסיסמה (לפחות 6 תווים)");
+        showAuthError(tr("fillUsernamePassword"));
         return;
       }
       if (!phone || phone.replace(/\D/g, "").length < 10) {
-        showAuthError("יש להזין מספר טלפון תקין - שדה חובה להרשמה");
+        showAuthError(tr("validPhoneRequired"));
         return;
       }
       setAuthBusy(true);
@@ -2475,17 +2657,17 @@
           setAuthBusy(false);
           if (result.error) {
             var already = result.error.message && result.error.message.toLowerCase().indexOf("already") !== -1;
-            showAuthError(already ? "שם המשתמש הזה כבר תפוס" : "שגיאה בהרשמה");
+            showAuthError(already ? tr("usernameTaken") : tr("signupError"));
             return;
           }
           if (result.data.session && result.data.user) {
             showApp(result.data.user);
           } else {
-            showAuthError("ההרשמה בוצעה. נסו להתחבר עכשיו.");
+            showAuthError(tr("signupSuccess"));
           }
         }, function () {
           setAuthBusy(false);
-          showAuthError("שגיאת הרשמה. בדקו את החיבור לאינטרנט.");
+          showAuthError(tr("signupNetworkError"));
         });
     });
 
@@ -2532,7 +2714,7 @@
       var newUsername = newUsernameInput.value.trim();
       changeUsernameError.hidden = true;
       if (!newUsername) {
-        showChangeUsernameError("יש להזין שם משתמש");
+        showChangeUsernameError(tr("enterUsername"));
         return;
       }
       if (newUsername === currentUsername) {
@@ -2545,15 +2727,15 @@
           changeUsernameSaveBtn.disabled = false;
           if (result.error) {
             var already = result.error.message && result.error.message.toLowerCase().indexOf("already") !== -1;
-            showChangeUsernameError(already ? "שם המשתמש הזה כבר תפוס" : "שגיאה בשינוי שם המשתמש");
+            showChangeUsernameError(already ? tr("usernameTaken") : tr("usernameChangeError"));
             return;
           }
           currentUsername = newUsername;
-          menuUsernameLabel.textContent = "מחובר/ת בתור " + newUsername;
+          menuUsernameLabel.textContent = tr("loggedInAs") + newUsername;
           closeChangeUsername();
         }, function () {
           changeUsernameSaveBtn.disabled = false;
-          showChangeUsernameError("שגיאת רשת. בדקו את החיבור לאינטרנט.");
+          showChangeUsernameError(tr("networkError"));
         });
     });
 
@@ -2601,11 +2783,11 @@
       var confirmPassword = confirmPasswordInput.value;
       changePasswordError.hidden = true;
       if (!newPassword || newPassword.length < 6) {
-        showChangePasswordError("הסיסמה חייבת להכיל לפחות 6 תווים");
+        showChangePasswordError(tr("passwordTooShort"));
         return;
       }
       if (newPassword !== confirmPassword) {
-        showChangePasswordError("הסיסמאות אינן תואמות");
+        showChangePasswordError(tr("passwordsDontMatch"));
         return;
       }
       changePasswordSaveBtn.disabled = true;
@@ -2613,13 +2795,13 @@
         .then(function (result) {
           changePasswordSaveBtn.disabled = false;
           if (result.error) {
-            showChangePasswordError("שגיאה בשינוי הסיסמה");
+            showChangePasswordError(tr("passwordChangeError"));
             return;
           }
           closeChangePassword();
         }, function () {
           changePasswordSaveBtn.disabled = false;
-          showChangePasswordError("שגיאת רשת. בדקו את החיבור לאינטרנט.");
+          showChangePasswordError(tr("networkError"));
         });
     });
   }
