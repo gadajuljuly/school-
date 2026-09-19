@@ -1,9 +1,11 @@
-var CACHE_NAME = "tasks-app-v10";
+var CACHE_NAME = "tasks-app-v11";
 var CORE_ASSETS = [
   "./tasks.html",
   "./tasks-manifest.json",
   "./tasks-icon-192.png",
-  "./tasks-icon-512.png"
+  "./tasks-icon-512.png",
+  "./vendor/html2canvas.min.js",
+  "./vendor/jspdf.umd.min.js"
 ];
 
 self.addEventListener("install", function (event) {

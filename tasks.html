@@ -15,6 +15,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700&family=Rubik:wght@600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="vendor/html2canvas.min.js"></script>
+<script src="vendor/jspdf.umd.min.js"></script>
 <style>
   :root {
     --desk: #e7e2d3;
@@ -268,6 +270,62 @@
   }
   .report-priority-tag.urgent { background: var(--high); color: #fff; }
   .report-priority-tag.regular { background: var(--low); color: #fff; }
+  .pdf-doc-wrap { background: #ffffff; }
+  .pdf-doc {
+    width: 794px;
+    box-sizing: border-box;
+    padding: 40px 48px;
+    background: #ffffff;
+    color: #2c2a24;
+    font-family: "Assistant", "Segoe UI", Tahoma, Arial, sans-serif;
+  }
+  .pdf-doc-title {
+    font-family: "Rubik", "Assistant", sans-serif;
+    font-weight: 700;
+    font-size: 1.7rem;
+    text-align: center;
+    color: #35618f;
+    margin: 0 0 22px;
+    padding-bottom: 14px;
+    border-bottom: 3px solid #35618f;
+  }
+  .pdf-doc-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 1.05rem;
+    margin-bottom: 8px;
+  }
+  .pdf-doc-info-title { font-weight: 700; }
+  .pdf-doc-info-date { color: #6b6558; font-size: 0.95rem; }
+  .pdf-doc-participants { font-size: 0.95rem; margin-bottom: 22px; color: #4a463c; }
+  .pdf-doc-participants strong { color: #2c2a24; }
+  .pdf-doc-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  .pdf-doc-table th, .pdf-doc-table td {
+    border: 1px solid #cfc8b4;
+    padding: 8px 6px;
+    text-align: center;
+    vertical-align: middle;
+  }
+  .pdf-doc-table th {
+    background: #efe9d8;
+    font-family: "Rubik", "Assistant", sans-serif;
+    font-weight: 700;
+    font-size: 0.8rem;
+  }
+  .pdf-doc-table td.pdf-doc-col-task { text-align: start; }
+  .pdf-doc-empty { color: #8a8471; padding: 18px; }
+  .pdf-doc-priority-tag {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 10px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #fff;
+  }
+  .pdf-doc-priority-tag.urgent { background: #c0392b; }
+  .pdf-doc-priority-tag.regular { background: #3c8a5c; }
+  .pdf-doc-thumb { width: 60px; height: 60px; object-fit: cover; border-radius: 6px; }
   .report-priority-popup {
     position: absolute;
     z-index: 30;
@@ -1528,8 +1586,6 @@
     imagePopupCamera: { he: "מצלמה", en: "Camera", ar: "الكاميرا", ru: "Камера" },
     imagePopupGallery: { he: "מהאלבום", en: "From gallery", ar: "من الألبوم", ru: "Из галереи" },
     imagePopupRemove: { he: "הסרת תמונה", en: "Remove photo", ar: "إزالة الصورة", ru: "Удалить фото" },
-    reportShareDueLabel: { he: "עד ", en: "due ", ar: "حتى ", ru: "до " },
-    reportShareImageNote: { he: "[יש תמונה מצורפת]", en: "[photo attached]", ar: "[توجد صورة مرفقة]", ru: "[есть прикреплённое фото]" },
     priorityUrgent: { he: "דחוף", en: "Urgent", ar: "عاجل", ru: "Срочно" },
     priorityRegular: { he: "רגיל", en: "Regular", ar: "عادي", ru: "Обычный" },
     responsiblePlaceholder: { he: "שם...", en: "Name...", ar: "الاسم...", ru: "Имя..." },
@@ -1537,7 +1593,10 @@
     statusWordPartial: { he: "בביצוע חלקי", en: "Partially done", ar: "منفذ جزئيًا", ru: "Частично выполнено" },
     statusWordNotDone: { he: "לא בוצע", en: "Not done", ar: "لم يتم التنفيذ", ru: "Не выполнено" },
     reportShareParticipantsLabel: { he: "משתתפים: ", en: "Participants: ", ar: "المشاركون: ", ru: "Участники: " },
-    reportShareNoRows: { he: "(אין שורות)", en: "(no rows)", ar: "(لا توجد عناصر)", ru: "(нет записей)" }
+    reportShareNoRows: { he: "(אין שורות)", en: "(no rows)", ar: "(لا توجد عناصر)", ru: "(нет записей)" },
+    reportPdfTitleMeeting: { he: "סיכום פגישה", en: "Meeting Summary", ar: "ملخص الاجتماع", ru: "Итоги встречи" },
+    reportPdfTitleTour: { he: "סיכום סיור", en: "Tour Summary", ar: "ملخص الجولة", ru: "Итоги обхода" },
+    reportPdfError: { he: "אירעה שגיאה ביצירת ה-PDF", en: "An error occurred creating the PDF", ar: "حدث خطأ أثناء إنشاء PDF", ru: "Ошибка при создании PDF" }
   };
 
   var LANG_STORAGE_KEY = "itask-lang";
@@ -2866,46 +2925,182 @@
     renderReportView();
   }
 
-  function buildReportShareText(report) {
+  function buildReportPdfElement(report) {
     var typeLabel = report.type === "meeting" ? tr("reportTypeMeeting") : tr("reportTypeTour");
-    var lines = [];
-    lines.push((report.title || typeLabel) + " (" + typeLabel + ")");
-    lines.push(isoToFullDisplay(report.date));
-    if (report.participants) lines.push(tr("reportShareParticipantsLabel") + report.participants);
-    lines.push("");
+    var pdfTitle = report.type === "meeting" ? tr("reportPdfTitleMeeting") : tr("reportPdfTitleTour");
+
+    var doc = document.createElement("div");
+    doc.className = "pdf-doc";
+    doc.dir = RTL_LANGS[currentLang] ? "rtl" : "ltr";
+
+    var titleEl = document.createElement("div");
+    titleEl.className = "pdf-doc-title";
+    titleEl.textContent = pdfTitle;
+    doc.appendChild(titleEl);
+
+    var infoRow = document.createElement("div");
+    infoRow.className = "pdf-doc-info-row";
+    var infoTitle = document.createElement("span");
+    infoTitle.className = "pdf-doc-info-title";
+    infoTitle.textContent = report.title || typeLabel;
+    var infoDate = document.createElement("span");
+    infoDate.className = "pdf-doc-info-date";
+    infoDate.textContent = isoToFullDisplay(report.date);
+    infoRow.appendChild(infoTitle);
+    infoRow.appendChild(infoDate);
+    doc.appendChild(infoRow);
+
+    if (report.participants) {
+      var partsEl = document.createElement("div");
+      partsEl.className = "pdf-doc-participants";
+      var partsLabel = document.createElement("strong");
+      partsLabel.textContent = tr("reportShareParticipantsLabel");
+      partsEl.appendChild(partsLabel);
+      partsEl.appendChild(document.createTextNode(report.participants));
+      doc.appendChild(partsEl);
+    }
+
+    var table = document.createElement("table");
+    table.className = "pdf-doc-table";
+    var thead = document.createElement("thead");
+    var headRow = document.createElement("tr");
+    ["reportColNum", "reportColTask", "reportColResponsible", "reportColDue", "reportColStatus", "reportColPriority", "reportColImage"].forEach(function (key) {
+      var th = document.createElement("th");
+      th.textContent = tr(key);
+      headRow.appendChild(th);
+    });
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+
+    var tbody = document.createElement("tbody");
     if (!report.rows.length) {
-      lines.push(tr("reportShareNoRows"));
+      var emptyRow = document.createElement("tr");
+      var emptyTd = document.createElement("td");
+      emptyTd.className = "pdf-doc-empty";
+      emptyTd.colSpan = 7;
+      emptyTd.textContent = tr("reportShareNoRows");
+      emptyRow.appendChild(emptyTd);
+      tbody.appendChild(emptyRow);
     } else {
       report.rows.forEach(function (row, index) {
-        var statusWord = row.status === 2 ? tr("statusWordDone") : row.status === 1 ? tr("statusWordPartial") : tr("statusWordNotDone");
-        var priorityWord = row.priority === "urgent" ? tr("priorityUrgent") : row.priority === "regular" ? tr("priorityRegular") : "";
-        var line = (index + 1) + ". " + row.task;
-        if (row.responsible) line += " - " + row.responsible;
-        if (row.dueDate) line += " - " + tr("reportShareDueLabel") + isoToDisplay(row.dueDate);
-        line += " - " + statusWord;
-        if (priorityWord) line += " - " + priorityWord;
-        if (row.image) line += " " + tr("reportShareImageNote");
-        lines.push(line);
+        var rowEl = document.createElement("tr");
+
+        var numTd = document.createElement("td");
+        numTd.textContent = String(index + 1);
+        rowEl.appendChild(numTd);
+
+        var taskTd = document.createElement("td");
+        taskTd.className = "pdf-doc-col-task";
+        taskTd.textContent = row.task || "";
+        rowEl.appendChild(taskTd);
+
+        var respTd = document.createElement("td");
+        respTd.textContent = row.responsible || "";
+        rowEl.appendChild(respTd);
+
+        var dueTd = document.createElement("td");
+        dueTd.textContent = row.dueDate ? isoToDisplay(row.dueDate) : "";
+        rowEl.appendChild(dueTd);
+
+        var statusTd = document.createElement("td");
+        statusTd.textContent = row.status === 2 ? tr("statusWordDone") : row.status === 1 ? tr("statusWordPartial") : tr("statusWordNotDone");
+        rowEl.appendChild(statusTd);
+
+        var priorityTd = document.createElement("td");
+        if (row.priority) {
+          var tag = document.createElement("span");
+          tag.className = "pdf-doc-priority-tag " + row.priority;
+          tag.textContent = row.priority === "urgent" ? tr("priorityUrgent") : tr("priorityRegular");
+          priorityTd.appendChild(tag);
+        }
+        rowEl.appendChild(priorityTd);
+
+        var imageTd = document.createElement("td");
+        if (row.image) {
+          var img = document.createElement("img");
+          img.className = "pdf-doc-thumb";
+          img.src = row.image;
+          imageTd.appendChild(img);
+        }
+        rowEl.appendChild(imageTd);
+
+        tbody.appendChild(rowEl);
       });
     }
-    return lines.join("\n");
+    table.appendChild(tbody);
+    doc.appendChild(table);
+
+    return doc;
+  }
+
+  function waitForImagesLoaded(container) {
+    var imgs = Array.prototype.slice.call(container.querySelectorAll("img"));
+    return Promise.all(imgs.map(function (img) {
+      if (img.complete) return Promise.resolve();
+      return new Promise(function (resolve) {
+        img.addEventListener("load", resolve);
+        img.addEventListener("error", resolve);
+      });
+    }));
+  }
+
+  function generateReportPdf(report) {
+    if (!window.html2canvas || !window.jspdf) {
+      alert(tr("reportPdfError"));
+      return;
+    }
+    reportShareBtn.disabled = true;
+    var container = document.createElement("div");
+    container.className = "pdf-doc-wrap";
+    container.style.position = "fixed";
+    container.style.top = "0";
+    container.style.left = "-99999px";
+    container.appendChild(buildReportPdfElement(report));
+    document.body.appendChild(container);
+
+    waitForImagesLoaded(container).then(function () {
+      return window.html2canvas(container, { scale: 2, backgroundColor: "#ffffff", useCORS: true });
+    }).then(function (canvas) {
+      var pdf = new window.jspdf.jsPDF({ unit: "mm", format: "a4" });
+      var pageWidth = pdf.internal.pageSize.getWidth();
+      var pageHeight = pdf.internal.pageSize.getHeight();
+      var imgWidth = pageWidth;
+      var imgHeight = (canvas.height * imgWidth) / canvas.width;
+      var imgData = canvas.toDataURL("image/jpeg", 0.92);
+      var heightLeft = imgHeight;
+      var position = 0;
+      pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+      while (heightLeft > 0) {
+        position -= pageHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+      document.body.removeChild(container);
+      reportShareBtn.disabled = false;
+
+      var typeLabel = report.type === "meeting" ? tr("reportTypeMeeting") : tr("reportTypeTour");
+      var fileName = (report.title || typeLabel) + ".pdf";
+      var blob = pdf.output("blob");
+      var file = new File([blob], fileName, { type: "application/pdf" });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file], title: report.title || typeLabel }).catch(function () {});
+      } else {
+        pdf.save(fileName);
+      }
+    }).catch(function (err) {
+      console.error(err);
+      if (container.parentNode) document.body.removeChild(container);
+      reportShareBtn.disabled = false;
+      alert(tr("reportPdfError"));
+    });
   }
 
   reportShareBtn.addEventListener("click", function () {
     var report = findReport(activeReportId);
     if (!report) return;
-    var text = buildReportShareText(report);
-    if (navigator.share) {
-      navigator.share({ title: report.title, text: text }).catch(function () {});
-    } else if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(function () {
-        alert(tr("projectContentCopied"));
-      }, function () {
-        alert(tr("shareNotSupported"));
-      });
-    } else {
-      alert(tr("shareNotSupported"));
-    }
+    generateReportPdf(report);
   });
 
   menuBtn.addEventListener("click", function (e) {
