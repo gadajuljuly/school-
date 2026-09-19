@@ -122,10 +122,44 @@
     box-shadow: 0 4px 10px var(--shadow);
   }
   .report-fab svg { width: 26px; height: 26px; }
+  .report-fab[hidden], .tasks-fab[hidden] { display: none; }
+  .tasks-fab {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+    padding: 0;
+    overflow: hidden;
+    cursor: pointer;
+    box-shadow: 0 4px 10px var(--shadow);
+  }
+  .tasks-fab img { width: 100%; height: 100%; display: block; object-fit: cover; }
 
-  .reports-list-box { max-height: 70vh; display: flex; flex-direction: column; }
-  .reports-list-items { overflow-y: auto; margin: 10px 0; display: flex; flex-direction: column; gap: 6px; }
-  .reports-list-empty { color: var(--ink-muted); font-size: 0.85rem; padding: 8px 0; text-align: center; }
+  .sheet-reports-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 4px 0;
+  }
+  .sheet-reports-list[hidden] { display: none; }
+  .sheet-reports-empty { color: var(--ink-muted); font-size: 0.85rem; padding: 10px 0; text-align: center; }
+  .sheet-reports-add-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: var(--accent);
+    color: var(--accent-contrast);
+    font-size: 1.15rem;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    margin: 6px auto 0;
+  }
+
   .report-list-item {
     display: flex;
     align-items: center;
@@ -1155,9 +1189,13 @@
         <input type="text" id="taskInput" data-i18n-ph="taskInputPlaceholder" placeholder="חדש..." maxlength="200" required autocomplete="off">
         <button type="submit" class="add-btn" data-i18n-title="addBtnTitle" title="הוספה">+</button>
       </form>
+      <div class="sheet-reports-list" id="sheetReportsList" hidden></div>
     </div>
     <div class="footer-divider"></div>
     <div class="notebook-footer" id="notebookFooter">
+      <button type="button" class="tasks-fab" id="tasksFabBtn" data-i18n-title="tasksBtnTitle" title="חזרה למשימות">
+        <img src="tasks-icon-192.png" alt="">
+      </button>
       <button type="button" class="report-fab" id="reportFabBtn" data-i18n-title="reportsBtnTitle" title="דוחות פגישות וסיורים">
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="4" width="18" height="16" rx="2"/>
@@ -1242,17 +1280,6 @@
       <div class="modal-actions">
         <button type="button" class="modal-btn modal-btn-yes" id="changeUsernameSaveBtn" data-i18n="saveBtn">שמירה</button>
         <button type="button" class="modal-btn modal-btn-no" id="changeUsernameCancelBtn" data-i18n="cancelBtn">ביטול</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="modal-overlay" id="reportsListOverlay" hidden>
-    <div class="modal-box reports-list-box" role="alertdialog" aria-modal="true">
-      <p class="modal-message" data-i18n="reportsListTitle">דוחות פגישות וסיורים</p>
-      <div class="reports-list-items" id="reportsListItems"></div>
-      <div class="modal-actions">
-        <button type="button" class="modal-btn modal-btn-yes" id="newReportBtn" data-i18n="newReportBtn">+ חדש</button>
-        <button type="button" class="modal-btn modal-btn-no" id="reportsListCloseBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </div>
   </div>
@@ -1459,6 +1486,7 @@
       ru: "Чтобы установить приложение:<br><br>1. Найдите значок установки (⊕ или монитор со стрелкой) справа в адресной строке<br>2. Если не видите его — откройте меню из трёх точек (⋮) и выберите «Установить приложение»"
     },
     reportsBtnTitle: { he: "דוחות פגישות וסיורים", en: "Meeting and tour reports", ar: "تقارير الاجتماعات والجولات", ru: "Отчёты о встречах и обходах" },
+    tasksBtnTitle: { he: "חזרה למשימות", en: "Back to tasks", ar: "العودة إلى المهام", ru: "Назад к задачам" },
     reportsListTitle: { he: "דוחות פגישות וסיורים", en: "Meeting and tour reports", ar: "تقارير الاجتماعات والجولات", ru: "Отчёты о встречах и обходах" },
     reportsListEmpty: { he: "עדיין אין דוחות", en: "No reports yet", ar: "لا توجد تقارير بعد", ru: "Пока нет отчётов" },
     newReportBtn: { he: "+ חדש", en: "+ New", ar: "+ جديد", ru: "+ Новый" },
@@ -1598,9 +1626,8 @@
   function defaultData() {
     var sheetId = uid();
     return {
-      sheets: [{ id: sheetId, name: tr("projectWord") + " 1", tasks: [] }],
-      activeSheetId: sheetId,
-      reports: []
+      sheets: [{ id: sheetId, name: tr("projectWord") + " 1", tasks: [], reports: [] }],
+      activeSheetId: sheetId
     };
   }
 
@@ -1617,17 +1644,18 @@
         delete t.done;
         delete t.priority;
       });
-    });
-    if (!Array.isArray(parsed.reports)) parsed.reports = [];
-    parsed.reports.forEach(function (report) {
-      if (!Array.isArray(report.rows)) report.rows = [];
-      report.rows.forEach(function (row) {
-        if (typeof row.status !== "number") row.status = 0;
-        if (row.priority !== "urgent" && row.priority !== "regular") row.priority = null;
-        if (typeof row.dueDate !== "string") row.dueDate = null;
-        if (typeof row.image !== "string") row.image = null;
+      if (!Array.isArray(sheet.reports)) sheet.reports = [];
+      sheet.reports.forEach(function (report) {
+        if (!Array.isArray(report.rows)) report.rows = [];
+        report.rows.forEach(function (row) {
+          if (typeof row.status !== "number") row.status = 0;
+          if (row.priority !== "urgent" && row.priority !== "regular") row.priority = null;
+          if (typeof row.dueDate !== "string") row.dueDate = null;
+          if (typeof row.image !== "string") row.image = null;
+        });
       });
     });
+    delete parsed.reports;
     return parsed;
   }
   function loadLocalData() {
@@ -1666,7 +1694,7 @@
   }
 
   var data = defaultData();
-  var state = { filter: "all", renamingSheetId: null, menuOpen: false, editingTaskId: null, viewDate: todayISO(), searchOpen: false, highlightTaskId: null };
+  var state = { filter: "all", renamingSheetId: null, menuOpen: false, editingTaskId: null, viewDate: todayISO(), searchOpen: false, highlightTaskId: null, viewMode: "tasks" };
 
   var dateLabel = document.getElementById("dateLabel");
   var sheetsBar = document.getElementById("sheetsBar");
@@ -1934,7 +1962,7 @@
 
   function addSheet() {
     var name = tr("projectWord") + " " + (data.sheets.length + 1);
-    var sheet = { id: uid(), name: name, tasks: [] };
+    var sheet = { id: uid(), name: name, tasks: [], reports: [] };
     data.sheets.push(sheet);
     data.activeSheetId = sheet.id;
     state.renamingSheetId = sheet.id;
@@ -2253,10 +2281,8 @@
     }
   });
 
-  var reportsListOverlay = document.getElementById("reportsListOverlay");
-  var reportsListItems = document.getElementById("reportsListItems");
-  var newReportBtn = document.getElementById("newReportBtn");
-  var reportsListCloseBtn = document.getElementById("reportsListCloseBtn");
+  var sheetReportsList = document.getElementById("sheetReportsList");
+  var tasksFabBtn = document.getElementById("tasksFabBtn");
 
   var reportTypeOverlay = document.getElementById("reportTypeOverlay");
   var reportTypeMeetingBtn = document.getElementById("reportTypeMeetingBtn");
@@ -2287,50 +2313,62 @@
   var openPriorityPopupRowId = null;
 
   function findReport(id) {
-    return data.reports.find(function (r) { return r.id === id; });
-  }
-
-  function closeReportsList() {
-    reportsListOverlay.hidden = true;
-  }
-
-  function renderReportsList() {
-    reportsListItems.innerHTML = "";
-    var reports = data.reports.slice().sort(function (a, b) { return b.createdAt - a.createdAt; });
-    if (!reports.length) {
-      reportsListItems.innerHTML = '<div class="reports-list-empty">' + tr("reportsListEmpty") + "</div>";
-      return;
+    for (var i = 0; i < data.sheets.length; i++) {
+      var found = (data.sheets[i].reports || []).find(function (r) { return r.id === id; });
+      if (found) return found;
     }
-    reports.forEach(function (report) {
-      var item = document.createElement("button");
-      item.type = "button";
-      item.className = "report-list-item";
-      var typeLabel = report.type === "meeting" ? tr("reportTypeMeeting") : tr("reportTypeTour");
-      var titleEl = document.createElement("span");
-      titleEl.className = "report-list-item-title";
-      titleEl.textContent = report.title || typeLabel;
-      var metaEl = document.createElement("span");
-      metaEl.className = "report-list-item-meta";
-      metaEl.textContent = typeLabel + " · " + isoToFullDisplay(report.date);
-      item.appendChild(titleEl);
-      item.appendChild(metaEl);
-      item.addEventListener("click", function () {
-        closeReportsList();
-        openReportView(report.id);
+    return null;
+  }
+
+  function renderSheetReportsList() {
+    sheetReportsList.innerHTML = "";
+    var sheet = activeSheet();
+    var reports = (sheet.reports || []).slice().sort(function (a, b) { return b.createdAt - a.createdAt; });
+    if (!reports.length) {
+      var empty = document.createElement("div");
+      empty.className = "sheet-reports-empty";
+      empty.textContent = tr("reportsListEmpty");
+      sheetReportsList.appendChild(empty);
+    } else {
+      reports.forEach(function (report) {
+        var item = document.createElement("button");
+        item.type = "button";
+        item.className = "report-list-item";
+        var typeLabel = report.type === "meeting" ? tr("reportTypeMeeting") : tr("reportTypeTour");
+        var titleEl = document.createElement("span");
+        titleEl.className = "report-list-item-title";
+        titleEl.textContent = report.title || typeLabel;
+        var metaEl = document.createElement("span");
+        metaEl.className = "report-list-item-meta";
+        metaEl.textContent = typeLabel + " · " + isoToFullDisplay(report.date);
+        item.appendChild(titleEl);
+        item.appendChild(metaEl);
+        item.addEventListener("click", function () {
+          openReportView(report.id);
+        });
+        sheetReportsList.appendChild(item);
       });
-      reportsListItems.appendChild(item);
+    }
+    var addBtn = document.createElement("button");
+    addBtn.type = "button";
+    addBtn.className = "sheet-reports-add-btn";
+    addBtn.textContent = "+";
+    addBtn.title = tr("addBtnTitle");
+    addBtn.addEventListener("click", function () {
+      reportTypeOverlay.hidden = false;
     });
+    sheetReportsList.appendChild(addBtn);
   }
 
-  function openReportsList() {
-    renderReportsList();
-    reportsListOverlay.hidden = false;
-  }
-
-  reportFabBtn.addEventListener("click", openReportsList);
-  reportsListCloseBtn.addEventListener("click", closeReportsList);
-  reportsListOverlay.addEventListener("click", function (e) {
-    if (e.target === reportsListOverlay) closeReportsList();
+  reportFabBtn.addEventListener("click", function () {
+    state.viewMode = "reports";
+    state.menuOpen = false;
+    render();
+  });
+  tasksFabBtn.addEventListener("click", function () {
+    state.viewMode = "tasks";
+    state.menuOpen = false;
+    render();
   });
 
   function closeReportTypeModal() {
@@ -2344,10 +2382,6 @@
     reportTitleOverlay.hidden = false;
     reportTitleInput.focus();
   }
-  newReportBtn.addEventListener("click", function () {
-    closeReportsList();
-    reportTypeOverlay.hidden = false;
-  });
   reportTypeMeetingBtn.addEventListener("click", function () { chooseReportType("meeting"); });
   reportTypeTourBtn.addEventListener("click", function () { chooseReportType("tour"); });
   reportTypeCancelBtn.addEventListener("click", closeReportTypeModal);
@@ -2392,7 +2426,7 @@
       createdAt: Date.now(),
       rows: []
     };
-    data.reports.push(report);
+    activeSheet().reports.push(report);
     saveData();
     pendingReportDraft = null;
     reportParticipantsOverlay.hidden = true;
@@ -2429,6 +2463,7 @@
     editingReportCell = null;
     closePriorityPopup();
     closeImagePopup();
+    if (state.viewMode === "reports") renderSheetReportsList();
   }
   reportBackBtn.addEventListener("click", closeReportView);
 
@@ -3155,6 +3190,21 @@
     dateLabel.textContent = isoToFullDisplay(state.viewDate);
     dateInput.value = state.viewDate;
     todayBtn.hidden = isToday;
+    sheetTitle.textContent = activeSheet().name;
+
+    var reportsMode = state.viewMode === "reports";
+    taskList.hidden = reportsMode;
+    emptyState.hidden = reportsMode;
+    if (reportsMode) emptyState.style.display = "none";
+    sheetReportsList.hidden = !reportsMode;
+    reportFabBtn.hidden = reportsMode;
+    tasksFabBtn.hidden = !reportsMode;
+    if (reportsMode) {
+      addForm.hidden = true;
+      progressText.textContent = "";
+      renderSheetReportsList();
+      return;
+    }
     addForm.hidden = isPast;
 
     var sheetTasks = activeSheet().tasks.filter(function (t) { return t.date === state.viewDate; });
