@@ -30,6 +30,7 @@
     --high: #c0392b;
     --medium: #b8811f;
     --low: #3c8a5c;
+    --report-green: #3c8a5c;
     --shadow: rgba(44, 42, 36, 0.18);
   }
   @media (prefers-color-scheme: dark) {
@@ -106,6 +107,156 @@
     padding: 20px 20px 32px;
     flex-shrink: 0;
     border-radius: 0 0 10px 10px;
+  }
+  .report-fab {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    background: var(--report-green);
+    color: #fdfbf5;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 10px var(--shadow);
+  }
+  .report-fab svg { width: 26px; height: 26px; }
+
+  .reports-list-box { max-height: 70vh; display: flex; flex-direction: column; }
+  .reports-list-items { overflow-y: auto; margin: 10px 0; display: flex; flex-direction: column; gap: 6px; }
+  .reports-list-empty { color: var(--ink-muted); font-size: 0.85rem; padding: 8px 0; text-align: center; }
+  .report-list-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 12px;
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    background: var(--paper-alt);
+    cursor: pointer;
+    text-align: start;
+    font: inherit;
+    color: var(--ink);
+  }
+  .report-list-item-title { font-weight: 600; }
+  .report-list-item-meta { font-size: 0.75rem; color: var(--ink-muted); }
+
+  .report-view {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    background: var(--paper);
+    display: flex;
+    flex-direction: column;
+  }
+  .report-view[hidden] { display: none; }
+  .report-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px 10px;
+    flex-shrink: 0;
+  }
+  .report-head-title { font-family: "Rubik", "Assistant", sans-serif; font-weight: 700; font-size: 1.05rem; text-align: center; flex: 1; }
+  .report-back-btn, .report-share-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+    color: var(--ink);
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .report-meta {
+    padding: 0 20px 10px;
+    font-size: 0.82rem;
+    color: var(--ink-muted);
+    flex-shrink: 0;
+  }
+  .report-table-wrap { flex: 1; overflow: auto; padding: 0 12px; }
+  .report-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  .report-table th, .report-table td {
+    border: 1px solid var(--rule);
+    padding: 8px 6px;
+    text-align: center;
+    vertical-align: middle;
+  }
+  .report-table th {
+    background: var(--paper-alt);
+    font-family: "Rubik", "Assistant", sans-serif;
+    font-weight: 700;
+    font-size: 0.78rem;
+  }
+  .report-table td.report-col-task { text-align: start; }
+  .report-cell-btn {
+    width: 100%;
+    min-height: 28px;
+    border: none;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+    padding: 2px;
+    text-align: inherit;
+  }
+  .report-cell-input {
+    width: 100%;
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    background: var(--paper);
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.85rem;
+    padding: 4px 6px;
+    box-sizing: border-box;
+  }
+  .report-status-mark { display: inline-block; width: 20px; height: 18px; margin: 0 auto; color: var(--ink); }
+  .report-status-mark svg { width: 100%; height: 100%; display: block; }
+  .report-priority-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+  .report-priority-tag.urgent { background: var(--high); color: #fff; }
+  .report-priority-tag.regular { background: var(--low); color: #fff; }
+  .report-priority-popup {
+    position: absolute;
+    z-index: 30;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    box-shadow: 0 8px 20px var(--shadow);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .report-priority-popup button {
+    border: none;
+    background: var(--paper);
+    color: var(--ink);
+    padding: 8px 16px;
+    font: inherit;
+    font-size: 0.8rem;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .report-priority-popup button:first-child { border-bottom: 1px solid var(--rule); }
+  .report-priority-popup button:hover { background: var(--paper-alt); }
+  .report-add-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px 20px;
+    flex-shrink: 0;
   }
   .notebook-date-wrap {
     display: flex;
@@ -979,7 +1130,17 @@
       </form>
     </div>
     <div class="footer-divider"></div>
-    <div class="notebook-footer" id="notebookFooter"></div>
+    <div class="notebook-footer" id="notebookFooter">
+      <button type="button" class="report-fab" id="reportFabBtn" data-i18n-title="reportsBtnTitle" title="דוחות פגישות וסיורים">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="16" rx="2"/>
+          <line x1="3" y1="9" x2="21" y2="9"/>
+          <line x1="3" y1="14" x2="21" y2="14"/>
+          <line x1="9" y1="4" x2="9" y2="20"/>
+          <line x1="15" y1="4" x2="15" y2="20"/>
+        </svg>
+      </button>
+    </div>
   </div>
 
   <div class="modal-overlay" id="addTypeOverlay" hidden>
@@ -1056,6 +1217,80 @@
         <button type="button" class="modal-btn modal-btn-no" id="changeUsernameCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </div>
+  </div>
+
+  <div class="modal-overlay" id="reportsListOverlay" hidden>
+    <div class="modal-box reports-list-box" role="alertdialog" aria-modal="true">
+      <p class="modal-message" data-i18n="reportsListTitle">דוחות פגישות וסיורים</p>
+      <div class="reports-list-items" id="reportsListItems"></div>
+      <div class="modal-actions">
+        <button type="button" class="modal-btn modal-btn-yes" id="newReportBtn" data-i18n="newReportBtn">+ חדש</button>
+        <button type="button" class="modal-btn modal-btn-no" id="reportsListCloseBtn" data-i18n="cancelBtn">ביטול</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="reportTypeOverlay" hidden>
+    <div class="modal-box" role="alertdialog" aria-modal="true">
+      <p class="modal-message" data-i18n="reportTypeModalMessage">פגישה או סיור?</p>
+      <div class="move-task-mode">
+        <button type="button" id="reportTypeMeetingBtn" data-i18n="reportTypeMeeting">פגישה</button>
+        <button type="button" id="reportTypeTourBtn" data-i18n="reportTypeTour">סיור</button>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="modal-btn modal-btn-no" id="reportTypeCancelBtn" data-i18n="cancelBtn">ביטול</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="reportTitleOverlay" hidden>
+    <div class="modal-box" role="alertdialog" aria-modal="true">
+      <p class="modal-message" data-i18n="reportTitleModalMessage">כותרת</p>
+      <input type="text" id="reportTitleInput" class="auth-input" data-i18n-ph="reportTitlePlaceholder" placeholder="כותרת">
+      <div class="modal-actions">
+        <button type="button" class="modal-btn modal-btn-yes" id="reportTitleSaveBtn" data-i18n="confirmBtn">אישור</button>
+        <button type="button" class="modal-btn modal-btn-no" id="reportTitleCancelBtn" data-i18n="cancelBtn">ביטול</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="reportParticipantsOverlay" hidden>
+    <div class="modal-box" role="alertdialog" aria-modal="true">
+      <p class="modal-message" data-i18n="reportParticipantsModalMessage">משתתפים</p>
+      <input type="text" id="reportParticipantsInput" class="auth-input" data-i18n-ph="reportParticipantsPlaceholder" placeholder="שמות המשתתפים">
+      <div class="modal-actions">
+        <button type="button" class="modal-btn modal-btn-yes" id="reportParticipantsSaveBtn" data-i18n="confirmBtn">אישור</button>
+        <button type="button" class="modal-btn modal-btn-no" id="reportParticipantsCancelBtn" data-i18n="cancelBtn">ביטול</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="report-view" id="reportView" hidden>
+    <div class="report-head">
+      <button type="button" class="report-back-btn" id="reportBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
+      <div class="report-head-title" id="reportHeadTitle"></div>
+      <button type="button" class="report-share-btn" id="reportShareBtn" data-i18n-title="shareBtn" title="שיתוף">&#128228;</button>
+    </div>
+    <div class="report-meta" id="reportMeta"></div>
+    <div class="report-table-wrap">
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th data-i18n="reportColNum">מס'</th>
+            <th data-i18n="reportColTask">משימה</th>
+            <th data-i18n="reportColResponsible">באחריות</th>
+            <th data-i18n="reportColStatus">סטטוס</th>
+            <th data-i18n="reportColPriority">עדיפות</th>
+          </tr>
+        </thead>
+        <tbody id="reportTableBody"></tbody>
+      </table>
+    </div>
+    <form class="report-add-row" id="reportAddRowForm">
+      <span class="row-mark" aria-hidden="true"><svg viewBox="0 0 20 18" xmlns="http://www.w3.org/2000/svg"><path d="M4 3 L16 15 M1.5 3 L6.5 3 M13.5 3 L18.5 3 M1.5 15 L6.5 15 M13.5 15 L18.5 15" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg></span>
+      <input type="text" id="reportRowInput" data-i18n-ph="taskInputPlaceholder" placeholder="חדש..." maxlength="200" required autocomplete="off">
+      <button type="submit" class="add-btn" data-i18n-title="addBtnTitle" title="הוספה">+</button>
+    </form>
   </div>
 
   <button type="button" class="install-fab" id="installBtn" data-i18n="installFab" hidden>&#128241; התקן אפליקציה</button>
@@ -1195,7 +1430,33 @@
       en: "To install the app:<br><br>1. Look for an install icon (⊕ or a monitor with an arrow) on the right side of the address bar<br>2. If you don't see it — open the three-dot menu (⋮) and choose \"Install app\"",
       ar: "لتثبيت التطبيق:<br><br>1. ابحث عن أيقونة التثبيت (⊕ أو شاشة بسهم) على يمين شريط العنوان<br>2. إذا لم تجدها — افتح قائمة النقاط الثلاث (⋮) واختر \"تثبيت التطبيق\"",
       ru: "Чтобы установить приложение:<br><br>1. Найдите значок установки (⊕ или монитор со стрелкой) справа в адресной строке<br>2. Если не видите его — откройте меню из трёх точек (⋮) и выберите «Установить приложение»"
-    }
+    },
+    reportsBtnTitle: { he: "דוחות פגישות וסיורים", en: "Meeting and tour reports", ar: "تقارير الاجتماعات والجولات", ru: "Отчёты о встречах и обходах" },
+    reportsListTitle: { he: "דוחות פגישות וסיורים", en: "Meeting and tour reports", ar: "تقارير الاجتماعات والجولات", ru: "Отчёты о встречах и обходах" },
+    reportsListEmpty: { he: "עדיין אין דוחות", en: "No reports yet", ar: "لا توجد تقارير بعد", ru: "Пока нет отчётов" },
+    newReportBtn: { he: "+ חדש", en: "+ New", ar: "+ جديد", ru: "+ Новый" },
+    confirmBtn: { he: "אישור", en: "Confirm", ar: "تأكيد", ru: "Подтвердить" },
+    backBtn: { he: "חזרה", en: "Back", ar: "رجوع", ru: "Назад" },
+    reportTypeModalMessage: { he: "פגישה או סיור?", en: "Meeting or tour?", ar: "اجتماع أم جولة؟", ru: "Встреча или обход?" },
+    reportTypeMeeting: { he: "פגישה", en: "Meeting", ar: "اجتماع", ru: "Встреча" },
+    reportTypeTour: { he: "סיור", en: "Tour", ar: "جولة", ru: "Обход" },
+    reportTitleModalMessage: { he: "כותרת", en: "Title", ar: "العنوان", ru: "Заголовок" },
+    reportTitlePlaceholder: { he: "כותרת", en: "Title", ar: "العنوان", ru: "Заголовок" },
+    reportParticipantsModalMessage: { he: "משתתפים", en: "Participants", ar: "المشاركون", ru: "Участники" },
+    reportParticipantsPlaceholder: { he: "שמות המשתתפים", en: "Participant names", ar: "أسماء المشاركين", ru: "Имена участников" },
+    reportColNum: { he: "מס'", en: "No.", ar: "الرقم", ru: "№" },
+    reportColTask: { he: "משימה", en: "Task", ar: "المهمة", ru: "Задача" },
+    reportColResponsible: { he: "באחריות", en: "Responsible", ar: "المسؤول", ru: "Ответственный" },
+    reportColStatus: { he: "סטטוס", en: "Status", ar: "الحالة", ru: "Статус" },
+    reportColPriority: { he: "עדיפות", en: "Priority", ar: "الأولوية", ru: "Приоритет" },
+    priorityUrgent: { he: "דחוף", en: "Urgent", ar: "عاجل", ru: "Срочно" },
+    priorityRegular: { he: "רגיל", en: "Regular", ar: "عادي", ru: "Обычный" },
+    responsiblePlaceholder: { he: "שם...", en: "Name...", ar: "الاسم...", ru: "Имя..." },
+    statusWordDone: { he: "בוצע", en: "Done", ar: "تم التنفيذ", ru: "Выполнено" },
+    statusWordPartial: { he: "בביצוע חלקי", en: "Partially done", ar: "منفذ جزئيًا", ru: "Частично выполнено" },
+    statusWordNotDone: { he: "לא בוצע", en: "Not done", ar: "لم يتم التنفيذ", ru: "Не выполнено" },
+    reportShareParticipantsLabel: { he: "משתתפים: ", en: "Participants: ", ar: "المشاركون: ", ru: "Участники: " },
+    reportShareNoRows: { he: "(אין שורות)", en: "(no rows)", ar: "(لا توجد عناصر)", ru: "(нет записей)" }
   };
 
   var LANG_STORAGE_KEY = "itask-lang";
@@ -1304,7 +1565,8 @@
     var sheetId = uid();
     return {
       sheets: [{ id: sheetId, name: tr("projectWord") + " 1", tasks: [] }],
-      activeSheetId: sheetId
+      activeSheetId: sheetId,
+      reports: []
     };
   }
 
@@ -1320,6 +1582,14 @@
         }
         delete t.done;
         delete t.priority;
+      });
+    });
+    if (!Array.isArray(parsed.reports)) parsed.reports = [];
+    parsed.reports.forEach(function (report) {
+      if (!Array.isArray(report.rows)) report.rows = [];
+      report.rows.forEach(function (row) {
+        if (typeof row.status !== "number") row.status = 0;
+        if (row.priority !== "urgent" && row.priority !== "regular") row.priority = null;
       });
     });
     return parsed;
@@ -1944,6 +2214,395 @@
       });
     } else {
       alert(tr("installLink") + url);
+    }
+  });
+
+  var reportsListOverlay = document.getElementById("reportsListOverlay");
+  var reportsListItems = document.getElementById("reportsListItems");
+  var newReportBtn = document.getElementById("newReportBtn");
+  var reportsListCloseBtn = document.getElementById("reportsListCloseBtn");
+
+  var reportTypeOverlay = document.getElementById("reportTypeOverlay");
+  var reportTypeMeetingBtn = document.getElementById("reportTypeMeetingBtn");
+  var reportTypeTourBtn = document.getElementById("reportTypeTourBtn");
+  var reportTypeCancelBtn = document.getElementById("reportTypeCancelBtn");
+
+  var reportTitleOverlay = document.getElementById("reportTitleOverlay");
+  var reportTitleInput = document.getElementById("reportTitleInput");
+  var reportTitleSaveBtn = document.getElementById("reportTitleSaveBtn");
+  var reportTitleCancelBtn = document.getElementById("reportTitleCancelBtn");
+
+  var reportParticipantsOverlay = document.getElementById("reportParticipantsOverlay");
+  var reportParticipantsInput = document.getElementById("reportParticipantsInput");
+  var reportParticipantsSaveBtn = document.getElementById("reportParticipantsSaveBtn");
+  var reportParticipantsCancelBtn = document.getElementById("reportParticipantsCancelBtn");
+
+  var reportView = document.getElementById("reportView");
+  var reportBackBtn = document.getElementById("reportBackBtn");
+  var reportHeadTitle = document.getElementById("reportHeadTitle");
+  var reportShareBtn = document.getElementById("reportShareBtn");
+  var reportMeta = document.getElementById("reportMeta");
+  var reportTableBody = document.getElementById("reportTableBody");
+  var reportAddRowForm = document.getElementById("reportAddRowForm");
+  var reportRowInput = document.getElementById("reportRowInput");
+  var reportFabBtn = document.getElementById("reportFabBtn");
+
+  var pendingReportDraft = null;
+  var activeReportId = null;
+  var editingReportCell = null;
+  var openPriorityPopupRowId = null;
+
+  function findReport(id) {
+    return data.reports.find(function (r) { return r.id === id; });
+  }
+
+  function closeReportsList() {
+    reportsListOverlay.hidden = true;
+  }
+
+  function renderReportsList() {
+    reportsListItems.innerHTML = "";
+    var reports = data.reports.slice().sort(function (a, b) { return b.createdAt - a.createdAt; });
+    if (!reports.length) {
+      reportsListItems.innerHTML = '<div class="reports-list-empty">' + tr("reportsListEmpty") + "</div>";
+      return;
+    }
+    reports.forEach(function (report) {
+      var item = document.createElement("button");
+      item.type = "button";
+      item.className = "report-list-item";
+      var typeLabel = report.type === "meeting" ? tr("reportTypeMeeting") : tr("reportTypeTour");
+      var titleEl = document.createElement("span");
+      titleEl.className = "report-list-item-title";
+      titleEl.textContent = report.title || typeLabel;
+      var metaEl = document.createElement("span");
+      metaEl.className = "report-list-item-meta";
+      metaEl.textContent = typeLabel + " · " + isoToFullDisplay(report.date);
+      item.appendChild(titleEl);
+      item.appendChild(metaEl);
+      item.addEventListener("click", function () {
+        closeReportsList();
+        openReportView(report.id);
+      });
+      reportsListItems.appendChild(item);
+    });
+  }
+
+  function openReportsList() {
+    renderReportsList();
+    reportsListOverlay.hidden = false;
+  }
+
+  reportFabBtn.addEventListener("click", openReportsList);
+  reportsListCloseBtn.addEventListener("click", closeReportsList);
+  reportsListOverlay.addEventListener("click", function (e) {
+    if (e.target === reportsListOverlay) closeReportsList();
+  });
+
+  function closeReportTypeModal() {
+    reportTypeOverlay.hidden = true;
+    pendingReportDraft = null;
+  }
+  function chooseReportType(type) {
+    pendingReportDraft = { type: type };
+    reportTypeOverlay.hidden = true;
+    reportTitleInput.value = "";
+    reportTitleOverlay.hidden = false;
+    reportTitleInput.focus();
+  }
+  newReportBtn.addEventListener("click", function () {
+    closeReportsList();
+    reportTypeOverlay.hidden = false;
+  });
+  reportTypeMeetingBtn.addEventListener("click", function () { chooseReportType("meeting"); });
+  reportTypeTourBtn.addEventListener("click", function () { chooseReportType("tour"); });
+  reportTypeCancelBtn.addEventListener("click", closeReportTypeModal);
+  reportTypeOverlay.addEventListener("click", function (e) {
+    if (e.target === reportTypeOverlay) closeReportTypeModal();
+  });
+
+  function closeReportTitleModal() {
+    reportTitleOverlay.hidden = true;
+    pendingReportDraft = null;
+  }
+  reportTitleSaveBtn.addEventListener("click", function () {
+    if (!pendingReportDraft) return;
+    pendingReportDraft.title = reportTitleInput.value.trim();
+    reportTitleOverlay.hidden = true;
+    reportParticipantsInput.value = "";
+    reportParticipantsOverlay.hidden = false;
+    reportParticipantsInput.focus();
+  });
+  reportTitleCancelBtn.addEventListener("click", closeReportTitleModal);
+  reportTitleOverlay.addEventListener("click", function (e) {
+    if (e.target === reportTitleOverlay) closeReportTitleModal();
+  });
+  reportTitleInput.addEventListener("keydown", function (e) {
+    e.stopPropagation();
+    if (e.key === "Enter") reportTitleSaveBtn.click();
+    if (e.key === "Escape") closeReportTitleModal();
+  });
+
+  function closeReportParticipantsModal() {
+    reportParticipantsOverlay.hidden = true;
+    pendingReportDraft = null;
+  }
+  reportParticipantsSaveBtn.addEventListener("click", function () {
+    if (!pendingReportDraft) return;
+    var report = {
+      id: uid(),
+      type: pendingReportDraft.type,
+      title: pendingReportDraft.title,
+      participants: reportParticipantsInput.value.trim(),
+      date: todayISO(),
+      createdAt: Date.now(),
+      rows: []
+    };
+    data.reports.push(report);
+    saveData();
+    pendingReportDraft = null;
+    reportParticipantsOverlay.hidden = true;
+    openReportView(report.id);
+  });
+  reportParticipantsCancelBtn.addEventListener("click", closeReportParticipantsModal);
+  reportParticipantsOverlay.addEventListener("click", function (e) {
+    if (e.target === reportParticipantsOverlay) closeReportParticipantsModal();
+  });
+  reportParticipantsInput.addEventListener("keydown", function (e) {
+    e.stopPropagation();
+    if (e.key === "Enter") reportParticipantsSaveBtn.click();
+    if (e.key === "Escape") closeReportParticipantsModal();
+  });
+
+  function closePriorityPopup() {
+    var existing = document.querySelector(".report-priority-popup");
+    if (existing) existing.remove();
+    openPriorityPopupRowId = null;
+  }
+
+  function openReportView(reportId) {
+    activeReportId = reportId;
+    editingReportCell = null;
+    closePriorityPopup();
+    renderReportView();
+    reportView.hidden = false;
+  }
+
+  function closeReportView() {
+    reportView.hidden = true;
+    activeReportId = null;
+    editingReportCell = null;
+    closePriorityPopup();
+  }
+  reportBackBtn.addEventListener("click", closeReportView);
+
+  function renderReportView() {
+    var report = findReport(activeReportId);
+    if (!report) { closeReportView(); return; }
+    var typeLabel = report.type === "meeting" ? tr("reportTypeMeeting") : tr("reportTypeTour");
+    reportHeadTitle.textContent = report.title || typeLabel;
+    var metaText = typeLabel + " · " + isoToFullDisplay(report.date);
+    if (report.participants) metaText += " — " + tr("reportShareParticipantsLabel") + report.participants;
+    reportMeta.textContent = metaText;
+
+    reportTableBody.innerHTML = "";
+    report.rows.forEach(function (row, index) {
+      var rowEl = document.createElement("tr");
+
+      var numTd = document.createElement("td");
+      numTd.textContent = String(index + 1);
+      rowEl.appendChild(numTd);
+
+      var taskTd = document.createElement("td");
+      taskTd.className = "report-col-task";
+      if (editingReportCell && editingReportCell.rowId === row.id && editingReportCell.field === "task") {
+        var taskInputEl = document.createElement("input");
+        taskInputEl.type = "text";
+        taskInputEl.className = "report-cell-input";
+        taskInputEl.value = row.task || "";
+        taskInputEl.maxLength = 200;
+        taskTd.appendChild(taskInputEl);
+        setTimeout(function () { taskInputEl.focus(); }, 0);
+        var commitTask = function () {
+          row.task = taskInputEl.value.trim();
+          editingReportCell = null;
+          saveData();
+          renderReportView();
+        };
+        taskInputEl.addEventListener("blur", commitTask);
+        taskInputEl.addEventListener("keydown", function (e) {
+          e.stopPropagation();
+          if (e.key === "Enter") commitTask();
+          if (e.key === "Escape") { editingReportCell = null; renderReportView(); }
+        });
+      } else {
+        var taskBtn = document.createElement("button");
+        taskBtn.type = "button";
+        taskBtn.className = "report-cell-btn";
+        taskBtn.textContent = row.task || "";
+        taskBtn.addEventListener("click", function () {
+          editingReportCell = { rowId: row.id, field: "task" };
+          renderReportView();
+        });
+        taskTd.appendChild(taskBtn);
+      }
+      rowEl.appendChild(taskTd);
+
+      var respTd = document.createElement("td");
+      if (editingReportCell && editingReportCell.rowId === row.id && editingReportCell.field === "responsible") {
+        var respInputEl = document.createElement("input");
+        respInputEl.type = "text";
+        respInputEl.className = "report-cell-input";
+        respInputEl.value = row.responsible || "";
+        respInputEl.maxLength = 100;
+        respTd.appendChild(respInputEl);
+        setTimeout(function () { respInputEl.focus(); }, 0);
+        var commitResp = function () {
+          row.responsible = respInputEl.value.trim();
+          editingReportCell = null;
+          saveData();
+          renderReportView();
+        };
+        respInputEl.addEventListener("blur", commitResp);
+        respInputEl.addEventListener("keydown", function (e) {
+          e.stopPropagation();
+          if (e.key === "Enter") commitResp();
+          if (e.key === "Escape") { editingReportCell = null; renderReportView(); }
+        });
+      } else {
+        var respBtn = document.createElement("button");
+        respBtn.type = "button";
+        respBtn.className = "report-cell-btn";
+        respBtn.textContent = row.responsible || "";
+        respBtn.addEventListener("click", function () {
+          editingReportCell = { rowId: row.id, field: "responsible" };
+          renderReportView();
+        });
+        respTd.appendChild(respBtn);
+      }
+      rowEl.appendChild(respTd);
+
+      var statusTd = document.createElement("td");
+      var statusMark = document.createElement("span");
+      statusMark.className = "report-status-mark";
+      statusMark.innerHTML = rowMarkSvg(row.status);
+      statusMark.style.cursor = "pointer";
+      statusMark.addEventListener("click", function () {
+        row.status = (row.status + 1) % 3;
+        saveData();
+        renderReportView();
+      });
+      statusTd.appendChild(statusMark);
+      rowEl.appendChild(statusTd);
+
+      var priorityTd = document.createElement("td");
+      priorityTd.style.position = "relative";
+      if (row.priority) {
+        var tag = document.createElement("span");
+        tag.className = "report-priority-tag " + row.priority;
+        tag.textContent = row.priority === "urgent" ? tr("priorityUrgent") : tr("priorityRegular");
+        priorityTd.appendChild(tag);
+      }
+      priorityTd.addEventListener("click", function (e) {
+        e.stopPropagation();
+        togglePriorityPopup(row, priorityTd);
+      });
+      rowEl.appendChild(priorityTd);
+
+      reportTableBody.appendChild(rowEl);
+    });
+  }
+
+  function togglePriorityPopup(row, anchorTd) {
+    if (openPriorityPopupRowId === row.id) { closePriorityPopup(); return; }
+    closePriorityPopup();
+    openPriorityPopupRowId = row.id;
+    var popup = document.createElement("div");
+    popup.className = "report-priority-popup";
+    var urgentBtn = document.createElement("button");
+    urgentBtn.type = "button";
+    urgentBtn.textContent = tr("priorityUrgent");
+    urgentBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      row.priority = row.priority === "urgent" ? null : "urgent";
+      saveData();
+      closePriorityPopup();
+      renderReportView();
+    });
+    var regularBtn = document.createElement("button");
+    regularBtn.type = "button";
+    regularBtn.textContent = tr("priorityRegular");
+    regularBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      row.priority = row.priority === "regular" ? null : "regular";
+      saveData();
+      closePriorityPopup();
+      renderReportView();
+    });
+    popup.appendChild(urgentBtn);
+    popup.appendChild(regularBtn);
+    document.body.appendChild(popup);
+    var rect = anchorTd.getBoundingClientRect();
+    popup.style.top = (rect.bottom + window.scrollY) + "px";
+    popup.style.left = (rect.left + window.scrollX) + "px";
+  }
+
+  document.addEventListener("click", function (e) {
+    if (openPriorityPopupRowId && !e.target.closest(".report-priority-popup")) {
+      closePriorityPopup();
+    }
+  });
+
+  reportAddRowForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var report = findReport(activeReportId);
+    if (!report) return;
+    var text = reportRowInput.value.trim();
+    if (!text) return;
+    report.rows.push({ id: uid(), task: text, responsible: "", status: 0, priority: null });
+    saveData();
+    reportRowInput.value = "";
+    renderReportView();
+    reportRowInput.focus();
+  });
+
+  function buildReportShareText(report) {
+    var typeLabel = report.type === "meeting" ? tr("reportTypeMeeting") : tr("reportTypeTour");
+    var lines = [];
+    lines.push((report.title || typeLabel) + " (" + typeLabel + ")");
+    lines.push(isoToFullDisplay(report.date));
+    if (report.participants) lines.push(tr("reportShareParticipantsLabel") + report.participants);
+    lines.push("");
+    if (!report.rows.length) {
+      lines.push(tr("reportShareNoRows"));
+    } else {
+      report.rows.forEach(function (row, index) {
+        var statusWord = row.status === 2 ? tr("statusWordDone") : row.status === 1 ? tr("statusWordPartial") : tr("statusWordNotDone");
+        var priorityWord = row.priority === "urgent" ? tr("priorityUrgent") : row.priority === "regular" ? tr("priorityRegular") : "";
+        var line = (index + 1) + ". " + row.task;
+        if (row.responsible) line += " - " + row.responsible;
+        line += " - " + statusWord;
+        if (priorityWord) line += " - " + priorityWord;
+        lines.push(line);
+      });
+    }
+    return lines.join("\n");
+  }
+
+  reportShareBtn.addEventListener("click", function () {
+    var report = findReport(activeReportId);
+    if (!report) return;
+    var text = buildReportShareText(report);
+    if (navigator.share) {
+      navigator.share({ title: report.title, text: text }).catch(function () {});
+    } else if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () {
+        alert(tr("projectContentCopied"));
+      }, function () {
+        alert(tr("shareNotSupported"));
+      });
+    } else {
+      alert(tr("shareNotSupported"));
     }
   });
 
