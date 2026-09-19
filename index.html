@@ -1,4 +1,8 @@
 <!DOCTYPE html>
+<!--
+  © غادة جلجولي (Gada Jaljulli) — جميع الحقوق محفوظة.
+  هذا التطبيق وكامل الكود المصدري ملك خاص، ويُمنع نسخه أو إعادة استخدامه أو توزيعه دون إذن كتابي صريح من المالكة.
+-->
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
@@ -175,7 +179,7 @@ if("serviceWorker" in navigator){
   });
 }
 
-const APP_BUILD_VERSION = "2026-09-16T19:06:11Z";
+const APP_BUILD_VERSION = "2026-09-19T08:41:03Z";
 async function checkForAppUpdate(){
   try{
     const res = await fetch("version.json?t=" + Date.now(), { cache: "no-store" });
@@ -193,6 +197,16 @@ window.addEventListener("load", () => {
     if(document.visibilityState === "visible") checkForAppUpdate();
   });
 });
+
+document.addEventListener("contextmenu", (e) => e.preventDefault());
+document.addEventListener("keydown", (e) => {
+  const k = (e.key || "").toUpperCase();
+  if(k === "F12") e.preventDefault();
+  if(e.ctrlKey && e.shiftKey && (k === "I" || k === "J" || k === "C")) e.preventDefault();
+  if(e.ctrlKey && k === "U") e.preventDefault();
+});
+console.log("%c© غادة جلجولي — جميع الحقوق محفوظة", "font-size:16px;font-weight:bold;color:#0f766e;");
+console.log("%cهذا التطبيق وكامل محتواه ملك خاص، ويُمنع نسخه أو استخدامه دون إذن كتابي.", "font-size:13px;color:#991b1b;");
 
 const MECHANISMS = [
   {key:"sys", label:"أنظمة"},
@@ -1279,6 +1293,7 @@ const App = {
         <button onclick="App.installApp()" class="btn btn-outline" style="width:100%;margin-top:.5rem;">📲 تثبيت على الهاتف</button>
         <p class="text-stone-400 text-xs" style="margin-top:.75rem;">رقم هاتفك بيسمحلك تكملي تعبئة الاستمارة لاحقًا من أي جهاز آخر بنفس الرقم.</p>
       </div>
+      <p style="text-align:center;font-size:.7rem;color:#a8a29e;margin-top:1rem;">© غادة جلجولي — جميع الحقوق محفوظة</p>
     </div>`;
   },
 
