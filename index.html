@@ -179,7 +179,7 @@ if("serviceWorker" in navigator){
   });
 }
 
-const APP_BUILD_VERSION = "2026-09-19T19:13:57Z";
+const APP_BUILD_VERSION = "2026-09-19T19:29:48Z";
 async function checkForAppUpdate(){
   try{
     const res = await fetch("version.json?t=" + Date.now(), { cache: "no-store" });
@@ -627,55 +627,6 @@ const App = {
     return list.filter(sub =>
       (sub.schoolName||"").includes(q) || (sub.principalName||"").includes(q) || (sub.coachName||"").includes(q)
     );
-  },
-
-  async submitSurvey(){
-    const g = this.state.general;
-    if(!g.schoolName || !g.schoolName.trim()){
-      alert("الرجاء إدخال اسم المدرسة قبل إرسال المسح.");
-      this.setSection("general");
-      return;
-    }
-    if(!confirm("سيتم إرسال نسخة نهائية من هذا المسح إلى المسؤول ليتمكّن من الاطّلاع عليها. هل أنتِ متأكدة؟")) return;
-
-    const payload = {
-      school_name: g.schoolName || "",
-      principal_name: g.principalName || "",
-      coach_name: g.coachName || "",
-      teachers_count: g.teachersCount || "",
-      students_count: g.studentsCount || "",
-      submitted_at: new Date().toISOString(),
-      survey: {
-        general: this.state.general,
-        leadership: this.state.leadership,
-        staff: this.state.staff,
-        students: this.state.students,
-        principal: this.state.principal,
-        summary: this.state.summary,
-        insights: this.state.insights
-      }
-    };
-
-    try{
-      if(this.state.lastSubmissionId){
-        await sbRequest("submissions?id=eq." + this.state.lastSubmissionId, {
-          method: "PATCH",
-          body: JSON.stringify(payload)
-        });
-      } else {
-        const rows = await sbRequest("submissions", {
-          method: "POST",
-          headers: { "Prefer": "return=representation" },
-          body: JSON.stringify(payload)
-        });
-        this.state.lastSubmissionId = rows && rows[0] && rows[0].id;
-      }
-      this.state.submitted = true;
-      alert("تم إرسال المسح بنجاح. شكرًا لك!");
-      this.render();
-    }catch(e){
-      alert("حدث خطأ أثناء الإرسال، حاولي مرة أخرى: " + (e && e.message ? e.message : e));
-    }
   },
 
   viewSubmission(id){
@@ -1354,15 +1305,12 @@ const App = {
     <div class="flex flex-wrap gap-2 mb-6 no-print">${tabs}</div>
     <div class="flex flex-wrap gap-2 mb-2 no-print">
       <button onclick="App.saveDraft()" class="btn btn-blue">💾 حفظ</button>
-      <button onclick="App.submitSurvey()" class="btn btn-indigo">📤 إرسال المسح النهائي</button>
       <button onclick="App.printDocument()" class="bg-rose-700 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-rose-800">طباعة / حفظ كـ PDF</button>
       <button onclick="App.exportExcel()" class="bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-emerald-800">تصدير إلى Excel</button>
       <button onclick="App.clearAutosave()" class="bg-stone-200 text-stone-600 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-stone-300">بدء مسح جديد فارغ</button>
       <button onclick="App.installApp()" class="btn btn-outline">📲 تثبيت على الهاتف</button>
     </div>
-    ${this.state.submitted ? `<p class="text-teal-700 text-xs font-semibold mb-2 no-print">✓ تمّ إرسال هذا المسح. يمكنك الاستمرار بالتعديل ثمّ الضغط على "إرسال المسح النهائي" مجددًا لتحديث النسخة المُرسلة.</p>` : ""}
-    <p class="text-stone-400 text-xs mb-1 no-print">✓ بياناتك تُحفظ تلقائيًا بهذا الجهاز أثناء التعبئة. لمتابعة العمل من حاسوب أو جهاز آخر، اضغطي "💾 حفظ" — وبعدها ادخلي بنفس رقم هاتفك من أي جهاز لاحقًا وبتظهرلك بياناتك المحفوظة تلقائيًا.</p>
-    <p class="text-stone-400 text-xs mb-6 no-print">اضغطي "إرسال المسح النهائي" لإرسال نسخة نهائية إلى المسؤول. للحصول على ملف PDF: عند فتح نافذة الطباعة، اختاري "Save as PDF" / "حفظ كـ PDF" من قائمة الطابعة بدل طابعة فعليّة.</p>`;
+    <p class="text-stone-400 text-xs mb-6 no-print">تُحفظ بياناتك تلقائيًا على هذا الجهاز أثناء تعبئة الاستمارة. ولمتابعة العمل من حاسوب أو جهاز آخر، يُرجى الضغط على زر "💾 حفظ"، ثمّ الدخول لاحقًا برقم الهاتف نفسه من أي جهاز، لتظهر البيانات المحفوظة تلقائيًا.</p>`;
   },
 
   renderSection(){
