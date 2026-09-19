@@ -270,12 +270,20 @@
     opacity: 0.4;
     cursor: pointer;
   }
-  .report-add-row {
+  .report-add-row-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: none;
+    background: var(--accent);
+    color: var(--accent-contrast);
+    font-size: 1rem;
+    line-height: 1;
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 10px 20px 20px;
-    flex-shrink: 0;
+    justify-content: center;
+    cursor: pointer;
+    margin: 0 auto;
   }
   .notebook-date-wrap {
     display: flex;
@@ -1307,11 +1315,6 @@
         <tbody id="reportTableBody"></tbody>
       </table>
     </div>
-    <form class="report-add-row" id="reportAddRowForm">
-      <span class="row-mark" aria-hidden="true"><svg viewBox="0 0 20 18" xmlns="http://www.w3.org/2000/svg"><path d="M4 3 L16 15 M1.5 3 L6.5 3 M13.5 3 L18.5 3 M1.5 15 L6.5 15 M13.5 15 L18.5 15" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg></span>
-      <input type="text" id="reportRowInput" data-i18n-ph="taskInputPlaceholder" placeholder="חדש..." maxlength="200" required autocomplete="off">
-      <button type="submit" class="add-btn" data-i18n-title="addBtnTitle" title="הוספה">+</button>
-    </form>
   </div>
 
   <input type="file" accept="image/*" capture="environment" id="reportImageCameraInput" style="display:none">
@@ -2276,8 +2279,6 @@
   var reportShareBtn = document.getElementById("reportShareBtn");
   var reportMeta = document.getElementById("reportMeta");
   var reportTableBody = document.getElementById("reportTableBody");
-  var reportAddRowForm = document.getElementById("reportAddRowForm");
-  var reportRowInput = document.getElementById("reportRowInput");
   var reportFabBtn = document.getElementById("reportFabBtn");
 
   var pendingReportDraft = null;
@@ -2598,6 +2599,21 @@
 
       reportTableBody.appendChild(rowEl);
     });
+
+    var addRowEl = document.createElement("tr");
+    var addNumTd = document.createElement("td");
+    var addBtn = document.createElement("button");
+    addBtn.type = "button";
+    addBtn.className = "report-add-row-btn";
+    addBtn.textContent = "+";
+    addBtn.title = tr("addBtnTitle");
+    addBtn.addEventListener("click", addReportRow);
+    addNumTd.appendChild(addBtn);
+    addRowEl.appendChild(addNumTd);
+    for (var i = 0; i < 6; i++) {
+      addRowEl.appendChild(document.createElement("td"));
+    }
+    reportTableBody.appendChild(addRowEl);
   }
 
   function togglePriorityPopup(row, anchorTd) {
@@ -2743,18 +2759,15 @@
     handleReportImageFile(reportImageGalleryInput.files && reportImageGalleryInput.files[0]);
   });
 
-  reportAddRowForm.addEventListener("submit", function (e) {
-    e.preventDefault();
+  function addReportRow() {
     var report = findReport(activeReportId);
     if (!report) return;
-    var text = reportRowInput.value.trim();
-    if (!text) return;
-    report.rows.push({ id: uid(), task: text, responsible: "", status: 0, priority: null, dueDate: null, image: null });
+    var newRow = { id: uid(), task: "", responsible: "", status: 0, priority: null, dueDate: null, image: null };
+    report.rows.push(newRow);
     saveData();
-    reportRowInput.value = "";
+    editingReportCell = { rowId: newRow.id, field: "task" };
     renderReportView();
-    reportRowInput.focus();
-  });
+  }
 
   function buildReportShareText(report) {
     var typeLabel = report.type === "meeting" ? tr("reportTypeMeeting") : tr("reportTypeTour");
