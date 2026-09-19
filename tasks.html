@@ -173,7 +173,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    padding: 10px 12px;
+    padding: 10px 25px 10px 12px;
     border: 1px solid var(--rule);
     border-radius: 8px;
     background: var(--paper-alt);
@@ -1299,6 +1299,19 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="reportActionOverlay" hidden>
+    <div class="modal-box" role="alertdialog" aria-modal="true">
+      <p class="modal-message" data-i18n="reportActionModalMessage">מה לעשות עם הדוח?</p>
+      <div class="move-task-mode">
+        <button type="button" class="danger-btn" id="reportActionDeleteBtn" data-i18n="deleteBtn">מחיקה</button>
+        <button type="button" id="reportActionShareBtn" data-i18n="shareBtn">שיתוף</button>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="modal-btn modal-btn-no" id="reportActionCancelBtn" data-i18n="cancelBtn">ביטול</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="confirmOverlay" hidden>
     <div class="modal-box" role="alertdialog" aria-modal="true">
       <p class="modal-message" id="confirmMessage"></p>
@@ -1505,6 +1518,8 @@
     confirmEndProjectNamed: { he: 'לסמן את הפרויקט "{name}" כמסתיים? הוא לא יופיע יותר בימים הבאים (ימשיך להופיע בימים הקודמים).', en: 'Mark the project "{name}" as finished? It will no longer appear on future days (it will still appear on past days).', ar: 'هل تريد وضع علامة "منتهٍ" على المشروع "{name}"؟ لن يظهر بعد الآن في الأيام القادمة (سيستمر بالظهور في الأيام السابقة).', ru: 'Отметить проект «{name}» как завершённый? Он больше не будет отображаться в будущие дни (но останется виден в прошедших днях).' },
     confirmEndProjectGeneric: { he: "לסמן את הפרויקט כמסתיים?", en: "Mark the project as finished?", ar: "هل تريد وضع علامة \"منتهٍ\" على هذا المشروع؟", ru: "Отметить проект как завершённый?" },
     confirmShareProject: { he: 'לשתף את הפרויקט "{name}"?', en: 'Share the project "{name}"?', ar: 'هل تريد مشاركة المشروع "{name}"؟', ru: 'Поделиться проектом «{name}»?' },
+    confirmDeleteReport: { he: 'למחוק את הדוח "{name}"?', en: 'Delete the report "{name}"?', ar: 'هل تريد حذف التقرير "{name}"؟', ru: 'Удалить отчёт «{name}»?' },
+    reportActionModalMessage: { he: "מה לעשות עם הדוח?", en: "What would you like to do with this report?", ar: "ماذا تريد أن تفعل بهذا التقرير؟", ru: "Что сделать с этим отчётом?" },
     projectContentCopied: { he: "תוכן הפרויקט הועתק ללוח", en: "Project content copied to clipboard", ar: "تم نسخ محتوى المشروع إلى الحافظة", ru: "Содержимое проекта скопировано в буфер обмена" },
     shareNotSupported: { he: "השיתוף לא נתמך בדפדפן הזה", en: "Sharing isn't supported in this browser", ar: "المشاركة غير مدعومة في هذا المتصفح", ru: "Обмен не поддерживается в этом браузере" },
     remindersActive: { he: "תזכורות פעילות", en: "Reminders active", ar: "التذكيرات نشطة", ru: "Напоминания включены" },
@@ -2203,6 +2218,47 @@
     if (e.target === sheetActionOverlay) closeSheetActionModal();
   });
 
+  var reportActionOverlay = document.getElementById("reportActionOverlay");
+  var reportActionDeleteBtn = document.getElementById("reportActionDeleteBtn");
+  var reportActionShareBtn = document.getElementById("reportActionShareBtn");
+  var reportActionCancelBtn = document.getElementById("reportActionCancelBtn");
+  var pendingReportActionId = null;
+
+  function openReportActionModal(id) {
+    pendingReportActionId = id;
+    reportActionOverlay.hidden = false;
+  }
+  function closeReportActionModal() {
+    reportActionOverlay.hidden = true;
+    pendingReportActionId = null;
+  }
+  function deleteReport(id) {
+    var report = findReport(id);
+    if (!report) return;
+    var typeLabel = report.type === "meeting" ? tr("reportTypeMeeting") : tr("reportTypeTour");
+    askConfirm(tr("confirmDeleteReport").replace("{name}", report.title || typeLabel), function () {
+      var sheet = activeSheet();
+      sheet.reports = (sheet.reports || []).filter(function (r) { return r.id !== id; });
+      saveData();
+      if (state.viewMode === "reports") renderSheetReportsList();
+    });
+  }
+  reportActionDeleteBtn.addEventListener("click", function () {
+    var id = pendingReportActionId;
+    closeReportActionModal();
+    deleteReport(id);
+  });
+  reportActionShareBtn.addEventListener("click", function () {
+    var id = pendingReportActionId;
+    closeReportActionModal();
+    var report = findReport(id);
+    if (report) generateReportPdf(report);
+  });
+  reportActionCancelBtn.addEventListener("click", closeReportActionModal);
+  reportActionOverlay.addEventListener("click", function (e) {
+    if (e.target === reportActionOverlay) closeReportActionModal();
+  });
+
   renameSheetBtn.addEventListener("click", function () {
     state.menuOpen = false;
     state.renamingSheetId = activeSheet().id;
@@ -2451,9 +2507,42 @@
         metaEl.textContent = typeLabel + " · " + isoToFullDisplay(report.date);
         item.appendChild(titleEl);
         item.appendChild(metaEl);
+
+        var reportLongPressFired = false;
         item.addEventListener("click", function () {
+          if (reportLongPressFired) { reportLongPressFired = false; return; }
           openReportView(report.id);
         });
+
+        var reportPressStartX = 0, reportPressStartY = 0;
+        var startReportPress = function (e) {
+          var point = e.touches ? e.touches[0] : e;
+          reportPressStartX = point.clientX;
+          reportPressStartY = point.clientY;
+          reportLongPressFired = false;
+          clearTimeout(longPressTimer);
+          longPressTimer = setTimeout(function () {
+            reportLongPressFired = true;
+            openReportActionModal(report.id);
+          }, 1000);
+        };
+        var cancelReportPress = function () {
+          clearTimeout(longPressTimer);
+        };
+        var moveReportPress = function (e) {
+          var point = e.touches ? e.touches[0] : e;
+          if (Math.abs(point.clientX - reportPressStartX) > 10 || Math.abs(point.clientY - reportPressStartY) > 10) {
+            cancelReportPress();
+          }
+        };
+        item.addEventListener("mousedown", startReportPress);
+        item.addEventListener("mouseup", cancelReportPress);
+        item.addEventListener("mouseleave", cancelReportPress);
+        item.addEventListener("mousemove", moveReportPress);
+        item.addEventListener("touchstart", startReportPress, { passive: true });
+        item.addEventListener("touchend", cancelReportPress);
+        item.addEventListener("touchmove", moveReportPress, { passive: true });
+
         sheetReportsList.appendChild(item);
       });
     }
