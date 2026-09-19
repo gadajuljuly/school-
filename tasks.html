@@ -251,6 +251,25 @@
   }
   .report-priority-popup button:first-child { border-bottom: 1px solid var(--rule); }
   .report-priority-popup button:hover { background: var(--paper-alt); }
+  .report-image-thumb {
+    width: 36px;
+    height: 36px;
+    object-fit: cover;
+    border-radius: 6px;
+    cursor: pointer;
+    display: block;
+    margin: 0 auto;
+  }
+  .report-image-placeholder {
+    display: block;
+    width: 36px;
+    height: 36px;
+    line-height: 36px;
+    margin: 0 auto;
+    font-size: 1.1rem;
+    opacity: 0.4;
+    cursor: pointer;
+  }
   .report-add-row {
     display: flex;
     align-items: center;
@@ -1279,8 +1298,10 @@
             <th data-i18n="reportColNum">מס'</th>
             <th data-i18n="reportColTask">משימה</th>
             <th data-i18n="reportColResponsible">באחריות</th>
+            <th data-i18n="reportColDue">עד</th>
             <th data-i18n="reportColStatus">סטטוס</th>
             <th data-i18n="reportColPriority">עדיפות</th>
+            <th data-i18n="reportColImage">תמונה</th>
           </tr>
         </thead>
         <tbody id="reportTableBody"></tbody>
@@ -1292,6 +1313,9 @@
       <button type="submit" class="add-btn" data-i18n-title="addBtnTitle" title="הוספה">+</button>
     </form>
   </div>
+
+  <input type="file" accept="image/*" capture="environment" id="reportImageCameraInput" style="display:none">
+  <input type="file" accept="image/*" id="reportImageGalleryInput" style="display:none">
 
   <button type="button" class="install-fab" id="installBtn" data-i18n="installFab" hidden>&#128241; התקן אפליקציה</button>
 
@@ -1449,6 +1473,13 @@
     reportColResponsible: { he: "באחריות", en: "Responsible", ar: "المسؤول", ru: "Ответственный" },
     reportColStatus: { he: "סטטוס", en: "Status", ar: "الحالة", ru: "Статус" },
     reportColPriority: { he: "עדיפות", en: "Priority", ar: "الأولوية", ru: "Приоритет" },
+    reportColDue: { he: "עד", en: "Due", ar: "حتى", ru: "До" },
+    reportColImage: { he: "תמונה", en: "Photo", ar: "صورة", ru: "Фото" },
+    imagePopupCamera: { he: "מצלמה", en: "Camera", ar: "الكاميرا", ru: "Камера" },
+    imagePopupGallery: { he: "מהאלבום", en: "From gallery", ar: "من الألبوم", ru: "Из галереи" },
+    imagePopupRemove: { he: "הסרת תמונה", en: "Remove photo", ar: "إزالة الصورة", ru: "Удалить фото" },
+    reportShareDueLabel: { he: "עד ", en: "due ", ar: "حتى ", ru: "до " },
+    reportShareImageNote: { he: "[יש תמונה מצורפת]", en: "[photo attached]", ar: "[توجد صورة مرفقة]", ru: "[есть прикреплённое фото]" },
     priorityUrgent: { he: "דחוף", en: "Urgent", ar: "عاجل", ru: "Срочно" },
     priorityRegular: { he: "רגיל", en: "Regular", ar: "عادي", ru: "Обычный" },
     responsiblePlaceholder: { he: "שם...", en: "Name...", ar: "الاسم...", ru: "Имя..." },
@@ -1590,6 +1621,8 @@
       report.rows.forEach(function (row) {
         if (typeof row.status !== "number") row.status = 0;
         if (row.priority !== "urgent" && row.priority !== "regular") row.priority = null;
+        if (typeof row.dueDate !== "string") row.dueDate = null;
+        if (typeof row.image !== "string") row.image = null;
       });
     });
     return parsed;
@@ -2384,6 +2417,7 @@
     activeReportId = reportId;
     editingReportCell = null;
     closePriorityPopup();
+    closeImagePopup();
     renderReportView();
     reportView.hidden = false;
   }
@@ -2393,6 +2427,7 @@
     activeReportId = null;
     editingReportCell = null;
     closePriorityPopup();
+    closeImagePopup();
   }
   reportBackBtn.addEventListener("click", closeReportView);
 
@@ -2482,6 +2517,38 @@
       }
       rowEl.appendChild(respTd);
 
+      var dueTd = document.createElement("td");
+      if (editingReportCell && editingReportCell.rowId === row.id && editingReportCell.field === "dueDate") {
+        var dueInputEl = document.createElement("input");
+        dueInputEl.type = "date";
+        dueInputEl.className = "report-cell-input";
+        dueInputEl.value = row.dueDate || "";
+        dueTd.appendChild(dueInputEl);
+        setTimeout(function () {
+          dueInputEl.focus();
+          if (dueInputEl.showPicker) { try { dueInputEl.showPicker(); } catch (e) {} }
+        }, 0);
+        var commitDue = function () {
+          row.dueDate = dueInputEl.value || null;
+          editingReportCell = null;
+          saveData();
+          renderReportView();
+        };
+        dueInputEl.addEventListener("change", commitDue);
+        dueInputEl.addEventListener("blur", commitDue);
+      } else {
+        var dueBtn = document.createElement("button");
+        dueBtn.type = "button";
+        dueBtn.className = "report-cell-btn";
+        dueBtn.textContent = row.dueDate ? isoToDisplay(row.dueDate) : "";
+        dueBtn.addEventListener("click", function () {
+          editingReportCell = { rowId: row.id, field: "dueDate" };
+          renderReportView();
+        });
+        dueTd.appendChild(dueBtn);
+      }
+      rowEl.appendChild(dueTd);
+
       var statusTd = document.createElement("td");
       var statusMark = document.createElement("span");
       statusMark.className = "report-status-mark";
@@ -2508,6 +2575,26 @@
         togglePriorityPopup(row, priorityTd);
       });
       rowEl.appendChild(priorityTd);
+
+      var imageTd = document.createElement("td");
+      imageTd.style.position = "relative";
+      if (row.image) {
+        var thumb = document.createElement("img");
+        thumb.className = "report-image-thumb";
+        thumb.src = row.image;
+        thumb.alt = "";
+        imageTd.appendChild(thumb);
+      } else {
+        var imagePlaceholder = document.createElement("span");
+        imagePlaceholder.className = "report-image-placeholder";
+        imagePlaceholder.innerHTML = "&#128247;";
+        imageTd.appendChild(imagePlaceholder);
+      }
+      imageTd.addEventListener("click", function (e) {
+        e.stopPropagation();
+        toggleImagePopup(row, imageTd);
+      });
+      rowEl.appendChild(imageTd);
 
       reportTableBody.appendChild(rowEl);
     });
@@ -2553,13 +2640,116 @@
     }
   });
 
+  var reportImageCameraInput = document.getElementById("reportImageCameraInput");
+  var reportImageGalleryInput = document.getElementById("reportImageGalleryInput");
+  var pendingImageRowId = null;
+  var openImagePopupRowId = null;
+
+  function closeImagePopup() {
+    var existing = document.querySelector(".report-priority-popup.report-image-popup");
+    if (existing) existing.remove();
+    openImagePopupRowId = null;
+  }
+
+  function toggleImagePopup(row, anchorTd) {
+    if (openImagePopupRowId === row.id) { closeImagePopup(); return; }
+    closeImagePopup();
+    closePriorityPopup();
+    openImagePopupRowId = row.id;
+    var popup = document.createElement("div");
+    popup.className = "report-priority-popup report-image-popup";
+    var cameraBtn = document.createElement("button");
+    cameraBtn.type = "button";
+    cameraBtn.textContent = tr("imagePopupCamera");
+    cameraBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      pendingImageRowId = row.id;
+      closeImagePopup();
+      reportImageCameraInput.value = "";
+      reportImageCameraInput.click();
+    });
+    var galleryBtn = document.createElement("button");
+    galleryBtn.type = "button";
+    galleryBtn.textContent = tr("imagePopupGallery");
+    galleryBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      pendingImageRowId = row.id;
+      closeImagePopup();
+      reportImageGalleryInput.value = "";
+      reportImageGalleryInput.click();
+    });
+    popup.appendChild(cameraBtn);
+    popup.appendChild(galleryBtn);
+    if (row.image) {
+      var removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.textContent = tr("imagePopupRemove");
+      removeBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        row.image = null;
+        saveData();
+        closeImagePopup();
+        renderReportView();
+      });
+      popup.appendChild(removeBtn);
+    }
+    document.body.appendChild(popup);
+    var rect = anchorTd.getBoundingClientRect();
+    popup.style.top = (rect.bottom + window.scrollY) + "px";
+    popup.style.left = (rect.left + window.scrollX) + "px";
+  }
+
+  document.addEventListener("click", function (e) {
+    if (openImagePopupRowId && !e.target.closest(".report-image-popup")) {
+      closeImagePopup();
+    }
+  });
+
+  function resizeImageFile(file, callback) {
+    var reader = new FileReader();
+    reader.onload = function () {
+      var img = new Image();
+      img.onload = function () {
+        var maxDim = 900;
+        var scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        var canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        var ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        callback(canvas.toDataURL("image/jpeg", 0.72));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function handleReportImageFile(file) {
+    if (!file || !pendingImageRowId) return;
+    var report = findReport(activeReportId);
+    if (!report) return;
+    var row = report.rows.find(function (r) { return r.id === pendingImageRowId; });
+    if (!row) return;
+    resizeImageFile(file, function (dataUrl) {
+      row.image = dataUrl;
+      saveData();
+      renderReportView();
+    });
+  }
+  reportImageCameraInput.addEventListener("change", function () {
+    handleReportImageFile(reportImageCameraInput.files && reportImageCameraInput.files[0]);
+  });
+  reportImageGalleryInput.addEventListener("change", function () {
+    handleReportImageFile(reportImageGalleryInput.files && reportImageGalleryInput.files[0]);
+  });
+
   reportAddRowForm.addEventListener("submit", function (e) {
     e.preventDefault();
     var report = findReport(activeReportId);
     if (!report) return;
     var text = reportRowInput.value.trim();
     if (!text) return;
-    report.rows.push({ id: uid(), task: text, responsible: "", status: 0, priority: null });
+    report.rows.push({ id: uid(), task: text, responsible: "", status: 0, priority: null, dueDate: null, image: null });
     saveData();
     reportRowInput.value = "";
     renderReportView();
@@ -2581,8 +2771,10 @@
         var priorityWord = row.priority === "urgent" ? tr("priorityUrgent") : row.priority === "regular" ? tr("priorityRegular") : "";
         var line = (index + 1) + ". " + row.task;
         if (row.responsible) line += " - " + row.responsible;
+        if (row.dueDate) line += " - " + tr("reportShareDueLabel") + isoToDisplay(row.dueDate);
         line += " - " + statusWord;
         if (priorityWord) line += " - " + priorityWord;
+        if (row.image) line += " " + tr("reportShareImageNote");
         lines.push(line);
       });
     }
