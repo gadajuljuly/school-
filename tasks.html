@@ -289,15 +289,8 @@
     padding-bottom: 14px;
     border-bottom: 3px solid #35618f;
   }
-  .pdf-doc-info-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    font-size: 1.05rem;
-    margin-bottom: 8px;
-  }
-  .pdf-doc-info-title { font-weight: 700; }
-  .pdf-doc-info-date { color: #6b6558; font-size: 0.95rem; }
+  .pdf-doc-info-title { font-weight: 700; font-size: 1.05rem; text-align: center; margin-bottom: 4px; }
+  .pdf-doc-info-date { color: #6b6558; font-size: 0.95rem; text-align: center; margin-bottom: 8px; }
   .pdf-doc-participants { font-size: 0.95rem; margin-bottom: 22px; color: #4a463c; }
   .pdf-doc-participants strong { color: #2c2a24; }
   .pdf-doc-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
@@ -952,7 +945,7 @@
     align-items: center;
     justify-content: center;
     padding: 20px;
-    z-index: 20;
+    z-index: 40;
   }
   .modal-overlay[hidden] { display: none; }
   .modal-box {
@@ -1306,6 +1299,7 @@
       <p class="modal-message" data-i18n="reportActionModalMessage">מה לעשות עם הדוח?</p>
       <div class="move-task-mode">
         <button type="button" class="danger-btn" id="reportActionDeleteBtn" data-i18n="deleteBtn">מחיקה</button>
+        <button type="button" id="reportActionEditBtn" data-i18n="editReportBtnTitle">עריכת הדוח</button>
         <button type="button" id="reportActionShareBtn" data-i18n="shareBtn">שיתוף</button>
       </div>
       <div class="modal-actions">
@@ -1413,6 +1407,7 @@
     <div class="report-head">
       <button type="button" class="report-back-btn" id="reportBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
       <div class="report-head-title" id="reportHeadTitle"></div>
+      <button type="button" class="report-share-btn" id="reportEditBtn" data-i18n-title="editReportBtnTitle" title="עריכת הדוח">&#9998;</button>
       <button type="button" class="report-share-btn" id="reportShareBtn" data-i18n-title="shareBtn" title="שיתוף">&#128228;</button>
     </div>
     <div class="report-meta" id="reportMeta"></div>
@@ -1499,6 +1494,7 @@
     sheetActionModalMessage: { he: "מה לעשות עם הפרויקט?", en: "What would you like to do with this project?", ar: "ماذا تريد أن تفعل بهذا المشروع؟", ru: "Что сделать с этим проектом?" },
     deleteBtn: { he: "מחיקה", en: "Delete", ar: "حذف", ru: "Удалить" },
     shareBtn: { he: "שיתוף", en: "Share", ar: "مشاركة", ru: "Поделиться" },
+    editReportBtnTitle: { he: "עריכת הדוח", en: "Edit report", ar: "تعديل التقرير", ru: "Изменить отчёт" },
     sheetActionEndBtn: { he: "הפרויקט הסתיים", en: "Project finished", ar: "انتهى المشروع", ru: "Проект завершён" },
     confirmYesBtn: { he: "כן", en: "Yes", ar: "نعم", ru: "Да" },
     confirmNoBtn: { he: "לא", en: "No", ar: "لا", ru: "Нет" },
@@ -2222,6 +2218,7 @@
 
   var reportActionOverlay = document.getElementById("reportActionOverlay");
   var reportActionDeleteBtn = document.getElementById("reportActionDeleteBtn");
+  var reportActionEditBtn = document.getElementById("reportActionEditBtn");
   var reportActionShareBtn = document.getElementById("reportActionShareBtn");
   var reportActionCancelBtn = document.getElementById("reportActionCancelBtn");
   var pendingReportActionId = null;
@@ -2249,6 +2246,11 @@
     var id = pendingReportActionId;
     closeReportActionModal();
     deleteReport(id);
+  });
+  reportActionEditBtn.addEventListener("click", function () {
+    var id = pendingReportActionId;
+    closeReportActionModal();
+    openReportEditFlow(id);
   });
   reportActionShareBtn.addEventListener("click", function () {
     var id = pendingReportActionId;
@@ -2460,15 +2462,25 @@
     if (focusIt) input.focus();
   }
 
-  function resetParticipantsList() {
+  function resetParticipantsList(existingNames) {
     reportParticipantsList.innerHTML = "";
-    addParticipantInput(true);
+    var names = (existingNames || []).filter(function (name) { return name; });
+    if (!names.length) {
+      addParticipantInput(true);
+      return;
+    }
+    names.forEach(function (name) {
+      addParticipantInput(false);
+      reportParticipantsList.lastElementChild.value = name;
+    });
+    addParticipantInput(false);
   }
 
   var reportView = document.getElementById("reportView");
   var reportBackBtn = document.getElementById("reportBackBtn");
   var reportHeadTitle = document.getElementById("reportHeadTitle");
   var reportShareBtn = document.getElementById("reportShareBtn");
+  var reportEditBtn = document.getElementById("reportEditBtn");
   var reportMeta = document.getElementById("reportMeta");
   var reportTableBody = document.getElementById("reportTableBody");
   var reportFabBtn = document.getElementById("reportFabBtn");
@@ -2581,6 +2593,14 @@
     reportTitleOverlay.hidden = false;
     reportTitleInput.focus();
   }
+  function openReportEditFlow(reportId) {
+    var report = findReport(reportId);
+    if (!report) return;
+    pendingReportDraft = { type: report.type, editId: report.id };
+    reportTitleInput.value = report.title || "";
+    reportTitleOverlay.hidden = false;
+    reportTitleInput.focus();
+  }
   reportTypeMeetingBtn.addEventListener("click", function () { chooseReportType("meeting"); });
   reportTypeTourBtn.addEventListener("click", function () { chooseReportType("tour"); });
   reportTypeCancelBtn.addEventListener("click", closeReportTypeModal);
@@ -2596,7 +2616,8 @@
     if (!pendingReportDraft) return;
     pendingReportDraft.title = reportTitleInput.value.trim();
     reportTitleOverlay.hidden = true;
-    reportDateInput.value = todayISO();
+    var existingReport = pendingReportDraft.editId ? findReport(pendingReportDraft.editId) : null;
+    reportDateInput.value = existingReport ? existingReport.date : todayISO();
     reportDateOverlay.hidden = false;
   });
   reportTitleCancelBtn.addEventListener("click", closeReportTitleModal);
@@ -2617,7 +2638,11 @@
     if (!pendingReportDraft) return;
     pendingReportDraft.date = reportDateInput.value || todayISO();
     reportDateOverlay.hidden = true;
-    resetParticipantsList();
+    var existingReport = pendingReportDraft.editId ? findReport(pendingReportDraft.editId) : null;
+    var existingNames = existingReport && existingReport.participants
+      ? existingReport.participants.split(",").map(function (s) { return s.trim(); })
+      : [];
+    resetParticipantsList(existingNames);
     reportParticipantsOverlay.hidden = false;
   });
   reportDateCancelBtn.addEventListener("click", closeReportDateModal);
@@ -2634,20 +2659,33 @@
     var names = Array.prototype.slice.call(reportParticipantsList.querySelectorAll("input"))
       .map(function (input) { return input.value.trim(); })
       .filter(function (name) { return name; });
-    var report = {
-      id: uid(),
-      type: pendingReportDraft.type,
-      title: pendingReportDraft.title,
-      participants: names.join(", "),
-      date: pendingReportDraft.date || todayISO(),
-      createdAt: Date.now(),
-      rows: []
-    };
-    activeSheet().reports.push(report);
+    var participantsStr = names.join(", ");
+    var reportId;
+    if (pendingReportDraft.editId) {
+      var existing = findReport(pendingReportDraft.editId);
+      if (existing) {
+        existing.title = pendingReportDraft.title;
+        existing.date = pendingReportDraft.date || todayISO();
+        existing.participants = participantsStr;
+      }
+      reportId = pendingReportDraft.editId;
+    } else {
+      var report = {
+        id: uid(),
+        type: pendingReportDraft.type,
+        title: pendingReportDraft.title,
+        participants: participantsStr,
+        date: pendingReportDraft.date || todayISO(),
+        createdAt: Date.now(),
+        rows: []
+      };
+      activeSheet().reports.push(report);
+      reportId = report.id;
+    }
     saveData();
     pendingReportDraft = null;
     reportParticipantsOverlay.hidden = true;
-    openReportView(report.id);
+    openReportView(reportId);
   });
   reportParticipantsCancelBtn.addEventListener("click", closeReportParticipantsModal);
   reportParticipantsOverlay.addEventListener("click", function (e) {
@@ -2678,6 +2716,9 @@
     if (state.viewMode === "reports") renderSheetReportsList();
   }
   reportBackBtn.addEventListener("click", closeReportView);
+  reportEditBtn.addEventListener("click", function () {
+    if (activeReportId) openReportEditFlow(activeReportId);
+  });
 
   function renderReportView() {
     var report = findReport(activeReportId);
@@ -3029,17 +3070,15 @@
     titleEl.textContent = pdfTitle;
     doc.appendChild(titleEl);
 
-    var infoRow = document.createElement("div");
-    infoRow.className = "pdf-doc-info-row";
-    var infoTitle = document.createElement("span");
+    var infoTitle = document.createElement("div");
     infoTitle.className = "pdf-doc-info-title";
     infoTitle.textContent = report.title || typeLabel;
-    var infoDate = document.createElement("span");
+    doc.appendChild(infoTitle);
+
+    var infoDate = document.createElement("div");
     infoDate.className = "pdf-doc-info-date";
     infoDate.textContent = isoToFullDisplay(report.date);
-    infoRow.appendChild(infoTitle);
-    infoRow.appendChild(infoDate);
-    doc.appendChild(infoRow);
+    doc.appendChild(infoDate);
 
     if (report.participants) {
       var partsEl = document.createElement("div");
