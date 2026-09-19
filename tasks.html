@@ -1308,6 +1308,17 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="reportDateOverlay" hidden>
+    <div class="modal-box" role="alertdialog" aria-modal="true">
+      <p class="modal-message" data-i18n="reportDateModalMessage">תאריך</p>
+      <input type="date" id="reportDateInput" class="auth-input">
+      <div class="modal-actions">
+        <button type="button" class="modal-btn modal-btn-yes" id="reportDateSaveBtn" data-i18n="confirmBtn">אישור</button>
+        <button type="button" class="modal-btn modal-btn-no" id="reportDateCancelBtn" data-i18n="cancelBtn">ביטול</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="reportParticipantsOverlay" hidden>
     <div class="modal-box" role="alertdialog" aria-modal="true">
       <p class="modal-message" data-i18n="reportParticipantsModalMessage">משתתפים</p>
@@ -1497,6 +1508,7 @@
     reportTypeTour: { he: "סיור", en: "Tour", ar: "جولة", ru: "Обход" },
     reportTitleModalMessage: { he: "כותרת", en: "Title", ar: "العنوان", ru: "Заголовок" },
     reportTitlePlaceholder: { he: "כותרת", en: "Title", ar: "العنوان", ru: "Заголовок" },
+    reportDateModalMessage: { he: "תאריך", en: "Date", ar: "التاريخ", ru: "Дата" },
     reportParticipantsModalMessage: { he: "משתתפים", en: "Participants", ar: "المشاركون", ru: "Участники" },
     reportParticipantsPlaceholder: { he: "שמות המשתתפים", en: "Participant names", ar: "أسماء المشاركين", ru: "Имена участников" },
     reportColNum: { he: "מס'", en: "No.", ar: "الرقم", ru: "№" },
@@ -2294,6 +2306,11 @@
   var reportTitleSaveBtn = document.getElementById("reportTitleSaveBtn");
   var reportTitleCancelBtn = document.getElementById("reportTitleCancelBtn");
 
+  var reportDateOverlay = document.getElementById("reportDateOverlay");
+  var reportDateInput = document.getElementById("reportDateInput");
+  var reportDateSaveBtn = document.getElementById("reportDateSaveBtn");
+  var reportDateCancelBtn = document.getElementById("reportDateCancelBtn");
+
   var reportParticipantsOverlay = document.getElementById("reportParticipantsOverlay");
   var reportParticipantsInput = document.getElementById("reportParticipantsInput");
   var reportParticipantsSaveBtn = document.getElementById("reportParticipantsSaveBtn");
@@ -2397,9 +2414,8 @@
     if (!pendingReportDraft) return;
     pendingReportDraft.title = reportTitleInput.value.trim();
     reportTitleOverlay.hidden = true;
-    reportParticipantsInput.value = "";
-    reportParticipantsOverlay.hidden = false;
-    reportParticipantsInput.focus();
+    reportDateInput.value = todayISO();
+    reportDateOverlay.hidden = false;
   });
   reportTitleCancelBtn.addEventListener("click", closeReportTitleModal);
   reportTitleOverlay.addEventListener("click", function (e) {
@@ -2409,6 +2425,23 @@
     e.stopPropagation();
     if (e.key === "Enter") reportTitleSaveBtn.click();
     if (e.key === "Escape") closeReportTitleModal();
+  });
+
+  function closeReportDateModal() {
+    reportDateOverlay.hidden = true;
+    pendingReportDraft = null;
+  }
+  reportDateSaveBtn.addEventListener("click", function () {
+    if (!pendingReportDraft) return;
+    pendingReportDraft.date = reportDateInput.value || todayISO();
+    reportDateOverlay.hidden = true;
+    reportParticipantsInput.value = "";
+    reportParticipantsOverlay.hidden = false;
+    reportParticipantsInput.focus();
+  });
+  reportDateCancelBtn.addEventListener("click", closeReportDateModal);
+  reportDateOverlay.addEventListener("click", function (e) {
+    if (e.target === reportDateOverlay) closeReportDateModal();
   });
 
   function closeReportParticipantsModal() {
@@ -2422,7 +2455,7 @@
       type: pendingReportDraft.type,
       title: pendingReportDraft.title,
       participants: reportParticipantsInput.value.trim(),
-      date: todayISO(),
+      date: pendingReportDraft.date || todayISO(),
       createdAt: Date.now(),
       rows: []
     };
