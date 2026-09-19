@@ -160,6 +160,12 @@
     margin: 6px auto 0;
   }
 
+  .report-participants-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
   .report-list-item {
     display: flex;
     align-items: center;
@@ -1322,7 +1328,7 @@
   <div class="modal-overlay" id="reportParticipantsOverlay" hidden>
     <div class="modal-box" role="alertdialog" aria-modal="true">
       <p class="modal-message" data-i18n="reportParticipantsModalMessage">משתתפים</p>
-      <input type="text" id="reportParticipantsInput" class="auth-input" data-i18n-ph="reportParticipantsPlaceholder" placeholder="שמות המשתתפים">
+      <div class="report-participants-list" id="reportParticipantsList"></div>
       <div class="modal-actions">
         <button type="button" class="modal-btn modal-btn-yes" id="reportParticipantsSaveBtn" data-i18n="confirmBtn">אישור</button>
         <button type="button" class="modal-btn modal-btn-no" id="reportParticipantsCancelBtn" data-i18n="cancelBtn">ביטול</button>
@@ -1511,6 +1517,7 @@
     reportDateModalMessage: { he: "תאריך", en: "Date", ar: "التاريخ", ru: "Дата" },
     reportParticipantsModalMessage: { he: "משתתפים", en: "Participants", ar: "المشاركون", ru: "Участники" },
     reportParticipantsPlaceholder: { he: "שמות המשתתפים", en: "Participant names", ar: "أسماء المشاركين", ru: "Имена участников" },
+    reportParticipantNamePlaceholder: { he: "שם משתתף", en: "Participant name", ar: "اسم المشارك", ru: "Имя участника" },
     reportColNum: { he: "מס'", en: "No.", ar: "الرقم", ru: "№" },
     reportColTask: { he: "משימה", en: "Task", ar: "المهمة", ru: "Задача" },
     reportColResponsible: { he: "באחריות", en: "Responsible", ar: "المسؤول", ru: "Ответственный" },
@@ -2312,9 +2319,34 @@
   var reportDateCancelBtn = document.getElementById("reportDateCancelBtn");
 
   var reportParticipantsOverlay = document.getElementById("reportParticipantsOverlay");
-  var reportParticipantsInput = document.getElementById("reportParticipantsInput");
+  var reportParticipantsList = document.getElementById("reportParticipantsList");
   var reportParticipantsSaveBtn = document.getElementById("reportParticipantsSaveBtn");
   var reportParticipantsCancelBtn = document.getElementById("reportParticipantsCancelBtn");
+
+  function addParticipantInput(focusIt) {
+    var input = document.createElement("input");
+    input.type = "text";
+    input.className = "auth-input";
+    input.placeholder = tr("reportParticipantNamePlaceholder");
+    input.maxLength = 100;
+    input.addEventListener("input", function () {
+      if (input.value.trim() && input === reportParticipantsList.lastElementChild) {
+        addParticipantInput(false);
+      }
+    });
+    input.addEventListener("keydown", function (e) {
+      e.stopPropagation();
+      if (e.key === "Enter") reportParticipantsSaveBtn.click();
+      if (e.key === "Escape") closeReportParticipantsModal();
+    });
+    reportParticipantsList.appendChild(input);
+    if (focusIt) input.focus();
+  }
+
+  function resetParticipantsList() {
+    reportParticipantsList.innerHTML = "";
+    addParticipantInput(true);
+  }
 
   var reportView = document.getElementById("reportView");
   var reportBackBtn = document.getElementById("reportBackBtn");
@@ -2435,9 +2467,8 @@
     if (!pendingReportDraft) return;
     pendingReportDraft.date = reportDateInput.value || todayISO();
     reportDateOverlay.hidden = true;
-    reportParticipantsInput.value = "";
+    resetParticipantsList();
     reportParticipantsOverlay.hidden = false;
-    reportParticipantsInput.focus();
   });
   reportDateCancelBtn.addEventListener("click", closeReportDateModal);
   reportDateOverlay.addEventListener("click", function (e) {
@@ -2450,11 +2481,14 @@
   }
   reportParticipantsSaveBtn.addEventListener("click", function () {
     if (!pendingReportDraft) return;
+    var names = Array.prototype.slice.call(reportParticipantsList.querySelectorAll("input"))
+      .map(function (input) { return input.value.trim(); })
+      .filter(function (name) { return name; });
     var report = {
       id: uid(),
       type: pendingReportDraft.type,
       title: pendingReportDraft.title,
-      participants: reportParticipantsInput.value.trim(),
+      participants: names.join(", "),
       date: pendingReportDraft.date || todayISO(),
       createdAt: Date.now(),
       rows: []
@@ -2468,11 +2502,6 @@
   reportParticipantsCancelBtn.addEventListener("click", closeReportParticipantsModal);
   reportParticipantsOverlay.addEventListener("click", function (e) {
     if (e.target === reportParticipantsOverlay) closeReportParticipantsModal();
-  });
-  reportParticipantsInput.addEventListener("keydown", function (e) {
-    e.stopPropagation();
-    if (e.key === "Enter") reportParticipantsSaveBtn.click();
-    if (e.key === "Escape") closeReportParticipantsModal();
   });
 
   function closePriorityPopup() {
