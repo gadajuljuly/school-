@@ -1095,6 +1095,36 @@
     outline: none;
   }
   .auth-input:focus { border-color: var(--accent); }
+  .phone-input-group {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0 12px;
+    margin-bottom: 10px;
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    background: var(--paper-alt);
+    direction: ltr;
+  }
+  .phone-input-group:focus-within { border-color: var(--accent); }
+  .phone-prefix {
+    color: var(--ink-muted);
+    font-weight: 600;
+    padding-inline-end: 6px;
+    flex-shrink: 0;
+  }
+  .phone-number-input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: transparent;
+    outline: none;
+    padding: 11px 0;
+    font: inherit;
+    font-size: 0.95rem;
+    color: var(--ink);
+  }
   .auth-error {
     color: var(--danger);
     font-size: 0.83rem;
@@ -1152,7 +1182,10 @@
     <h1 class="auth-title">ITASK</h1>
     <p class="auth-subtitle" data-i18n="authSubtitle">התחברו כדי לראות את המשימות שלכם</p>
     <form id="authPhoneForm">
-      <input type="tel" id="authPhone" class="auth-input" data-i18n-ph="authPhonePlaceholder" placeholder="מספר טלפון, לדוגמה 972501234567+" autocomplete="tel" required>
+      <div class="phone-input-group">
+        <span class="phone-prefix">972+</span>
+        <input type="tel" id="authPhone" class="phone-number-input" data-i18n-ph="authPhonePlaceholder" placeholder="50-1234567" inputmode="numeric" autocomplete="tel" required>
+      </div>
       <p class="auth-error" id="authError" hidden></p>
       <div class="auth-actions">
         <button type="submit" class="auth-btn auth-btn-primary" id="authSendCodeBtn" data-i18n="authSendCodeBtn">שליחת קוד</button>
@@ -1430,13 +1463,13 @@
 (function () {
   var TRANSLATIONS = {
     authSubtitle: { he: "התחברו כדי לראות את המשימות שלכם", en: "Log in to see your tasks", ar: "سجّل الدخول لرؤية مهامك", ru: "Войдите, чтобы увидеть свои задачи" },
-    authPhonePlaceholder: { he: "מספר טלפון, לדוגמה 972501234567+", en: "Phone number, e.g. +972501234567", ar: "رقم الهاتف، مثال 972501234567+", ru: "Номер телефона, например +972501234567" },
+    authPhonePlaceholder: { he: "50-1234567", en: "50-1234567", ar: "50-1234567", ru: "50-1234567" },
     authSendCodeBtn: { he: "שליחת קוד", en: "Send code", ar: "إرسال الرمز", ru: "Отправить код" },
     authCodePlaceholder: { he: "קוד בן 6 ספרות", en: "6-digit code", ar: "رمز مكوّن من 6 أرقام", ru: "6-значный код" },
     authVerifyCodeBtn: { he: "אישור קוד", en: "Verify code", ar: "تأكيد الرمز", ru: "Подтвердить код" },
     authChangePhoneBtn: { he: "שינוי מספר טלפון", en: "Change phone number", ar: "تغيير رقم الهاتف", ru: "Изменить номер телефона" },
     authCodeSentTo: { he: "קוד נשלח אל ", en: "Code sent to ", ar: "تم إرسال الرمز إلى ", ru: "Код отправлен на " },
-    invalidPhoneNumber: { he: "יש להזין מספר טלפון תקין בפורמט בינלאומי, לדוגמה 972501234567+", en: "Please enter a valid phone number in international format, e.g. +972501234567", ar: "يرجى إدخال رقم هاتف صالح بالصيغة الدولية، مثال 972501234567+", ru: "Введите номер телефона в международном формате, например +972501234567" },
+    invalidPhoneNumber: { he: "יש להזין מספר טלפון נייד תקין, לדוגמה 501234567", en: "Please enter a valid mobile number, e.g. 501234567", ar: "يرجى إدخال رقم هاتف نقّال صالح، مثال 501234567", ru: "Введите корректный номер мобильного телефона, например 501234567" },
     sendCodeError: { he: "שגיאה בשליחת הקוד. בדקו את מספר הטלפון ונסו שוב.", en: "Error sending the code. Check the phone number and try again.", ar: "خطأ في إرسال الرمز. تحقق من رقم الهاتف وحاول مرة أخرى.", ru: "Ошибка отправки кода. Проверьте номер телефона и попробуйте снова." },
     invalidCode: { he: "יש להזין קוד בן 6 ספרות", en: "Please enter a 6-digit code", ar: "يرجى إدخال رمز مكوّن من 6 أرقام", ru: "Введите 6-значный код" },
     wrongCode: { he: "הקוד שהוזן שגוי", en: "The code you entered is incorrect", ar: "الرمز الذي أدخلته غير صحيح", ru: "Введённый код неверен" },
@@ -3934,11 +3967,12 @@
     authPhoneForm.addEventListener("submit", function (e) {
       e.preventDefault();
       clearAuthError();
-      var phone = authPhone.value.trim();
-      if (!/^\+[1-9]\d{7,14}$/.test(phone)) {
+      var digits = authPhone.value.replace(/\D/g, "").replace(/^0+/, "");
+      if (digits.length < 8 || digits.length > 10) {
         showAuthError(tr("invalidPhoneNumber"));
         return;
       }
+      var phone = "+972" + digits;
       authSendCodeBtn.disabled = true;
       if (!recaptchaVerifier) {
         recaptchaVerifier = new firebase.auth.RecaptchaVerifier("recaptchaContainer", { size: "invisible" });
