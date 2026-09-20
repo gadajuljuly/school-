@@ -1472,6 +1472,7 @@
     sendCodeError: { he: "שגיאה בשליחת הקוד. בדקו את מספר הטלפון ונסו שוב.", en: "Error sending the code. Check the phone number and try again.", ar: "خطأ في إرسال الرمز. تحقق من رقم الهاتف وحاول مرة أخرى.", ru: "Ошибка отправки кода. Проверьте номер телефона и попробуйте снова." },
     invalidCode: { he: "יש להזין קוד בן 6 ספרות", en: "Please enter a 6-digit code", ar: "يرجى إدخال رمز مكوّن من 6 أرقام", ru: "Введите 6-значный код" },
     wrongCode: { he: "הקוד שהוזן שגוי", en: "The code you entered is incorrect", ar: "الرمز الذي أدخلته غير صحيح", ru: "Введённый код неверен" },
+    signedInElsewhere: { he: "התחברת למספר הזה ממכשיר אחר, ולכן התנתקת כאן. אפשר להתחבר שוב.", en: "This number was signed in on another device, so you were signed out here. You can sign in again.", ar: "تم تسجيل الدخول بهذا الرقم من جهاز آخر، لذا تم تسجيل خروجك هنا. يمكنك تسجيل الدخول مجددًا.", ru: "Этот номер вошёл на другом устройстве, поэтому вы были выведены здесь. Можно войти снова." },
     dateInputTitle: { he: "לחצו לבחירת תאריך", en: "Click to pick a date", ar: "اضغط لاختيار التاريخ", ru: "Нажмите, чтобы выбрать дату" },
     todayBtn: { he: "היום", en: "Today", ar: "اليوم", ru: "Сегодня" },
     menuBtnTitle: { he: "תפריט", en: "Menu", ar: "القائمة", ru: "Меню" },
@@ -3924,6 +3925,48 @@
   var pendingConfirmationResult = null;
   var recaptchaVerifier = null;
   var appShown = false;
+  var justVerified = false;
+
+  var SESSION_TOKEN_KEY = "itask-session-token";
+  var mySessionToken = null;
+
+  function claimSession() {
+    mySessionToken = window.crypto.randomUUID ? window.crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2));
+    try { localStorage.setItem(SESSION_TOKEN_KEY, mySessionToken); } catch (e) {}
+    if (!supabaseClient) return Promise.resolve();
+    return supabaseClient.from("app_state").update({ session_token: mySessionToken }).eq("id", SUPABASE_ROW_ID)
+      .then(function () {}, function () {});
+  }
+
+  function establishSession() {
+    var stored = null;
+    try { stored = localStorage.getItem(SESSION_TOKEN_KEY); } catch (e) {}
+    if (justVerified || !stored) return claimSession();
+    mySessionToken = stored;
+    return Promise.resolve();
+  }
+
+  function signOutDueToOtherDevice() {
+    try { localStorage.removeItem(SESSION_TOKEN_KEY); } catch (e) {}
+    try { localStorage.setItem("itask-kicked", "1"); } catch (e) {}
+    firebaseAuth.signOut().then(function () { location.reload(); }, function () { location.reload(); });
+  }
+
+  function checkSessionStillActive() {
+    if (!supabaseClient || !mySessionToken) return;
+    supabaseClient.from("app_state").select("session_token").eq("id", SUPABASE_ROW_ID).maybeSingle()
+      .then(function (result) {
+        var remoteToken = result && result.data && result.data.session_token;
+        if (remoteToken && remoteToken !== mySessionToken) signOutDueToOtherDevice();
+      }, function () {});
+  }
+
+  function startSessionWatcher() {
+    setInterval(checkSessionStillActive, 60000);
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden) checkSessionStillActive();
+    });
+  }
 
   function showApp(phoneNumber, rowId) {
     SUPABASE_ROW_ID = rowId;
@@ -3934,6 +3977,7 @@
     appRoot.hidden = false;
     startWithSupabase();
     initReminderSettings();
+    establishSession().then(startSessionWatcher);
   }
 
   function showAuthGate() {
@@ -3955,6 +3999,15 @@
   function clearAuthCodeError() {
     authCodeError.hidden = true;
   }
+
+  (function checkKickedFlag() {
+    var kicked = false;
+    try {
+      kicked = localStorage.getItem("itask-kicked") === "1";
+      localStorage.removeItem("itask-kicked");
+    } catch (e) {}
+    if (kicked) showAuthError(tr("signedInElsewhere"));
+  })();
 
   function showCodeStep(phoneNumber) {
     authPhoneForm.hidden = true;
@@ -4026,6 +4079,7 @@
       authVerifyCodeBtn.disabled = true;
       pendingConfirmationResult.confirm(code).then(function () {
         authVerifyCodeBtn.disabled = false;
+        justVerified = true;
       }, function () {
         authVerifyCodeBtn.disabled = false;
         showAuthCodeError(tr("wrongCode"));
