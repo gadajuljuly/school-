@@ -3380,22 +3380,21 @@
   function attemptShare(blob, fileName) {
     var file = new File([blob], fileName, { type: "application/pdf" });
     var shareData = { files: [file], title: fileName };
-    var asciiFile = new File([blob], "report.pdf", { type: "application/pdf" });
+    // Some Android browsers support sharing files via navigator.share()
+    // without exposing (or correctly answering) navigator.canShare, so
+    // don't let a missing/false canShare rule out trying share() itself -
+    // only skip it when share() is entirely absent.
     var hasShare = !!navigator.share;
-    var canShareHebrew = navigator.canShare ? navigator.canShare(shareData) : "missing";
-    var canShareAscii = navigator.canShare ? navigator.canShare({ files: [asciiFile] }) : "missing";
-    alert("DEBUG hasShare=" + hasShare + " canShare(hebrew name)=" + canShareHebrew + " canShare(ascii name)=" + canShareAscii);
-    var canShareFiles = hasShare && (canShareHebrew === "missing" || canShareHebrew);
+    var canShareResult = navigator.canShare ? navigator.canShare(shareData) : "missing";
+    var canShareFiles = hasShare && (canShareResult === "missing" || canShareResult);
     if (canShareFiles) {
       try {
         navigator.share(shareData).catch(function (err) {
           if (err && err.name === "AbortError") return;
-          alert("DEBUG share() with hebrew name failed: " + (err && err.name) + " / " + (err && err.message));
           downloadBlob(blob, fileName);
         });
         return;
       } catch (err) {
-        alert("DEBUG share() with hebrew name threw: " + (err && err.name) + " / " + (err && err.message));
         downloadBlob(blob, fileName);
         return;
       }
