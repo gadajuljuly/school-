@@ -15,6 +15,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700&family=Rubik:wght@600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="vendor/html2canvas.min.js"></script>
 <script src="vendor/jspdf.umd.min.js"></script>
 <style>
@@ -1149,16 +1151,23 @@
     </select>
     <h1 class="auth-title">ITASK</h1>
     <p class="auth-subtitle" data-i18n="authSubtitle">התחברו כדי לראות את המשימות שלכם</p>
-    <form id="authForm">
-      <input type="text" id="authUsername" class="auth-input" data-i18n-ph="authUsernamePlaceholder" placeholder="שם משתמש" autocomplete="username" required>
-      <input type="password" id="authPassword" class="auth-input" data-i18n-ph="authPasswordPlaceholder" placeholder="סיסמה" autocomplete="current-password" required minlength="6">
-      <input type="tel" id="authPhone" class="auth-input" data-i18n-ph="authPhonePlaceholder" placeholder="מספר טלפון (נדרש להרשמה)" autocomplete="tel">
+    <form id="authPhoneForm">
+      <input type="tel" id="authPhone" class="auth-input" data-i18n-ph="authPhonePlaceholder" placeholder="מספר טלפון, לדוגמה 972501234567+" autocomplete="tel" required>
       <p class="auth-error" id="authError" hidden></p>
       <div class="auth-actions">
-        <button type="submit" class="auth-btn auth-btn-primary" id="authLoginBtn" data-i18n="authLoginBtn">התחברות</button>
-        <button type="button" class="auth-btn auth-btn-secondary" id="authSignupBtn" data-i18n="authSignupBtn">הרשמה</button>
+        <button type="submit" class="auth-btn auth-btn-primary" id="authSendCodeBtn" data-i18n="authSendCodeBtn">שליחת קוד</button>
       </div>
     </form>
+    <form id="authCodeForm" hidden>
+      <p class="auth-subtitle" id="authCodeSentTo"></p>
+      <input type="text" id="authCode" class="auth-input" data-i18n-ph="authCodePlaceholder" placeholder="קוד בן 6 ספרות" inputmode="numeric" maxlength="6" autocomplete="one-time-code" required>
+      <p class="auth-error" id="authCodeError" hidden></p>
+      <div class="auth-actions">
+        <button type="submit" class="auth-btn auth-btn-primary" id="authVerifyCodeBtn" data-i18n="authVerifyCodeBtn">אישור קוד</button>
+        <button type="button" class="auth-btn auth-btn-secondary" id="authChangePhoneBtn" data-i18n="authChangePhoneBtn">שינוי מספר טלפון</button>
+      </div>
+    </form>
+    <div id="recaptchaContainer"></div>
   </div>
 </div>
 
@@ -1191,8 +1200,6 @@
           </div>
           <div class="menu-section" id="accountMenuSection">
             <div class="menu-label" id="menuUsernameLabel"></div>
-            <button id="changeUsernameBtn" data-i18n="changeUsernameBtn">שינוי שם משתמש</button>
-            <button id="changePasswordBtn" data-i18n="changePasswordBtn">שינוי סיסמה</button>
             <button id="logoutBtn" data-i18n="logoutBtn">התנתקות</button>
           </div>
           <div class="menu-section" id="reminderMenuSection">
@@ -1332,31 +1339,6 @@
     </div>
   </div>
 
-  <div class="modal-overlay" id="changePasswordOverlay" hidden>
-    <div class="modal-box" role="alertdialog" aria-modal="true">
-      <p class="modal-message" data-i18n="changePasswordBtn">שינוי סיסמה</p>
-      <input type="password" id="newPasswordInput" class="auth-input" data-i18n-ph="newPasswordPlaceholder" placeholder="סיסמה חדשה (לפחות 6 תווים)" autocomplete="new-password" minlength="6">
-      <input type="password" id="confirmPasswordInput" class="auth-input" data-i18n-ph="confirmPasswordPlaceholder" placeholder="אימות סיסמה חדשה" autocomplete="new-password" minlength="6">
-      <p class="auth-error" id="changePasswordError" hidden></p>
-      <div class="modal-actions">
-        <button type="button" class="modal-btn modal-btn-yes" id="changePasswordSaveBtn" data-i18n="saveBtn">שמירה</button>
-        <button type="button" class="modal-btn modal-btn-no" id="changePasswordCancelBtn" data-i18n="cancelBtn">ביטול</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="modal-overlay" id="changeUsernameOverlay" hidden>
-    <div class="modal-box" role="alertdialog" aria-modal="true">
-      <p class="modal-message" data-i18n="changeUsernameBtn">שינוי שם משתמש</p>
-      <input type="text" id="newUsernameInput" class="auth-input" data-i18n-ph="newUsernamePlaceholder" placeholder="שם משתמש חדש" autocomplete="username">
-      <p class="auth-error" id="changeUsernameError" hidden></p>
-      <div class="modal-actions">
-        <button type="button" class="modal-btn modal-btn-yes" id="changeUsernameSaveBtn" data-i18n="saveBtn">שמירה</button>
-        <button type="button" class="modal-btn modal-btn-no" id="changeUsernameCancelBtn" data-i18n="cancelBtn">ביטול</button>
-      </div>
-    </div>
-  </div>
-
   <div class="modal-overlay" id="reportTypeOverlay" hidden>
     <div class="modal-box" role="alertdialog" aria-modal="true">
       <p class="modal-message" data-i18n="reportTypeModalMessage">פגישה או סיור?</p>
@@ -1448,11 +1430,16 @@
 (function () {
   var TRANSLATIONS = {
     authSubtitle: { he: "התחברו כדי לראות את המשימות שלכם", en: "Log in to see your tasks", ar: "سجّل الدخول لرؤية مهامك", ru: "Войдите, чтобы увидеть свои задачи" },
-    authUsernamePlaceholder: { he: "שם משתמש", en: "Username", ar: "اسم المستخدم", ru: "Имя пользователя" },
-    authPasswordPlaceholder: { he: "סיסמה", en: "Password", ar: "كلمة المرور", ru: "Пароль" },
-    authPhonePlaceholder: { he: "מספר טלפון (נדרש להרשמה)", en: "Phone number (required for signup)", ar: "رقم الهاتف (مطلوب للتسجيل)", ru: "Номер телефона (обязателен при регистрации)" },
-    authLoginBtn: { he: "התחברות", en: "Log in", ar: "تسجيل الدخول", ru: "Войти" },
-    authSignupBtn: { he: "הרשמה", en: "Sign up", ar: "إنشاء حساب", ru: "Регистрация" },
+    authPhonePlaceholder: { he: "מספר טלפון, לדוגמה 972501234567+", en: "Phone number, e.g. +972501234567", ar: "رقم الهاتف، مثال 972501234567+", ru: "Номер телефона, например +972501234567" },
+    authSendCodeBtn: { he: "שליחת קוד", en: "Send code", ar: "إرسال الرمز", ru: "Отправить код" },
+    authCodePlaceholder: { he: "קוד בן 6 ספרות", en: "6-digit code", ar: "رمز مكوّن من 6 أرقام", ru: "6-значный код" },
+    authVerifyCodeBtn: { he: "אישור קוד", en: "Verify code", ar: "تأكيد الرمز", ru: "Подтвердить код" },
+    authChangePhoneBtn: { he: "שינוי מספר טלפון", en: "Change phone number", ar: "تغيير رقم الهاتف", ru: "Изменить номер телефона" },
+    authCodeSentTo: { he: "קוד נשלח אל ", en: "Code sent to ", ar: "تم إرسال الرمز إلى ", ru: "Код отправлен на " },
+    invalidPhoneNumber: { he: "יש להזין מספר טלפון תקין בפורמט בינלאומי, לדוגמה 972501234567+", en: "Please enter a valid phone number in international format, e.g. +972501234567", ar: "يرجى إدخال رقم هاتف صالح بالصيغة الدولية، مثال 972501234567+", ru: "Введите номер телефона в международном формате, например +972501234567" },
+    sendCodeError: { he: "שגיאה בשליחת הקוד. בדקו את מספר הטלפון ונסו שוב.", en: "Error sending the code. Check the phone number and try again.", ar: "خطأ في إرسال الرمز. تحقق من رقم الهاتف وحاول مرة أخرى.", ru: "Ошибка отправки кода. Проверьте номер телефона и попробуйте снова." },
+    invalidCode: { he: "יש להזין קוד בן 6 ספרות", en: "Please enter a 6-digit code", ar: "يرجى إدخال رمز مكوّن من 6 أرقام", ru: "Введите 6-значный код" },
+    wrongCode: { he: "הקוד שהוזן שגוי", en: "The code you entered is incorrect", ar: "الرمز الذي أدخلته غير صحيح", ru: "Введённый код неверен" },
     dateInputTitle: { he: "לחצו לבחירת תאריך", en: "Click to pick a date", ar: "اضغط لاختيار التاريخ", ru: "Нажмите, чтобы выбрать дату" },
     todayBtn: { he: "היום", en: "Today", ar: "اليوم", ru: "Сегодня" },
     menuBtnTitle: { he: "תפריט", en: "Menu", ar: "القائمة", ru: "Меню" },
@@ -1463,8 +1450,6 @@
     menuLabelCurrentProject: { he: "הפרויקט הנוכחי", en: "Current project", ar: "المشروع الحالي", ru: "Текущий проект" },
     renameSheetBtn: { he: "שינוי שם", en: "Rename", ar: "تغيير الاسم", ru: "Переименовать" },
     deleteSheetBtn: { he: "מחיקת פרויקט", en: "Delete project", ar: "حذف المشروع", ru: "Удалить проект" },
-    changeUsernameBtn: { he: "שינוי שם משתמש", en: "Change username", ar: "تغيير اسم المستخدم", ru: "Изменить имя пользователя" },
-    changePasswordBtn: { he: "שינוי סיסמה", en: "Change password", ar: "تغيير كلمة المرور", ru: "Изменить пароль" },
     logoutBtn: { he: "התנתקות", en: "Log out", ar: "تسجيل الخروج", ru: "Выйти" },
     menuLabelReminders: { he: "תזכורות משימות", en: "Task reminders", ar: "تذكيرات المهام", ru: "Напоминания о задачах" },
     reminderOff: { he: "כבוי", en: "Off", ar: "إيقاف", ru: "Выкл" },
@@ -1501,10 +1486,6 @@
     moveTaskModalMessage: { he: "העברה או העתקה של המשימה", en: "Move or copy this task", ar: "نقل أو نسخ هذه المهمة", ru: "Переместить или скопировать задачу" },
     moveModeMoveBtn: { he: "העברה", en: "Move", ar: "نقل", ru: "Переместить" },
     moveModeCopyBtn: { he: "העתקה", en: "Copy", ar: "نسخ", ru: "Копировать" },
-    newPasswordPlaceholder: { he: "סיסמה חדשה (לפחות 6 תווים)", en: "New password (at least 6 characters)", ar: "كلمة مرور جديدة (6 أحرف على الأقل)", ru: "Новый пароль (не менее 6 символов)" },
-    confirmPasswordPlaceholder: { he: "אימות סיסמה חדשה", en: "Confirm new password", ar: "تأكيد كلمة المرور الجديدة", ru: "Подтвердите новый пароль" },
-    saveBtn: { he: "שמירה", en: "Save", ar: "حفظ", ru: "Сохранить" },
-    newUsernamePlaceholder: { he: "שם משתמש חדש", en: "New username", ar: "اسم مستخدم جديد", ru: "Новое имя пользователя" },
     installFab: { he: "📱 התקן אפליקציה", en: "📱 Install app", ar: "📱 تثبيت التطبيق", ru: "📱 Установить приложение" },
     iosInstallCloseBtn: { he: "הבנתי", en: "Got it", ar: "فهمت", ru: "Понятно" },
     projectWord: { he: "פרויקט", en: "Project", ar: "مشروع", ru: "Проект" },
@@ -1540,21 +1521,7 @@
     confirmDeleteTask: { he: 'למחוק את השורה "{name}"?', en: 'Delete the row "{name}"?', ar: 'هل تريد حذف العنصر "{name}"؟', ru: 'Удалить запись «{name}»?' },
     completedOn: { he: "הושלם בתאריך ", en: "Completed on ", ar: "اكتمل بتاريخ ", ru: "Выполнено " },
     completedCount: { he: " הושלמו", en: " done", ar: " مكتملة", ru: " выполнено" },
-    loggedInAs: { he: "מחובר/ת בתור ", en: "Logged in as ", ar: "تم تسجيل الدخول باسم ", ru: "Вы вошли как " },
-    wrongCredentials: { he: "שם משתמש או סיסמה שגויים", en: "Incorrect username or password", ar: "اسم المستخدم أو كلمة المرور غير صحيحة", ru: "Неверное имя пользователя или пароль" },
-    loginError: { he: "שגיאת התחברות. בדקו את החיבור לאינטרנט.", en: "Login error. Check your internet connection.", ar: "خطأ في تسجيل الدخول. تحقق من اتصالك بالإنترنت.", ru: "Ошибка входа. Проверьте подключение к интернету." },
-    fillUsernamePassword: { he: "מלאו שם משתמש וסיסמה (לפחות 6 תווים)", en: "Fill in username and password (at least 6 characters)", ar: "املأ اسم المستخدم وكلمة المرور (6 أحرف على الأقل)", ru: "Заполните имя пользователя и пароль (не менее 6 символов)" },
-    validPhoneRequired: { he: "יש להזין מספר טלפון תקין - שדה חובה להרשמה", en: "Please enter a valid phone number - required for signup", ar: "يرجى إدخال رقم هاتف صالح - حقل مطلوب للتسجيل", ru: "Введите корректный номер телефона - обязательное поле для регистрации" },
-    usernameTaken: { he: "שם המשתמש הזה כבר תפוס", en: "This username is already taken", ar: "اسم المستخدم هذا مستخدم بالفعل", ru: "Это имя пользователя уже занято" },
-    signupError: { he: "שגיאה בהרשמה", en: "Signup error", ar: "خطأ في التسجيل", ru: "Ошибка регистрации" },
-    signupSuccess: { he: "ההרשמה בוצעה. נסו להתחבר עכשיו.", en: "Signup complete. Try logging in now.", ar: "تم التسجيل بنجاح. حاول تسجيل الدخول الآن.", ru: "Регистрация завершена. Попробуйте войти сейчас." },
-    signupNetworkError: { he: "שגיאת הרשמה. בדקו את החיבור לאינטרנט.", en: "Signup error. Check your internet connection.", ar: "خطأ في التسجيل. تحقق من اتصالك بالإنترنت.", ru: "Ошибка регистрации. Проверьте подключение к интернету." },
-    enterUsername: { he: "יש להזין שם משתמש", en: "Please enter a username", ar: "يرجى إدخال اسم مستخدم", ru: "Введите имя пользователя" },
-    usernameChangeError: { he: "שגיאה בשינוי שם המשתמש", en: "Error changing username", ar: "خطأ في تغيير اسم المستخدم", ru: "Ошибка изменения имени пользователя" },
-    networkError: { he: "שגיאת רשת. בדקו את החיבור לאינטרנט.", en: "Network error. Check your internet connection.", ar: "خطأ في الشبكة. تحقق من اتصالك بالإنترنت.", ru: "Ошибка сети. Проверьте подключение к интернету." },
-    passwordTooShort: { he: "הסיסמה חייבת להכיל לפחות 6 תווים", en: "Password must be at least 6 characters", ar: "يجب أن تتكون كلمة المرور من 6 أحرف على الأقل", ru: "Пароль должен содержать не менее 6 символов" },
-    passwordsDontMatch: { he: "הסיסמאות אינן תואמות", en: "Passwords don't match", ar: "كلمتا المرور غير متطابقتين", ru: "Пароли не совпадают" },
-    passwordChangeError: { he: "שגיאה בשינוי הסיסמה", en: "Error changing password", ar: "خطأ في تغيير كلمة المرور", ru: "Ошибка изменения пароля" },
+    loggedInAs: { he: "מחובר/ת עם ", en: "Logged in with ", ar: "تم تسجيل الدخول برقم ", ru: "Вы вошли с номером " },
     installInstructionsIOS: {
       he: "כדי להתקין את האפליקציה באייפון:<br><br>1. הקש על כפתור השיתוף בסרגל הדפדפן (בדרך כלל למטה, ריבוע עם חץ)<br>2. גלול ובחר ב-\"הוסף למסך הבית\" (Add to Home Screen)<br>3. הקש \"הוסף\" למעלה",
       en: "To install the app on iPhone:<br><br>1. Tap the Share button in the browser toolbar (usually a square with an arrow)<br>2. Scroll and choose \"Add to Home Screen\"<br>3. Tap \"Add\" at the top",
@@ -1616,7 +1583,7 @@
   var currentLang = (function () {
     try {
       var saved = localStorage.getItem(LANG_STORAGE_KEY);
-      if (saved && TRANSLATIONS.authLoginBtn[saved]) return saved;
+      if (saved && TRANSLATIONS.authSubtitle[saved]) return saved;
     } catch (e) {}
     return "he";
   })();
@@ -1643,7 +1610,7 @@
   }
 
   function setLang(lang) {
-    if (!TRANSLATIONS.authLoginBtn[lang]) lang = "he";
+    if (!TRANSLATIONS.authSubtitle[lang]) lang = "he";
     currentLang = lang;
     try { localStorage.setItem(LANG_STORAGE_KEY, lang); } catch (e) {}
     document.documentElement.lang = lang;
@@ -1764,15 +1731,29 @@
 
   var SUPABASE_URL = "https://oqvqrqhtywcqdnftaovk.supabase.co";
   var SUPABASE_KEY = "sb_publishable_K6dRlzpWSRV7O-Dy_C8ypA_Yep2P3x7";
-  var FAKE_EMAIL_DOMAIN = "users.itask-app.local";
   var SUPABASE_ROW_ID = null;
   var supabaseClient = (window.supabase && SUPABASE_URL && SUPABASE_KEY)
     ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
     : null;
 
-  function usernameToEmail(username) {
-    var clean = username.trim().toLowerCase().replace(/[^a-z0-9_.-]/g, "");
-    return clean + "@" + FAKE_EMAIL_DOMAIN;
+  var FIREBASE_CONFIG = {
+    apiKey: "AIzaSyDdOBjiG2pO7pTkRC44gLJQ_gEPiTaHTPU",
+    authDomain: "itask-93f4f.firebaseapp.com",
+    projectId: "itask-93f4f",
+    storageBucket: "itask-93f4f.firebasestorage.app",
+    messagingSenderId: "480651316688",
+    appId: "1:480651316688:web:7a4378d6347fe22dc67dd5"
+  };
+  var firebaseAuth = (window.firebase && FIREBASE_CONFIG.apiKey)
+    ? (firebase.initializeApp(FIREBASE_CONFIG), firebase.auth())
+    : null;
+
+  function phoneToUuid(phone) {
+    return window.crypto.subtle.digest("SHA-256", new TextEncoder().encode("itask-phone:" + phone)).then(function (buf) {
+      var bytes = Array.prototype.slice.call(new Uint8Array(buf), 0, 16);
+      var hex = bytes.map(function (b) { return b.toString(16).padStart(2, "0"); }).join("");
+      return hex.slice(0, 8) + "-" + hex.slice(8, 12) + "-4" + hex.slice(13, 16) + "-a" + hex.slice(17, 20) + "-" + hex.slice(20, 32);
+    });
   }
 
   function saveData() {
@@ -3871,21 +3852,28 @@
 
   var authGate = document.getElementById("authGate");
   var appRoot = document.getElementById("appRoot");
-  var authForm = document.getElementById("authForm");
-  var authUsername = document.getElementById("authUsername");
-  var authPassword = document.getElementById("authPassword");
+  var authPhoneForm = document.getElementById("authPhoneForm");
   var authPhone = document.getElementById("authPhone");
   var authError = document.getElementById("authError");
-  var authLoginBtn = document.getElementById("authLoginBtn");
-  var authSignupBtn = document.getElementById("authSignupBtn");
+  var authSendCodeBtn = document.getElementById("authSendCodeBtn");
+  var authCodeForm = document.getElementById("authCodeForm");
+  var authCodeSentTo = document.getElementById("authCodeSentTo");
+  var authCode = document.getElementById("authCode");
+  var authCodeError = document.getElementById("authCodeError");
+  var authVerifyCodeBtn = document.getElementById("authVerifyCodeBtn");
+  var authChangePhoneBtn = document.getElementById("authChangePhoneBtn");
   var logoutBtn = document.getElementById("logoutBtn");
   var menuUsernameLabel = document.getElementById("menuUsernameLabel");
 
-  function showApp(user) {
-    SUPABASE_ROW_ID = user.id;
-    var uname = (user.email || "").split("@")[0];
-    currentUsername = uname;
-    menuUsernameLabel.textContent = tr("loggedInAs") + uname;
+  var pendingConfirmationResult = null;
+  var recaptchaVerifier = null;
+  var appShown = false;
+
+  function showApp(phoneNumber, rowId) {
+    SUPABASE_ROW_ID = rowId;
+    menuUsernameLabel.textContent = tr("loggedInAs") + phoneNumber;
+    if (appShown) return;
+    appShown = true;
     authGate.hidden = true;
     appRoot.hidden = false;
     startWithSupabase();
@@ -3897,10 +3885,6 @@
     authGate.hidden = false;
   }
 
-  function setAuthBusy(busy) {
-    authLoginBtn.disabled = busy;
-    authSignupBtn.disabled = busy;
-  }
   function showAuthError(msg) {
     authError.textContent = msg;
     authError.hidden = false;
@@ -3908,209 +3892,92 @@
   function clearAuthError() {
     authError.hidden = true;
   }
+  function showAuthCodeError(msg) {
+    authCodeError.textContent = msg;
+    authCodeError.hidden = false;
+  }
+  function clearAuthCodeError() {
+    authCodeError.hidden = true;
+  }
 
-  if (!supabaseClient) {
+  function showCodeStep(phoneNumber) {
+    authPhoneForm.hidden = true;
+    authCodeForm.hidden = false;
+    authCodeSentTo.textContent = tr("authCodeSentTo") + phoneNumber;
+    authCode.value = "";
+    authCode.focus();
+  }
+  function showPhoneStep() {
+    authCodeForm.hidden = true;
+    authPhoneForm.hidden = false;
+    clearAuthCodeError();
+    pendingConfirmationResult = null;
+  }
+
+  if (!supabaseClient || !firebaseAuth) {
     appRoot.hidden = false;
     authGate.hidden = true;
     document.getElementById("accountMenuSection").hidden = true;
     document.getElementById("reminderMenuSection").hidden = true;
     startLocalOnly();
   } else {
-    supabaseClient.auth.getSession().then(function (result) {
-      var session = result && result.data && result.data.session;
-      if (session && session.user) {
-        showApp(session.user);
+    firebaseAuth.onAuthStateChanged(function (firebaseUser) {
+      if (firebaseUser && firebaseUser.phoneNumber) {
+        phoneToUuid(firebaseUser.phoneNumber).then(function (rowId) {
+          showApp(firebaseUser.phoneNumber, rowId);
+        });
       } else {
         showAuthGate();
       }
-    }).catch(showAuthGate);
+    });
 
-    authForm.addEventListener("submit", function (e) {
+    authPhoneForm.addEventListener("submit", function (e) {
       e.preventDefault();
       clearAuthError();
-      var username = authUsername.value.trim();
-      var password = authPassword.value;
-      if (!username || !password) return;
-      setAuthBusy(true);
-      supabaseClient.auth.signInWithPassword({ email: usernameToEmail(username), password: password })
-        .then(function (result) {
-          setAuthBusy(false);
-          if (result.error) {
-            showAuthError(tr("wrongCredentials"));
-            return;
-          }
-          showApp(result.data.user);
-        }, function () {
-          setAuthBusy(false);
-          showAuthError(tr("loginError"));
-        });
-    });
-
-    authSignupBtn.addEventListener("click", function () {
-      clearAuthError();
-      var username = authUsername.value.trim();
-      var password = authPassword.value;
       var phone = authPhone.value.trim();
-      if (!username || !password || password.length < 6) {
-        showAuthError(tr("fillUsernamePassword"));
+      if (!/^\+[1-9]\d{7,14}$/.test(phone)) {
+        showAuthError(tr("invalidPhoneNumber"));
         return;
       }
-      if (!phone || phone.replace(/\D/g, "").length < 10) {
-        showAuthError(tr("validPhoneRequired"));
-        return;
+      authSendCodeBtn.disabled = true;
+      if (!recaptchaVerifier) {
+        recaptchaVerifier = new firebase.auth.RecaptchaVerifier("recaptchaContainer", { size: "invisible" });
       }
-      setAuthBusy(true);
-      supabaseClient.auth.signUp({ email: usernameToEmail(username), password: password, options: { data: { phone: phone } } })
-        .then(function (result) {
-          setAuthBusy(false);
-          if (result.error) {
-            var already = result.error.message && result.error.message.toLowerCase().indexOf("already") !== -1;
-            showAuthError(already ? tr("usernameTaken") : tr("signupError"));
-            return;
-          }
-          if (result.data.session && result.data.user) {
-            showApp(result.data.user);
-          } else {
-            showAuthError(tr("signupSuccess"));
-          }
+      firebaseAuth.signInWithPhoneNumber(phone, recaptchaVerifier)
+        .then(function (confirmationResult) {
+          authSendCodeBtn.disabled = false;
+          pendingConfirmationResult = confirmationResult;
+          showCodeStep(phone);
         }, function () {
-          setAuthBusy(false);
-          showAuthError(tr("signupNetworkError"));
+          authSendCodeBtn.disabled = false;
+          showAuthError(tr("sendCodeError"));
+          recaptchaVerifier.render().then(function (widgetId) {
+            if (window.grecaptcha) window.grecaptcha.reset(widgetId);
+          });
         });
     });
 
-    logoutBtn.addEventListener("click", function () {
-      supabaseClient.auth.signOut().then(function () { location.reload(); }, function () { location.reload(); });
-    });
-
-    var changeUsernameBtn = document.getElementById("changeUsernameBtn");
-    var changeUsernameOverlay = document.getElementById("changeUsernameOverlay");
-    var newUsernameInput = document.getElementById("newUsernameInput");
-    var changeUsernameError = document.getElementById("changeUsernameError");
-    var changeUsernameSaveBtn = document.getElementById("changeUsernameSaveBtn");
-    var changeUsernameCancelBtn = document.getElementById("changeUsernameCancelBtn");
-    var currentUsername = "";
-
-    function showChangeUsernameError(msg) {
-      changeUsernameError.textContent = msg;
-      changeUsernameError.hidden = false;
-    }
-    function closeChangeUsername() {
-      changeUsernameOverlay.hidden = true;
-      changeUsernameError.hidden = true;
-      changeUsernameSaveBtn.disabled = false;
-    }
-
-    changeUsernameBtn.addEventListener("click", function () {
-      state.menuOpen = false;
-      render();
-      changeUsernameError.hidden = true;
-      newUsernameInput.value = currentUsername;
-      changeUsernameOverlay.hidden = false;
-      newUsernameInput.focus();
-      newUsernameInput.select();
-    });
-    changeUsernameCancelBtn.addEventListener("click", closeChangeUsername);
-    changeUsernameOverlay.addEventListener("click", function (e) {
-      if (e.target === changeUsernameOverlay) closeChangeUsername();
-    });
-    newUsernameInput.addEventListener("keydown", function (e) {
-      if (e.key === "Escape") closeChangeUsername();
-      if (e.key === "Enter") { e.preventDefault(); changeUsernameSaveBtn.click(); }
-    });
-    changeUsernameSaveBtn.addEventListener("click", function () {
-      var newUsername = newUsernameInput.value.trim();
-      changeUsernameError.hidden = true;
-      if (!newUsername) {
-        showChangeUsernameError(tr("enterUsername"));
+    authCodeForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      clearAuthCodeError();
+      var code = authCode.value.trim();
+      if (!pendingConfirmationResult || !/^\d{6}$/.test(code)) {
+        showAuthCodeError(tr("invalidCode"));
         return;
       }
-      if (newUsername === currentUsername) {
-        closeChangeUsername();
-        return;
-      }
-      changeUsernameSaveBtn.disabled = true;
-      supabaseClient.auth.updateUser({ email: usernameToEmail(newUsername) })
-        .then(function (result) {
-          changeUsernameSaveBtn.disabled = false;
-          if (result.error) {
-            var already = result.error.message && result.error.message.toLowerCase().indexOf("already") !== -1;
-            showChangeUsernameError(already ? tr("usernameTaken") : tr("usernameChangeError"));
-            return;
-          }
-          currentUsername = newUsername;
-          menuUsernameLabel.textContent = tr("loggedInAs") + newUsername;
-          closeChangeUsername();
-        }, function () {
-          changeUsernameSaveBtn.disabled = false;
-          showChangeUsernameError(tr("networkError"));
-        });
-    });
-
-    var changePasswordBtn = document.getElementById("changePasswordBtn");
-    var changePasswordOverlay = document.getElementById("changePasswordOverlay");
-    var newPasswordInput = document.getElementById("newPasswordInput");
-    var confirmPasswordInput = document.getElementById("confirmPasswordInput");
-    var changePasswordError = document.getElementById("changePasswordError");
-    var changePasswordSaveBtn = document.getElementById("changePasswordSaveBtn");
-    var changePasswordCancelBtn = document.getElementById("changePasswordCancelBtn");
-
-    function showChangePasswordError(msg) {
-      changePasswordError.textContent = msg;
-      changePasswordError.hidden = false;
-    }
-    function closeChangePassword() {
-      changePasswordOverlay.hidden = true;
-      changePasswordError.hidden = true;
-      changePasswordSaveBtn.disabled = false;
-      newPasswordInput.value = "";
-      confirmPasswordInput.value = "";
-    }
-
-    changePasswordBtn.addEventListener("click", function () {
-      state.menuOpen = false;
-      render();
-      changePasswordError.hidden = true;
-      newPasswordInput.value = "";
-      confirmPasswordInput.value = "";
-      changePasswordOverlay.hidden = false;
-      newPasswordInput.focus();
-    });
-    changePasswordCancelBtn.addEventListener("click", closeChangePassword);
-    changePasswordOverlay.addEventListener("click", function (e) {
-      if (e.target === changePasswordOverlay) closeChangePassword();
-    });
-    [newPasswordInput, confirmPasswordInput].forEach(function (input) {
-      input.addEventListener("keydown", function (e) {
-        if (e.key === "Escape") closeChangePassword();
-        if (e.key === "Enter") { e.preventDefault(); changePasswordSaveBtn.click(); }
+      authVerifyCodeBtn.disabled = true;
+      pendingConfirmationResult.confirm(code).then(function () {
+        authVerifyCodeBtn.disabled = false;
+      }, function () {
+        authVerifyCodeBtn.disabled = false;
+        showAuthCodeError(tr("wrongCode"));
       });
     });
-    changePasswordSaveBtn.addEventListener("click", function () {
-      var newPassword = newPasswordInput.value;
-      var confirmPassword = confirmPasswordInput.value;
-      changePasswordError.hidden = true;
-      if (!newPassword || newPassword.length < 6) {
-        showChangePasswordError(tr("passwordTooShort"));
-        return;
-      }
-      if (newPassword !== confirmPassword) {
-        showChangePasswordError(tr("passwordsDontMatch"));
-        return;
-      }
-      changePasswordSaveBtn.disabled = true;
-      supabaseClient.auth.updateUser({ password: newPassword })
-        .then(function (result) {
-          changePasswordSaveBtn.disabled = false;
-          if (result.error) {
-            showChangePasswordError(tr("passwordChangeError"));
-            return;
-          }
-          closeChangePassword();
-        }, function () {
-          changePasswordSaveBtn.disabled = false;
-          showChangePasswordError(tr("networkError"));
-        });
+
+    authChangePhoneBtn.addEventListener("click", showPhoneStep);
+
+    logoutBtn.addEventListener("click", function () {
+      firebaseAuth.signOut().then(function () { location.reload(); }, function () { location.reload(); });
     });
   }
 
