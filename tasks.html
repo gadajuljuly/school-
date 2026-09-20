@@ -3982,9 +3982,10 @@
           authSendCodeBtn.disabled = false;
           pendingConfirmationResult = confirmationResult;
           showCodeStep(phone);
-        }, function () {
+        }, function (err) {
           authSendCodeBtn.disabled = false;
-          showAuthError(tr("sendCodeError"));
+          console.error("signInWithPhoneNumber failed:", err);
+          showAuthError(tr("sendCodeError") + " (" + (err && (err.code || err.message) || "unknown") + ")");
           recaptchaVerifier.render().then(function (widgetId) {
             if (window.grecaptcha) window.grecaptcha.reset(widgetId);
           });
