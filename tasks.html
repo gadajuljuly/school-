@@ -3928,6 +3928,7 @@
   function showApp(phoneNumber, rowId) {
     SUPABASE_ROW_ID = rowId;
     menuUsernameLabel.textContent = tr("loggedInAs") + phoneNumber;
+    menuUsernameLabel.innerHTML += '<br><span style="font-size:0.7rem;opacity:0.6;user-select:all;">' + rowId + '</span>';
     if (appShown) return;
     appShown = true;
     authGate.hidden = true;
