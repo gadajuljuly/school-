@@ -1803,6 +1803,9 @@
   var firebaseAuth = (window.firebase && FIREBASE_CONFIG.apiKey)
     ? (firebase.initializeApp(FIREBASE_CONFIG), firebase.auth())
     : null;
+  if (firebaseAuth) {
+    firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(function () {});
+  }
 
   function phoneToUuid(phone) {
     return window.crypto.subtle.digest("SHA-256", new TextEncoder().encode("itask-phone:" + phone)).then(function (buf) {
