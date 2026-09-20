@@ -3384,19 +3384,24 @@
     // without exposing (or correctly answering) navigator.canShare, so
     // don't let a missing/false canShare rule out trying share() itself -
     // only skip it when share() is entirely absent.
-    var canShareFiles = navigator.share && (!navigator.canShare || navigator.canShare(shareData));
+    var hasShare = !!navigator.share;
+    var canShareResult = navigator.canShare ? navigator.canShare(shareData) : "missing";
+    var canShareFiles = hasShare && (canShareResult === "missing" || canShareResult);
     if (canShareFiles) {
       try {
         navigator.share(shareData).catch(function (err) {
           if (err && err.name === "AbortError") return;
+          alert("DEBUG share failed: " + (err && err.name) + " / " + (err && err.message));
           downloadBlob(blob, fileName);
         });
         return;
       } catch (err) {
+        alert("DEBUG share threw: " + (err && err.name) + " / " + (err && err.message));
         downloadBlob(blob, fileName);
         return;
       }
     }
+    alert("DEBUG no share attempt: hasShare=" + hasShare + " canShareResult=" + canShareResult);
     downloadBlob(blob, fileName);
   }
 
