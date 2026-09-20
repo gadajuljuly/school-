@@ -255,7 +255,8 @@
   .report-cell-btn {
     width: 100%;
     min-height: 28px;
-    border: none;
+    box-sizing: border-box;
+    border: 1px solid transparent;
     background: transparent;
     color: var(--ink);
     font: inherit;
@@ -266,13 +267,14 @@
   }
   .report-cell-input {
     width: 100%;
+    min-height: 28px;
     border: 1px solid var(--accent);
     border-radius: 6px;
     background: var(--paper);
     color: var(--ink);
     font: inherit;
     font-size: 0.85rem;
-    padding: 4px 6px;
+    padding: 2px;
     box-sizing: border-box;
   }
   .report-status-mark { display: inline-block; width: 20px; height: 18px; margin: 0 auto; color: var(--ink); }
@@ -2371,19 +2373,21 @@
     var sheet = activeSheet();
     var added = 0;
     (report.rows || []).forEach(function (row) {
-      var text = (row.task || "").trim();
-      if (!text) return;
-      if (row.dueDate) text += " - " + tr("reportTaskDueSuffix") + " " + isoToDisplay(row.dueDate);
-      sheet.tasks.push({
-        id: uid(),
-        text: text,
-        status: row.status || 0,
-        urgent: row.priority === "urgent",
-        type: "task",
-        date: row.dueDate || todayISO(),
-        createdAt: Date.now()
+      var lines = (row.task || "").split(/\r\n|\r|\n/).map(function (l) { return l.trim(); }).filter(function (l) { return l; });
+      lines.forEach(function (line) {
+        var text = line;
+        if (row.dueDate) text += " - " + tr("reportTaskDueSuffix") + " " + isoToDisplay(row.dueDate);
+        sheet.tasks.push({
+          id: uid(),
+          text: text,
+          status: row.status || 0,
+          urgent: row.priority === "urgent",
+          type: "task",
+          date: row.dueDate || todayISO(),
+          createdAt: Date.now()
+        });
+        added++;
       });
-      added++;
     });
     if (added) saveData();
     return added;
@@ -2856,7 +2860,17 @@
     if (activeReportId) openReportEditFlow(activeReportId);
   });
 
+  var renderReportViewDepth = 0;
   function renderReportView() {
+    if (renderReportViewDepth > 0) return;
+    renderReportViewDepth++;
+    try {
+      renderReportViewInner();
+    } finally {
+      renderReportViewDepth--;
+    }
+  }
+  function renderReportViewInner() {
     var report = findReport(activeReportId);
     if (!report) { closeReportView(); return; }
     var typeLabel = report.type === "meeting" ? tr("reportTypeMeeting") : tr("reportTypeTour");
@@ -2883,8 +2897,10 @@
         taskInputEl.maxLength = 200;
         taskTd.appendChild(taskInputEl);
         setTimeout(function () { taskInputEl.focus(); }, 0);
+        var myTaskEditRef = editingReportCell;
         var commitTask = function () {
           row.task = taskInputEl.value.trim();
+          if (editingReportCell !== myTaskEditRef) return;
           editingReportCell = null;
           saveData();
           renderReportView();
@@ -2917,8 +2933,10 @@
         respInputEl.maxLength = 100;
         respTd.appendChild(respInputEl);
         setTimeout(function () { respInputEl.focus(); }, 0);
+        var myRespEditRef = editingReportCell;
         var commitResp = function () {
           row.responsible = respInputEl.value.trim();
+          if (editingReportCell !== myRespEditRef) return;
           editingReportCell = null;
           saveData();
           renderReportView();
@@ -3031,7 +3049,14 @@
     addBtn.className = "report-add-row-btn";
     addBtn.textContent = "+";
     addBtn.title = tr("addBtnTitle");
-    addBtn.addEventListener("click", addReportRow);
+    addBtn.addEventListener("mousedown", function (e) {
+      e.preventDefault();
+      addReportRow();
+    });
+    addBtn.addEventListener("touchstart", function (e) {
+      e.preventDefault();
+      addReportRow();
+    }, { passive: false });
     addNumTd.appendChild(addBtn);
     addRowEl.appendChild(addNumTd);
     for (var i = 0; i < 6; i++) {
@@ -3183,7 +3208,20 @@
     handleReportImageFile(reportImageGalleryInput.files && reportImageGalleryInput.files[0]);
   });
 
+  function commitEditingReportCellIfPending() {
+    if (!editingReportCell) return;
+    var report = findReport(activeReportId);
+    if (!report) { editingReportCell = null; return; }
+    var row = report.rows.find(function (r) { return r.id === editingReportCell.rowId; });
+    var inputEl = reportTableBody.querySelector(".report-cell-input");
+    if (row && inputEl && (editingReportCell.field === "task" || editingReportCell.field === "responsible")) {
+      row[editingReportCell.field] = inputEl.value.trim();
+    }
+    editingReportCell = null;
+  }
+
   function addReportRow() {
+    commitEditingReportCellIfPending();
     var report = findReport(activeReportId);
     if (!report) return;
     var newRow = { id: uid(), task: "", responsible: "", status: 0, priority: null, dueDate: null, image: null };
