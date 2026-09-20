@@ -1692,11 +1692,10 @@
   }
 
   var splashScreen = document.getElementById("splashScreen");
-  if (splashScreen) {
-    setTimeout(function () {
-      splashScreen.classList.add("splash-hide");
-      setTimeout(function () { splashScreen.hidden = true; }, 500);
-    }, 3000);
+  function hideSplash() {
+    if (!splashScreen || splashScreen.hidden) return;
+    splashScreen.classList.add("splash-hide");
+    setTimeout(function () { splashScreen.hidden = true; }, 500);
   }
 
   var STORAGE_KEY = "daily-tasks-sheets-v1";
@@ -4038,6 +4037,7 @@
   function showApp(phoneNumber, rowId) {
     SUPABASE_ROW_ID = rowId;
     menuUsernameLabel.textContent = tr("loggedInAs") + phoneNumber;
+    hideSplash();
     if (appShown) return;
     appShown = true;
     authGate.hidden = true;
@@ -4050,6 +4050,7 @@
   function showAuthGate() {
     appRoot.hidden = true;
     authGate.hidden = false;
+    hideSplash();
   }
 
   function showAuthError(msg) {
@@ -4096,6 +4097,7 @@
     document.getElementById("accountMenuSection").hidden = true;
     document.getElementById("reminderMenuSection").hidden = true;
     startLocalOnly();
+    hideSplash();
   } else {
     firebaseAuth.onAuthStateChanged(function (firebaseUser) {
       if (firebaseUser && firebaseUser.phoneNumber) {
