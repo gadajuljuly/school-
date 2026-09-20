@@ -1552,6 +1552,7 @@
     reportActionAddTasksBtn: { he: "הוספת המשימות לרשימה", en: "Add tasks to the list", ar: "إضافة المهام إلى القائمة", ru: "Добавить задачи в список" },
     reportTasksAddedMsg: { he: "נוספו {count} משימות לרשימת המשימות", en: "{count} tasks added to the task list", ar: "تمت إضافة {count} مهام إلى قائمة المهام", ru: "Добавлено задач: {count}" },
     reportTasksNoneToAdd: { he: "אין שורות עם תוכן להוספה", en: "There are no rows with content to add", ar: "لا توجد عناصر تحتوي على محتوى لإضافتها", ru: "Нет строк с содержимым для добавления" },
+    reportTaskDueSuffix: { he: "עד", en: "due", ar: "حتى", ru: "до" },
     sheetActionEndBtn: { he: "הפרויקט הסתיים", en: "Project finished", ar: "انتهى المشروع", ru: "Проект завершён" },
     confirmYesBtn: { he: "כן", en: "Yes", ar: "نعم", ru: "Да" },
     confirmNoBtn: { he: "לא", en: "No", ar: "لا", ru: "Нет" },
@@ -2372,7 +2373,7 @@
     (report.rows || []).forEach(function (row) {
       var text = (row.task || "").trim();
       if (!text) return;
-      if (row.responsible) text += " - " + row.responsible;
+      if (row.dueDate) text += " - " + tr("reportTaskDueSuffix") + " " + isoToDisplay(row.dueDate);
       sheet.tasks.push({
         id: uid(),
         text: text,
