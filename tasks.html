@@ -3379,14 +3379,25 @@
 
   function attemptShare(blob, fileName) {
     var file = new File([blob], fileName, { type: "application/pdf" });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      navigator.share({ files: [file], title: fileName }).catch(function (err) {
-        if (err && err.name === "AbortError") return;
+    var shareData = { files: [file], title: fileName };
+    // Some Android browsers support sharing files via navigator.share()
+    // without exposing (or correctly answering) navigator.canShare, so
+    // don't let a missing/false canShare rule out trying share() itself -
+    // only skip it when share() is entirely absent.
+    var canShareFiles = navigator.share && (!navigator.canShare || navigator.canShare(shareData));
+    if (canShareFiles) {
+      try {
+        navigator.share(shareData).catch(function (err) {
+          if (err && err.name === "AbortError") return;
+          downloadBlob(blob, fileName);
+        });
+        return;
+      } catch (err) {
         downloadBlob(blob, fileName);
-      });
-    } else {
-      downloadBlob(blob, fileName);
+        return;
+      }
     }
+    downloadBlob(blob, fileName);
   }
 
   function buildReportPdfBlob(report) {
