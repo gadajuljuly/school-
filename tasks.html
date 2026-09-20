@@ -688,6 +688,22 @@
     text-align: center;
     padding: 10px 0;
   }
+  .convert-to-note-btn {
+    width: 100%;
+    box-sizing: border-box;
+    text-align: center;
+    padding: 9px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--rule);
+    background: var(--paper-alt);
+    color: var(--ink);
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-family: inherit;
+    font-weight: 600;
+    margin-bottom: 14px;
+  }
+  .convert-to-note-btn[hidden] { display: none; }
   .sheet-tab:hover:not(.active) {
     background: rgba(0, 0, 0, 0.05);
     color: var(--ink);
@@ -1364,6 +1380,7 @@
         <button type="button" class="active" id="moveModeMoveBtn" data-i18n="moveModeMoveBtn">העברה</button>
         <button type="button" id="moveModeCopyBtn" data-i18n="moveModeCopyBtn">העתקה</button>
       </div>
+      <button type="button" class="convert-to-note-btn" id="convertToNoteBtn" data-i18n="convertToNoteBtn" hidden>הפוך למזכרת</button>
       <div class="move-task-projects" id="moveTaskProjects"></div>
       <div class="modal-actions">
         <button type="button" class="modal-btn modal-btn-no" id="moveTaskCancelBtn" data-i18n="cancelBtn">ביטול</button>
@@ -1518,6 +1535,7 @@
     moveTaskModalMessage: { he: "העברה או העתקה של המשימה", en: "Move or copy this task", ar: "نقل أو نسخ هذه المهمة", ru: "Переместить или скопировать задачу" },
     moveModeMoveBtn: { he: "העברה", en: "Move", ar: "نقل", ru: "Переместить" },
     moveModeCopyBtn: { he: "העתקה", en: "Copy", ar: "نسخ", ru: "Копировать" },
+    convertToNoteBtn: { he: "הפוך למזכרת", en: "Convert to note", ar: "تحويل إلى ملاحظة", ru: "Сделать заметкой" },
     installFab: { he: "📱 התקן אפליקציה", en: "📱 Install app", ar: "📱 تثبيت التطبيق", ru: "📱 Установить приложение" },
     iosInstallCloseBtn: { he: "הבנתי", en: "Got it", ar: "فهمت", ru: "Понятно" },
     projectWord: { he: "פרויקט", en: "Project", ar: "مشروع", ru: "Проект" },
@@ -1872,6 +1890,7 @@
   var moveTaskProjects = document.getElementById("moveTaskProjects");
   var moveModeMoveBtn = document.getElementById("moveModeMoveBtn");
   var moveModeCopyBtn = document.getElementById("moveModeCopyBtn");
+  var convertToNoteBtn = document.getElementById("convertToNoteBtn");
   var moveTaskCancelBtn = document.getElementById("moveTaskCancelBtn");
   var pendingMoveTaskId = null;
   var longPressTimer = null;
@@ -1931,6 +1950,8 @@
     moveModeMoveBtn.classList.add("active");
     moveModeCopyBtn.classList.remove("active");
     renderMoveTaskProjects();
+    var task = activeSheet().tasks.find(function (t) { return t.id === taskId; });
+    convertToNoteBtn.hidden = !task || task.type === "note";
     moveTaskOverlay.hidden = false;
   }
   function closeMoveTask() {
@@ -1946,6 +1967,16 @@
     moveTaskMode = "copy";
     moveModeCopyBtn.classList.add("active");
     moveModeMoveBtn.classList.remove("active");
+  });
+  convertToNoteBtn.addEventListener("click", function () {
+    var task = activeSheet().tasks.find(function (t) { return t.id === pendingMoveTaskId; });
+    if (task) {
+      task.type = "note";
+      task.time = currentTimeHHMM();
+      saveData();
+    }
+    closeMoveTask();
+    render();
   });
   moveTaskCancelBtn.addEventListener("click", closeMoveTask);
   moveTaskOverlay.addEventListener("click", function (e) {
