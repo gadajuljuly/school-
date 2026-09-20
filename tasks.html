@@ -2383,7 +2383,7 @@
           status: row.status || 0,
           urgent: row.priority === "urgent",
           type: "task",
-          date: row.dueDate || todayISO(),
+          date: todayISO(),
           createdAt: Date.now()
         });
         added++;
