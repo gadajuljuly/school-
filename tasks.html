@@ -17,8 +17,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<script src="vendor/html2canvas.min.js"></script>
-<script src="vendor/jspdf.umd.min.js"></script>
 <style>
   :root {
     --desk: #e7e2d3;
@@ -3277,11 +3275,29 @@
     }));
   }
 
-  function generateReportPdf(report) {
-    if (!window.html2canvas || !window.jspdf) {
-      alert(tr("reportPdfError"));
-      return;
+  var loadedScripts = {};
+  function loadScriptOnce(src) {
+    if (!loadedScripts[src]) {
+      loadedScripts[src] = new Promise(function (resolve, reject) {
+        var script = document.createElement("script");
+        script.src = src;
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
     }
+    return loadedScripts[src];
+  }
+
+  function generateReportPdf(report) {
+    var ready = (window.html2canvas && window.jspdf) ? Promise.resolve() : Promise.all([
+      window.html2canvas ? Promise.resolve() : loadScriptOnce("vendor/html2canvas.min.js"),
+      window.jspdf ? Promise.resolve() : loadScriptOnce("vendor/jspdf.umd.min.js")
+    ]);
+    ready.then(function () { doGenerateReportPdf(report); }, function () { alert(tr("reportPdfError")); });
+  }
+
+  function doGenerateReportPdf(report) {
     var originalBtnContent = reportShareBtn.innerHTML;
     function restoreShareBtn() {
       reportShareBtn.disabled = false;
