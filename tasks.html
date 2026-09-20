@@ -3447,15 +3447,25 @@
   }
 
   // Cache the last generated PDF per report so tapping "share" can call
-  // navigator.share() synchronously from the click handler - iOS Safari
-  // drops the share sheet silently if it's invoked after the async
-  // html2canvas/jsPDF work, since that spends the click's user activation.
+  // navigator.share() synchronously from the click handler - both iOS
+  // Safari and Android Chrome drop/reject the share sheet (NotAllowedError)
+  // if it's invoked after the async html2canvas/jsPDF work, since that
+  // spends the click's user activation. The share button stays disabled
+  // (with a spinner) until a fresh PDF is actually cached and ready, so a
+  // real tap can never fall through to the slow, activation-losing path.
+  var REPORT_SHARE_ICON = "&#128228;";
+  var REPORT_SHARE_SPINNER = "&#8987;";
   var reportPdfCache = {};
   var reportPdfCacheTimer = null;
+  function setShareBtnReady(ready) {
+    reportShareBtn.disabled = !ready;
+    reportShareBtn.innerHTML = ready ? REPORT_SHARE_ICON : REPORT_SHARE_SPINNER;
+  }
   function scheduleReportPdfCacheRefresh(report) {
     var hadCache = !!reportPdfCache[report.id];
     delete reportPdfCache[report.id];
     if (reportPdfCacheTimer) clearTimeout(reportPdfCacheTimer);
+    setShareBtnReady(false);
     // On first open there's nothing to show yet, so start building right
     // away - every extra millisecond of delay here is a millisecond closer
     // to losing the share button's user-activation window if it's tapped
@@ -3463,7 +3473,10 @@
     reportPdfCacheTimer = setTimeout(function () {
       buildReportPdfBlob(report).then(function (result) {
         reportPdfCache[report.id] = result;
-      }).catch(function () {});
+        if (activeReportId === report.id) setShareBtnReady(true);
+      }).catch(function () {
+        if (activeReportId === report.id) setShareBtnReady(true);
+      });
     }, hadCache ? 900 : 0);
   }
 
