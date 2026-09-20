@@ -1460,6 +1460,7 @@
       <button type="button" class="report-back-btn" id="reportBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
       <div class="report-head-title" id="reportHeadTitle"></div>
       <button type="button" class="report-share-btn" id="reportEditBtn" data-i18n-title="editReportBtnTitle" title="עריכת הדוח">&#9998;</button>
+      <button type="button" class="report-share-btn" id="reportSaveBtn" data-i18n-title="saveBtnTitle" title="שמירת קובץ">&#128190;</button>
       <button type="button" class="report-share-btn" id="reportShareBtn" data-i18n-title="shareBtn" title="שיתוף">&#128228;</button>
     </div>
     <div class="report-meta" id="reportMeta"></div>
@@ -1550,6 +1551,7 @@
     sheetActionModalMessage: { he: "מה לעשות עם הפרויקט?", en: "What would you like to do with this project?", ar: "ماذا تريد أن تفعل بهذا المشروع؟", ru: "Что сделать с этим проектом?" },
     deleteBtn: { he: "מחיקה", en: "Delete", ar: "حذف", ru: "Удалить" },
     shareBtn: { he: "שיתוף", en: "Share", ar: "مشاركة", ru: "Поделиться" },
+    saveBtnTitle: { he: "שמירת קובץ", en: "Save file", ar: "حفظ الملف", ru: "Сохранить файл" },
     editReportBtnTitle: { he: "עריכת הדוח", en: "Edit report", ar: "تعديل التقرير", ru: "Изменить отчёт" },
     reportActionAddTasksBtn: { he: "הוספת המשימות לרשימה", en: "Add tasks to the list", ar: "إضافة المهام إلى القائمة", ru: "Добавить задачи в список" },
     reportTasksAddedMsg: { he: "נוספו {count} משימות לרשימת המשימות", en: "{count} tasks added to the task list", ar: "تمت إضافة {count} مهام إلى قائمة المهام", ru: "Добавлено задач: {count}" },
@@ -2365,7 +2367,7 @@
     var id = pendingReportActionId;
     closeReportActionModal();
     var report = findReport(id);
-    if (report) generateReportPdf(report);
+    if (report) generateReportPdf(report, "share");
   });
   function addReportRowsToTaskList(reportId) {
     var report = findReport(reportId);
@@ -2620,6 +2622,7 @@
   var reportBackBtn = document.getElementById("reportBackBtn");
   var reportHeadTitle = document.getElementById("reportHeadTitle");
   var reportShareBtn = document.getElementById("reportShareBtn");
+  var reportSaveBtn = document.getElementById("reportSaveBtn");
   var reportEditBtn = document.getElementById("reportEditBtn");
   var reportMeta = document.getElementById("reportMeta");
   var reportTableBody = document.getElementById("reportTableBody");
@@ -3362,22 +3365,23 @@
     return loadedScripts[src];
   }
 
-  function generateReportPdf(report) {
+  function generateReportPdf(report, mode) {
     var ready = (window.html2canvas && window.jspdf) ? Promise.resolve() : Promise.all([
       window.html2canvas ? Promise.resolve() : loadScriptOnce("vendor/html2canvas.min.js"),
       window.jspdf ? Promise.resolve() : loadScriptOnce("vendor/jspdf.umd.min.js")
     ]);
-    ready.then(function () { doGenerateReportPdf(report); }, function () { alert(tr("reportPdfError")); });
+    ready.then(function () { doGenerateReportPdf(report, mode); }, function () { alert(tr("reportPdfError")); });
   }
 
-  function doGenerateReportPdf(report) {
-    var originalBtnContent = reportShareBtn.innerHTML;
+  function doGenerateReportPdf(report, mode) {
+    var activeBtn = mode === "save" ? reportSaveBtn : reportShareBtn;
+    var originalBtnContent = activeBtn.innerHTML;
     function restoreShareBtn() {
-      reportShareBtn.disabled = false;
-      reportShareBtn.innerHTML = originalBtnContent;
+      activeBtn.disabled = false;
+      activeBtn.innerHTML = originalBtnContent;
     }
-    reportShareBtn.disabled = true;
-    reportShareBtn.innerHTML = "&#8987;";
+    activeBtn.disabled = true;
+    activeBtn.innerHTML = "&#8987;";
     var container = document.createElement("div");
     container.className = "pdf-doc-wrap";
     container.style.position = "fixed";
@@ -3412,7 +3416,9 @@
       var fileName = (report.title || typeLabel) + ".pdf";
       var blob = pdf.output("blob");
       var file = new File([blob], fileName, { type: "application/pdf" });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      if (mode === "save") {
+        pdf.save(fileName);
+      } else if (navigator.canShare && navigator.canShare({ files: [file] })) {
         navigator.share({ files: [file], title: report.title || typeLabel }).catch(function (err) {
           if (err && err.name === "AbortError") return;
           pdf.save(fileName);
@@ -3431,7 +3437,12 @@
   reportShareBtn.addEventListener("click", function () {
     var report = findReport(activeReportId);
     if (!report) return;
-    generateReportPdf(report);
+    generateReportPdf(report, "share");
+  });
+  reportSaveBtn.addEventListener("click", function () {
+    var report = findReport(activeReportId);
+    if (!report) return;
+    generateReportPdf(report, "save");
   });
 
   menuBtn.addEventListener("click", function (e) {
