@@ -1761,6 +1761,29 @@
       localStorage.setItem(localStorageKey(), JSON.stringify(data));
     } catch (e) {}
   }
+  function countTasks(d) {
+    var total = 0;
+    (d.sheets || []).forEach(function (s) { total += (s.tasks || []).length; });
+    return total;
+  }
+  function findLegacyLocalData() {
+    try {
+      var currentKey = localStorageKey();
+      var prefix = STORAGE_KEY + ":";
+      var best = null;
+      var bestCount = 0;
+      for (var i = 0; i < localStorage.length; i++) {
+        var key = localStorage.key(i);
+        if (key === currentKey || (key !== STORAGE_KEY && key.indexOf(prefix) !== 0)) continue;
+        var parsed = normalizeData(JSON.parse(localStorage.getItem(key)));
+        var count = countTasks(parsed);
+        if (count > bestCount) { best = parsed; bestCount = count; }
+      }
+      return best;
+    } catch (e) {
+      return null;
+    }
+  }
 
   var SUPABASE_URL = "https://oqvqrqhtywcqdnftaovk.supabase.co";
   var SUPABASE_KEY = "sb_publishable_K6dRlzpWSRV7O-Dy_C8ypA_Yep2P3x7";
@@ -3874,7 +3897,7 @@
       .then(function (result) {
         var row = result && result.data;
         var remote = row && row.data ? normalizeData(row.data) : null;
-        data = remote || loadFromLocalOrDefault();
+        data = remote || loadLocalData() || findLegacyLocalData() || defaultData();
         var rolled = applyDailyRollover(data);
         if (rolled || !remote) saveData();
         applyTaskLinkFromURL();
