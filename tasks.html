@@ -1233,7 +1233,6 @@
           </div>
           <div class="menu-section" id="accountMenuSection">
             <div class="menu-label" id="menuUsernameLabel"></div>
-            <button id="logoutBtn" data-i18n="logoutBtn">התנתקות</button>
           </div>
           <div class="menu-section" id="reminderMenuSection">
             <div class="menu-label" data-i18n="menuLabelReminders">תזכורות משימות</div>
@@ -1483,7 +1482,6 @@
     menuLabelCurrentProject: { he: "הפרויקט הנוכחי", en: "Current project", ar: "المشروع الحالي", ru: "Текущий проект" },
     renameSheetBtn: { he: "שינוי שם", en: "Rename", ar: "تغيير الاسم", ru: "Переименовать" },
     deleteSheetBtn: { he: "מחיקת פרויקט", en: "Delete project", ar: "حذف المشروع", ru: "Удалить проект" },
-    logoutBtn: { he: "התנתקות", en: "Log out", ar: "تسجيل الخروج", ru: "Выйти" },
     menuLabelReminders: { he: "תזכורות משימות", en: "Task reminders", ar: "تذكيرات المهام", ru: "Напоминания о задачах" },
     reminderOff: { he: "כבוי", en: "Off", ar: "إيقاف", ru: "Выкл" },
     reminderEvery1: { he: "כל דקה", en: "Every minute", ar: "كل دقيقة", ru: "Каждую минуту" },
@@ -3921,7 +3919,6 @@
   var authCodeError = document.getElementById("authCodeError");
   var authVerifyCodeBtn = document.getElementById("authVerifyCodeBtn");
   var authChangePhoneBtn = document.getElementById("authChangePhoneBtn");
-  var logoutBtn = document.getElementById("logoutBtn");
   var menuUsernameLabel = document.getElementById("menuUsernameLabel");
 
   var pendingConfirmationResult = null;
@@ -4036,10 +4033,6 @@
     });
 
     authChangePhoneBtn.addEventListener("click", showPhoneStep);
-
-    logoutBtn.addEventListener("click", function () {
-      firebaseAuth.signOut().then(function () { location.reload(); }, function () { location.reload(); });
-    });
   }
 
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
