@@ -1374,6 +1374,7 @@
         <button type="button" id="reportActionEditBtn" data-i18n="editReportBtnTitle">עריכת הדוח</button>
         <button type="button" id="reportActionShareBtn" data-i18n="shareBtn">שיתוף</button>
       </div>
+      <button type="button" class="convert-to-note-btn" id="reportActionAddTasksBtn" data-i18n="reportActionAddTasksBtn">הוספת המשימות לרשימה</button>
       <div class="modal-actions">
         <button type="button" class="modal-btn modal-btn-no" id="reportActionCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
@@ -1548,6 +1549,9 @@
     deleteBtn: { he: "מחיקה", en: "Delete", ar: "حذف", ru: "Удалить" },
     shareBtn: { he: "שיתוף", en: "Share", ar: "مشاركة", ru: "Поделиться" },
     editReportBtnTitle: { he: "עריכת הדוח", en: "Edit report", ar: "تعديل التقرير", ru: "Изменить отчёт" },
+    reportActionAddTasksBtn: { he: "הוספת המשימות לרשימה", en: "Add tasks to the list", ar: "إضافة المهام إلى القائمة", ru: "Добавить задачи в список" },
+    reportTasksAddedMsg: { he: "נוספו {count} משימות לרשימת המשימות", en: "{count} tasks added to the task list", ar: "تمت إضافة {count} مهام إلى قائمة المهام", ru: "Добавлено задач: {count}" },
+    reportTasksNoneToAdd: { he: "אין שורות עם תוכן להוספה", en: "There are no rows with content to add", ar: "لا توجد عناصر تحتوي على محتوى لإضافتها", ru: "Нет строк с содержимым для добавления" },
     sheetActionEndBtn: { he: "הפרויקט הסתיים", en: "Project finished", ar: "انتهى المشروع", ru: "Проект завершён" },
     confirmYesBtn: { he: "כן", en: "Yes", ar: "نعم", ru: "Да" },
     confirmNoBtn: { he: "לא", en: "No", ar: "لا", ru: "Нет" },
@@ -2321,6 +2325,7 @@
   var reportActionDeleteBtn = document.getElementById("reportActionDeleteBtn");
   var reportActionEditBtn = document.getElementById("reportActionEditBtn");
   var reportActionShareBtn = document.getElementById("reportActionShareBtn");
+  var reportActionAddTasksBtn = document.getElementById("reportActionAddTasksBtn");
   var reportActionCancelBtn = document.getElementById("reportActionCancelBtn");
   var pendingReportActionId = null;
 
@@ -2358,6 +2363,35 @@
     closeReportActionModal();
     var report = findReport(id);
     if (report) generateReportPdf(report);
+  });
+  function addReportRowsToTaskList(reportId) {
+    var report = findReport(reportId);
+    if (!report) return 0;
+    var sheet = activeSheet();
+    var added = 0;
+    (report.rows || []).forEach(function (row) {
+      var text = (row.task || "").trim();
+      if (!text) return;
+      if (row.responsible) text += " - " + row.responsible;
+      sheet.tasks.push({
+        id: uid(),
+        text: text,
+        status: row.status || 0,
+        urgent: row.priority === "urgent",
+        type: "task",
+        date: row.dueDate || todayISO(),
+        createdAt: Date.now()
+      });
+      added++;
+    });
+    if (added) saveData();
+    return added;
+  }
+  reportActionAddTasksBtn.addEventListener("click", function () {
+    var id = pendingReportActionId;
+    closeReportActionModal();
+    var added = addReportRowsToTaskList(id);
+    alert(added ? tr("reportTasksAddedMsg").replace("{count}", added) : tr("reportTasksNoneToAdd"));
   });
   reportActionCancelBtn.addEventListener("click", closeReportActionModal);
   reportActionOverlay.addEventListener("click", function (e) {
