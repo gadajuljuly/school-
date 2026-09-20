@@ -3391,17 +3391,14 @@
       try {
         navigator.share(shareData).catch(function (err) {
           if (err && err.name === "AbortError") return;
-          alert("DEBUG share failed: " + (err && err.name) + " / " + (err && err.message));
           downloadBlob(blob, fileName);
         });
         return;
       } catch (err) {
-        alert("DEBUG share threw: " + (err && err.name) + " / " + (err && err.message));
         downloadBlob(blob, fileName);
         return;
       }
     }
-    alert("DEBUG no share attempt: hasShare=" + hasShare + " canShareResult=" + canShareResult);
     downloadBlob(blob, fileName);
   }
 
@@ -3456,13 +3453,18 @@
   var reportPdfCache = {};
   var reportPdfCacheTimer = null;
   function scheduleReportPdfCacheRefresh(report) {
+    var hadCache = !!reportPdfCache[report.id];
     delete reportPdfCache[report.id];
     if (reportPdfCacheTimer) clearTimeout(reportPdfCacheTimer);
+    // On first open there's nothing to show yet, so start building right
+    // away - every extra millisecond of delay here is a millisecond closer
+    // to losing the share button's user-activation window if it's tapped
+    // quickly. Only debounce repeat rebuilds triggered by fast edits.
     reportPdfCacheTimer = setTimeout(function () {
       buildReportPdfBlob(report).then(function (result) {
         reportPdfCache[report.id] = result;
       }).catch(function () {});
-    }, 900);
+    }, hadCache ? 900 : 0);
   }
 
   function generateReportPdf(report, mode) {
