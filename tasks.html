@@ -1400,6 +1400,7 @@
         <button type="button" id="moveModeCopyBtn" data-i18n="moveModeCopyBtn">העתקה</button>
       </div>
       <button type="button" class="convert-to-note-btn" id="convertToNoteBtn" data-i18n="convertToNoteBtn" hidden>הפוך למזכרת</button>
+      <button type="button" class="convert-to-note-btn" id="convertToTaskBtn" data-i18n="convertToTaskBtn" hidden>הפוך למשימה</button>
       <div class="move-task-projects" id="moveTaskProjects"></div>
       <div class="modal-actions">
         <button type="button" class="modal-btn modal-btn-no" id="moveTaskCancelBtn" data-i18n="cancelBtn">ביטול</button>
@@ -1556,6 +1557,7 @@
     moveModeMoveBtn: { he: "העברה", en: "Move", ar: "نقل", ru: "Переместить" },
     moveModeCopyBtn: { he: "העתקה", en: "Copy", ar: "نسخ", ru: "Копировать" },
     convertToNoteBtn: { he: "הפוך למזכרת", en: "Convert to note", ar: "تحويل إلى ملاحظة", ru: "Сделать заметкой" },
+    convertToTaskBtn: { he: "הפוך למשימה", en: "Convert to task", ar: "تحويل إلى مهمة", ru: "Сделать задачей" },
     installFab: { he: "📱 התקן אפליקציה", en: "📱 Install app", ar: "📱 تثبيت التطبيق", ru: "📱 Установить приложение" },
     iosInstallCloseBtn: { he: "הבנתי", en: "Got it", ar: "فهمت", ru: "Понятно" },
     projectWord: { he: "פרויקט", en: "Project", ar: "مشروع", ru: "Проект" },
@@ -1911,6 +1913,7 @@
   var moveModeMoveBtn = document.getElementById("moveModeMoveBtn");
   var moveModeCopyBtn = document.getElementById("moveModeCopyBtn");
   var convertToNoteBtn = document.getElementById("convertToNoteBtn");
+  var convertToTaskBtn = document.getElementById("convertToTaskBtn");
   var moveTaskCancelBtn = document.getElementById("moveTaskCancelBtn");
   var pendingMoveTaskId = null;
   var longPressTimer = null;
@@ -1972,6 +1975,7 @@
     renderMoveTaskProjects();
     var task = activeSheet().tasks.find(function (t) { return t.id === taskId; });
     convertToNoteBtn.hidden = !task || task.type === "note";
+    convertToTaskBtn.hidden = !task || task.type !== "note";
     moveTaskOverlay.hidden = false;
   }
   function closeMoveTask() {
@@ -1993,6 +1997,16 @@
     if (task) {
       task.type = "note";
       task.time = currentTimeHHMM();
+      saveData();
+    }
+    closeMoveTask();
+    render();
+  });
+  convertToTaskBtn.addEventListener("click", function () {
+    var task = activeSheet().tasks.find(function (t) { return t.id === pendingMoveTaskId; });
+    if (task) {
+      task.type = "task";
+      delete task.time;
       saveData();
     }
     closeMoveTask();
