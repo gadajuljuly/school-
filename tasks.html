@@ -1744,6 +1744,8 @@
     chatEmptyPrompt: { he: "אין עדיין הודעות בצ'אט הזה", en: "No messages in this chat yet", ar: "لا توجد رسائل في هذه الدردشة بعد", ru: "В этом чате пока нет сообщений" },
     chatYou: { he: "אני", en: "You", ar: "أنا", ru: "Я" },
     chatAskNamePrompt: { he: "איך שמך יוצג לשאר המשתתפים בצ'אט הזה?", en: "How should your name appear to others in this chat?", ar: "كيف تريد أن يظهر اسمك لبقية المشاركين في هذه الدردشة؟", ru: "Как ваше имя будет отображаться другим участникам этого чата?" },
+    newSharedProjectNotifTitle: { he: "צורפת לפרויקט משותף", en: "You were added to a shared project", ar: "تمت إضافتك إلى مشروع مشترك", ru: "Вас добавили в общий проект" },
+    newSharedProjectNotifBody: { he: "{name} - לחצו כדי לפתוח", en: "{name} - tap to open", ar: "{name} - انقر للفتح", ru: "{name} - нажмите, чтобы открыть" },
     reportColNum: { he: "מס'", en: "No.", ar: "الرقم", ru: "№" },
     reportColTask: { he: "משימה", en: "Task", ar: "المهمة", ru: "Задача" },
     reportColResponsible: { he: "באחריות", en: "Responsible", ar: "المسؤول", ru: "Ответственный" },
@@ -4636,12 +4638,36 @@
     };
   }
 
+  function notifyNewSharedProject(sheet) {
+    if (!("Notification" in window) || Notification.permission !== "granted" || !("serviceWorker" in navigator)) return;
+    navigator.serviceWorker.getRegistration().then(function (reg) {
+      if (!reg) return;
+      reg.showNotification(tr("newSharedProjectNotifTitle"), {
+        body: tr("newSharedProjectNotifBody").replace("{name}", sheet.name),
+        icon: "tasks-icon-192.png",
+        badge: "tasks-icon-192.png",
+        tag: "shared-project-" + sheet.id,
+        data: { sheetId: sheet.id }
+      });
+    }).catch(function () {});
+  }
+
+  var sharedSheetsLoadedOnce = false;
+
   function loadSharedSheets() {
     if (!supabaseClient || !myPhoneNumber) return Promise.resolve();
     return supabaseClient.from(SHARED_TABLE).select("*").contains("members", [myPhoneNumber])
       .then(function (result) {
         var rows = (result && result.data) || [];
-        sharedSheets = rows.map(sharedRowToSheet);
+        var previousIds = sharedSheets.map(function (s) { return s.id; });
+        var newSheets = rows.map(sharedRowToSheet);
+        if (sharedSheetsLoadedOnce) {
+          newSheets.forEach(function (s) {
+            if (previousIds.indexOf(s.id) === -1) notifyNewSharedProject(s);
+          });
+        }
+        sharedSheetsLoadedOnce = true;
+        sharedSheets = newSheets;
         rollSheetsForward(sharedSheets);
         render();
       }, function () {});
