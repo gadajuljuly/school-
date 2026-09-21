@@ -1746,6 +1746,7 @@
     chatAskNamePrompt: { he: "איך שמך יוצג לשאר המשתתפים בצ'אט הזה?", en: "How should your name appear to others in this chat?", ar: "كيف تريد أن يظهر اسمك لبقية المشاركين في هذه الدردشة؟", ru: "Как ваше имя будет отображаться другим участникам этого чата?" },
     newSharedProjectNotifTitle: { he: "צורפת לפרויקט משותף", en: "You were added to a shared project", ar: "تمت إضافتك إلى مشروع مشترك", ru: "Вас добавили в общий проект" },
     newSharedProjectNotifBody: { he: "{name} - לחצו כדי לפתוח", en: "{name} - tap to open", ar: "{name} - انقر للفتح", ru: "{name} - нажмите, чтобы открыть" },
+    newChatMessagesNotifBody: { he: "{count} הודעות חדשות בצ'אט", en: "{count} new chat messages", ar: "{count} رسائل دردشة جديدة", ru: "{count} новых сообщений в чате" },
     reportColNum: { he: "מס'", en: "No.", ar: "الرقم", ru: "№" },
     reportColTask: { he: "משימה", en: "Task", ar: "المهمة", ru: "Задача" },
     reportColResponsible: { he: "באחריות", en: "Responsible", ar: "المسؤول", ru: "Ответственный" },
@@ -4318,7 +4319,8 @@
     appLoadingOverlay.hidden = true;
     clearTimeout(longPressTimer);
     var visibleForDate = visibleSheets();
-    if (visibleForDate.length && !visibleForDate.some(function (s) { return s.id === data.activeSheetId; })) {
+    if (visibleForDate.length && data.activeSheetId !== pendingOpenChatSheetId &&
+        !visibleForDate.some(function (s) { return s.id === data.activeSheetId; })) {
       data.activeSheetId = visibleForDate[0].id;
     }
     renderSheetsBar();
@@ -4569,10 +4571,25 @@
     setTimeout(function () { el.style.display = "none"; }, 8000);
   }
 
-  function navigateToTaskLink(sheetId, date, taskId) {
+  var pendingOpenChatSheetId = null;
+
+  function tryOpenPendingChat() {
+    if (!pendingOpenChatSheetId) return;
+    var sheet = sharedSheets.find(function (s) { return s.id === pendingOpenChatSheetId; });
+    if (sheet) {
+      pendingOpenChatSheetId = null;
+      openChatView();
+    }
+  }
+
+  function navigateToTaskLink(sheetId, date, taskId, chat) {
     if (sheetId) data.activeSheetId = sheetId;
     if (date) state.viewDate = date;
     if (taskId) state.highlightTaskId = taskId;
+    if (chat && sheetId) {
+      pendingOpenChatSheetId = sheetId;
+      tryOpenPendingChat();
+    }
   }
 
   function applyTaskLinkFromURL() {
@@ -4580,9 +4597,10 @@
     var sheetId = params.get("sheet");
     var date = params.get("date");
     var taskId = params.get("task");
-    if (!sheetId && !date && !taskId) return;
+    var chat = params.get("chat") === "1";
+    if (!sheetId && !date && !taskId && !chat) return;
     showNavDebugToast("URL", sheetId, date, taskId);
-    navigateToTaskLink(sheetId, date, taskId);
+    navigateToTaskLink(sheetId, date, taskId, chat);
     history.replaceState(null, "", location.pathname);
   }
 
@@ -4591,7 +4609,7 @@
       var msg = event.data || {};
       if (msg.type !== "navigate-task") return;
       showNavDebugToast("message", msg.sheetId, msg.date, msg.taskId);
-      navigateToTaskLink(msg.sheetId, msg.date, msg.taskId);
+      navigateToTaskLink(msg.sheetId, msg.date, msg.taskId, msg.chat);
       render();
     });
   }
@@ -4638,18 +4656,43 @@
     };
   }
 
-  function notifyNewSharedProject(sheet) {
+  function showSharedNotification(title, body, sheetId, tag, chat) {
     if (!("Notification" in window) || Notification.permission !== "granted" || !("serviceWorker" in navigator)) return;
     navigator.serviceWorker.getRegistration().then(function (reg) {
       if (!reg) return;
-      reg.showNotification(tr("newSharedProjectNotifTitle"), {
-        body: tr("newSharedProjectNotifBody").replace("{name}", sheet.name),
+      reg.showNotification(title, {
+        body: body,
         icon: "tasks-icon-192.png",
         badge: "tasks-icon-192.png",
-        tag: "shared-project-" + sheet.id,
-        data: { sheetId: sheet.id }
+        tag: tag,
+        data: { sheetId: sheetId, chat: !!chat }
       });
     }).catch(function () {});
+  }
+
+  function notifyNewSharedProject(sheet) {
+    showSharedNotification(
+      tr("newSharedProjectNotifTitle"),
+      tr("newSharedProjectNotifBody").replace("{name}", sheet.name),
+      sheet.id,
+      "shared-project-" + sheet.id,
+      false
+    );
+  }
+
+  function notifyNewChatMessages(sheet, previousMessages) {
+    if (activeChatSheetId === sheet.id) return;
+    var previousIds = previousMessages.map(function (m) { return m.id; });
+    var newMessages = (sheet.messages || []).filter(function (m) {
+      return previousIds.indexOf(m.id) === -1 && m.phone !== myPhoneNumber;
+    });
+    if (!newMessages.length) return;
+    var last = newMessages[newMessages.length - 1];
+    var senderName = (sheet.memberNames && sheet.memberNames[last.phone]) || last.phone;
+    var body = newMessages.length > 1
+      ? tr("newChatMessagesNotifBody").replace("{count}", newMessages.length)
+      : (senderName + ": " + last.text);
+    showSharedNotification(sheet.name, body, sheet.id, "chat-" + sheet.id, true);
   }
 
   var sharedSheetsLoadedOnce = false;
@@ -4659,17 +4702,24 @@
     return supabaseClient.from(SHARED_TABLE).select("*").contains("members", [myPhoneNumber])
       .then(function (result) {
         var rows = (result && result.data) || [];
-        var previousIds = sharedSheets.map(function (s) { return s.id; });
+        var previousById = {};
+        sharedSheets.forEach(function (s) { previousById[s.id] = s; });
         var newSheets = rows.map(sharedRowToSheet);
         if (sharedSheetsLoadedOnce) {
           newSheets.forEach(function (s) {
-            if (previousIds.indexOf(s.id) === -1) notifyNewSharedProject(s);
+            var prev = previousById[s.id];
+            if (!prev) {
+              notifyNewSharedProject(s);
+            } else {
+              notifyNewChatMessages(s, prev.messages || []);
+            }
           });
         }
         sharedSheetsLoadedOnce = true;
         sharedSheets = newSheets;
         rollSheetsForward(sharedSheets);
         render();
+        tryOpenPendingChat();
       }, function () {});
   }
 

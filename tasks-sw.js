@@ -90,11 +90,12 @@ self.addEventListener("notificationclick", function (event) {
   event.notification.close();
   var taskData = event.notification.data || {};
   var url = "./tasks.html";
-  if (taskData.sheetId || taskData.date || taskData.taskId) {
+  if (taskData.sheetId || taskData.date || taskData.taskId || taskData.chat) {
     var params = new URLSearchParams();
     if (taskData.sheetId) params.set("sheet", taskData.sheetId);
     if (taskData.date) params.set("date", taskData.date);
     if (taskData.taskId) params.set("task", taskData.taskId);
+    if (taskData.chat) params.set("chat", "1");
     url = "./tasks.html?" + params.toString();
   }
   var targetUrl = new URL(url, self.location.href).href;
@@ -107,7 +108,8 @@ self.addEventListener("notificationclick", function (event) {
             type: "navigate-task",
             sheetId: taskData.sheetId,
             date: taskData.date,
-            taskId: taskData.taskId
+            taskId: taskData.taskId,
+            chat: taskData.chat
           });
           return client.focus();
         }
