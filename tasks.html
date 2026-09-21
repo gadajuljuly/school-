@@ -1524,6 +1524,7 @@
       <p class="modal-message" id="sharedProjectModalMessage" data-i18n="sharedProjectModalMessage">פרויקט משותף חדש</p>
       <input type="text" id="sharedProjectNameInput" class="auth-input" data-i18n-ph="sharedProjectNamePlaceholder" placeholder="שם הפרויקט" maxlength="40">
       <p class="modal-submessage" data-i18n="sharedProjectMembersLabel">מספרי טלפון של המשתתפים</p>
+      <button type="button" class="convert-to-note-btn" id="sharedProjectPickContactsBtn" data-i18n="sharedProjectPickContactsBtn" hidden>בחירה מאנשי הקשר</button>
       <div class="report-participants-list" id="sharedProjectMembersList"></div>
       <div class="modal-actions">
         <button type="button" class="modal-btn modal-btn-yes" id="sharedProjectSaveBtn" data-i18n="confirmBtn">אישור</button>
@@ -1729,6 +1730,7 @@
     sharedProjectModalMessage: { he: "פרויקט משותף חדש", en: "New shared project", ar: "مشروع مشترك جديد", ru: "Новый общий проект" },
     sharedProjectEditModalMessage: { he: "ניהול משתתפים", en: "Manage members", ar: "إدارة المشاركين", ru: "Управление участниками" },
     sharedProjectConvertModalMessage: { he: "הפיכה לפרויקט משותף - המשימות הקיימות יישמרו", en: "Make into a shared project - existing tasks are kept", ar: "تحويل إلى مشروع مشترك - سيتم الاحتفاظ بالمهام الحالية", ru: "Сделать общим проектом - существующие задачи сохранятся" },
+    sharedProjectPickContactsBtn: { he: "בחירה מאנשי הקשר", en: "Choose from contacts", ar: "الاختيار من جهات الاتصال", ru: "Выбрать из контактов" },
     sharedProjectNamePlaceholder: { he: "שם הפרויקט", en: "Project name", ar: "اسم المشروع", ru: "Название проекта" },
     sharedProjectMembersLabel: { he: "מספרי טלפון של המשתתפים", en: "Members' phone numbers", ar: "أرقام هواتف المشاركين", ru: "Номера телефонов участников" },
     sharedProjectPhonePlaceholder: { he: "050-1234567", en: "050-1234567", ar: "050-1234567", ru: "050-1234567" },
@@ -1741,6 +1743,7 @@
     chatSendBtnTitle: { he: "שליחה", en: "Send", ar: "إرسال", ru: "Отправить" },
     chatEmptyPrompt: { he: "אין עדיין הודעות בצ'אט הזה", en: "No messages in this chat yet", ar: "لا توجد رسائل في هذه الدردشة بعد", ru: "В этом чате пока нет сообщений" },
     chatYou: { he: "אני", en: "You", ar: "أنا", ru: "Я" },
+    chatAskNamePrompt: { he: "איך שמך יוצג לשאר המשתתפים בצ'אט הזה?", en: "How should your name appear to others in this chat?", ar: "كيف تريد أن يظهر اسمك لبقية المشاركين في هذه الدردشة؟", ru: "Как ваше имя будет отображаться другим участникам этого чата?" },
     reportColNum: { he: "מס'", en: "No.", ar: "الرقم", ru: "№" },
     reportColTask: { he: "משימה", en: "Task", ar: "المهمة", ru: "Задача" },
     reportColResponsible: { he: "באחריות", en: "Responsible", ar: "المسؤول", ru: "Ответственный" },
@@ -1994,6 +1997,7 @@
           name: sheet.name,
           data: { tasks: sheet.tasks, reports: sheet.reports, ended: sheet.ended || false, endedDate: sheet.endedDate || null },
           members: sheet.members,
+          member_names: sheet.memberNames || {},
           updated_at: new Date().toISOString()
         })
         .then(function () {}, function () {});
@@ -2447,13 +2451,16 @@
   var sharedProjectSaveBtn = document.getElementById("sharedProjectSaveBtn");
   var sharedProjectCancelBtn = document.getElementById("sharedProjectCancelBtn");
 
-  function addSharedMemberInput(focusIt) {
+  function addSharedMemberInput(focusIt, presetValue, presetName) {
     var input = document.createElement("input");
     input.type = "tel";
     input.className = "auth-input";
     input.placeholder = tr("sharedProjectPhonePlaceholder");
     input.maxLength = 20;
+    if (presetValue) input.value = presetValue;
+    if (presetName) input.dataset.contactName = presetName;
     input.addEventListener("input", function () {
+      delete input.dataset.contactName;
       if (input.value.trim() && input === sharedProjectMembersList.lastElementChild) {
         addSharedMemberInput(false);
       }
@@ -2466,6 +2473,27 @@
     sharedProjectMembersList.appendChild(input);
     if (focusIt) input.focus();
   }
+
+  var contactPickerSupported = !!(navigator.contacts && window.ContactsManager);
+
+  function pickContactsForSharedProject() {
+    if (!contactPickerSupported) return;
+    navigator.contacts.select(["name", "tel"], { multiple: true }).then(function (contacts) {
+      var lastEmpty = sharedProjectMembersList.lastElementChild;
+      contacts.forEach(function (c) {
+        var tel = (c.tel && c.tel[0]) || "";
+        var name = (c.name && c.name[0]) || "";
+        if (!tel) return;
+        addSharedMemberInput(false, tel, name);
+      });
+      if (lastEmpty && !lastEmpty.value.trim() && lastEmpty.parentNode) lastEmpty.parentNode.removeChild(lastEmpty);
+      addSharedMemberInput(false);
+    }).catch(function () {});
+  }
+
+  var sharedProjectPickContactsBtn = document.getElementById("sharedProjectPickContactsBtn");
+  sharedProjectPickContactsBtn.hidden = !contactPickerSupported;
+  sharedProjectPickContactsBtn.addEventListener("click", pickContactsForSharedProject);
 
   var pendingSharedEditId = null;
 
@@ -2491,8 +2519,8 @@
     sharedProjectMembersList.innerHTML = "";
     var otherMembers = (sheet.members || []).filter(function (p) { return p !== myPhoneNumber; });
     otherMembers.forEach(function (phone) {
-      addSharedMemberInput(false);
-      sharedProjectMembersList.lastElementChild.value = phone.replace("+972", "0");
+      var knownName = (sheet.memberNames || {})[phone] || "";
+      addSharedMemberInput(false, phone.replace("+972", "0"), knownName);
     });
     addSharedMemberInput(false);
     sharedProjectOverlay.hidden = false;
@@ -2521,9 +2549,15 @@
   }
   sharedProjectSaveBtn.addEventListener("click", function () {
     var name = sharedProjectNameInput.value.trim().slice(0, 40) || tr("sharedProjectDefaultName");
-    var rawPhones = Array.prototype.slice.call(sharedProjectMembersList.querySelectorAll("input"))
-      .map(function (i) { return i.value; });
-    var members = rawPhones.map(normalizePhoneDigits).filter(function (p) { return p; });
+    var inputs = Array.prototype.slice.call(sharedProjectMembersList.querySelectorAll("input"));
+    var members = [];
+    var pickedNames = {};
+    inputs.forEach(function (i) {
+      var phone = normalizePhoneDigits(i.value);
+      if (!phone) return;
+      members.push(phone);
+      if (i.dataset.contactName) pickedNames[phone] = i.dataset.contactName;
+    });
     if (myPhoneNumber && members.indexOf(myPhoneNumber) === -1) members.push(myPhoneNumber);
     if (members.length < 2) {
       alert(tr("sharedProjectNeedMember"));
@@ -2534,6 +2568,7 @@
       if (existing) {
         existing.name = name;
         existing.members = members;
+        existing.memberNames = Object.assign({}, existing.memberNames || {}, pickedNames);
       }
     } else if (pendingConvertSheetId) {
       var privateSheet = data.sheets.find(function (s) { return s.id === pendingConvertSheetId; });
@@ -2547,6 +2582,7 @@
           ended: privateSheet.ended || false,
           endedDate: privateSheet.endedDate || null,
           members: members,
+          memberNames: pickedNames,
           messages: []
         };
         data.sheets = data.sheets.filter(function (s) { return s.id !== pendingConvertSheetId; });
@@ -2563,6 +2599,7 @@
         ended: false,
         endedDate: null,
         members: members,
+        memberNames: pickedNames,
         messages: []
       };
       sharedSheets.push(sheet);
@@ -2654,7 +2691,8 @@
       bubble.className = "chat-bubble" + (m.phone === myPhoneNumber ? " chat-bubble-mine" : "");
       var senderEl = document.createElement("div");
       senderEl.className = "chat-bubble-sender";
-      senderEl.textContent = m.phone === myPhoneNumber ? tr("chatYou") : m.phone;
+      var knownName = sheet && sheet.memberNames && sheet.memberNames[m.phone];
+      senderEl.textContent = m.phone === myPhoneNumber ? tr("chatYou") : (knownName || m.phone);
       bubble.appendChild(senderEl);
       var textEl = document.createElement("div");
       textEl.textContent = m.text;
@@ -2679,6 +2717,24 @@
       }, function () {});
   }
 
+  function ensureOwnDisplayName(sheet) {
+    if (!sheet || !supabaseClient || (sheet.memberNames && sheet.memberNames[myPhoneNumber])) return;
+    var name = prompt(tr("chatAskNamePrompt"));
+    if (!name || !name.trim()) return;
+    name = name.trim().slice(0, 40);
+    supabaseClient.from(SHARED_TABLE).select("member_names").eq("id", sheet.id).maybeSingle()
+      .then(function (result) {
+        var current = (result && result.data && result.data.member_names) || {};
+        current[myPhoneNumber] = name;
+        return supabaseClient.from(SHARED_TABLE).update({ member_names: current }).eq("id", sheet.id);
+      })
+      .then(function () {
+        sheet.memberNames = Object.assign({}, sheet.memberNames || {});
+        sheet.memberNames[myPhoneNumber] = name;
+        renderChatMessages();
+      });
+  }
+
   function openChatView() {
     var sheet = activeSheet();
     if (!sheet || !sheet.shared) return;
@@ -2687,6 +2743,7 @@
     renderChatMessages();
     chatView.hidden = false;
     refreshActiveChat();
+    ensureOwnDisplayName(sheet);
     chatPollTimer = setInterval(refreshActiveChat, 5000);
     chatInput.focus();
   }
@@ -4574,6 +4631,7 @@
       ended: d.ended || false,
       endedDate: d.endedDate || null,
       members: row.members || [],
+      memberNames: row.member_names || {},
       messages: row.messages || []
     };
   }
