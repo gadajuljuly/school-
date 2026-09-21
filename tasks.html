@@ -166,6 +166,45 @@
     justify-content: center;
     cursor: pointer;
     box-shadow: 0 4px 10px var(--shadow);
+    position: relative;
+  }
+  .chat-fab-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: #e5383b;
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    min-width: 17px;
+    height: 17px;
+    line-height: 1;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 3px;
+    box-shadow: 0 1px 2px var(--shadow);
+  }
+  .chat-fab-badge[hidden] { display: none; }
+  .sheet-tab-unread-badge {
+    position: absolute;
+    top: -6px;
+    right: 4px;
+    background: #e5383b;
+    color: #fff;
+    font-size: 0.62rem;
+    font-weight: 700;
+    line-height: 1;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 3px;
+    box-shadow: 0 1px 2px var(--shadow);
+    z-index: 3;
   }
 
   .sheet-reports-list {
@@ -1525,7 +1564,7 @@
       <button type="button" class="tasks-fab" id="tasksFabBtn" data-i18n-title="tasksBtnTitle" title="חזרה למשימות">
         <img src="tasks-icon-192.png" alt="">
       </button>
-      <button type="button" class="chat-fab" id="chatBtn" data-i18n-title="chatBtnTitle" title="צ'אט הפרויקט" hidden>&#128172;</button>
+      <button type="button" class="chat-fab" id="chatBtn" data-i18n-title="chatBtnTitle" title="צ'אט הפרויקט" hidden>&#128172;<span class="chat-fab-badge" id="chatFabBadge" hidden>0</span></button>
       <button type="button" class="report-fab" id="reportFabBtn" data-i18n-title="reportsBtnTitle" title="דוחות פגישות וסיורים">
         <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
           <rect x="42" y="10" width="16" height="16" rx="3" fill="#fdfbf5"/>
@@ -2907,6 +2946,7 @@
   });
 
   var chatBtn = document.getElementById("chatBtn");
+  var chatFabBadge = document.getElementById("chatFabBadge");
   var chatView = document.getElementById("chatView");
   var chatBackBtn = document.getElementById("chatBackBtn");
   var chatHeadTitle = document.getElementById("chatHeadTitle");
@@ -2915,6 +2955,43 @@
   var chatInput = document.getElementById("chatInput");
   var activeChatSheetId = null;
   var chatPollTimer = null;
+
+  var CHAT_READ_KEY_PREFIX = "itask-chat-read:";
+  var chatReadState = {};
+  function chatReadStorageKey() { return CHAT_READ_KEY_PREFIX + SUPABASE_ROW_ID; }
+  function loadChatReadState() {
+    try {
+      var raw = localStorage.getItem(chatReadStorageKey());
+      chatReadState = raw ? JSON.parse(raw) : {};
+    } catch (e) { chatReadState = {}; }
+  }
+  function persistChatReadState() {
+    try { localStorage.setItem(chatReadStorageKey(), JSON.stringify(chatReadState)); } catch (e) {}
+  }
+  function markChatRead(sheet) {
+    if (!sheet) return;
+    chatReadState[sheet.id] = Date.now();
+    persistChatReadState();
+    updateAppBadge();
+  }
+  function getUnreadCount(sheet) {
+    if (!sheet || !sheet.messages) return 0;
+    var lastRead = chatReadState[sheet.id] || 0;
+    return sheet.messages.filter(function (m) {
+      return m.phone !== myPhoneNumber && m.ts > lastRead;
+    }).length;
+  }
+  function totalUnreadCount() {
+    return sharedSheets.reduce(function (sum, s) { return sum + getUnreadCount(s); }, 0);
+  }
+  function updateAppBadge() {
+    if (!("setAppBadge" in navigator)) return;
+    var n = totalUnreadCount();
+    try {
+      if (n > 0) navigator.setAppBadge(n).catch(function () {});
+      else if ("clearAppBadge" in navigator) navigator.clearAppBadge().catch(function () {});
+    } catch (e) {}
+  }
 
   function chatDayLabel(ts) {
     var d = new Date(ts);
@@ -2980,6 +3057,7 @@
         var sheet = sharedSheets.find(function (s) { return s.id === activeChatSheetId; });
         if (sheet) sheet.messages = messages;
         renderChatMessages();
+        markChatRead(sheet);
       }, function () {});
   }
 
@@ -3008,6 +3086,7 @@
     chatHeadTitle.textContent = sheet.name;
     renderChatMessages();
     chatView.hidden = false;
+    markChatRead(sheet);
     refreshActiveChat();
     ensureOwnDisplayName(sheet);
     chatPollTimer = setInterval(refreshActiveChat, 5000);
@@ -3017,6 +3096,7 @@
     chatView.hidden = true;
     activeChatSheetId = null;
     clearInterval(chatPollTimer);
+    render();
   }
   chatBtn.addEventListener("click", openChatView);
   chatBackBtn.addEventListener("click", closeChatView);
@@ -4504,6 +4584,16 @@
       tab.appendChild(label);
       tab.title = sheet.id === data.activeSheetId ? tr("clickToRename") : sheet.name;
 
+      if (sheet.shared) {
+        var unreadCount = getUnreadCount(sheet);
+        if (unreadCount > 0) {
+          var unreadBadge = document.createElement("span");
+          unreadBadge.className = "sheet-tab-unread-badge";
+          unreadBadge.textContent = unreadCount > 99 ? "99+" : String(unreadCount);
+          tab.appendChild(unreadBadge);
+        }
+      }
+
       var tabLongPressFired = false;
       tab.addEventListener("click", function () {
         if (tabLongPressFired) { tabLongPressFired = false; return; }
@@ -4736,6 +4826,13 @@
     todayBtn.hidden = isToday;
     sheetTitle.textContent = activeSheet().name;
     chatBtn.hidden = !activeSheet().shared;
+    if (activeSheet().shared) {
+      var activeUnread = getUnreadCount(activeSheet());
+      chatFabBadge.hidden = activeUnread <= 0;
+      chatFabBadge.textContent = activeUnread > 99 ? "99+" : String(activeUnread);
+    } else {
+      chatFabBadge.hidden = true;
+    }
 
     var reportsMode = state.viewMode === "reports";
     taskList.hidden = reportsMode;
@@ -5130,6 +5227,7 @@
         sharedSheetsLoadedOnce = true;
         sharedSheets = newSheets;
         rollSheetsForward(sharedSheets);
+        updateAppBadge();
         render();
         tryOpenPendingChat();
       }, function () {});
@@ -5216,6 +5314,7 @@
   function showApp(phoneNumber, rowId) {
     SUPABASE_ROW_ID = rowId;
     myPhoneNumber = phoneNumber;
+    loadChatReadState();
     menuUsernameLabel.textContent = tr("loggedInAs") + phoneNumber;
     hideSplash();
     if (appShown) return;
