@@ -1006,6 +1006,21 @@
     line-height: 1;
     cursor: pointer;
   }
+  .add-row-chat-btn {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+    color: var(--ink);
+    font-size: 0.85rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 
   .empty-state {
     color: var(--ink-muted);
@@ -1350,7 +1365,6 @@
     <div class="sheets-row">
       <div class="sheets-bar" id="sheetsBar"></div>
       <div class="sheets-search">
-        <button class="menu-btn" id="chatBtn" data-i18n-title="chatBtnTitle" title="צ'אט הפרויקט" hidden>&#128172;</button>
         <button class="menu-btn" id="searchBtn" data-i18n-title="searchBtnTitle" title="חיפוש משימות" aria-haspopup="true" aria-expanded="false">&#128269;</button>
         <div class="search-panel" id="searchPanel" hidden>
           <input type="text" id="searchInput" class="search-input" data-i18n-ph="searchInputPlaceholder" placeholder="חיפוש משימות בכל הפרויקטים..." autocomplete="off">
@@ -1366,6 +1380,7 @@
       <form class="add-row" id="addForm">
         <span class="row-mark" aria-hidden="true"><svg viewBox="0 0 20 18" xmlns="http://www.w3.org/2000/svg"><path d="M4 3 L16 15 M1.5 3 L6.5 3 M13.5 3 L18.5 3 M1.5 15 L6.5 15 M13.5 15 L18.5 15" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg></span>
         <input type="text" id="taskInput" data-i18n-ph="taskInputPlaceholder" placeholder="חדש..." maxlength="200" required autocomplete="off">
+        <button type="button" class="add-row-chat-btn" id="chatBtn" data-i18n-title="chatBtnTitle" title="צ'אט הפרויקט" hidden>&#128172;</button>
         <button type="submit" class="add-btn" data-i18n-title="addBtnTitle" title="הוספה">+</button>
       </form>
       <div class="sheet-reports-list" id="sheetReportsList" hidden></div>
