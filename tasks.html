@@ -251,38 +251,93 @@
     color: var(--ink-muted);
     flex-shrink: 0;
   }
+  #chatView .report-head {
+    background: var(--accent);
+    color: var(--accent-contrast);
+    padding-bottom: 16px;
+  }
+  #chatView .report-head-title { color: var(--accent-contrast); }
+  #chatView .report-back-btn {
+    background: transparent;
+    border-color: rgba(255, 255, 255, 0.4);
+    color: var(--accent-contrast);
+  }
   .chat-messages {
     flex: 1;
     overflow-y: auto;
-    padding: 10px 16px;
+    padding: 14px 12px 6px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 3px;
+    background:
+      radial-gradient(circle at 15% 20%, var(--rule) 0, transparent 45%),
+      radial-gradient(circle at 85% 75%, var(--rule) 0, transparent 45%),
+      var(--paper);
+    background-size: 220px 220px, 260px 260px, auto;
+    background-blend-mode: overlay;
+    opacity: 1;
+  }
+  .chat-day-sep {
+    align-self: center;
+    background: var(--paper-alt);
+    color: var(--ink-muted);
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 10px;
+    margin: 10px 0 8px;
+    box-shadow: 0 1px 2px var(--shadow);
   }
   .chat-bubble {
     max-width: 78%;
-    padding: 8px 12px;
-    border-radius: 14px;
+    padding: 6px 9px 7px;
+    border-radius: 10px;
     background: var(--paper-alt);
-    border: 1px solid var(--rule);
-    font-size: 0.88rem;
-    line-height: 1.4;
+    color: var(--ink);
+    font-size: 0.92rem;
+    line-height: 1.38;
     word-break: break-word;
+    position: relative;
+    margin: 1px 8px 2px;
+    box-shadow: 0 1px 1.5px var(--shadow);
   }
+  .chat-bubble.chat-bubble-start { margin-top: 6px; }
+  .chat-bubble-theirs { margin-right: auto; }
   .chat-bubble-mine {
-    align-self: flex-end;
+    margin-left: auto;
     background: var(--accent);
-    color: #fff;
-    border-color: var(--accent);
+    color: var(--accent-contrast);
+  }
+  .chat-bubble-theirs.chat-bubble-start::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: -6px;
+    width: 10px;
+    height: 12px;
+    background: var(--paper-alt);
+    clip-path: polygon(0 0, 0 100%, 100% 0);
+  }
+  .chat-bubble-mine.chat-bubble-start::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -6px;
+    width: 10px;
+    height: 12px;
+    background: var(--accent);
+    clip-path: polygon(100% 0, 100% 100%, 0 0);
   }
   .chat-bubble-sender {
-    font-size: 0.72rem;
+    font-size: 0.74rem;
     font-weight: 700;
-    opacity: 0.75;
+    color: var(--accent);
     margin-bottom: 2px;
   }
+  .chat-bubble-mine .chat-bubble-sender { color: inherit; opacity: 0.85; }
+  .chat-bubble-text { white-space: pre-wrap; }
   .chat-bubble-time {
-    font-size: 0.68rem;
+    font-size: 0.66rem;
     opacity: 0.65;
     margin-top: 2px;
     text-align: end;
@@ -292,6 +347,25 @@
     color: var(--ink-muted);
     font-size: 0.85rem;
     margin-top: 20px;
+  }
+  #chatForm {
+    height: auto;
+    padding: 8px 10px;
+    background: var(--paper-alt);
+    border-top: 1px solid var(--rule);
+    gap: 8px;
+  }
+  #chatForm .row-mark { display: none; }
+  #chatInput {
+    background: var(--paper);
+    border-radius: 20px;
+    padding: 9px 16px;
+    line-height: 1.3;
+  }
+  #chatForm .add-btn {
+    width: 34px;
+    height: 34px;
+    font-size: 1.15rem;
   }
   .report-table-wrap { flex: 1; overflow: auto; padding: 0 12px; }
   .report-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
@@ -1743,6 +1817,8 @@
     chatSendBtnTitle: { he: "שליחה", en: "Send", ar: "إرسال", ru: "Отправить" },
     chatEmptyPrompt: { he: "אין עדיין הודעות בצ'אט הזה", en: "No messages in this chat yet", ar: "لا توجد رسائل في هذه الدردشة بعد", ru: "В этом чате пока нет сообщений" },
     chatYou: { he: "אני", en: "You", ar: "أنا", ru: "Я" },
+    chatToday: { he: "היום", en: "Today", ar: "اليوم", ru: "Сегодня" },
+    chatYesterday: { he: "אתמול", en: "Yesterday", ar: "أمس", ru: "Вчера" },
     chatAskNamePrompt: { he: "איך שמך יוצג לשאר המשתתפים בצ'אט הזה?", en: "How should your name appear to others in this chat?", ar: "كيف تريد أن يظهر اسمك لبقية المشاركين في هذه الدردشة؟", ru: "Как ваше имя будет отображаться другим участникам этого чата?" },
     newSharedProjectNotifTitle: { he: "צורפת לפרויקט משותף", en: "You were added to a shared project", ar: "تمت إضافتك إلى مشروع مشترك", ru: "Вас добавили в общий проект" },
     newSharedProjectNotifBody: { he: "{name} - לחצו כדי לפתוח", en: "{name} - tap to open", ar: "{name} - انقر للفتح", ru: "{name} - нажмите, чтобы открыть" },
@@ -2678,6 +2754,16 @@
   var activeChatSheetId = null;
   var chatPollTimer = null;
 
+  function chatDayLabel(ts) {
+    var d = new Date(ts);
+    var today = new Date();
+    var yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+    if (d.toDateString() === today.toDateString()) return tr("chatToday");
+    if (d.toDateString() === yesterday.toDateString()) return tr("chatYesterday");
+    return d.toLocaleDateString([], { day: "2-digit", month: "2-digit", year: "numeric" });
+  }
+
   function renderChatMessages() {
     var sheet = sharedSheets.find(function (s) { return s.id === activeChatSheetId; });
     var messages = (sheet && sheet.messages) || [];
@@ -2689,15 +2775,30 @@
       chatMessages.appendChild(empty);
       return;
     }
-    messages.forEach(function (m) {
+    var lastDay = null;
+    messages.forEach(function (m, i) {
+      var day = new Date(m.ts).toDateString();
+      if (day !== lastDay) {
+        var sep = document.createElement("div");
+        sep.className = "chat-day-sep";
+        sep.textContent = chatDayLabel(m.ts);
+        chatMessages.appendChild(sep);
+        lastDay = day;
+      }
+      var isMine = m.phone === myPhoneNumber;
+      var prev = messages[i - 1];
+      var isStart = day !== (prev ? new Date(prev.ts).toDateString() : null) || !prev || prev.phone !== m.phone;
       var bubble = document.createElement("div");
-      bubble.className = "chat-bubble" + (m.phone === myPhoneNumber ? " chat-bubble-mine" : "");
-      var senderEl = document.createElement("div");
-      senderEl.className = "chat-bubble-sender";
-      var knownName = sheet && sheet.memberNames && sheet.memberNames[m.phone];
-      senderEl.textContent = m.phone === myPhoneNumber ? tr("chatYou") : (knownName || m.phone);
-      bubble.appendChild(senderEl);
+      bubble.className = "chat-bubble " + (isMine ? "chat-bubble-mine" : "chat-bubble-theirs") + (isStart ? " chat-bubble-start" : "");
+      if (isStart && !isMine) {
+        var senderEl = document.createElement("div");
+        senderEl.className = "chat-bubble-sender";
+        var knownName = sheet && sheet.memberNames && sheet.memberNames[m.phone];
+        senderEl.textContent = knownName || m.phone;
+        bubble.appendChild(senderEl);
+      }
       var textEl = document.createElement("div");
+      textEl.className = "chat-bubble-text";
       textEl.textContent = m.text;
       bubble.appendChild(textEl);
       var timeEl = document.createElement("div");
