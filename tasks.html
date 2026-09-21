@@ -593,6 +593,60 @@
     height: 34px;
     display: block;
   }
+  .chat-editing-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 6px 14px;
+    background: var(--paper-alt);
+    border-top: 1px solid var(--rule);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--accent);
+  }
+  .chat-editing-bar[hidden] { display: none; }
+  .chat-editing-cancel {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--ink-muted);
+    font-size: 0.9rem;
+    padding: 2px 4px;
+  }
+  .chat-bubble-image img {
+    max-width: 100%;
+    width: 190px;
+    border-radius: 8px;
+    display: block;
+    cursor: pointer;
+  }
+  .chat-bubble-file {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 170px;
+  }
+  .chat-bubble-file-icon { font-size: 1.6rem; flex-shrink: 0; }
+  .chat-bubble-file-info { flex: 1; min-width: 0; }
+  .chat-bubble-file-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .chat-bubble-file-size { font-size: 0.72rem; opacity: 0.75; }
+  .chat-bubble-download-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.15rem;
+    color: inherit;
+    flex-shrink: 0;
+    padding: 4px;
+  }
+  .chat-bubble-edited-mark { font-size: 0.62rem; opacity: 0.65; margin-inline-start: 4px; }
   .report-table-wrap { flex: 1; overflow: auto; padding: 0 12px; }
   .report-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
   .report-table th, .report-table td {
@@ -1854,16 +1908,35 @@
       <div class="report-head-title" id="chatHeadTitle"></div>
     </div>
     <div class="chat-messages" id="chatMessages"></div>
+    <div class="chat-editing-bar" id="chatEditingBar" hidden>
+      <span class="chat-editing-label" data-i18n="chatEditingLabel">עריכת הודעה</span>
+      <button type="button" class="chat-editing-cancel" id="chatEditingCancelBtn" data-i18n-title="chatRecordingCancelTitle" title="ביטול">&#10005;</button>
+    </div>
     <form class="add-row" id="chatForm">
+      <button type="button" class="add-btn" id="chatAttachBtn" data-i18n-title="chatAttachBtnTitle" title="צירוף קובץ">&#128206;</button>
       <button type="button" class="add-btn" id="chatMicBtn" data-i18n-title="chatMicBtnTitle" title="הקלטת הודעה קולית">&#127908;</button>
       <input type="text" id="chatInput" data-i18n-ph="chatInputPlaceholder" placeholder="הודעה..." maxlength="500" required autocomplete="off">
       <button type="submit" class="add-btn" data-i18n-title="chatSendBtnTitle" title="שליחה">&#10148;</button>
+      <input type="file" id="chatFileInput" hidden>
     </form>
     <div class="chat-recording-bar" id="chatRecordingBar" hidden>
       <button type="button" class="chat-recording-cancel" id="chatRecordingCancelBtn" data-i18n-title="chatRecordingCancelTitle" title="ביטול">&#128465;</button>
       <span class="chat-recording-dot" aria-hidden="true"></span>
       <span class="chat-recording-time" id="chatRecordingTime">0:00</span>
       <button type="button" class="chat-recording-send" id="chatRecordingSendBtn" data-i18n-title="chatSendBtnTitle" title="שליחה">&#10148;</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="chatMsgActionOverlay" hidden>
+    <div class="modal-box" role="alertdialog" aria-modal="true">
+      <p class="modal-message" data-i18n="chatMsgActionModalMessage">מה לעשות עם ההודעה?</p>
+      <div class="move-task-mode">
+        <button type="button" id="chatMsgEditBtn" data-i18n="chatMsgEditBtn">עריכה</button>
+        <button type="button" id="chatMsgDeleteBtn" class="danger-btn" data-i18n="chatMsgDeleteBtn">מחיקה</button>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="modal-btn modal-btn-no" id="chatMsgActionCancelBtn" data-i18n="cancelBtn">ביטול</button>
+      </div>
     </div>
   </div>
 
@@ -2086,6 +2159,14 @@
     voiceNotSupported: { he: "הקלטת קול לא נתמכת בדפדפן הזה", en: "Voice recording isn't supported in this browser", ar: "تسجيل الصوت غير مدعوم في هذا المتصفح", ru: "Запись голоса не поддерживается в этом браузере" },
     voiceMicPermissionDenied: { he: "לא ניתנה הרשאה למיקרופון", en: "Microphone permission was denied", ar: "لم يتم منح إذن الميكروفون", ru: "Доступ к микрофону не предоставлен" },
     voiceUploadError: { he: "שליחת ההודעה הקולית נכשלה", en: "Failed to send the voice message", ar: "فشل إرسال الرسالة الصوتية", ru: "Не удалось отправить голосовое сообщение" },
+    chatAttachBtnTitle: { he: "צירוף קובץ", en: "Attach file", ar: "إرفاق ملف", ru: "Прикрепить файл" },
+    chatFileUploadError: { he: "העלאת הקובץ נכשלה", en: "File upload failed", ar: "فشل تحميل الملف", ru: "Не удалось загрузить файл" },
+    chatMsgActionModalMessage: { he: "מה לעשות עם ההודעה?", en: "What would you like to do with this message?", ar: "ماذا تريد أن تفعل بهذه الرسالة؟", ru: "Что сделать с этим сообщением?" },
+    chatMsgEditBtn: { he: "עריכה", en: "Edit", ar: "تعديل", ru: "Изменить" },
+    chatMsgDeleteBtn: { he: "מחיקה", en: "Delete", ar: "حذف", ru: "Удалить" },
+    chatMsgConfirmDelete: { he: "למחוק את ההודעה הזו?", en: "Delete this message?", ar: "هل تريد حذف هذه الرسالة؟", ru: "Удалить это сообщение?" },
+    chatEditingLabel: { he: "עריכת הודעה", en: "Editing message", ar: "تعديل الرسالة", ru: "Редактирование сообщения" },
+    chatMsgEditedMark: { he: "נערך", en: "edited", ar: "معدّلة", ru: "изменено" },
     chatEmptyPrompt: { he: "אין עדיין הודעות בצ'אט הזה", en: "No messages in this chat yet", ar: "لا توجد رسائل في هذه الدردشة بعد", ru: "В этом чате пока нет сообщений" },
     chatYou: { he: "אני", en: "You", ar: "أنا", ru: "Я" },
     chatToday: { he: "היום", en: "Today", ar: "اليوم", ru: "Сегодня" },
@@ -3173,6 +3254,43 @@
         audioEl.preload = "none";
         audioEl.src = m.audioUrl;
         textEl.appendChild(audioEl);
+      } else if (m.type === "file") {
+        var isImg = /^image\//.test(m.fileType || "");
+        if (isImg) {
+          textEl.className = "chat-bubble-image";
+          var imgEl = document.createElement("img");
+          imgEl.src = m.fileUrl;
+          imgEl.alt = m.fileName || "";
+          imgEl.addEventListener("click", function () { window.open(m.fileUrl, "_blank"); });
+          textEl.appendChild(imgEl);
+        } else {
+          textEl.className = "chat-bubble-file";
+          var fileIcon = document.createElement("div");
+          fileIcon.className = "chat-bubble-file-icon";
+          fileIcon.textContent = "📄";
+          textEl.appendChild(fileIcon);
+          var fileInfo = document.createElement("div");
+          fileInfo.className = "chat-bubble-file-info";
+          var fileNameEl = document.createElement("div");
+          fileNameEl.className = "chat-bubble-file-name";
+          fileNameEl.textContent = m.fileName || "";
+          fileInfo.appendChild(fileNameEl);
+          var fileSizeEl = document.createElement("div");
+          fileSizeEl.className = "chat-bubble-file-size";
+          fileSizeEl.textContent = formatFileSize(m.fileSize);
+          fileInfo.appendChild(fileSizeEl);
+          textEl.appendChild(fileInfo);
+        }
+        var downloadBtn = document.createElement("button");
+        downloadBtn.type = "button";
+        downloadBtn.className = "chat-bubble-download-btn";
+        downloadBtn.textContent = "⬇";
+        downloadBtn.title = tr("libraryAddBtnTitle");
+        downloadBtn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          downloadChatFile(m.fileUrl, m.fileName);
+        });
+        textEl.appendChild(downloadBtn);
       } else {
         textEl.className = "chat-bubble-text";
         textEl.textContent = m.text;
@@ -3181,10 +3299,25 @@
       var timeEl = document.createElement("div");
       timeEl.className = "chat-bubble-time";
       timeEl.textContent = new Date(m.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      if (m.edited) {
+        var editedEl = document.createElement("span");
+        editedEl.className = "chat-bubble-edited-mark";
+        editedEl.textContent = tr("chatMsgEditedMark");
+        timeEl.appendChild(editedEl);
+      }
       bubble.appendChild(timeEl);
+      if (isMine) attachChatBubbleLongPress(bubble, m);
       chatMessages.appendChild(bubble);
     });
     chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+
+  function downloadChatFile(url, fileName) {
+    fetch(url).then(function (res) { return res.blob(); }).then(function (blob) {
+      downloadBlob(blob, fileName || "file");
+    }).catch(function () {
+      window.open(url, "_blank");
+    });
   }
 
   function refreshActiveChat() {
@@ -3232,6 +3365,7 @@
   }
   function closeChatView() {
     if (activeRecorder) stopVoiceRecording(false);
+    if (editingChatMessageId) cancelEditingChatMessage();
     chatView.hidden = true;
     activeChatSheetId = null;
     clearInterval(chatPollTimer);
@@ -3261,7 +3395,13 @@
     var text = chatInput.value;
     if (!text.trim() || !activeChatSheetId) return;
     chatInput.value = "";
-    sendChatMessage(activeChatSheetId, text).then(renderChatMessages);
+    if (editingChatMessageId) {
+      var msgId = editingChatMessageId;
+      cancelEditingChatMessage();
+      updateChatMessageText(activeChatSheetId, msgId, text).then(renderChatMessages);
+    } else {
+      sendChatMessage(activeChatSheetId, text).then(renderChatMessages);
+    }
   });
 
   function sendChatVoiceMessage(sheetId, audioUrl, durationSec) {
@@ -3365,6 +3505,147 @@
   chatMicBtn.addEventListener("click", startVoiceRecording);
   chatRecordingCancelBtn.addEventListener("click", function () { stopVoiceRecording(false); });
   chatRecordingSendBtn.addEventListener("click", function () { stopVoiceRecording(true); });
+
+  var chatAttachBtn = document.getElementById("chatAttachBtn");
+  var chatFileInput = document.getElementById("chatFileInput");
+  chatAttachBtn.addEventListener("click", function () { chatFileInput.click(); });
+  chatFileInput.addEventListener("change", function () {
+    var file = chatFileInput.files && chatFileInput.files[0];
+    chatFileInput.value = "";
+    if (file) uploadAndSendChatFile(file);
+  });
+
+  function uploadAndSendChatFile(file) {
+    if (!activeChatSheetId || !supabaseClient) return;
+    var path = activeChatSheetId + "/files/" + uid() + "-" + file.name;
+    supabaseClient.storage.from(LIBRARY_BUCKET).upload(path, file)
+      .then(function (result) {
+        if (result.error) throw result.error;
+        var url = libraryPublicUrl(path);
+        return sendChatFileMessage(activeChatSheetId, url, file.name, file.type || "", file.size || 0);
+      })
+      .then(function () { renderChatMessages(); }, function () { alert(tr("chatFileUploadError")); });
+  }
+
+  function sendChatFileMessage(sheetId, fileUrl, fileName, fileType, fileSize) {
+    if (!fileUrl || !supabaseClient) return Promise.resolve();
+    return supabaseClient.from(SHARED_TABLE).select("messages").eq("id", sheetId).maybeSingle()
+      .then(function (result) {
+        var current = (result && result.data && result.data.messages) || [];
+        var msg = { id: uid(), phone: myPhoneNumber, type: "file", fileUrl: fileUrl, fileName: fileName, fileType: fileType, fileSize: fileSize, ts: Date.now() };
+        var updated = current.concat([msg]).slice(-200);
+        return supabaseClient.from(SHARED_TABLE).update({ messages: updated }).eq("id", sheetId)
+          .then(function () {
+            var sheet = sharedSheets.find(function (s) { return s.id === sheetId; });
+            if (sheet) sheet.messages = updated;
+          });
+      });
+  }
+
+  var chatMsgActionOverlay = document.getElementById("chatMsgActionOverlay");
+  var chatMsgEditBtn = document.getElementById("chatMsgEditBtn");
+  var chatMsgDeleteBtn = document.getElementById("chatMsgDeleteBtn");
+  var chatMsgActionCancelBtn = document.getElementById("chatMsgActionCancelBtn");
+  var chatEditingBar = document.getElementById("chatEditingBar");
+  var chatEditingCancelBtn = document.getElementById("chatEditingCancelBtn");
+  var pendingChatActionMessage = null;
+  var editingChatMessageId = null;
+  var chatLongPressTimer = null;
+
+  function attachChatBubbleLongPress(bubbleEl, message) {
+    var startX = 0, startY = 0, fired = false;
+    var start = function (e) {
+      var pt = e.touches ? e.touches[0] : e;
+      startX = pt.clientX; startY = pt.clientY; fired = false;
+      clearTimeout(chatLongPressTimer);
+      chatLongPressTimer = setTimeout(function () {
+        fired = true;
+        openChatMessageActionModal(message);
+      }, 550);
+    };
+    var cancel = function () { clearTimeout(chatLongPressTimer); };
+    var move = function (e) {
+      var pt = e.touches ? e.touches[0] : e;
+      if (Math.abs(pt.clientX - startX) > 10 || Math.abs(pt.clientY - startY) > 10) cancel();
+    };
+    bubbleEl.addEventListener("mousedown", start);
+    bubbleEl.addEventListener("mouseup", cancel);
+    bubbleEl.addEventListener("mouseleave", cancel);
+    bubbleEl.addEventListener("mousemove", move);
+    bubbleEl.addEventListener("touchstart", start, { passive: true });
+    bubbleEl.addEventListener("touchend", cancel);
+    bubbleEl.addEventListener("touchmove", move, { passive: true });
+  }
+
+  function openChatMessageActionModal(message) {
+    pendingChatActionMessage = message;
+    chatMsgEditBtn.hidden = message.type === "voice" || message.type === "file";
+    chatMsgActionOverlay.hidden = false;
+  }
+  function closeChatMessageActionModal() {
+    chatMsgActionOverlay.hidden = true;
+    pendingChatActionMessage = null;
+  }
+  chatMsgActionCancelBtn.addEventListener("click", closeChatMessageActionModal);
+  chatMsgActionOverlay.addEventListener("click", function (e) {
+    if (e.target === chatMsgActionOverlay) closeChatMessageActionModal();
+  });
+
+  function deleteChatMessage(sheetId, msgId) {
+    if (!supabaseClient) return;
+    supabaseClient.from(SHARED_TABLE).select("messages").eq("id", sheetId).maybeSingle().then(function (result) {
+      var current = (result && result.data && result.data.messages) || [];
+      var updated = current.filter(function (m) { return m.id !== msgId; });
+      return supabaseClient.from(SHARED_TABLE).update({ messages: updated }).eq("id", sheetId).then(function () {
+        var sheet = sharedSheets.find(function (s) { return s.id === sheetId; });
+        if (sheet) sheet.messages = updated;
+        renderChatMessages();
+      });
+    });
+  }
+
+  function updateChatMessageText(sheetId, msgId, newText) {
+    if (!supabaseClient) return Promise.resolve();
+    return supabaseClient.from(SHARED_TABLE).select("messages").eq("id", sheetId).maybeSingle().then(function (result) {
+      var current = (result && result.data && result.data.messages) || [];
+      var updated = current.map(function (m) {
+        if (m.id === msgId) return Object.assign({}, m, { text: newText.trim().slice(0, 500), edited: true });
+        return m;
+      });
+      return supabaseClient.from(SHARED_TABLE).update({ messages: updated }).eq("id", sheetId).then(function () {
+        var sheet = sharedSheets.find(function (s) { return s.id === sheetId; });
+        if (sheet) sheet.messages = updated;
+      });
+    });
+  }
+
+  function startEditingChatMessage(message) {
+    editingChatMessageId = message.id;
+    chatInput.value = message.text || "";
+    chatEditingBar.hidden = false;
+    chatInput.focus();
+  }
+  function cancelEditingChatMessage() {
+    editingChatMessageId = null;
+    chatInput.value = "";
+    chatEditingBar.hidden = true;
+  }
+  chatEditingCancelBtn.addEventListener("click", cancelEditingChatMessage);
+
+  chatMsgDeleteBtn.addEventListener("click", function () {
+    var message = pendingChatActionMessage;
+    closeChatMessageActionModal();
+    if (!message) return;
+    askConfirm(tr("chatMsgConfirmDelete"), function () {
+      if (editingChatMessageId === message.id) cancelEditingChatMessage();
+      deleteChatMessage(activeChatSheetId, message.id);
+    });
+  });
+  chatMsgEditBtn.addEventListener("click", function () {
+    var message = pendingChatActionMessage;
+    closeChatMessageActionModal();
+    if (message) startEditingChatMessage(message);
+  });
 
   var LIBRARY_BUCKET = "project-files";
   var libraryBtn = document.getElementById("libraryBtn");
