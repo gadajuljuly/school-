@@ -3470,7 +3470,8 @@
   }
 
   function uploadAndSendVoiceMessage(blob, durationSec) {
-    if (!activeChatSheetId || !supabaseClient || !blob.size) return;
+    if (!activeChatSheetId || !supabaseClient) return;
+    if (!blob.size) { alert(tr("voiceUploadError") + " (empty recording)"); return; }
     var ext = (blob.type && blob.type.indexOf("mp4") !== -1) ? "m4a" : "webm";
     var path = activeChatSheetId + "/voice/" + uid() + "." + ext;
     supabaseClient.storage.from(LIBRARY_BUCKET).upload(path, blob, { contentType: blob.type || "audio/webm" })
@@ -3479,7 +3480,10 @@
         var url = libraryPublicUrl(path);
         return sendChatVoiceMessage(activeChatSheetId, url, durationSec);
       })
-      .then(function () { renderChatMessages(); }, function () { alert(tr("voiceUploadError")); });
+      .then(function () { renderChatMessages(); }, function (err) {
+        console.error("voice message send failed:", err);
+        alert(tr("voiceUploadError") + "\n" + ((err && (err.message || err.error || err.statusCode)) || JSON.stringify(err) || ""));
+      });
   }
 
   function stopVoiceRecording(shouldSend) {
