@@ -2164,6 +2164,43 @@
     });
   }
 
+  var BACKUP_TABLE = "app_state_backups";
+  var BACKUP_MIN_INTERVAL_MS = 6 * 60 * 60 * 1000;
+  var BACKUP_KEEP_COUNT = 20;
+
+  function backupStorageKey() {
+    return "itask-last-backup:" + SUPABASE_ROW_ID;
+  }
+
+  function pruneOldBackups() {
+    supabaseClient.from(BACKUP_TABLE).select("id").eq("row_id", SUPABASE_ROW_ID).order("created_at", { ascending: false })
+      .then(function (result) {
+        var rows = (result && result.data) || [];
+        var toDelete = rows.slice(BACKUP_KEEP_COUNT).map(function (r) { return r.id; });
+        if (toDelete.length) {
+          supabaseClient.from(BACKUP_TABLE).delete().in("id", toDelete).then(function () {}, function () {});
+        }
+      }, function () {});
+  }
+
+  // Best-effort rolling backup: whenever we've just confirmed we're holding
+  // real data (not a bare fresh default), snapshot it into a separate
+  // history table at most once per BACKUP_MIN_INTERVAL_MS, so a future bug
+  // or mistake has something to restore from beyond just the live row.
+  function maybeBackupData() {
+    if (!supabaseClient || !SUPABASE_ROW_ID) return;
+    var lastBackupAt = 0;
+    try { lastBackupAt = Number(localStorage.getItem(backupStorageKey())) || 0; } catch (e) {}
+    if (Date.now() - lastBackupAt < BACKUP_MIN_INTERVAL_MS) return;
+    try {
+      supabaseClient.from(BACKUP_TABLE).insert({ row_id: SUPABASE_ROW_ID, data: data }).then(function (result) {
+        if (result && result.error) return;
+        try { localStorage.setItem(backupStorageKey(), String(Date.now())); } catch (e) {}
+        try { pruneOldBackups(); } catch (e) {}
+      }, function () {});
+    } catch (e) {}
+  }
+
   var data = defaultData();
   var state = { filter: "all", renamingSheetId: null, menuOpen: false, editingTaskId: null, viewDate: todayISO(), searchOpen: false, highlightTaskId: null, viewMode: "tasks" };
 
@@ -4956,6 +4993,9 @@
         var local = remote ? null : (loadLocalData() || findLegacyLocalData());
         var isFreshDefault = !remote && !local;
         data = remote || local || defaultData();
+        // Backups are a nice-to-have safety net, never allowed to disrupt
+        // the core load/save flow if the backup table/call misbehaves.
+        if (!isFreshDefault) { try { maybeBackupData(); } catch (e) {} }
         var rolled = applyDailyRollover(data);
         // Same protection as startLocalOnly: never auto-save a bare default
         // over a row we simply failed to read cleanly. Only persist here
