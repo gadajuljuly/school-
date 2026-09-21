@@ -1145,16 +1145,9 @@
   li.task.task-highlight {
     animation: task-highlight-flash 2.2s ease-out;
   }
-  li.task.task-highlight .task-text {
-    animation: task-highlight-flash-text 2.2s ease-out;
-  }
   @keyframes task-highlight-flash {
     0% { background: var(--accent); }
     100% { background: transparent; }
-  }
-  @keyframes task-highlight-flash-text {
-    0% { background: var(--accent); }
-    100% { background: var(--paper); }
   }
   @keyframes urgent-blink {
     0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(182, 71, 63, 0.7); }
@@ -1167,14 +1160,13 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     line-height: 16px;
-    background: var(--paper);
   }
   .task-text-input {
     flex: 1;
     min-width: 0;
     border: none;
     border-bottom: 1px solid var(--accent);
-    background: var(--paper);
+    background: transparent;
     font: inherit;
     color: var(--ink);
     outline: none;
