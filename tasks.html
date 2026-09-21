@@ -2257,7 +2257,7 @@
   }
 
   var BACKUP_TABLE = "app_state_backups";
-  var BACKUP_MIN_INTERVAL_MS = 6 * 60 * 60 * 1000;
+  var BACKUP_MIN_INTERVAL_MS = 30 * 60 * 1000;
   var BACKUP_KEEP_COUNT = 20;
 
   function backupStorageKey() {
@@ -2280,7 +2280,7 @@
   // history table at most once per BACKUP_MIN_INTERVAL_MS, so a future bug
   // or mistake has something to restore from beyond just the live row.
   function maybeBackupData() {
-    if (!supabaseClient || !SUPABASE_ROW_ID) return;
+    if (!supabaseClient || !SUPABASE_ROW_ID || dataLoadBlocked) return;
     var lastBackupAt = 0;
     try { lastBackupAt = Number(localStorage.getItem(backupStorageKey())) || 0; } catch (e) {}
     if (Date.now() - lastBackupAt < BACKUP_MIN_INTERVAL_MS) return;
@@ -5355,6 +5355,14 @@
     });
   }
 
+  // A fresh backup snapshot is only taken on load, gated by
+  // BACKUP_MIN_INTERVAL_MS - but a session can stay open for hours without
+  // a reload, during which real edits would sit unbacked-up the whole time.
+  // Re-check periodically so a long session still gets a recent snapshot.
+  function startPeriodicBackup() {
+    setInterval(function () { try { maybeBackupData(); } catch (e) {} }, 15 * 60 * 1000);
+  }
+
   function showApp(phoneNumber, rowId) {
     SUPABASE_ROW_ID = rowId;
     myPhoneNumber = phoneNumber;
@@ -5369,6 +5377,7 @@
     initReminderSettings();
     establishSession().then(startSessionWatcher);
     startSharedSheetsWatcher();
+    startPeriodicBackup();
   }
 
   function showAuthGate() {
