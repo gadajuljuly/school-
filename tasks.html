@@ -34,6 +34,14 @@
     --low: #d9722a;
     --report-green: #3c8a5c;
     --shadow: rgba(44, 42, 36, 0.18);
+    --contact-bg-1: #dde8f5; --contact-name-1: #2c5282;
+    --contact-bg-2: #e0f0e0; --contact-name-2: #276749;
+    --contact-bg-3: #fbe8d9; --contact-name-3: #9c4a1a;
+    --contact-bg-4: #f5e0ec; --contact-name-4: #97266d;
+    --contact-bg-5: #e8e0f8; --contact-name-5: #553c9a;
+    --contact-bg-6: #fdf0d0; --contact-name-6: #8a5a10;
+    --contact-bg-7: #dcf5f0; --contact-name-7: #1a6e63;
+    --contact-bg-8: #f5e0e0; --contact-name-8: #9b2c2c;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
@@ -47,6 +55,14 @@
       --accent: #7fb0e0;
       --accent-contrast: #16181c;
       --shadow: rgba(0, 0, 0, 0.5);
+      --contact-bg-1: #24374d; --contact-name-1: #8ab4e8;
+      --contact-bg-2: #24402c; --contact-name-2: #8cd9a0;
+      --contact-bg-3: #4a3420; --contact-name-3: #e8a868;
+      --contact-bg-4: #452038; --contact-name-4: #e895c0;
+      --contact-bg-5: #362450; --contact-name-5: #b39ce8;
+      --contact-bg-6: #453410; --contact-name-6: #e0c068;
+      --contact-bg-7: #1c4038; --contact-name-7: #7fd9c8;
+      --contact-bg-8: #402020; --contact-name-8: #e08888;
     }
   }
   :root[data-theme="dark"] {
@@ -60,6 +76,14 @@
     --accent: #7fb0e0;
     --accent-contrast: #16181c;
     --shadow: rgba(0, 0, 0, 0.5);
+    --contact-bg-1: #24374d; --contact-name-1: #8ab4e8;
+    --contact-bg-2: #24402c; --contact-name-2: #8cd9a0;
+    --contact-bg-3: #4a3420; --contact-name-3: #e8a868;
+    --contact-bg-4: #452038; --contact-name-4: #e895c0;
+    --contact-bg-5: #362450; --contact-name-5: #b39ce8;
+    --contact-bg-6: #453410; --contact-name-6: #e0c068;
+    --contact-bg-7: #1c4038; --contact-name-7: #7fd9c8;
+    --contact-bg-8: #402020; --contact-name-8: #e08888;
   }
   * { box-sizing: border-box; }
   body {
@@ -372,7 +396,7 @@
     box-shadow: 0 1px 1.5px var(--shadow);
   }
   .chat-bubble.chat-bubble-start { margin-top: 6px; }
-  .chat-bubble-theirs { margin-right: auto; }
+  .chat-bubble-theirs { margin-right: auto; background: var(--bubble-bg, var(--paper-alt)); }
   .chat-bubble-mine {
     margin-left: auto;
     background: var(--accent);
@@ -385,7 +409,7 @@
     left: -7px;
     width: 9px;
     height: 12px;
-    background: var(--paper-alt);
+    background: var(--bubble-bg, var(--paper-alt));
     clip-path: polygon(100% 0, 0 50%, 100% 100%);
   }
   .chat-bubble-mine.chat-bubble-start::after {
@@ -399,10 +423,11 @@
     clip-path: polygon(0 0, 100% 50%, 0 100%);
   }
   .chat-bubble-sender {
-    font-size: 0.74rem;
-    font-weight: 700;
-    color: var(--accent);
-    margin-bottom: 2px;
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: var(--sender-color, var(--accent));
+    margin-bottom: 3px;
+    letter-spacing: 0.01em;
   }
   .chat-bubble-mine .chat-bubble-sender { color: inherit; opacity: 0.85; }
   .chat-bubble-text { white-space: pre-wrap; }
@@ -3005,6 +3030,13 @@
     } catch (e) {}
   }
 
+  var CONTACT_COLOR_COUNT = 8;
+  function contactColorIndex(phone) {
+    var hash = 0;
+    for (var i = 0; i < phone.length; i++) hash = (hash * 31 + phone.charCodeAt(i)) >>> 0;
+    return (hash % CONTACT_COLOR_COUNT) + 1;
+  }
+
   function chatDayLabel(ts) {
     var d = new Date(ts);
     var today = new Date();
@@ -3041,6 +3073,11 @@
       var isStart = day !== (prev ? new Date(prev.ts).toDateString() : null) || !prev || prev.phone !== m.phone;
       var bubble = document.createElement("div");
       bubble.className = "chat-bubble " + (isMine ? "chat-bubble-mine" : "chat-bubble-theirs") + (isStart ? " chat-bubble-start" : "");
+      if (!isMine) {
+        var colorIdx = contactColorIndex(m.phone);
+        bubble.style.setProperty("--bubble-bg", "var(--contact-bg-" + colorIdx + ")");
+        bubble.style.setProperty("--sender-color", "var(--contact-name-" + colorIdx + ")");
+      }
       if (isStart && !isMine) {
         var senderEl = document.createElement("div");
         senderEl.className = "chat-bubble-sender";
