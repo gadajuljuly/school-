@@ -91,6 +91,38 @@
     background: var(--paper);
   }
   .app-loading-overlay[hidden] { display: none; }
+  .data-error-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    background: var(--paper);
+    padding: 24px;
+    text-align: center;
+  }
+  .data-error-overlay[hidden] { display: none; }
+  .data-error-text {
+    color: var(--ink);
+    font-size: 0.95rem;
+    font-weight: 600;
+    max-width: 320px;
+    line-height: 1.5;
+  }
+  .data-error-retry-btn {
+    padding: 10px 26px;
+    border-radius: 8px;
+    border: none;
+    background: var(--accent);
+    color: var(--accent-contrast);
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
   .app-loading-text {
     color: var(--ink-muted);
     font-size: 0.95rem;
@@ -1477,6 +1509,10 @@
   <div class="app-loading-overlay" id="appLoadingOverlay">
     <div class="app-loading-text" data-i18n="appLoadingText">טוען...</div>
   </div>
+  <div class="data-error-overlay" id="dataErrorOverlay" hidden>
+    <div class="data-error-text" data-i18n="dataErrorText">לא הצלחנו לטעון את הנתונים שלך מהשרת. כדי להגן על המידע שלך, העריכה חסומה עד שהחיבור יחזור.</div>
+    <button type="button" class="data-error-retry-btn" id="dataErrorRetryBtn" data-i18n="dataErrorRetryBtn">נסה שוב</button>
+  </div>
   <div class="notebook">
     <div class="notebook-head">
       <span class="notebook-date-wrap">
@@ -1789,6 +1825,13 @@
   var TRANSLATIONS = {
     authSubtitle: { he: "התחברו כדי לראות את המשימות שלכם", en: "Log in to see your tasks", ar: "سجّل الدخول لرؤية مهامك", ru: "Войдите, чтобы увидеть свои задачи" },
     appLoadingText: { he: "טוען...", en: "Loading...", ar: "جارٍ التحميل...", ru: "Загрузка..." },
+    dataErrorText: {
+      he: "לא הצלחנו לטעון את הנתונים שלך מהשרת. כדי להגן על המידע שלך, העריכה חסומה עד שהחיבור יחזור.",
+      en: "We couldn't load your data from the server. To protect your information, editing is disabled until the connection is back.",
+      ar: "لم نتمكن من تحميل بياناتك من الخادم. لحماية معلوماتك، تم تعطيل التعديل حتى يعود الاتصال.",
+      ru: "Не удалось загрузить ваши данные с сервера. Чтобы защитить вашу информацию, редактирование отключено до восстановления соединения."
+    },
+    dataErrorRetryBtn: { he: "נסה שוב", en: "Try again", ar: "حاول مرة أخرى", ru: "Повторить" },
     authPhonePlaceholder: { he: "50-1234567", en: "50-1234567", ar: "50-1234567", ru: "50-1234567" },
     authSendCodeBtn: { he: "שליחת קוד", en: "Send code", ar: "إرسال الرمز", ru: "Отправить код" },
     authCodePlaceholder: { he: "קוד בן 6 ספרות", en: "6-digit code", ar: "رمز مكوّن من 6 أرقام", ru: "6-значный код" },
@@ -2187,6 +2230,7 @@
   var SHARED_TABLE = "shared_projects";
 
   function saveData() {
+    if (dataLoadBlocked) return;
     saveLocalData();
     if (supabaseClient) {
       supabaseClient.from("app_state")
@@ -2250,6 +2294,7 @@
   }
 
   var data = defaultData();
+  var dataLoadBlocked = false;
   var state = { filter: "all", renamingSheetId: null, menuOpen: false, editingTaskId: null, viewDate: todayISO(), searchOpen: false, highlightTaskId: null, viewMode: "tasks" };
 
   var dateLabel = document.getElementById("dateLabel");
@@ -5077,14 +5122,36 @@
     return loadLocalData() || defaultData();
   }
 
+  // If we can't confirm what's really in Supabase (or in a local cache) for
+  // this user, we must never show a silently-empty, fully-editable app: any
+  // ordinary action the user then takes (adding a task, renaming...) calls
+  // the plain saveData() below, which would happily persist that empty
+  // in-memory placeholder over real data still sitting in the row. Instead
+  // we block all editing behind a visible retry screen until a load
+  // actually confirms either real data or a genuinely brand-new user.
+  function showDataLoadError() {
+    dataLoadBlocked = true;
+    appLoadingOverlay.hidden = true;
+    dataErrorOverlay.hidden = false;
+  }
+  function hideDataLoadError() {
+    dataLoadBlocked = false;
+    dataErrorOverlay.hidden = true;
+  }
+
   function startLocalOnly() {
     // Only ever auto-save here if we actually had a local cache to roll
     // forward. If local storage is also empty (new browser profile, cleared
-    // data, a transient read failure - anything), fall back to an in-memory
-    // default WITHOUT persisting it: a network hiccup must never be able to
-    // silently overwrite real data already sitting in Supabase just because
-    // this one load couldn't reach it.
-    var local = loadLocalData();
+    // data, a transient read failure - anything) AND there's a real Supabase
+    // row this might be shadowing, block editing instead of rendering an
+    // in-memory default: a network hiccup must never be able to silently
+    // overwrite real data already sitting in Supabase just because this one
+    // load couldn't reach it. When there's no Supabase client at all (e.g.
+    // it failed to load), there's no remote row to protect, so fall back to
+    // a plain empty default as before.
+    var local = loadLocalData() || findLegacyLocalData();
+    if (!local && supabaseClient) { showDataLoadError(); return; }
+    hideDataLoadError();
     data = local || defaultData();
     if (local && applyDailyRollover(data)) saveData();
     applyTaskLinkFromURL();
@@ -5098,16 +5165,19 @@
         var remote = row && row.data ? normalizeData(row.data) : null;
         var local = remote ? null : (loadLocalData() || findLegacyLocalData());
         var isFreshDefault = !remote && !local;
+        var confirmedNewUser = isFreshDefault && !row;
+        // Same protection as startLocalOnly: never render an editable bare
+        // default over a row we simply failed to read cleanly. Only proceed
+        // here when there's real data, or this is a confirmed brand-new
+        // user (no row exists yet for this id at all).
+        if (isFreshDefault && !confirmedNewUser) { showDataLoadError(); return; }
+        hideDataLoadError();
         data = remote || local || defaultData();
         // Backups are a nice-to-have safety net, never allowed to disrupt
         // the core load/save flow if the backup table/call misbehaves.
         if (!isFreshDefault) { try { maybeBackupData(); } catch (e) {} }
         var rolled = applyDailyRollover(data);
-        // Same protection as startLocalOnly: never auto-save a bare default
-        // over a row we simply failed to read cleanly. Only persist here
-        // when there's real data to roll over, or this is a confirmed
-        // brand-new user (no row exists yet for this id at all).
-        if ((rolled && !isFreshDefault) || (isFreshDefault && !row)) saveData();
+        if ((rolled && !isFreshDefault) || confirmedNewUser) saveData();
         applyTaskLinkFromURL();
         render();
       }, startLocalOnly)
@@ -5203,6 +5273,13 @@
   var authGate = document.getElementById("authGate");
   var appRoot = document.getElementById("appRoot");
   var appLoadingOverlay = document.getElementById("appLoadingOverlay");
+  var dataErrorOverlay = document.getElementById("dataErrorOverlay");
+  var dataErrorRetryBtn = document.getElementById("dataErrorRetryBtn");
+  dataErrorRetryBtn.addEventListener("click", function () {
+    dataErrorOverlay.hidden = true;
+    appLoadingOverlay.hidden = false;
+    if (supabaseClient) startWithSupabase(); else startLocalOnly();
+  });
   var authPhoneForm = document.getElementById("authPhoneForm");
   var authPhone = document.getElementById("authPhone");
   var authError = document.getElementById("authError");
