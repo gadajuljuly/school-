@@ -237,6 +237,48 @@
     color: var(--ink-muted);
     flex-shrink: 0;
   }
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .chat-bubble {
+    max-width: 78%;
+    padding: 8px 12px;
+    border-radius: 14px;
+    background: var(--paper-alt);
+    border: 1px solid var(--rule);
+    font-size: 0.88rem;
+    line-height: 1.4;
+    word-break: break-word;
+  }
+  .chat-bubble-mine {
+    align-self: flex-end;
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .chat-bubble-sender {
+    font-size: 0.72rem;
+    font-weight: 700;
+    opacity: 0.75;
+    margin-bottom: 2px;
+  }
+  .chat-bubble-time {
+    font-size: 0.68rem;
+    opacity: 0.65;
+    margin-top: 2px;
+    text-align: end;
+  }
+  .chat-empty {
+    text-align: center;
+    color: var(--ink-muted);
+    font-size: 0.85rem;
+    margin-top: 20px;
+  }
   .report-table-wrap { flex: 1; overflow: auto; padding: 0 12px; }
   .report-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
   .report-table th, .report-table td {
@@ -996,6 +1038,11 @@
     line-height: 1.5;
     color: var(--ink);
   }
+  .modal-submessage {
+    margin: 14px 0 8px;
+    font-size: 0.8rem;
+    color: var(--ink-muted);
+  }
   .modal-actions {
     display: flex;
     gap: 10px;
@@ -1303,6 +1350,7 @@
     <div class="sheets-row">
       <div class="sheets-bar" id="sheetsBar"></div>
       <div class="sheets-search">
+        <button class="menu-btn" id="chatBtn" data-i18n-title="chatBtnTitle" title="צ'אט הפרויקט" hidden>&#128172;</button>
         <button class="menu-btn" id="searchBtn" data-i18n-title="searchBtnTitle" title="חיפוש משימות" aria-haspopup="true" aria-expanded="false">&#128269;</button>
         <div class="search-panel" id="searchPanel" hidden>
           <input type="text" id="searchInput" class="search-input" data-i18n-ph="searchInputPlaceholder" placeholder="חיפוש משימות בכל הפרויקטים..." autocomplete="off">
@@ -1362,6 +1410,7 @@
         <button type="button" id="sheetActionShareBtn" data-i18n="shareBtn">שיתוף</button>
         <button type="button" id="sheetActionEndBtn" data-i18n="sheetActionEndBtn">הפרויקט הסתיים</button>
       </div>
+      <button type="button" class="convert-to-note-btn" id="sheetActionMembersBtn" data-i18n="sheetActionMembersBtn" hidden>ניהול משתתפים</button>
       <div class="modal-actions">
         <button type="button" class="modal-btn modal-btn-no" id="sheetActionCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
@@ -1453,6 +1502,31 @@
         <button type="button" class="modal-btn modal-btn-no" id="reportParticipantsCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </div>
+  </div>
+
+  <div class="modal-overlay" id="sharedProjectOverlay" hidden>
+    <div class="modal-box" role="alertdialog" aria-modal="true">
+      <p class="modal-message" data-i18n="sharedProjectModalMessage">פרויקט משותף חדש</p>
+      <input type="text" id="sharedProjectNameInput" class="auth-input" data-i18n-ph="sharedProjectNamePlaceholder" placeholder="שם הפרויקט" maxlength="40">
+      <p class="modal-submessage" data-i18n="sharedProjectMembersLabel">מספרי טלפון של המשתתפים</p>
+      <div class="report-participants-list" id="sharedProjectMembersList"></div>
+      <div class="modal-actions">
+        <button type="button" class="modal-btn modal-btn-yes" id="sharedProjectSaveBtn" data-i18n="confirmBtn">אישור</button>
+        <button type="button" class="modal-btn modal-btn-no" id="sharedProjectCancelBtn" data-i18n="cancelBtn">ביטול</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="report-view" id="chatView" hidden>
+    <div class="report-head">
+      <button type="button" class="report-back-btn" id="chatBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
+      <div class="report-head-title" id="chatHeadTitle"></div>
+    </div>
+    <div class="chat-messages" id="chatMessages"></div>
+    <form class="add-row" id="chatForm">
+      <input type="text" id="chatInput" data-i18n-ph="chatInputPlaceholder" placeholder="הודעה..." maxlength="500" required autocomplete="off">
+      <button type="submit" class="add-btn" data-i18n-title="chatSendBtnTitle" title="שליחה">&#10148;</button>
+    </form>
   </div>
 
   <div class="report-view" id="reportView" hidden>
@@ -1558,6 +1632,7 @@
     reportTasksNoneToAdd: { he: "אין שורות עם תוכן להוספה", en: "There are no rows with content to add", ar: "لا توجد عناصر تحتوي على محتوى لإضافتها", ru: "Нет строк с содержимым для добавления" },
     reportTaskDueSuffix: { he: "עד", en: "due", ar: "حتى", ru: "до" },
     sheetActionEndBtn: { he: "הפרויקט הסתיים", en: "Project finished", ar: "انتهى المشروع", ru: "Проект завершён" },
+    sheetActionMembersBtn: { he: "ניהול משתתפים", en: "Manage members", ar: "إدارة المشاركين", ru: "Управление участниками" },
     confirmYesBtn: { he: "כן", en: "Yes", ar: "نعم", ru: "Да" },
     confirmNoBtn: { he: "לא", en: "No", ar: "لا", ru: "Нет" },
     moveTaskModalMessage: { he: "העברה או העתקה של המשימה", en: "Move or copy this task", ar: "نقل أو نسخ هذه المهمة", ru: "Переместить или скопировать задачу" },
@@ -1635,6 +1710,19 @@
     reportParticipantsModalMessage: { he: "משתתפים", en: "Participants", ar: "المشاركون", ru: "Участники" },
     reportParticipantsPlaceholder: { he: "שמות המשתתפים", en: "Participant names", ar: "أسماء المشاركين", ru: "Имена участников" },
     reportParticipantNamePlaceholder: { he: "שם משתתף", en: "Participant name", ar: "اسم المشارك", ru: "Имя участника" },
+    sharedProjectModalMessage: { he: "פרויקט משותף חדש", en: "New shared project", ar: "مشروع مشترك جديد", ru: "Новый общий проект" },
+    sharedProjectNamePlaceholder: { he: "שם הפרויקט", en: "Project name", ar: "اسم المشروع", ru: "Название проекта" },
+    sharedProjectMembersLabel: { he: "מספרי טלפון של המשתתפים", en: "Members' phone numbers", ar: "أرقام هواتف المشاركين", ru: "Номера телефонов участников" },
+    sharedProjectPhonePlaceholder: { he: "050-1234567", en: "050-1234567", ar: "050-1234567", ru: "050-1234567" },
+    sharedProjectDefaultName: { he: "פרויקט משותף", en: "Shared project", ar: "مشروع مشترك", ru: "Общий проект" },
+    sharedProjectNeedMember: { he: "יש להוסיף לפחות מספר טלפון אחד של משתתף", en: "Add at least one member's phone number", ar: "أضف رقم هاتف مشارك واحد على الأقل", ru: "Добавьте хотя бы один номер телефона участника" },
+    cannotDeleteSharedProject: { he: "אי אפשר למחוק פרויקט משותף כרגע", en: "Shared projects can't be deleted yet", ar: "لا يمكن حذف مشروع مشترك حاليًا", ru: "Общий проект пока нельзя удалить" },
+    addSharedProjectHint: { he: "לחיצה ארוכה על + יוצרת פרויקט משותף", en: "Long-press + to create a shared project", ar: "اضغط مطولاً على + لإنشاء مشروع مشترك", ru: "Долгое нажатие на + создаёт общий проект" },
+    chatBtnTitle: { he: "צ'אט הפרויקט", en: "Project chat", ar: "دردشة المشروع", ru: "Чат проекта" },
+    chatInputPlaceholder: { he: "הודעה...", en: "Message...", ar: "رسالة...", ru: "Сообщение..." },
+    chatSendBtnTitle: { he: "שליחה", en: "Send", ar: "إرسال", ru: "Отправить" },
+    chatEmptyPrompt: { he: "אין עדיין הודעות בצ'אט הזה", en: "No messages in this chat yet", ar: "لا توجد رسائل في هذه الدردشة بعد", ru: "В этом чате пока нет сообщений" },
+    chatYou: { he: "אני", en: "You", ar: "أنا", ru: "Я" },
     reportColNum: { he: "מס'", en: "No.", ar: "الرقم", ru: "№" },
     reportColTask: { he: "משימה", en: "Task", ar: "المهمة", ru: "Задача" },
     reportColResponsible: { he: "באחריות", en: "Responsible", ar: "المسؤول", ru: "Ответственный" },
@@ -1746,15 +1834,20 @@
     return parts[2] + "/" + parts[1];
   }
 
-  function applyDailyRollover(data) {
+  function rollSheetsForward(sheets) {
     var today = todayISO();
-    if (data.lastRolloverDate === today) return false;
-    data.sheets.forEach(function (sheet) {
+    sheets.forEach(function (sheet) {
       (sheet.tasks || []).forEach(function (t) {
         if (typeof t.date !== "string") t.date = today;
         if (t.type !== "note" && t.status !== 2 && t.date < today) t.date = today;
       });
     });
+  }
+
+  function applyDailyRollover(data) {
+    var today = todayISO();
+    if (data.lastRolloverDate === today) return false;
+    rollSheetsForward(data.sheets);
     data.lastRolloverDate = today;
     return true;
   }
@@ -1833,6 +1926,8 @@
   var SUPABASE_URL = "https://oqvqrqhtywcqdnftaovk.supabase.co";
   var SUPABASE_KEY = "sb_publishable_K6dRlzpWSRV7O-Dy_C8ypA_Yep2P3x7";
   var SUPABASE_ROW_ID = null;
+  var myPhoneNumber = null;
+  var sharedSheets = [];
   var supabaseClient = (window.supabase && SUPABASE_URL && SUPABASE_KEY)
     ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
     : null;
@@ -1860,6 +1955,8 @@
     });
   }
 
+  var SHARED_TABLE = "shared_projects";
+
   function saveData() {
     saveLocalData();
     if (supabaseClient) {
@@ -1867,6 +1964,22 @@
         .upsert({ id: SUPABASE_ROW_ID, data: data, updated_at: new Date().toISOString() })
         .then(function () {}, function () {});
     }
+    saveSharedSheets();
+  }
+
+  function saveSharedSheets() {
+    if (!supabaseClient) return;
+    sharedSheets.forEach(function (sheet) {
+      supabaseClient.from(SHARED_TABLE)
+        .upsert({
+          id: sheet.id,
+          name: sheet.name,
+          data: { tasks: sheet.tasks, reports: sheet.reports, ended: sheet.ended || false, endedDate: sheet.endedDate || null },
+          members: sheet.members,
+          updated_at: new Date().toISOString()
+        })
+        .then(function () {}, function () {});
+    });
   }
 
   var data = defaultData();
@@ -1931,7 +2044,7 @@
     var idx = sourceSheet.tasks.findIndex(function (x) { return x.id === taskId; });
     if (idx === -1) return;
     var task = sourceSheet.tasks[idx];
-    var targetSheet = data.sheets.find(function (s) { return s.id === targetSheetId; });
+    var targetSheet = allSheets().find(function (s) { return s.id === targetSheetId; });
     if (!targetSheet) return;
 
     if (mode === "copy") {
@@ -1953,7 +2066,7 @@
 
   function renderMoveTaskProjects() {
     moveTaskProjects.innerHTML = "";
-    var others = data.sheets.filter(function (s) { return s.id !== data.activeSheetId; });
+    var others = allSheets().filter(function (s) { return s.id !== data.activeSheetId; });
     if (!others.length) {
       var empty = document.createElement("div");
       empty.className = "move-task-empty";
@@ -2156,9 +2269,14 @@
     });
   })();
 
+  function allSheets() {
+    return data.sheets.concat(sharedSheets);
+  }
+
   function activeSheet() {
-    var sheet = data.sheets.find(function (s) { return s.id === data.activeSheetId; });
-    return sheet || data.sheets[0];
+    var all = allSheets();
+    var sheet = all.find(function (s) { return s.id === data.activeSheetId; });
+    return sheet || all[0];
   }
 
   function addSheet() {
@@ -2208,7 +2326,7 @@
   }
 
   function commitRename(id, value) {
-    var sheet = data.sheets.find(function (s) { return s.id === id; });
+    var sheet = allSheets().find(function (s) { return s.id === id; });
     var trimmed = value.trim();
     if (sheet && trimmed) {
       sheet.name = trimmed.slice(0, 40);
@@ -2219,6 +2337,11 @@
   }
 
   function deleteSheet(id) {
+    var sharedCheck = sharedSheets.find(function (s) { return s.id === id; });
+    if (sharedCheck) {
+      alert(tr("cannotDeleteSharedProject"));
+      return;
+    }
     if (data.sheets.length <= 1) {
       alert(tr("mustHaveOneProject"));
       return;
@@ -2240,7 +2363,7 @@
       alert(tr("mustHaveOneActiveProject"));
       return;
     }
-    var sheet = data.sheets.find(function (s) { return s.id === id; });
+    var sheet = allSheets().find(function (s) { return s.id === id; });
     var msg = sheet ? tr("confirmEndProjectNamed").replace("{name}", sheet.name) : tr("confirmEndProjectGeneric");
     askConfirm(msg, function () {
       sheet.ended = true;
@@ -2273,7 +2396,7 @@
   }
 
   function shareSheet(id) {
-    var sheet = data.sheets.find(function (s) { return s.id === id; });
+    var sheet = allSheets().find(function (s) { return s.id === id; });
     if (!sheet) return;
     askConfirm(tr("confirmShareProject").replace("{name}", sheet.name), function () {
       var text = buildSheetShareText(sheet);
@@ -2291,15 +2414,122 @@
     });
   }
 
+  function normalizePhoneDigits(raw) {
+    var digits = (raw || "").replace(/\D/g, "");
+    if (digits.indexOf("972") === 0 && digits.length > 10) digits = digits.slice(3);
+    digits = digits.replace(/^0+/, "");
+    if (digits.length < 8 || digits.length > 10) return null;
+    return "+972" + digits;
+  }
+
+  var sharedProjectOverlay = document.getElementById("sharedProjectOverlay");
+  var sharedProjectNameInput = document.getElementById("sharedProjectNameInput");
+  var sharedProjectMembersList = document.getElementById("sharedProjectMembersList");
+  var sharedProjectSaveBtn = document.getElementById("sharedProjectSaveBtn");
+  var sharedProjectCancelBtn = document.getElementById("sharedProjectCancelBtn");
+
+  function addSharedMemberInput(focusIt) {
+    var input = document.createElement("input");
+    input.type = "tel";
+    input.className = "auth-input";
+    input.placeholder = tr("sharedProjectPhonePlaceholder");
+    input.maxLength = 20;
+    input.addEventListener("input", function () {
+      if (input.value.trim() && input === sharedProjectMembersList.lastElementChild) {
+        addSharedMemberInput(false);
+      }
+    });
+    input.addEventListener("keydown", function (e) {
+      e.stopPropagation();
+      if (e.key === "Enter") sharedProjectSaveBtn.click();
+      if (e.key === "Escape") closeSharedProjectModal();
+    });
+    sharedProjectMembersList.appendChild(input);
+    if (focusIt) input.focus();
+  }
+
+  var pendingSharedEditId = null;
+
+  function openSharedProjectModal() {
+    pendingSharedEditId = null;
+    sharedProjectNameInput.value = "";
+    sharedProjectMembersList.innerHTML = "";
+    addSharedMemberInput(false);
+    sharedProjectOverlay.hidden = false;
+    sharedProjectNameInput.focus();
+  }
+  function openSharedProjectEditModal(id) {
+    var sheet = sharedSheets.find(function (s) { return s.id === id; });
+    if (!sheet) return;
+    pendingSharedEditId = id;
+    sharedProjectNameInput.value = sheet.name;
+    sharedProjectMembersList.innerHTML = "";
+    var otherMembers = (sheet.members || []).filter(function (p) { return p !== myPhoneNumber; });
+    otherMembers.forEach(function (phone) {
+      addSharedMemberInput(false);
+      sharedProjectMembersList.lastElementChild.value = phone.replace("+972", "0");
+    });
+    addSharedMemberInput(false);
+    sharedProjectOverlay.hidden = false;
+    sharedProjectNameInput.focus();
+  }
+  function closeSharedProjectModal() {
+    sharedProjectOverlay.hidden = true;
+    pendingSharedEditId = null;
+  }
+  sharedProjectSaveBtn.addEventListener("click", function () {
+    var name = sharedProjectNameInput.value.trim().slice(0, 40) || tr("sharedProjectDefaultName");
+    var rawPhones = Array.prototype.slice.call(sharedProjectMembersList.querySelectorAll("input"))
+      .map(function (i) { return i.value; });
+    var members = rawPhones.map(normalizePhoneDigits).filter(function (p) { return p; });
+    if (myPhoneNumber && members.indexOf(myPhoneNumber) === -1) members.push(myPhoneNumber);
+    if (members.length < 2) {
+      alert(tr("sharedProjectNeedMember"));
+      return;
+    }
+    if (pendingSharedEditId) {
+      var existing = sharedSheets.find(function (s) { return s.id === pendingSharedEditId; });
+      if (existing) {
+        existing.name = name;
+        existing.members = members;
+      }
+    } else {
+      var sheet = {
+        id: window.crypto.randomUUID ? window.crypto.randomUUID() : uid(),
+        shared: true,
+        name: name,
+        tasks: [],
+        reports: [],
+        ended: false,
+        endedDate: null,
+        members: members,
+        messages: []
+      };
+      sharedSheets.push(sheet);
+      data.activeSheetId = sheet.id;
+    }
+    closeSharedProjectModal();
+    saveSharedSheets();
+    render();
+  });
+  sharedProjectCancelBtn.addEventListener("click", closeSharedProjectModal);
+  sharedProjectOverlay.addEventListener("click", function (e) {
+    if (e.target === sharedProjectOverlay) closeSharedProjectModal();
+  });
+
   var sheetActionOverlay = document.getElementById("sheetActionOverlay");
   var sheetActionDeleteBtn = document.getElementById("sheetActionDeleteBtn");
   var sheetActionShareBtn = document.getElementById("sheetActionShareBtn");
   var sheetActionEndBtn = document.getElementById("sheetActionEndBtn");
+  var sheetActionMembersBtn = document.getElementById("sheetActionMembersBtn");
   var sheetActionCancelBtn = document.getElementById("sheetActionCancelBtn");
   var pendingSheetActionId = null;
 
   function openSheetActionModal(id) {
     pendingSheetActionId = id;
+    var isShared = !!sharedSheets.find(function (s) { return s.id === id; });
+    sheetActionDeleteBtn.hidden = isShared;
+    sheetActionMembersBtn.hidden = !isShared;
     sheetActionOverlay.hidden = false;
   }
   function closeSheetActionModal() {
@@ -2321,9 +2551,108 @@
     closeSheetActionModal();
     endSheet(id);
   });
+  sheetActionMembersBtn.addEventListener("click", function () {
+    var id = pendingSheetActionId;
+    closeSheetActionModal();
+    openSharedProjectEditModal(id);
+  });
   sheetActionCancelBtn.addEventListener("click", closeSheetActionModal);
   sheetActionOverlay.addEventListener("click", function (e) {
     if (e.target === sheetActionOverlay) closeSheetActionModal();
+  });
+
+  var chatBtn = document.getElementById("chatBtn");
+  var chatView = document.getElementById("chatView");
+  var chatBackBtn = document.getElementById("chatBackBtn");
+  var chatHeadTitle = document.getElementById("chatHeadTitle");
+  var chatMessages = document.getElementById("chatMessages");
+  var chatForm = document.getElementById("chatForm");
+  var chatInput = document.getElementById("chatInput");
+  var activeChatSheetId = null;
+  var chatPollTimer = null;
+
+  function renderChatMessages() {
+    var sheet = sharedSheets.find(function (s) { return s.id === activeChatSheetId; });
+    var messages = (sheet && sheet.messages) || [];
+    chatMessages.innerHTML = "";
+    if (!messages.length) {
+      var empty = document.createElement("div");
+      empty.className = "chat-empty";
+      empty.textContent = tr("chatEmptyPrompt");
+      chatMessages.appendChild(empty);
+      return;
+    }
+    messages.forEach(function (m) {
+      var bubble = document.createElement("div");
+      bubble.className = "chat-bubble" + (m.phone === myPhoneNumber ? " chat-bubble-mine" : "");
+      var senderEl = document.createElement("div");
+      senderEl.className = "chat-bubble-sender";
+      senderEl.textContent = m.phone === myPhoneNumber ? tr("chatYou") : m.phone;
+      bubble.appendChild(senderEl);
+      var textEl = document.createElement("div");
+      textEl.textContent = m.text;
+      bubble.appendChild(textEl);
+      var timeEl = document.createElement("div");
+      timeEl.className = "chat-bubble-time";
+      timeEl.textContent = new Date(m.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      bubble.appendChild(timeEl);
+      chatMessages.appendChild(bubble);
+    });
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+
+  function refreshActiveChat() {
+    if (!activeChatSheetId || !supabaseClient) return;
+    supabaseClient.from(SHARED_TABLE).select("messages").eq("id", activeChatSheetId).maybeSingle()
+      .then(function (result) {
+        var messages = (result && result.data && result.data.messages) || [];
+        var sheet = sharedSheets.find(function (s) { return s.id === activeChatSheetId; });
+        if (sheet) sheet.messages = messages;
+        renderChatMessages();
+      }, function () {});
+  }
+
+  function openChatView() {
+    var sheet = activeSheet();
+    if (!sheet || !sheet.shared) return;
+    activeChatSheetId = sheet.id;
+    chatHeadTitle.textContent = sheet.name;
+    renderChatMessages();
+    chatView.hidden = false;
+    refreshActiveChat();
+    chatPollTimer = setInterval(refreshActiveChat, 5000);
+    chatInput.focus();
+  }
+  function closeChatView() {
+    chatView.hidden = true;
+    activeChatSheetId = null;
+    clearInterval(chatPollTimer);
+  }
+  chatBtn.addEventListener("click", openChatView);
+  chatBackBtn.addEventListener("click", closeChatView);
+
+  function sendChatMessage(sheetId, text) {
+    var trimmed = (text || "").trim();
+    if (!trimmed || !supabaseClient) return Promise.resolve();
+    return supabaseClient.from(SHARED_TABLE).select("messages").eq("id", sheetId).maybeSingle()
+      .then(function (result) {
+        var current = (result && result.data && result.data.messages) || [];
+        var msg = { id: uid(), phone: myPhoneNumber, text: trimmed.slice(0, 500), ts: Date.now() };
+        var updated = current.concat([msg]).slice(-200);
+        return supabaseClient.from(SHARED_TABLE).update({ messages: updated }).eq("id", sheetId)
+          .then(function () {
+            var sheet = sharedSheets.find(function (s) { return s.id === sheetId; });
+            if (sheet) sheet.messages = updated;
+          });
+      });
+  }
+
+  chatForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var text = chatInput.value;
+    if (!text.trim() || !activeChatSheetId) return;
+    chatInput.value = "";
+    sendChatMessage(activeChatSheetId, text).then(renderChatMessages);
   });
 
   var reportActionOverlay = document.getElementById("reportActionOverlay");
@@ -2634,8 +2963,9 @@
   var openPriorityPopupRowId = null;
 
   function findReport(id) {
-    for (var i = 0; i < data.sheets.length; i++) {
-      var found = (data.sheets[i].reports || []).find(function (r) { return r.id === id; });
+    var all = allSheets();
+    for (var i = 0; i < all.length; i++) {
+      var found = (all[i].reports || []).find(function (r) { return r.id === id; });
       if (found) return found;
     }
     return null;
@@ -3539,7 +3869,7 @@
       return;
     }
     var matches = [];
-    data.sheets.forEach(function (sheet) {
+    allSheets().forEach(function (sheet) {
       sheet.tasks.forEach(function (t) {
         if (t.text.toLowerCase().indexOf(q) !== -1) {
           matches.push({ task: t, sheetId: sheet.id, sheetName: sheet.name });
@@ -3615,7 +3945,7 @@
   });
 
   function visibleSheets() {
-    return data.sheets.filter(function (s) {
+    return allSheets().filter(function (s) {
       return !s.ended || state.viewDate <= s.endedDate;
     });
   }
@@ -3648,7 +3978,7 @@
 
       var label = document.createElement("span");
       label.className = "sheet-tab-label";
-      label.textContent = sheet.name;
+      label.textContent = (sheet.shared ? "👥 " : "") + sheet.name;
       tab.appendChild(label);
       tab.title = sheet.id === data.activeSheetId ? tr("clickToRename") : sheet.name;
 
@@ -3723,9 +4053,27 @@
     var addBtn = document.createElement("button");
     addBtn.className = "sheet-tab add-sheet-tab";
     addBtn.type = "button";
-    addBtn.title = tr("addProjectTitle");
+    addBtn.title = tr("addProjectTitle") + " / " + tr("addSharedProjectHint");
     addBtn.textContent = "+";
-    addBtn.addEventListener("click", addSheet);
+    var addBtnLongPressFired = false;
+    addBtn.addEventListener("click", function () {
+      if (addBtnLongPressFired) { addBtnLongPressFired = false; return; }
+      addSheet();
+    });
+    var startAddBtnPress = function () {
+      addBtnLongPressFired = false;
+      clearTimeout(longPressTimer);
+      longPressTimer = setTimeout(function () {
+        addBtnLongPressFired = true;
+        openSharedProjectModal();
+      }, 1000);
+    };
+    var cancelAddBtnPress = function () { clearTimeout(longPressTimer); };
+    addBtn.addEventListener("mousedown", startAddBtnPress);
+    addBtn.addEventListener("mouseup", cancelAddBtnPress);
+    addBtn.addEventListener("mouseleave", cancelAddBtnPress);
+    addBtn.addEventListener("touchstart", startAddBtnPress, { passive: true });
+    addBtn.addEventListener("touchend", cancelAddBtnPress);
     sheetsBar.appendChild(addBtn);
 
     if (data.activeSheetId !== lastScrolledSheetId) {
@@ -3864,6 +4212,7 @@
     dateInput.value = state.viewDate;
     todayBtn.hidden = isToday;
     sheetTitle.textContent = activeSheet().name;
+    chatBtn.hidden = !activeSheet().shared;
 
     var reportsMode = state.viewMode === "reports";
     taskList.hidden = reportsMode;
@@ -4144,6 +4493,33 @@
         render();
       }, startLocalOnly)
       .catch(startLocalOnly);
+    loadSharedSheets();
+  }
+
+  function sharedRowToSheet(row) {
+    var d = row.data || {};
+    return {
+      id: row.id,
+      shared: true,
+      name: row.name,
+      tasks: d.tasks || [],
+      reports: d.reports || [],
+      ended: d.ended || false,
+      endedDate: d.endedDate || null,
+      members: row.members || [],
+      messages: row.messages || []
+    };
+  }
+
+  function loadSharedSheets() {
+    if (!supabaseClient || !myPhoneNumber) return Promise.resolve();
+    return supabaseClient.from(SHARED_TABLE).select("*").contains("members", [myPhoneNumber])
+      .then(function (result) {
+        var rows = (result && result.data) || [];
+        sharedSheets = rows.map(sharedRowToSheet);
+        rollSheetsForward(sharedSheets);
+        render();
+      }, function () {});
   }
 
   var authGate = document.getElementById("authGate");
@@ -4207,8 +4583,26 @@
     });
   }
 
+  function isEditingActively() {
+    var el = document.activeElement;
+    return !!(el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA"));
+  }
+
+  function refreshSharedSheetsIfIdle() {
+    if (isEditingActively()) return;
+    loadSharedSheets();
+  }
+
+  function startSharedSheetsWatcher() {
+    setInterval(refreshSharedSheetsIfIdle, 20000);
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden) refreshSharedSheetsIfIdle();
+    });
+  }
+
   function showApp(phoneNumber, rowId) {
     SUPABASE_ROW_ID = rowId;
+    myPhoneNumber = phoneNumber;
     menuUsernameLabel.textContent = tr("loggedInAs") + phoneNumber;
     hideSplash();
     if (appShown) return;
@@ -4218,6 +4612,7 @@
     startWithSupabase();
     initReminderSettings();
     establishSession().then(startSessionWatcher);
+    startSharedSheetsWatcher();
   }
 
   function showAuthGate() {
