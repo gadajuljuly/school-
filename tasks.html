@@ -42,6 +42,14 @@
     --contact-bg-6: #fdf0d0; --contact-name-6: #8a5a10;
     --contact-bg-7: #dcf5f0; --contact-name-7: #1a6e63;
     --contact-bg-8: #f5e0e0; --contact-name-8: #9b2c2c;
+    --contact-bg-9: #e0e4f8; --contact-name-9: #3c4a9c;
+    --contact-bg-10: #eef0d0; --contact-name-10: #6b7a1a;
+    --contact-bg-11: #fbdcd4; --contact-name-11: #b8462a;
+    --contact-bg-12: #d4f0f5; --contact-name-12: #1a6e8a;
+    --contact-bg-13: #f8dcf0; --contact-name-13: #a02a8a;
+    --contact-bg-14: #ecdcc8; --contact-name-14: #7a5228;
+    --contact-bg-15: #dde2e8; --contact-name-15: #3c4a5a;
+    --contact-bg-16: #f5ecc0; --contact-name-16: #8a6e10;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
@@ -63,6 +71,14 @@
       --contact-bg-6: #453410; --contact-name-6: #e0c068;
       --contact-bg-7: #1c4038; --contact-name-7: #7fd9c8;
       --contact-bg-8: #402020; --contact-name-8: #e08888;
+      --contact-bg-9: #2c3060; --contact-name-9: #a0aaf0;
+      --contact-bg-10: #383c18; --contact-name-10: #c8d868;
+      --contact-bg-11: #4a2820; --contact-name-11: #f0a888;
+      --contact-bg-12: #1c3a42; --contact-name-12: #78d0e8;
+      --contact-bg-13: #401c38; --contact-name-13: #e880d0;
+      --contact-bg-14: #3c2c1a; --contact-name-14: #d0a868;
+      --contact-bg-15: #2c343c; --contact-name-15: #a8b8c8;
+      --contact-bg-16: #3c3410; --contact-name-16: #e0c860;
     }
   }
   :root[data-theme="dark"] {
@@ -84,6 +100,14 @@
     --contact-bg-6: #453410; --contact-name-6: #e0c068;
     --contact-bg-7: #1c4038; --contact-name-7: #7fd9c8;
     --contact-bg-8: #402020; --contact-name-8: #e08888;
+    --contact-bg-9: #2c3060; --contact-name-9: #a0aaf0;
+    --contact-bg-10: #383c18; --contact-name-10: #c8d868;
+    --contact-bg-11: #4a2820; --contact-name-11: #f0a888;
+    --contact-bg-12: #1c3a42; --contact-name-12: #78d0e8;
+    --contact-bg-13: #401c38; --contact-name-13: #e880d0;
+    --contact-bg-14: #3c2c1a; --contact-name-14: #d0a868;
+    --contact-bg-15: #2c343c; --contact-name-15: #a8b8c8;
+    --contact-bg-16: #3c3410; --contact-name-16: #e0c860;
   }
   * { box-sizing: border-box; }
   body {
@@ -3030,7 +3054,7 @@
     } catch (e) {}
   }
 
-  var CONTACT_COLOR_COUNT = 8;
+  var CONTACT_COLOR_COUNT = 16;
   function contactColorIndex(phone) {
     var hash = 0;
     for (var i = 0; i < phone.length; i++) hash = (hash * 31 + phone.charCodeAt(i)) >>> 0;
