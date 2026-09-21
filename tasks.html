@@ -269,13 +269,12 @@
     display: flex;
     flex-direction: column;
     gap: 3px;
-    background:
-      radial-gradient(circle at 15% 20%, var(--rule) 0, transparent 45%),
-      radial-gradient(circle at 85% 75%, var(--rule) 0, transparent 45%),
-      var(--paper);
-    background-size: 220px 220px, 260px 260px, auto;
-    background-blend-mode: overlay;
-    opacity: 1;
+    background-color: var(--paper);
+    background-image:
+      radial-gradient(var(--rule) 1px, transparent 1px),
+      linear-gradient(160deg, color-mix(in srgb, var(--accent) 6%, transparent), transparent 55%);
+    background-size: 20px 20px, auto;
+    background-position: -8px -8px, 0 0;
   }
   .chat-day-sep {
     align-self: center;
