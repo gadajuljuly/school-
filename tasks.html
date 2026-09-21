@@ -4720,8 +4720,15 @@
   }
 
   function startLocalOnly() {
-    data = loadFromLocalOrDefault();
-    if (applyDailyRollover(data)) saveData();
+    // Only ever auto-save here if we actually had a local cache to roll
+    // forward. If local storage is also empty (new browser profile, cleared
+    // data, a transient read failure - anything), fall back to an in-memory
+    // default WITHOUT persisting it: a network hiccup must never be able to
+    // silently overwrite real data already sitting in Supabase just because
+    // this one load couldn't reach it.
+    var local = loadLocalData();
+    data = local || defaultData();
+    if (local && applyDailyRollover(data)) saveData();
     applyTaskLinkFromURL();
     render();
   }
@@ -4731,9 +4738,15 @@
       .then(function (result) {
         var row = result && result.data;
         var remote = row && row.data ? normalizeData(row.data) : null;
-        data = remote || loadLocalData() || findLegacyLocalData() || defaultData();
+        var local = remote ? null : (loadLocalData() || findLegacyLocalData());
+        var isFreshDefault = !remote && !local;
+        data = remote || local || defaultData();
         var rolled = applyDailyRollover(data);
-        if (rolled || !remote) saveData();
+        // Same protection as startLocalOnly: never auto-save a bare default
+        // over a row we simply failed to read cleanly. Only persist here
+        // when there's real data to roll over, or this is a confirmed
+        // brand-new user (no row exists yet for this id at all).
+        if ((rolled && !isFreshDefault) || (isFreshDefault && !row)) saveData();
         applyTaskLinkFromURL();
         render();
       }, startLocalOnly)
