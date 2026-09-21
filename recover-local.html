@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>בדיקת נתונים שמורים במכשיר</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; padding: 18px; max-width: 640px; margin: 0 auto; line-height: 1.5; }
+  h3 { margin-top: 0; }
+  textarea { width: 100%; height: 220px; box-sizing: border-box; font-family: monospace; font-size: 0.8rem; }
+  button { padding: 10px 18px; font-size: 0.95rem; border-radius: 8px; border: 1px solid #999; background: #2d4a6b; color: #fff; cursor: pointer; margin-top: 10px; }
+  button:disabled { opacity: 0.5; }
+  .status { margin-top: 12px; font-weight: 600; }
+  .summary { background: #f3f3f3; padding: 10px; border-radius: 8px; margin: 12px 0; }
+</style>
+</head>
+<body>
+<h3>בדיקת נתונים שמורים במכשיר הזה</h3>
+<div id="summary" class="summary">בודק...</div>
+<textarea id="out" readonly></textarea>
+<div>
+  <button id="uploadBtn" disabled>שלח את הנתונים האלה לגיבוי בענן</button>
+</div>
+<div id="status" class="status"></div>
+
+<script>
+  var ROW_ID = "89854061-3bd6-45ae-af0d-d8a913317ec3";
+  var SUPABASE_URL = "https://oqvqrqhtywcqdnftaovk.supabase.co";
+  var SUPABASE_KEY = "sb_publishable_K6dRlzpWSRV7O-Dy_C8ypA_Yep2P3x7";
+  var key = "daily-tasks-sheets-v1:" + ROW_ID;
+  var raw = localStorage.getItem(key);
+  var summaryEl = document.getElementById("summary");
+  var outEl = document.getElementById("out");
+  var uploadBtn = document.getElementById("uploadBtn");
+  var statusEl = document.getElementById("status");
+
+  if (!raw) {
+    summaryEl.textContent = "לא נמצאו נתונים שמורים במכשיר הזה תחת המפתח " + key + ".";
+    outEl.value = "";
+  } else {
+    outEl.value = raw;
+    try {
+      var parsed = JSON.parse(raw);
+      var sheets = parsed.sheets || [];
+      var taskCount = 0;
+      sheets.forEach(function (s) { taskCount += (s.tasks || []).length; });
+      summaryEl.textContent = "נמצאו " + sheets.length + " פרויקטים עם סה\"כ " + taskCount + " משימות. פרויקטים: " +
+        sheets.map(function (s) { return s.name; }).join(", ");
+      uploadBtn.disabled = false;
+    } catch (e) {
+      summaryEl.textContent = "יש נתונים שמורים אבל לא הצלחתי לפענח אותם: " + e.message;
+    }
+  }
+
+  uploadBtn.addEventListener("click", function () {
+    uploadBtn.disabled = true;
+    statusEl.textContent = "שולח...";
+    var client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    client.from("app_state_backups").insert({ row_id: ROW_ID, data: JSON.parse(raw) }).then(function (result) {
+      if (result && result.error) {
+        statusEl.textContent = "שגיאה בשליחה: " + result.error.message;
+        uploadBtn.disabled = false;
+      } else {
+        statusEl.textContent = "נשלח בהצלחה! אפשר לחזור ולהגיד לקלוד שהגיבוי נשלח.";
+      }
+    }, function (err) {
+      statusEl.textContent = "שגיאה בשליחה: " + (err && err.message);
+      uploadBtn.disabled = false;
+    });
+  });
+</script>
+</body>
+</html>
