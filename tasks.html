@@ -550,6 +550,49 @@
     height: 34px;
     font-size: 1.15rem;
   }
+  .chat-recording-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 14px;
+    background: var(--paper-alt);
+    border-top: 1px solid var(--rule);
+  }
+  .chat-recording-bar[hidden] { display: none; }
+  .chat-recording-dot {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: var(--danger);
+    flex-shrink: 0;
+    animation: urgent-blink 1.1s ease-in-out infinite;
+  }
+  .chat-recording-time {
+    flex: 1;
+    font-weight: 700;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .chat-recording-cancel, .chat-recording-send {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+  }
+  .chat-recording-cancel { background: var(--paper); color: var(--danger); }
+  .chat-recording-send { background: var(--accent); color: var(--accent-contrast); }
+  .chat-bubble-voice audio {
+    width: 210px;
+    max-width: 100%;
+    height: 34px;
+    display: block;
+  }
   .report-table-wrap { flex: 1; overflow: auto; padding: 0 12px; }
   .report-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
   .report-table th, .report-table td {
@@ -1812,9 +1855,16 @@
     </div>
     <div class="chat-messages" id="chatMessages"></div>
     <form class="add-row" id="chatForm">
+      <button type="button" class="add-btn" id="chatMicBtn" data-i18n-title="chatMicBtnTitle" title="הקלטת הודעה קולית">&#127908;</button>
       <input type="text" id="chatInput" data-i18n-ph="chatInputPlaceholder" placeholder="הודעה..." maxlength="500" required autocomplete="off">
       <button type="submit" class="add-btn" data-i18n-title="chatSendBtnTitle" title="שליחה">&#10148;</button>
     </form>
+    <div class="chat-recording-bar" id="chatRecordingBar" hidden>
+      <button type="button" class="chat-recording-cancel" id="chatRecordingCancelBtn" data-i18n-title="chatRecordingCancelTitle" title="ביטול">&#128465;</button>
+      <span class="chat-recording-dot" aria-hidden="true"></span>
+      <span class="chat-recording-time" id="chatRecordingTime">0:00</span>
+      <button type="button" class="chat-recording-send" id="chatRecordingSendBtn" data-i18n-title="chatSendBtnTitle" title="שליחה">&#10148;</button>
+    </div>
   </div>
 
   <div class="report-view" id="libraryView" hidden>
@@ -2030,6 +2080,12 @@
     chatBtnTitle: { he: "צ'אט הפרויקט", en: "Project chat", ar: "دردشة المشروع", ru: "Чат проекта" },
     chatInputPlaceholder: { he: "הודעה...", en: "Message...", ar: "رسالة...", ru: "Сообщение..." },
     chatSendBtnTitle: { he: "שליחה", en: "Send", ar: "إرسال", ru: "Отправить" },
+    chatMicBtnTitle: { he: "הקלטת הודעה קולית", en: "Record voice message", ar: "تسجيل رسالة صوتية", ru: "Записать голосовое сообщение" },
+    chatRecordingCancelTitle: { he: "ביטול", en: "Cancel", ar: "إلغاء", ru: "Отмена" },
+    voiceMessageLabel: { he: "🎤 הודעה קולית", en: "🎤 Voice message", ar: "🎤 رسالة صوتية", ru: "🎤 Голосовое сообщение" },
+    voiceNotSupported: { he: "הקלטת קול לא נתמכת בדפדפן הזה", en: "Voice recording isn't supported in this browser", ar: "تسجيل الصوت غير مدعوم في هذا المتصفح", ru: "Запись голоса не поддерживается в этом браузере" },
+    voiceMicPermissionDenied: { he: "לא ניתנה הרשאה למיקרופון", en: "Microphone permission was denied", ar: "لم يتم منح إذن الميكروفون", ru: "Доступ к микрофону не предоставлен" },
+    voiceUploadError: { he: "שליחת ההודעה הקולית נכשלה", en: "Failed to send the voice message", ar: "فشل إرسال الرسالة الصوتية", ru: "Не удалось отправить голосовое сообщение" },
     chatEmptyPrompt: { he: "אין עדיין הודעות בצ'אט הזה", en: "No messages in this chat yet", ar: "لا توجد رسائل في هذه الدردشة بعد", ru: "В этом чате пока нет сообщений" },
     chatYou: { he: "אני", en: "You", ar: "أنا", ru: "Я" },
     chatToday: { he: "היום", en: "Today", ar: "اليوم", ru: "Сегодня" },
@@ -3110,8 +3166,17 @@
         bubble.appendChild(senderEl);
       }
       var textEl = document.createElement("div");
-      textEl.className = "chat-bubble-text";
-      textEl.textContent = m.text;
+      if (m.type === "voice") {
+        textEl.className = "chat-bubble-voice";
+        var audioEl = document.createElement("audio");
+        audioEl.controls = true;
+        audioEl.preload = "none";
+        audioEl.src = m.audioUrl;
+        textEl.appendChild(audioEl);
+      } else {
+        textEl.className = "chat-bubble-text";
+        textEl.textContent = m.text;
+      }
       bubble.appendChild(textEl);
       var timeEl = document.createElement("div");
       timeEl.className = "chat-bubble-time";
@@ -3166,6 +3231,7 @@
     chatInput.focus();
   }
   function closeChatView() {
+    if (activeRecorder) stopVoiceRecording(false);
     chatView.hidden = true;
     activeChatSheetId = null;
     clearInterval(chatPollTimer);
@@ -3197,6 +3263,108 @@
     chatInput.value = "";
     sendChatMessage(activeChatSheetId, text).then(renderChatMessages);
   });
+
+  function sendChatVoiceMessage(sheetId, audioUrl, durationSec) {
+    if (!audioUrl || !supabaseClient) return Promise.resolve();
+    return supabaseClient.from(SHARED_TABLE).select("messages").eq("id", sheetId).maybeSingle()
+      .then(function (result) {
+        var current = (result && result.data && result.data.messages) || [];
+        var msg = { id: uid(), phone: myPhoneNumber, type: "voice", audioUrl: audioUrl, duration: durationSec || 0, ts: Date.now() };
+        var updated = current.concat([msg]).slice(-200);
+        return supabaseClient.from(SHARED_TABLE).update({ messages: updated }).eq("id", sheetId)
+          .then(function () {
+            var sheet = sharedSheets.find(function (s) { return s.id === sheetId; });
+            if (sheet) sheet.messages = updated;
+          });
+      });
+  }
+
+  var chatMicBtn = document.getElementById("chatMicBtn");
+  var chatRecordingBar = document.getElementById("chatRecordingBar");
+  var chatRecordingTime = document.getElementById("chatRecordingTime");
+  var chatRecordingCancelBtn = document.getElementById("chatRecordingCancelBtn");
+  var chatRecordingSendBtn = document.getElementById("chatRecordingSendBtn");
+  var activeRecorder = null;
+  var recordedChunks = [];
+  var recordingStartedAt = 0;
+  var recordingTimerInterval = null;
+
+  function formatRecordingTime(ms) {
+    var totalSec = Math.max(0, Math.floor(ms / 1000));
+    var m = Math.floor(totalSec / 60);
+    var s = totalSec % 60;
+    return m + ":" + (s < 10 ? "0" : "") + s;
+  }
+
+  function startVoiceRecording() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
+      alert(tr("voiceNotSupported"));
+      return;
+    }
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+      recordedChunks = [];
+      var recorder;
+      try { recorder = new MediaRecorder(stream); } catch (e) {
+        stream.getTracks().forEach(function (t) { t.stop(); });
+        alert(tr("voiceNotSupported"));
+        return;
+      }
+      activeRecorder = recorder;
+      recorder.addEventListener("dataavailable", function (e) {
+        if (e.data && e.data.size > 0) recordedChunks.push(e.data);
+      });
+      recorder.addEventListener("stop", function () {
+        stream.getTracks().forEach(function (t) { t.stop(); });
+      });
+      recorder.start();
+      recordingStartedAt = Date.now();
+      chatForm.hidden = true;
+      chatRecordingBar.hidden = false;
+      chatRecordingTime.textContent = "0:00";
+      recordingTimerInterval = setInterval(function () {
+        chatRecordingTime.textContent = formatRecordingTime(Date.now() - recordingStartedAt);
+      }, 500);
+    }, function () {
+      alert(tr("voiceMicPermissionDenied"));
+    });
+  }
+
+  function uploadAndSendVoiceMessage(blob, durationSec) {
+    if (!activeChatSheetId || !supabaseClient || !blob.size) return;
+    var ext = (blob.type && blob.type.indexOf("mp4") !== -1) ? "m4a" : "webm";
+    var path = activeChatSheetId + "/voice/" + uid() + "." + ext;
+    supabaseClient.storage.from(LIBRARY_BUCKET).upload(path, blob, { contentType: blob.type || "audio/webm" })
+      .then(function (result) {
+        if (result.error) throw result.error;
+        var url = libraryPublicUrl(path);
+        return sendChatVoiceMessage(activeChatSheetId, url, durationSec);
+      })
+      .then(function () { renderChatMessages(); }, function () { alert(tr("voiceUploadError")); });
+  }
+
+  function stopVoiceRecording(shouldSend) {
+    clearInterval(recordingTimerInterval);
+    chatRecordingBar.hidden = true;
+    chatForm.hidden = false;
+    var recorder = activeRecorder;
+    activeRecorder = null;
+    if (!recorder) return;
+    var durationSec = Math.round((Date.now() - recordingStartedAt) / 1000);
+    if (!shouldSend) {
+      recorder.stop();
+      return;
+    }
+    recorder.addEventListener("stop", function onStop() {
+      recorder.removeEventListener("stop", onStop);
+      var blob = new Blob(recordedChunks, { type: recorder.mimeType || "audio/webm" });
+      uploadAndSendVoiceMessage(blob, durationSec);
+    });
+    recorder.stop();
+  }
+
+  chatMicBtn.addEventListener("click", startVoiceRecording);
+  chatRecordingCancelBtn.addEventListener("click", function () { stopVoiceRecording(false); });
+  chatRecordingSendBtn.addEventListener("click", function () { stopVoiceRecording(true); });
 
   var LIBRARY_BUCKET = "project-files";
   var libraryBtn = document.getElementById("libraryBtn");
@@ -5296,9 +5464,10 @@
     if (!newMessages.length) return;
     var last = newMessages[newMessages.length - 1];
     var senderName = (sheet.memberNames && sheet.memberNames[last.phone]) || last.phone;
+    var lastText = last.type === "voice" ? tr("voiceMessageLabel") : last.text;
     var body = newMessages.length > 1
       ? tr("newChatMessagesNotifBody").replace("{count}", newMessages.length)
-      : (senderName + ": " + last.text);
+      : (senderName + ": " + lastText);
     showSharedNotification(sheet.name, body, sheet.id, "chat-" + sheet.id, true);
   }
 
