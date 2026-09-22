@@ -3477,6 +3477,7 @@
             var sheet = sharedSheets.find(function (s) { return s.id === sheetId; });
             if (sheet) sheet.messages = updated;
             if (activeChatSheetId === sheetId) renderChatMessages();
+            triggerChatPushNotification(sheetId, systemMessageText(msg));
           });
       }, function (err) {
         console.error("sendChatSystemMessage select rejected:", err);
