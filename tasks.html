@@ -218,8 +218,11 @@
     justify-content: center;
     cursor: pointer;
     box-shadow: 0 4px 10px var(--shadow);
+    padding: 0;
+    overflow: hidden;
   }
-  .report-fab svg, .library-fab svg { width: 26px; height: 26px; }
+  .report-fab img { width: 100%; height: 100%; display: block; object-fit: cover; }
+  .library-fab svg { width: 26px; height: 26px; }
   .report-fab[hidden], .tasks-fab[hidden] { display: none; }
   .tasks-fab {
     width: 46px;
@@ -1772,15 +1775,7 @@
         <img src="tasks-icon-192.png" alt="">
       </button>
       <button type="button" class="report-fab" id="reportFabBtn" data-i18n-title="reportsBtnTitle" title="דוחות פגישות וסיורים">
-        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-          <rect x="42" y="10" width="16" height="16" rx="3" fill="#fdfbf5"/>
-          <rect x="70" y="26" width="16" height="16" rx="3" fill="#fdfbf5"/>
-          <rect x="70" y="58" width="16" height="16" rx="3" fill="#fdfbf5"/>
-          <rect x="42" y="74" width="16" height="16" rx="3" fill="#fdfbf5"/>
-          <rect x="14" y="58" width="16" height="16" rx="3" fill="#fdfbf5"/>
-          <rect x="14" y="26" width="16" height="16" rx="3" fill="#fdfbf5"/>
-          <circle cx="50" cy="50" r="22" fill="#c98a4b"/>
-        </svg>
+        <img src="tasks-report-icon.webp" alt="">
       </button>
       <button type="button" class="chat-fab" id="chatBtn" data-i18n-title="chatBtnTitle" title="צ'אט הפרויקט" hidden><img src="tasks-chat-icon.webp" alt=""><span class="chat-fab-badge" id="chatFabBadge" hidden>0</span></button>
       <button type="button" class="library-fab" id="libraryBtn" data-i18n-title="libraryBtnTitle" title="ספריית קבצים">
