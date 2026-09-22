@@ -1702,6 +1702,14 @@
             </select>
             <p class="reminder-status" id="reminderStatus" hidden></p>
           </div>
+          <div class="menu-section" id="chatNotifMenuSection">
+            <div class="menu-label" data-i18n="menuLabelChatNotif">התראות הודעות צ'אט</div>
+            <select id="chatNotifSelect" class="reminder-select">
+              <option value="" data-i18n="reminderOff">כבוי</option>
+              <option value="on" data-i18n="chatNotifOn">פעיל</option>
+            </select>
+            <p class="reminder-status" id="chatNotifStatus" hidden></p>
+          </div>
           <div class="menu-section">
             <div class="menu-label" data-i18n="menuLabelApp">האפליקציה</div>
             <button id="shareAppBtn" data-i18n="shareAppBtn">שיתוף קישור להתקנה</button>
@@ -2027,6 +2035,10 @@
     deleteSheetBtn: { he: "מחיקת פרויקט", en: "Delete project", ar: "حذف المشروع", ru: "Удалить проект" },
     menuLabelReminders: { he: "תזכורות משימות", en: "Task reminders", ar: "تذكيرات المهام", ru: "Напоминания о задачах" },
     reminderOff: { he: "כבוי", en: "Off", ar: "إيقاف", ru: "Выкл" },
+    menuLabelChatNotif: { he: "התראות הודעות צ'אט", en: "Chat message notifications", ar: "إشعارات رسائل الدردشة", ru: "Уведомления о сообщениях в чате" },
+    chatNotifOn: { he: "פעיל", en: "On", ar: "مفعّل", ru: "Вкл" },
+    chatNotifActive: { he: "התראות צ'אט פעילות", en: "Chat notifications active", ar: "إشعارات الدردشة نشطة", ru: "Уведомления чата включены" },
+    chatNotifOffStatus: { he: "התראות הצ'אט כבויות", en: "Chat notifications are off", ar: "إشعارات الدردشة متوقفة", ru: "Уведомления чата выключены" },
     reminderEvery1: { he: "כל דקה", en: "Every minute", ar: "كل دقيقة", ru: "Каждую минуту" },
     reminderEvery5: { he: "כל 5 דקות", en: "Every 5 minutes", ar: "كل 5 دقائق", ru: "Каждые 5 минут" },
     reminderEvery15: { he: "כל 15 דקות", en: "Every 15 minutes", ar: "كل 15 دقيقة", ru: "Каждые 15 минут" },
@@ -3937,21 +3949,48 @@
     reminderStatus.hidden = false;
   }
 
+  var chatNotifSelect = document.getElementById("chatNotifSelect");
+  var chatNotifStatus = document.getElementById("chatNotifStatus");
+  function showChatNotifStatus(msg) {
+    chatNotifStatus.textContent = msg;
+    chatNotifStatus.hidden = false;
+  }
+
+  // A single push subscription (one per device) is shared by both task
+  // reminders and chat notifications - frequency_minutes and chat_enabled
+  // are independent flags on that same row, so turning one off must never
+  // delete the row or unsubscribe the device out from under the other.
+  function ensurePushSubscription() {
+    return navigator.serviceWorker.ready.then(function (reg) {
+      return reg.pushManager.getSubscription().then(function (existing) {
+        return existing || reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+        });
+      });
+    });
+  }
+
   function initReminderSettings() {
     if (!supabaseClient || !("serviceWorker" in navigator) || !("PushManager" in window)) {
       if (reminderFrequencySelect) reminderFrequencySelect.disabled = true;
+      if (chatNotifSelect) chatNotifSelect.disabled = true;
       return;
     }
     navigator.serviceWorker.ready.then(function (reg) {
       return reg.pushManager.getSubscription();
     }).then(function (sub) {
       if (!sub) return;
-      return supabaseClient.from("push_subscriptions").select("frequency_minutes").eq("endpoint", sub.endpoint).maybeSingle()
+      return supabaseClient.from("push_subscriptions").select("frequency_minutes, chat_enabled").eq("endpoint", sub.endpoint).maybeSingle()
         .then(function (result) {
           var row = result && result.data;
           if (row && row.frequency_minutes) {
             reminderFrequencySelect.value = String(row.frequency_minutes);
             showReminderStatus(tr("remindersActive"));
+          }
+          if (row && row.chat_enabled) {
+            chatNotifSelect.value = "on";
+            showChatNotifStatus(tr("chatNotifActive"));
           }
         });
     }).catch(function () {});
@@ -3973,8 +4012,7 @@
         return reg.pushManager.getSubscription();
       }).then(function (sub) {
         if (sub) {
-          supabaseClient.from("push_subscriptions").delete().eq("endpoint", sub.endpoint).then(function () {});
-          return sub.unsubscribe();
+          return supabaseClient.from("push_subscriptions").update({ frequency_minutes: null }).eq("endpoint", sub.endpoint);
         }
       }).then(function () {
         showReminderStatus(tr("remindersOffStatus"));
@@ -3994,14 +4032,7 @@
         reminderFrequencySelect.value = "";
         return;
       }
-      return navigator.serviceWorker.ready.then(function (reg) {
-        return reg.pushManager.getSubscription().then(function (existing) {
-          return existing || reg.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-          });
-        });
-      }).then(function (sub) {
+      return ensurePushSubscription().then(function (sub) {
         var keys = sub.toJSON().keys;
         return supabaseClient.from("push_subscriptions").upsert({
           user_id: SUPABASE_ROW_ID,
@@ -4024,6 +4055,67 @@
       console.error("reminder subscribe failed:", err);
       showReminderStatus(tr("errorEnablingReminders") + (err && err.message ? err.message : err));
       reminderFrequencySelect.value = "";
+    });
+  });
+
+  chatNotifSelect.addEventListener("change", function () {
+    var value = chatNotifSelect.value;
+    chatNotifStatus.hidden = true;
+    if (!supabaseClient || !SUPABASE_ROW_ID) return;
+
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+      showChatNotifStatus(tr("notificationsNotSupported"));
+      chatNotifSelect.value = "";
+      return;
+    }
+
+    if (!value) {
+      navigator.serviceWorker.ready.then(function (reg) {
+        return reg.pushManager.getSubscription();
+      }).then(function (sub) {
+        if (sub) {
+          return supabaseClient.from("push_subscriptions").update({ chat_enabled: false }).eq("endpoint", sub.endpoint);
+        }
+      }).then(function () {
+        showChatNotifStatus(tr("chatNotifOffStatus"));
+      }).catch(function () {});
+      return;
+    }
+
+    if (Notification.permission === "denied") {
+      showChatNotifStatus(tr("notificationsBlocked"));
+      chatNotifSelect.value = "";
+      return;
+    }
+
+    Notification.requestPermission().then(function (permission) {
+      if (permission !== "granted") {
+        showChatNotifStatus(tr("notificationPermissionDenied"));
+        chatNotifSelect.value = "";
+        return;
+      }
+      return ensurePushSubscription().then(function (sub) {
+        var keys = sub.toJSON().keys;
+        return supabaseClient.from("push_subscriptions").upsert({
+          user_id: SUPABASE_ROW_ID,
+          endpoint: sub.endpoint,
+          p256dh: keys.p256dh,
+          auth: keys.auth,
+          chat_enabled: true
+        }, { onConflict: "endpoint" });
+      }).then(function (result) {
+        if (result && result.error) {
+          console.error("push_subscriptions upsert failed:", result.error);
+          showChatNotifStatus(tr("errorSavingSubscription") + result.error.message);
+          chatNotifSelect.value = "";
+          return;
+        }
+        showChatNotifStatus(tr("chatNotifActive"));
+      });
+    }).catch(function (err) {
+      console.error("chat notification subscribe failed:", err);
+      showChatNotifStatus(tr("errorEnablingReminders") + (err && err.message ? err.message : err));
+      chatNotifSelect.value = "";
     });
   });
 
@@ -5979,6 +6071,7 @@
     authGate.hidden = true;
     document.getElementById("accountMenuSection").hidden = true;
     document.getElementById("reminderMenuSection").hidden = true;
+    document.getElementById("chatNotifMenuSection").hidden = true;
     startLocalOnly();
     hideSplash();
   } else {

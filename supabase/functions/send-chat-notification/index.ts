@@ -62,7 +62,8 @@ Deno.serve(async (req) => {
   const { data: subs, error: subsError } = await supabase
     .from("push_subscriptions")
     .select("*")
-    .in("user_id", recipientIds);
+    .in("user_id", recipientIds)
+    .eq("chat_enabled", true);
 
   if (subsError) {
     return new Response(JSON.stringify({ error: subsError.message }), { status: 500 });
