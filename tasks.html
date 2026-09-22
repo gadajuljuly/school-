@@ -3212,7 +3212,7 @@
     if (!sheet || !sheet.messages) return 0;
     var lastRead = chatReadState[sheet.id] || 0;
     return sheet.messages.filter(function (m) {
-      return m.phone !== myPhoneNumber && m.ts > lastRead;
+      return m.type !== "system" && m.phone !== myPhoneNumber && m.ts > lastRead;
     }).length;
   }
   function totalUnreadCount() {
@@ -5958,7 +5958,7 @@
     if (activeChatSheetId === sheet.id) return;
     var previousIds = previousMessages.map(function (m) { return m.id; });
     var newMessages = (sheet.messages || []).filter(function (m) {
-      return previousIds.indexOf(m.id) === -1 && m.phone !== myPhoneNumber;
+      return previousIds.indexOf(m.id) === -1 && m.type !== "system" && m.phone !== myPhoneNumber;
     });
     if (!newMessages.length) return;
     var last = newMessages[newMessages.length - 1];
