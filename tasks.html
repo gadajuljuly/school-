@@ -3857,47 +3857,94 @@
     });
   }
 
-  function deleteLibraryFile(sheet, entry) {
-    supabaseClient.storage.from(LIBRARY_BUCKET).remove([entry.path]).then(function () {
-      sheet.files = (sheet.files || []).filter(function (f) { return f.id !== entry.id; });
-      saveData();
-      renderLibraryGrid();
-    }, function () {
-      alert(tr("libraryUploadError"));
-    });
-  }
-
   var libraryDebugStatusEl = document.getElementById("libraryDebugStatus");
   function libraryDebugLog(line) {
     if (!libraryDebugStatusEl) return;
     libraryDebugStatusEl.textContent += (libraryDebugStatusEl.textContent ? "\n" : "") + line;
   }
 
+  // Shared-sheet library changes must never be written from a local `sheet`
+  // object captured before an async storage call - the background
+  // shared-sheets poll (every 20s, or on tab focus) replaces the whole
+  // sharedSheets array while that call is in flight, orphaning the
+  // reference so both the save and the re-render silently miss the change.
+  // Instead, re-fetch the current server-side data, merge just the files
+  // field, and write that back - the same safe pattern chat messages use.
+  function applySharedLibraryFiles(sheetId, updateFilesFn) {
+    return supabaseClient.from(SHARED_TABLE).select("data").eq("id", sheetId).maybeSingle().then(function (result) {
+      if (result && result.error) throw result.error;
+      var currentData = (result && result.data && result.data.data) || {};
+      var updatedData = {
+        tasks: currentData.tasks || [],
+        reports: currentData.reports || [],
+        files: updateFilesFn(currentData.files || []),
+        ended: currentData.ended || false,
+        endedDate: currentData.endedDate || null
+      };
+      return supabaseClient.from(SHARED_TABLE).update({ data: updatedData, updated_at: new Date().toISOString() }).eq("id", sheetId)
+        .then(function (updateResult) {
+          if (updateResult && updateResult.error) throw updateResult.error;
+          var liveSheet = sharedSheets.find(function (s) { return s.id === sheetId; });
+          if (liveSheet) liveSheet.files = updatedData.files;
+        });
+    });
+  }
+
+  function deleteLibraryFile(sheet, entry) {
+    var sheetId = sheet.id;
+    var isShared = !!sheet.shared;
+    supabaseClient.storage.from(LIBRARY_BUCKET).remove([entry.path]).then(function () {
+      if (isShared) {
+        return applySharedLibraryFiles(sheetId, function (files) {
+          return files.filter(function (f) { return f.id !== entry.id; });
+        });
+      }
+      var liveSheet = data.sheets.find(function (s) { return s.id === sheetId; });
+      if (liveSheet) {
+        liveSheet.files = (liveSheet.files || []).filter(function (f) { return f.id !== entry.id; });
+        saveData();
+      }
+    }).then(function () {
+      renderLibraryGrid();
+    }, function () {
+      alert(tr("libraryUploadError"));
+    });
+  }
+
   function uploadLibraryFiles(fileList) {
     libraryDebugLog("uploadLibraryFiles called, fileList.length=" + fileList.length);
-    var sheet = allSheets().find(function (s) { return s.id === activeLibrarySheetId; });
-    if (!sheet) { libraryDebugLog("STOP: no active sheet found (activeLibrarySheetId=" + activeLibrarySheetId + ")"); return; }
-    libraryDebugLog("sheet found: " + sheet.name + " (id=" + sheet.id + ")");
+    var initialSheet = allSheets().find(function (s) { return s.id === activeLibrarySheetId; });
+    if (!initialSheet) { libraryDebugLog("STOP: no active sheet found (activeLibrarySheetId=" + activeLibrarySheetId + ")"); return; }
+    var sheetId = initialSheet.id;
+    var isShared = !!initialSheet.shared;
+    libraryDebugLog("sheet found: " + initialSheet.name + " (id=" + sheetId + ", shared=" + isShared + ")");
     if (!supabaseClient) { libraryDebugLog("STOP: supabaseClient not ready yet"); return; }
     libraryDebugLog("supabaseClient ready");
-    sheet.files = sheet.files || [];
     Array.prototype.slice.call(fileList).forEach(function (file) {
       try {
       libraryDebugLog("processing file: " + file.name + " (" + file.size + " bytes, type=" + file.type + ")");
-      var path = sheet.id + "/" + uid() + "-" + safeStorageFileName(file.name);
+      var path = sheetId + "/" + uid() + "-" + safeStorageFileName(file.name);
       libraryDebugLog("upload path: " + path);
       supabaseClient.storage.from(LIBRARY_BUCKET).upload(path, file).then(function (result) {
         libraryDebugLog("upload() resolved: " + JSON.stringify(result));
         if (result.error) throw result.error;
-        sheet.files.push({
+        var newEntry = {
           id: uid(),
           name: file.name,
           path: path,
           type: file.type || "",
           size: file.size || 0,
           uploadedAt: Date.now()
-        });
-        saveData();
+        };
+        if (isShared) {
+          return applySharedLibraryFiles(sheetId, function (files) { return files.concat([newEntry]); });
+        }
+        var liveSheet = data.sheets.find(function (s) { return s.id === sheetId; });
+        if (liveSheet) {
+          liveSheet.files = (liveSheet.files || []).concat([newEntry]);
+          saveData();
+        }
+      }).then(function () {
         renderLibraryGrid();
         libraryDebugLog("done, file added to library");
       }).catch(function (err) {
