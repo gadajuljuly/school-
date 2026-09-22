@@ -3,10 +3,10 @@
 //   VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided automatically by Supabase.
 //
-// Called directly by the client right after a chat message is sent (no cron
-// needed here - it's triggered per-message, not on a schedule). Sends a real
-// web push to every other member of the project so they get a notification
-// even if the app/browser isn't open, like a normal messaging app.
+// Called directly by the client (from the browser) right after a chat
+// message is sent - unlike send-reminders, which pg_cron calls server-side
+// and never needs CORS. Sends a real web push to every other member of the
+// project so they get a notification even if the app/browser isn't open.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import webpush from "npm:web-push@3.6.7";
@@ -21,6 +21,23 @@ webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
+// Being called directly from the browser (unlike send-reminders, which only
+// pg_cron ever calls) means every response - including errors - needs CORS
+// headers, and the browser's OPTIONS preflight must be answered explicitly,
+// or the browser reports a generic network failure with no real detail.
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 // Same derivation as phoneToUuid() in tasks.html - must stay in sync.
 async function phoneToUuid(phone: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("itask-phone:" + phone));
@@ -30,16 +47,20 @@ async function phoneToUuid(phone: string): Promise<string> {
 }
 
 Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
   let body: { sheetId?: string; senderPhone?: string; senderName?: string; text?: string };
   try {
     body = await req.json();
   } catch {
-    return new Response(JSON.stringify({ error: "invalid json body" }), { status: 400 });
+    return jsonResponse({ error: "invalid json body" }, 400);
   }
 
   const { sheetId, senderPhone, senderName, text } = body;
   if (!sheetId || !senderPhone || !text) {
-    return new Response(JSON.stringify({ error: "missing sheetId, senderPhone, or text" }), { status: 400 });
+    return jsonResponse({ error: "missing sheetId, senderPhone, or text" }, 400);
   }
 
   const { data: sheet, error: sheetError } = await supabase
@@ -49,12 +70,12 @@ Deno.serve(async (req) => {
     .maybeSingle();
 
   if (sheetError || !sheet) {
-    return new Response(JSON.stringify({ error: sheetError?.message || "project not found" }), { status: 404 });
+    return jsonResponse({ error: sheetError?.message || "project not found" }, 404);
   }
 
   const recipients: string[] = (sheet.members || []).filter((p: string) => p !== senderPhone);
   if (!recipients.length) {
-    return new Response(JSON.stringify({ sent: 0, note: "no other members" }), { headers: { "Content-Type": "application/json" } });
+    return jsonResponse({ sent: 0, note: "no other members" });
   }
 
   const recipientIds = await Promise.all(recipients.map(phoneToUuid));
@@ -66,7 +87,7 @@ Deno.serve(async (req) => {
     .eq("chat_enabled", true);
 
   if (subsError) {
-    return new Response(JSON.stringify({ error: subsError.message }), { status: 500 });
+    return jsonResponse({ error: subsError.message }, 500);
   }
 
   const payload = JSON.stringify({
@@ -94,7 +115,5 @@ Deno.serve(async (req) => {
     }
   }
 
-  return new Response(JSON.stringify({ recipients: recipients.length, subscriptions: (subs || []).length, sent, removed }), {
-    headers: { "Content-Type": "application/json" },
-  });
+  return jsonResponse({ recipients: recipients.length, subscriptions: (subs || []).length, sent, removed });
 });
