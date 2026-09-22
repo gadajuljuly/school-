@@ -1964,7 +1964,6 @@
       <div class="report-head-title" id="libraryHeadTitle"></div>
       <button type="button" class="report-share-btn" id="libraryAddBtn" data-i18n-title="libraryAddBtnTitle" title="הוספת קובץ">&#10133;</button>
     </div>
-    <div id="libraryDebugStatus" style="white-space:pre-wrap; font-size:12px; padding:8px; background:#fffae0; color:#333; direction:ltr; text-align:left;"></div>
     <div class="library-grid" id="libraryGrid"></div>
     <input type="file" id="libraryFileInput" multiple hidden>
   </div>
@@ -3857,12 +3856,6 @@
     });
   }
 
-  var libraryDebugStatusEl = document.getElementById("libraryDebugStatus");
-  function libraryDebugLog(line) {
-    if (!libraryDebugStatusEl) return;
-    libraryDebugStatusEl.textContent += (libraryDebugStatusEl.textContent ? "\n" : "") + line;
-  }
-
   // Shared-sheet library changes must never be written from a local `sheet`
   // object captured before an async storage call - the background
   // shared-sheets poll (every 20s, or on tab focus) replaces the whole
@@ -3912,21 +3905,14 @@
   }
 
   function uploadLibraryFiles(fileList) {
-    libraryDebugLog("uploadLibraryFiles called, fileList.length=" + fileList.length);
     var initialSheet = allSheets().find(function (s) { return s.id === activeLibrarySheetId; });
-    if (!initialSheet) { libraryDebugLog("STOP: no active sheet found (activeLibrarySheetId=" + activeLibrarySheetId + ")"); return; }
+    if (!initialSheet) return;
     var sheetId = initialSheet.id;
     var isShared = !!initialSheet.shared;
-    libraryDebugLog("sheet found: " + initialSheet.name + " (id=" + sheetId + ", shared=" + isShared + ")");
-    if (!supabaseClient) { libraryDebugLog("STOP: supabaseClient not ready yet"); return; }
-    libraryDebugLog("supabaseClient ready");
+    if (!supabaseClient) return;
     Array.prototype.slice.call(fileList).forEach(function (file) {
-      try {
-      libraryDebugLog("processing file: " + file.name + " (" + file.size + " bytes, type=" + file.type + ")");
       var path = sheetId + "/" + uid() + "-" + safeStorageFileName(file.name);
-      libraryDebugLog("upload path: " + path);
       supabaseClient.storage.from(LIBRARY_BUCKET).upload(path, file).then(function (result) {
-        libraryDebugLog("upload() resolved: " + JSON.stringify(result));
         if (result.error) throw result.error;
         var newEntry = {
           id: uid(),
@@ -3946,15 +3932,10 @@
         }
       }).then(function () {
         renderLibraryGrid();
-        libraryDebugLog("done, file added to library");
       }).catch(function (err) {
         console.error("library upload failed:", err);
-        libraryDebugLog("CATCH: " + JSON.stringify(err) + " / " + (err && err.message));
         alert(tr("libraryUploadError") + "\n" + ((err && (err.message || err.error || err.statusCode)) || JSON.stringify(err) || ""));
       });
-      } catch (syncErr) {
-        libraryDebugLog("SYNC ERROR: " + (syncErr && (syncErr.message || syncErr)) + "\n" + (syncErr && syncErr.stack || ""));
-      }
     });
   }
 
@@ -3963,7 +3944,6 @@
     if (!sheet) return;
     activeLibrarySheetId = sheet.id;
     libraryHeadTitle.textContent = sheet.name;
-    if (libraryDebugStatusEl) libraryDebugStatusEl.textContent = "";
     renderLibraryGrid();
     libraryView.hidden = false;
   }
@@ -3973,12 +3953,8 @@
   }
   libraryBtn.addEventListener("click", openLibraryView);
   libraryBackBtn.addEventListener("click", closeLibraryView);
-  libraryAddBtn.addEventListener("click", function () {
-    libraryDebugLog("add button clicked, opening file picker");
-    libraryFileInput.click();
-  });
+  libraryAddBtn.addEventListener("click", function () { libraryFileInput.click(); });
   libraryFileInput.addEventListener("change", function () {
-    libraryDebugLog("change event fired, files=" + (libraryFileInput.files ? libraryFileInput.files.length : "null") + " activeLibrarySheetId=" + activeLibrarySheetId);
     if (libraryFileInput.files && libraryFileInput.files.length) uploadLibraryFiles(libraryFileInput.files);
     libraryFileInput.value = "";
   });
