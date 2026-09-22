@@ -406,6 +406,16 @@
     margin: 10px 0 8px;
     box-shadow: 0 1px 2px var(--shadow);
   }
+  .chat-system-msg {
+    align-self: center;
+    color: var(--ink-muted);
+    font-size: 0.72rem;
+    font-style: italic;
+    text-align: center;
+    padding: 3px 12px;
+    margin: 2px 0;
+    max-width: 85%;
+  }
   .chat-bubble {
     max-width: 78%;
     padding: 6px 9px 7px;
@@ -2168,6 +2178,10 @@
     chatMicBtnTitle: { he: "הקלטת הודעה קולית", en: "Record voice message", ar: "تسجيل رسالة صوتية", ru: "Записать голосовое сообщение" },
     chatRecordingCancelTitle: { he: "ביטול", en: "Cancel", ar: "إلغاء", ru: "Отмена" },
     voiceMessageLabel: { he: "🎤 הודעה קולית", en: "🎤 Voice message", ar: "🎤 رسالة صوتية", ru: "🎤 Голосовое сообщение" },
+    chatSysTaskAdded: { he: 'משימה "{name}" נוספה', en: 'Task "{name}" was added', ar: 'تمت إضافة المهمة "{name}"', ru: 'Задача "{name}" добавлена' },
+    chatSysTaskDeleted: { he: 'משימה "{name}" נמחקה', en: 'Task "{name}" was deleted', ar: 'تم حذف المهمة "{name}"', ru: 'Задача "{name}" удалена' },
+    chatSysTaskDone: { he: 'משימה "{name}" בוצעה', en: 'Task "{name}" was completed', ar: 'تم إنجاز المهمة "{name}"', ru: 'Задача "{name}" выполнена' },
+    chatSysTaskUndone: { he: 'משימה "{name}" לא בוצעה', en: 'Task "{name}" was marked not done', ar: 'المهمة "{name}" لم تُنجز', ru: 'Задача "{name}" отмечена как невыполненная' },
     voiceNotSupported: { he: "הקלטת קול לא נתמכת בדפדפן הזה", en: "Voice recording isn't supported in this browser", ar: "تسجيل الصوت غير مدعوم في هذا المتصفح", ru: "Запись голоса не поддерживается в этом браузере" },
     voiceMicPermissionDenied: { he: "לא ניתנה הרשאה למיקרופון", en: "Microphone permission was denied", ar: "لم يتم منح إذن الميكروفون", ru: "Доступ к микрофону не предоставлен" },
     voiceUploadError: { he: "שליחת ההודעה הקולית נכשלה", en: "Failed to send the voice message", ar: "فشل إرسال الرسالة الصوتية", ru: "Не удалось отправить голосовое сообщение" },
@@ -3251,6 +3265,13 @@
         chatMessages.appendChild(sep);
         lastDay = day;
       }
+      if (m.type === "system") {
+        var sysEl = document.createElement("div");
+        sysEl.className = "chat-system-msg";
+        sysEl.textContent = m.text;
+        chatMessages.appendChild(sysEl);
+        return;
+      }
       var isMine = m.phone === myPhoneNumber;
       var prev = messages[i - 1];
       var isStart = day !== (prev ? new Date(prev.ts).toDateString() : null) || !prev || prev.phone !== m.phone;
@@ -3409,6 +3430,25 @@
         body: { sheetId: sheetId, senderPhone: myPhoneNumber, senderName: senderName, text: text }
       }).then(function () {}, function () {});
     } catch (e) {}
+  }
+
+  // Posts an automatic system notice into a shared project's chat (e.g.
+  // "task X was added/done/deleted"), rendered without a sender bubble.
+  // Silently a no-op for anything that isn't an actually-shared sheet.
+  function sendChatSystemMessage(sheetId, text) {
+    if (!supabaseClient || !sheetId) return;
+    supabaseClient.from(SHARED_TABLE).select("messages").eq("id", sheetId).maybeSingle()
+      .then(function (result) {
+        var current = (result && result.data && result.data.messages) || [];
+        var msg = { id: uid(), type: "system", text: text, ts: Date.now() };
+        var updated = current.concat([msg]).slice(-200);
+        return supabaseClient.from(SHARED_TABLE).update({ messages: updated }).eq("id", sheetId)
+          .then(function () {
+            var sheet = sharedSheets.find(function (s) { return s.id === sheetId; });
+            if (sheet) sheet.messages = updated;
+            if (activeChatSheetId === sheetId) renderChatMessages();
+          });
+      }, function () {});
   }
 
   function sendChatMessage(sheetId, text) {
@@ -5415,8 +5455,12 @@
       createdAt: Date.now()
     };
     if (type === "note") newTask.time = currentTimeHHMM();
-    activeSheet().tasks.push(newTask);
+    var sheet = activeSheet();
+    sheet.tasks.push(newTask);
     saveData();
+    if (sheet.shared && type === "task") {
+      sendChatSystemMessage(sheet.id, tr("chatSysTaskAdded").replace("{name}", newTask.text));
+    }
     taskInput.value = "";
     closeAddTypeModal();
     render();
@@ -5448,18 +5492,27 @@
   });
 
   function cycleStatus(id) {
-    var t = activeSheet().tasks.find(function (x) { return x.id === id; });
+    var sheet = activeSheet();
+    var t = sheet.tasks.find(function (x) { return x.id === id; });
     if (t) {
+      var wasDone = t.status === 2;
       t.status = (t.status + 1) % 3;
       saveData();
+      if (sheet.shared && t.type === "task" && wasDone !== (t.status === 2)) {
+        sendChatSystemMessage(sheet.id, tr(t.status === 2 ? "chatSysTaskDone" : "chatSysTaskUndone").replace("{name}", t.text));
+      }
       render();
     }
   }
 
   function removeTask(id) {
     var sheet = activeSheet();
+    var t = sheet.tasks.find(function (x) { return x.id === id; });
     sheet.tasks = sheet.tasks.filter(function (x) { return x.id !== id; });
     saveData();
+    if (sheet.shared && t && t.type === "task") {
+      sendChatSystemMessage(sheet.id, tr("chatSysTaskDeleted").replace("{name}", t.text));
+    }
     render();
   }
 
