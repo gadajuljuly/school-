@@ -3868,9 +3868,11 @@
 
   function uploadLibraryFiles(fileList) {
     var sheet = allSheets().find(function (s) { return s.id === activeLibrarySheetId; });
-    if (!sheet) return;
+    if (!sheet) { alert("DEBUG: no active sheet found (activeLibrarySheetId=" + activeLibrarySheetId + ")"); return; }
+    if (!supabaseClient) { alert("DEBUG: supabaseClient not ready yet"); return; }
     sheet.files = sheet.files || [];
     Array.prototype.slice.call(fileList).forEach(function (file) {
+      try {
       var path = sheet.id + "/" + uid() + "-" + safeStorageFileName(file.name);
       supabaseClient.storage.from(LIBRARY_BUCKET).upload(path, file).then(function (result) {
         if (result.error) throw result.error;
@@ -3888,6 +3890,9 @@
         console.error("library upload failed:", err);
         alert(tr("libraryUploadError") + "\n" + ((err && (err.message || err.error || err.statusCode)) || JSON.stringify(err) || ""));
       });
+      } catch (syncErr) {
+        alert("DEBUG sync error in uploadLibraryFiles: " + (syncErr && (syncErr.message || syncErr)) + "\n" + (syncErr && syncErr.stack || ""));
+      }
     });
   }
 
