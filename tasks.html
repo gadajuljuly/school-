@@ -3870,8 +3870,9 @@
         });
         saveData();
         renderLibraryGrid();
-      }, function () {
-        alert(tr("libraryUploadError"));
+      }).catch(function (err) {
+        console.error("library upload failed:", err);
+        alert(tr("libraryUploadError") + "\n" + ((err && (err.message || err.error || err.statusCode)) || JSON.stringify(err) || ""));
       });
     });
   }
