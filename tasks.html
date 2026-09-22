@@ -3971,6 +3971,42 @@
     });
   }
 
+  function chatNotifDisabledKey() {
+    return "itask-chat-notif-disabled:" + SUPABASE_ROW_ID;
+  }
+
+  // Chat notifications are opt-out, not opt-in: try to enable them
+  // automatically on every load (silently reusing an already-granted
+  // permission, or asking once if permission was never decided), unless the
+  // user explicitly turned them off before via the menu toggle.
+  function autoEnableChatNotifications() {
+    if (!supabaseClient || !SUPABASE_ROW_ID) return;
+    if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) return;
+    var userDisabled = false;
+    try { userDisabled = localStorage.getItem(chatNotifDisabledKey()) === "1"; } catch (e) {}
+    if (userDisabled || Notification.permission === "denied") return;
+    var proceed = Notification.permission === "granted"
+      ? Promise.resolve("granted")
+      : Notification.requestPermission();
+    proceed.then(function (permission) {
+      if (permission !== "granted") return;
+      return ensurePushSubscription().then(function (sub) {
+        var keys = sub.toJSON().keys;
+        return supabaseClient.from("push_subscriptions").upsert({
+          user_id: SUPABASE_ROW_ID,
+          endpoint: sub.endpoint,
+          p256dh: keys.p256dh,
+          auth: keys.auth,
+          chat_enabled: true
+        }, { onConflict: "endpoint" });
+      }).then(function (result) {
+        if (result && result.error) return;
+        chatNotifSelect.value = "on";
+        showChatNotifStatus(tr("chatNotifActive"));
+      });
+    }).catch(function () {});
+  }
+
   function initReminderSettings() {
     if (!supabaseClient || !("serviceWorker" in navigator) || !("PushManager" in window)) {
       if (reminderFrequencySelect) reminderFrequencySelect.disabled = true;
@@ -4070,6 +4106,7 @@
     }
 
     if (!value) {
+      try { localStorage.setItem(chatNotifDisabledKey(), "1"); } catch (e) {}
       navigator.serviceWorker.ready.then(function (reg) {
         return reg.pushManager.getSubscription();
       }).then(function (sub) {
@@ -4081,6 +4118,8 @@
       }).catch(function () {});
       return;
     }
+
+    try { localStorage.removeItem(chatNotifDisabledKey()); } catch (e) {}
 
     if (Notification.permission === "denied") {
       showChatNotifStatus(tr("notificationsBlocked"));
@@ -6017,6 +6056,7 @@
     appRoot.hidden = false;
     startWithSupabase();
     initReminderSettings();
+    autoEnableChatNotifications();
     establishSession().then(startSessionWatcher);
     startSharedSheetsWatcher();
     startPeriodicBackup();
