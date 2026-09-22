@@ -3912,6 +3912,7 @@
   libraryBackBtn.addEventListener("click", closeLibraryView);
   libraryAddBtn.addEventListener("click", function () { libraryFileInput.click(); });
   libraryFileInput.addEventListener("change", function () {
+    alert("DEBUG: file input changed, files=" + (libraryFileInput.files ? libraryFileInput.files.length : "null") + " activeLibrarySheetId=" + activeLibrarySheetId);
     if (libraryFileInput.files && libraryFileInput.files.length) uploadLibraryFiles(libraryFileInput.files);
     libraryFileInput.value = "";
   });
