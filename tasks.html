@@ -3428,16 +3428,10 @@
     try {
       supabaseClient.functions.invoke("send-chat-notification", {
         body: { sheetId: sheetId, senderPhone: myPhoneNumber, senderName: senderName, text: text }
-      }).then(function (result) {
-        console.log("send-chat-notification result:", JSON.stringify(result));
-        alert("DEBUG push notif result: " + JSON.stringify(result));
-      }, function (err) {
+      }).then(function () {}, function (err) {
         console.error("send-chat-notification failed:", err);
-        alert("DEBUG push notif error: " + (err && err.message ? err.message : JSON.stringify(err)));
       });
-    } catch (e) {
-      alert("DEBUG push notif exception: " + e.message);
-    }
+    } catch (e) {}
   }
 
   // Posts an automatic system notice into a shared project's chat (e.g.
