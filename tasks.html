@@ -2416,7 +2416,7 @@
   var SHARED_TABLE = "shared_projects";
 
   function saveData() {
-    if (dataLoadBlocked) return;
+    if (dataLoadBlocked || !privateDataSettled) return;
     saveLocalData();
     if (supabaseClient) {
       supabaseClient.from("app_state")
@@ -2481,6 +2481,16 @@
 
   var data = defaultData();
   var dataLoadBlocked = false;
+  // The private app_state read and the shared-projects read both fire in
+  // parallel on startup (loadSharedSheets() is not awaited by
+  // startWithSupabase()). If the shared read resolves first, its own
+  // render() call would show a fully-interactive app with `data` still at
+  // its unresolved initial default - no error overlay, since that's only
+  // shown once the private read settles - and any tap before the private
+  // read finishes could saveData() that empty default over the real row.
+  // Gate every render() triggered by the shared-projects path behind this
+  // flag so the very first paint always reflects the private read's outcome.
+  var privateDataSettled = false;
   var state = { filter: "all", renamingSheetId: null, menuOpen: false, editingTaskId: null, viewDate: todayISO(), searchOpen: false, highlightTaskId: null, viewMode: "tasks" };
 
   var dateLabel = document.getElementById("dateLabel");
@@ -5645,11 +5655,13 @@
   // actually confirms either real data or a genuinely brand-new user.
   function showDataLoadError() {
     dataLoadBlocked = true;
+    privateDataSettled = true;
     appLoadingOverlay.hidden = true;
     dataErrorOverlay.hidden = false;
   }
   function hideDataLoadError() {
     dataLoadBlocked = false;
+    privateDataSettled = true;
     dataErrorOverlay.hidden = true;
   }
 
@@ -5780,7 +5792,12 @@
         sharedSheets = newSheets;
         rollSheetsForward(sharedSheets);
         updateAppBadge();
-        render();
+        // Don't paint an interactive frame off the private data's initial
+        // (unresolved) default before that load has had a chance to settle -
+        // see the privateDataSettled comment above. Once it settles, that
+        // code path's own render() picks up whatever this call already
+        // loaded into sharedSheets.
+        if (privateDataSettled) render();
         tryOpenPendingChat();
       }, function () {});
   }
