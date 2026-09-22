@@ -1447,6 +1447,11 @@
     background: var(--paper-alt);
     color: var(--ink);
   }
+  .modal-btn-primary {
+    border: none;
+    background: var(--accent);
+    color: var(--accent-contrast);
+  }
 
   .install-fab {
     position: fixed;
@@ -1953,6 +1958,26 @@
     </div>
   </div>
 
+  <div class="report-view" id="libraryFoldersView" hidden>
+    <div class="report-head">
+      <button type="button" class="report-back-btn" id="libraryFoldersBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
+      <div class="report-head-title" id="libraryFoldersHeadTitle"></div>
+      <button type="button" class="report-share-btn" id="libraryAddFolderBtn" data-i18n-title="libraryAddFolderBtnTitle" title="הוספת תיקייה">&#10133;</button>
+    </div>
+    <div class="library-grid" id="libraryFoldersGrid"></div>
+  </div>
+
+  <div class="modal-overlay" id="libraryFolderNameOverlay" hidden>
+    <div class="modal-box" role="alertdialog" aria-modal="true">
+      <p class="modal-message" data-i18n="libraryNewFolderPrompt">שם התיקייה</p>
+      <input type="text" id="libraryFolderNameInput" class="auth-input" maxlength="30" autocomplete="off">
+      <div class="modal-actions">
+        <button type="button" class="modal-btn modal-btn-primary" id="libraryFolderNameOkBtn" data-i18n="libraryFolderCreateBtn">יצירה</button>
+        <button type="button" class="modal-btn modal-btn-no" id="libraryFolderNameCancelBtn" data-i18n="cancelBtn">ביטול</button>
+      </div>
+    </div>
+  </div>
+
   <div class="report-view" id="libraryView" hidden>
     <div class="report-head">
       <button type="button" class="report-back-btn" id="libraryBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
@@ -2197,6 +2222,17 @@
     libraryEmptyPrompt: { he: "אין עדיין קבצים בספרייה הזו", en: "No files in this library yet", ar: "لا توجد ملفات في هذه المكتبة بعد", ru: "В этой библиотеке пока нет файлов" },
     libraryUploadError: { he: "העלאת הקובץ נכשלה", en: "File upload failed", ar: "فشل تحميل الملف", ru: "Не удалось загрузить файл" },
     libraryConfirmDelete: { he: "למחוק את הקובץ הזה?", en: "Delete this file?", ar: "هل تريد حذف هذا الملف؟", ru: "Удалить этот файл?" },
+    libraryAddFolderBtnTitle: { he: "הוספת תיקייה", en: "Add folder", ar: "إضافة مجلد", ru: "Добавить папку" },
+    libraryNewFolderPrompt: { he: "שם התיקייה", en: "Folder name", ar: "اسم المجلد", ru: "Название папки" },
+    libraryFoldersEmptyPrompt: { he: "אין עדיין תיקיות", en: "No folders yet", ar: "لا توجد مجلدات بعد", ru: "Пока нет папок" },
+    libraryFolderPlans: { he: "תוכניות", en: "Plans", ar: "خطط", ru: "Планы" },
+    libraryFolderPhotos: { he: "תמונות", en: "Photos", ar: "صور", ru: "Фото" },
+    libraryFolderDiaries: { he: "יומנים", en: "Journals", ar: "يوميات", ru: "Дневники" },
+    libraryFolderReports: { he: "דוחות", en: "Reports", ar: "تقارير", ru: "Отчёты" },
+    libraryFolderGeneral: { he: "כללי", en: "General", ar: "عام", ru: "Общее" },
+    libraryConfirmDeleteFolder: { he: "למחוק את התיקייה הזו וכל הקבצים שבה?", en: "Delete this folder and all its files?", ar: "هل تريد حذف هذا المجلد وجميع ملفاته؟", ru: "Удалить эту папку со всеми файлами?" },
+    libraryTitlePrefix: { he: "ספריית ", en: "Library: ", ar: "مكتبة ", ru: "Библиотека: " },
+    libraryFolderCreateBtn: { he: "יצירה", en: "Create", ar: "إنشاء", ru: "Создать" },
     chatAskNamePrompt: { he: "איך שמך יוצג לשאר המשתתפים בצ'אט הזה?", en: "How should your name appear to others in this chat?", ar: "كيف تريد أن يظهر اسمك لبقية المشاركين في هذه الدردشة؟", ru: "Как ваше имя будет отображаться другим участникам этого чата?" },
     newSharedProjectNotifTitle: { he: "צורפת לפרויקט משותף", en: "You were added to a shared project", ar: "تمت إضافتك إلى مشروع مشترك", ru: "Вас добавили в общий проект" },
     newSharedProjectNotifBody: { he: "{name} - לחצו כדי לפתוח", en: "{name} - tap to open", ar: "{name} - انقر للفتح", ru: "{name} - нажмите, чтобы открыть" },
@@ -2454,7 +2490,7 @@
         .upsert({
           id: sheet.id,
           name: sheet.name,
-          data: { tasks: sheet.tasks, reports: sheet.reports, files: sheet.files || [], ended: sheet.ended || false, endedDate: sheet.endedDate || null },
+          data: { tasks: sheet.tasks, reports: sheet.reports, files: [], folders: sheet.folders || null, ended: sheet.ended || false, endedDate: sheet.endedDate || null },
           members: sheet.members,
           member_names: sheet.memberNames || {},
           updated_at: new Date().toISOString()
@@ -3087,6 +3123,7 @@
           tasks: privateSheet.tasks || [],
           reports: privateSheet.reports || [],
           files: privateSheet.files || [],
+          folders: privateSheet.folders || null,
           ended: privateSheet.ended || false,
           endedDate: privateSheet.endedDate || null,
           members: members,
@@ -3775,6 +3812,15 @@
   }
 
   var libraryBtn = document.getElementById("libraryBtn");
+  var libraryFoldersView = document.getElementById("libraryFoldersView");
+  var libraryFoldersBackBtn = document.getElementById("libraryFoldersBackBtn");
+  var libraryFoldersHeadTitle = document.getElementById("libraryFoldersHeadTitle");
+  var libraryFoldersGrid = document.getElementById("libraryFoldersGrid");
+  var libraryAddFolderBtn = document.getElementById("libraryAddFolderBtn");
+  var libraryFolderNameOverlay = document.getElementById("libraryFolderNameOverlay");
+  var libraryFolderNameInput = document.getElementById("libraryFolderNameInput");
+  var libraryFolderNameOkBtn = document.getElementById("libraryFolderNameOkBtn");
+  var libraryFolderNameCancelBtn = document.getElementById("libraryFolderNameCancelBtn");
   var libraryView = document.getElementById("libraryView");
   var libraryBackBtn = document.getElementById("libraryBackBtn");
   var libraryHeadTitle = document.getElementById("libraryHeadTitle");
@@ -3782,6 +3828,31 @@
   var libraryAddBtn = document.getElementById("libraryAddBtn");
   var libraryFileInput = document.getElementById("libraryFileInput");
   var activeLibrarySheetId = null;
+  var activeLibraryFolderId = null;
+
+  var DEFAULT_LIBRARY_FOLDER_KEYS = ["plans", "photos", "diaries", "reports"];
+  var LIBRARY_FOLDER_KEY_LABELS = {
+    plans: "libraryFolderPlans",
+    photos: "libraryFolderPhotos",
+    diaries: "libraryFolderDiaries",
+    reports: "libraryFolderReports",
+    general: "libraryFolderGeneral"
+  };
+
+  function buildDefaultLibraryFolders(legacyFiles) {
+    var folders = DEFAULT_LIBRARY_FOLDER_KEYS.map(function (key) {
+      return { id: uid(), key: key, name: null, files: [] };
+    });
+    if (legacyFiles && legacyFiles.length) {
+      folders.push({ id: uid(), key: "general", name: null, files: legacyFiles });
+    }
+    return folders;
+  }
+
+  function folderDisplayName(folder) {
+    if (folder.key && LIBRARY_FOLDER_KEY_LABELS[folder.key]) return tr(LIBRARY_FOLDER_KEY_LABELS[folder.key]);
+    return folder.name || "";
+  }
 
   function libraryPublicUrl(path) {
     var result = supabaseClient.storage.from(LIBRARY_BUCKET).getPublicUrl(path);
@@ -3799,9 +3870,146 @@
     return (bytes / (1024 * 1024)).toFixed(1) + " MB";
   }
 
+  // Shared-sheet library changes must never be written from a local `sheet`
+  // object captured before an async storage/server call - the background
+  // shared-sheets poll (every 20s, or on tab focus) replaces the whole
+  // sharedSheets array while that call is in flight, orphaning the
+  // reference so both the save and the re-render silently miss the change.
+  // Instead, re-fetch the current server-side data, merge just the folders
+  // field, and write that back - the same safe pattern chat messages use.
+  function applySharedLibraryFolders(sheetId, updateFoldersFn) {
+    return supabaseClient.from(SHARED_TABLE).select("data").eq("id", sheetId).maybeSingle().then(function (result) {
+      if (result && result.error) throw result.error;
+      var currentData = (result && result.data && result.data.data) || {};
+      var updatedData = {
+        tasks: currentData.tasks || [],
+        reports: currentData.reports || [],
+        files: [],
+        folders: updateFoldersFn(currentData.folders || buildDefaultLibraryFolders(currentData.files)),
+        ended: currentData.ended || false,
+        endedDate: currentData.endedDate || null
+      };
+      return supabaseClient.from(SHARED_TABLE).update({ data: updatedData, updated_at: new Date().toISOString() }).eq("id", sheetId)
+        .then(function (updateResult) {
+          if (updateResult && updateResult.error) throw updateResult.error;
+          var liveSheet = sharedSheets.find(function (s) { return s.id === sheetId; });
+          if (liveSheet) liveSheet.folders = updatedData.folders;
+          return updatedData.folders;
+        });
+    });
+  }
+
+  // Lazily creates the 4 default folders (and migrates any pre-existing
+  // flat file list into a "General" folder) the first time a sheet's
+  // library is opened. Uses the same safe read-then-write approach for
+  // shared sheets so a concurrent member never gets their real folder
+  // clobbered by another client's bootstrap.
+  function ensureLibraryFolders(sheet, callback) {
+    if (sheet.folders) { callback(sheet.folders); return; }
+    if (!sheet.shared) {
+      var liveSheet = data.sheets.find(function (s) { return s.id === sheet.id; });
+      if (!liveSheet) { callback([]); return; }
+      if (!liveSheet.folders) {
+        liveSheet.folders = buildDefaultLibraryFolders(liveSheet.files);
+        liveSheet.files = [];
+        saveData();
+      }
+      callback(liveSheet.folders);
+      return;
+    }
+    supabaseClient.from(SHARED_TABLE).select("data").eq("id", sheet.id).maybeSingle().then(function (result) {
+      var currentData = (result && result.data && result.data.data) || {};
+      if (currentData.folders) {
+        var liveSheet = sharedSheets.find(function (s) { return s.id === sheet.id; });
+        if (liveSheet) liveSheet.folders = currentData.folders;
+        callback(currentData.folders);
+        return;
+      }
+      var folders = buildDefaultLibraryFolders(currentData.files);
+      var updatedData = {
+        tasks: currentData.tasks || [],
+        reports: currentData.reports || [],
+        files: [],
+        folders: folders,
+        ended: currentData.ended || false,
+        endedDate: currentData.endedDate || null
+      };
+      supabaseClient.from(SHARED_TABLE).update({ data: updatedData, updated_at: new Date().toISOString() }).eq("id", sheet.id).then(function () {
+        var liveSheet = sharedSheets.find(function (s) { return s.id === sheet.id; });
+        if (liveSheet) liveSheet.folders = folders;
+        callback(folders);
+      }, function () { callback(folders); });
+    }, function () { callback([]); });
+  }
+
+  function renderLibraryFolders() {
+    var sheet = allSheets().find(function (s) { return s.id === activeLibrarySheetId; });
+    if (!sheet) return;
+    ensureLibraryFolders(sheet, function (folders) {
+      if (activeLibrarySheetId !== sheet.id || !libraryFoldersView || libraryFoldersView.hidden) return;
+      libraryFoldersGrid.innerHTML = "";
+      folders.forEach(function (folder) {
+        var item = document.createElement("div");
+        item.className = "library-item";
+
+        var thumb = document.createElement("div");
+        thumb.className = "library-item-thumb";
+        thumb.textContent = "📁";
+        item.appendChild(thumb);
+
+        var nameEl = document.createElement("div");
+        nameEl.className = "library-item-name";
+        nameEl.textContent = folderDisplayName(folder);
+        item.appendChild(nameEl);
+
+        item.addEventListener("click", function () { openLibraryFolderView(sheet, folder); });
+
+        if (!folder.key) {
+          var delBtn = document.createElement("button");
+          delBtn.type = "button";
+          delBtn.className = "library-item-delete";
+          delBtn.textContent = "✕";
+          delBtn.addEventListener("click", function (e) {
+            e.stopPropagation();
+            askConfirm(tr("libraryConfirmDeleteFolder"), function () {
+              deleteLibraryFolder(sheet, folder);
+            });
+          });
+          item.appendChild(delBtn);
+        }
+
+        libraryFoldersGrid.appendChild(item);
+      });
+    });
+  }
+
+  function deleteLibraryFolder(sheet, folder) {
+    var sheetId = sheet.id;
+    var isShared = !!sheet.shared;
+    var paths = (folder.files || []).map(function (f) { return f.path; });
+    var removePromise = paths.length ? supabaseClient.storage.from(LIBRARY_BUCKET).remove(paths) : Promise.resolve();
+    removePromise.then(function () {
+      if (isShared) {
+        return applySharedLibraryFolders(sheetId, function (folders) {
+          return folders.filter(function (f) { return f.id !== folder.id; });
+        });
+      }
+      var liveSheet = data.sheets.find(function (s) { return s.id === sheetId; });
+      if (liveSheet && liveSheet.folders) {
+        liveSheet.folders = liveSheet.folders.filter(function (f) { return f.id !== folder.id; });
+        saveData();
+      }
+    }).then(function () {
+      renderLibraryFolders();
+    }, function () {
+      alert(tr("libraryUploadError"));
+    });
+  }
+
   function renderLibraryGrid() {
     var sheet = allSheets().find(function (s) { return s.id === activeLibrarySheetId; });
-    var files = (sheet && sheet.files) || [];
+    var folder = sheet && sheet.folders && sheet.folders.find(function (f) { return f.id === activeLibraryFolderId; });
+    var files = (folder && folder.files) || [];
     libraryGrid.innerHTML = "";
     if (!files.length) {
       var empty = document.createElement("div");
@@ -3842,7 +4050,7 @@
       delBtn.addEventListener("click", function (e) {
         e.stopPropagation();
         askConfirm(tr("libraryConfirmDelete"), function () {
-          deleteLibraryFile(sheet, entry);
+          deleteLibraryFile(sheet, folder, entry);
         });
       });
       item.appendChild(delBtn);
@@ -3851,45 +4059,23 @@
     });
   }
 
-  // Shared-sheet library changes must never be written from a local `sheet`
-  // object captured before an async storage call - the background
-  // shared-sheets poll (every 20s, or on tab focus) replaces the whole
-  // sharedSheets array while that call is in flight, orphaning the
-  // reference so both the save and the re-render silently miss the change.
-  // Instead, re-fetch the current server-side data, merge just the files
-  // field, and write that back - the same safe pattern chat messages use.
-  function applySharedLibraryFiles(sheetId, updateFilesFn) {
-    return supabaseClient.from(SHARED_TABLE).select("data").eq("id", sheetId).maybeSingle().then(function (result) {
-      if (result && result.error) throw result.error;
-      var currentData = (result && result.data && result.data.data) || {};
-      var updatedData = {
-        tasks: currentData.tasks || [],
-        reports: currentData.reports || [],
-        files: updateFilesFn(currentData.files || []),
-        ended: currentData.ended || false,
-        endedDate: currentData.endedDate || null
-      };
-      return supabaseClient.from(SHARED_TABLE).update({ data: updatedData, updated_at: new Date().toISOString() }).eq("id", sheetId)
-        .then(function (updateResult) {
-          if (updateResult && updateResult.error) throw updateResult.error;
-          var liveSheet = sharedSheets.find(function (s) { return s.id === sheetId; });
-          if (liveSheet) liveSheet.files = updatedData.files;
-        });
-    });
-  }
-
-  function deleteLibraryFile(sheet, entry) {
+  function deleteLibraryFile(sheet, folder, entry) {
     var sheetId = sheet.id;
+    var folderId = folder.id;
     var isShared = !!sheet.shared;
     supabaseClient.storage.from(LIBRARY_BUCKET).remove([entry.path]).then(function () {
       if (isShared) {
-        return applySharedLibraryFiles(sheetId, function (files) {
-          return files.filter(function (f) { return f.id !== entry.id; });
+        return applySharedLibraryFolders(sheetId, function (folders) {
+          return folders.map(function (f) {
+            if (f.id !== folderId) return f;
+            return Object.assign({}, f, { files: (f.files || []).filter(function (x) { return x.id !== entry.id; }) });
+          });
         });
       }
       var liveSheet = data.sheets.find(function (s) { return s.id === sheetId; });
-      if (liveSheet) {
-        liveSheet.files = (liveSheet.files || []).filter(function (f) { return f.id !== entry.id; });
+      var liveFolder = liveSheet && liveSheet.folders && liveSheet.folders.find(function (f) { return f.id === folderId; });
+      if (liveFolder) {
+        liveFolder.files = (liveFolder.files || []).filter(function (f) { return f.id !== entry.id; });
         saveData();
       }
     }).then(function () {
@@ -3903,10 +4089,11 @@
     var initialSheet = allSheets().find(function (s) { return s.id === activeLibrarySheetId; });
     if (!initialSheet) return;
     var sheetId = initialSheet.id;
+    var folderId = activeLibraryFolderId;
     var isShared = !!initialSheet.shared;
-    if (!supabaseClient) return;
+    if (!supabaseClient || !folderId) return;
     Array.prototype.slice.call(fileList).forEach(function (file) {
-      var path = sheetId + "/" + uid() + "-" + safeStorageFileName(file.name);
+      var path = sheetId + "/" + folderId + "/" + uid() + "-" + safeStorageFileName(file.name);
       supabaseClient.storage.from(LIBRARY_BUCKET).upload(path, file).then(function (result) {
         if (result.error) throw result.error;
         var newEntry = {
@@ -3918,11 +4105,17 @@
           uploadedAt: Date.now()
         };
         if (isShared) {
-          return applySharedLibraryFiles(sheetId, function (files) { return files.concat([newEntry]); });
+          return applySharedLibraryFolders(sheetId, function (folders) {
+            return folders.map(function (f) {
+              if (f.id !== folderId) return f;
+              return Object.assign({}, f, { files: (f.files || []).concat([newEntry]) });
+            });
+          });
         }
         var liveSheet = data.sheets.find(function (s) { return s.id === sheetId; });
-        if (liveSheet) {
-          liveSheet.files = (liveSheet.files || []).concat([newEntry]);
+        var liveFolder = liveSheet && liveSheet.folders && liveSheet.folders.find(function (f) { return f.id === folderId; });
+        if (liveFolder) {
+          liveFolder.files = (liveFolder.files || []).concat([newEntry]);
           saveData();
         }
       }).then(function () {
@@ -3934,24 +4127,76 @@
     });
   }
 
-  function openLibraryView() {
+  function openLibraryFoldersView() {
     var sheet = activeSheet();
     if (!sheet) return;
     activeLibrarySheetId = sheet.id;
-    libraryHeadTitle.textContent = sheet.name;
+    libraryFoldersHeadTitle.textContent = tr("libraryTitlePrefix") + sheet.name;
+    libraryFoldersView.hidden = false;
+    renderLibraryFolders();
+  }
+  function closeLibraryFoldersView() {
+    libraryFoldersView.hidden = true;
+    activeLibrarySheetId = null;
+  }
+  function openLibraryFolderView(sheet, folder) {
+    activeLibraryFolderId = folder.id;
+    libraryHeadTitle.textContent = folderDisplayName(folder);
     renderLibraryGrid();
+    libraryFoldersView.hidden = true;
     libraryView.hidden = false;
   }
   function closeLibraryView() {
     libraryView.hidden = true;
-    activeLibrarySheetId = null;
+    activeLibraryFolderId = null;
+    libraryFoldersView.hidden = false;
+    renderLibraryFolders();
   }
-  libraryBtn.addEventListener("click", openLibraryView);
+  libraryBtn.addEventListener("click", openLibraryFoldersView);
+  libraryFoldersBackBtn.addEventListener("click", closeLibraryFoldersView);
   libraryBackBtn.addEventListener("click", closeLibraryView);
   libraryAddBtn.addEventListener("click", function () { libraryFileInput.click(); });
   libraryFileInput.addEventListener("change", function () {
     if (libraryFileInput.files && libraryFileInput.files.length) uploadLibraryFiles(libraryFileInput.files);
     libraryFileInput.value = "";
+  });
+
+  function openLibraryFolderNameModal() {
+    libraryFolderNameInput.value = "";
+    libraryFolderNameOverlay.hidden = false;
+    libraryFolderNameInput.focus();
+  }
+  function closeLibraryFolderNameModal() {
+    libraryFolderNameOverlay.hidden = true;
+  }
+  function createLibraryFolder() {
+    var name = libraryFolderNameInput.value.trim();
+    if (!name) { closeLibraryFolderNameModal(); return; }
+    var sheet = allSheets().find(function (s) { return s.id === activeLibrarySheetId; });
+    closeLibraryFolderNameModal();
+    if (!sheet) return;
+    var newFolder = { id: uid(), key: null, name: name, files: [] };
+    if (sheet.shared) {
+      applySharedLibraryFolders(sheet.id, function (folders) { return (folders || []).concat([newFolder]); })
+        .then(function () { renderLibraryFolders(); });
+      return;
+    }
+    var liveSheet = data.sheets.find(function (s) { return s.id === sheet.id; });
+    if (liveSheet) {
+      liveSheet.folders = (liveSheet.folders || []).concat([newFolder]);
+      saveData();
+      renderLibraryFolders();
+    }
+  }
+  libraryAddFolderBtn.addEventListener("click", openLibraryFolderNameModal);
+  libraryFolderNameOkBtn.addEventListener("click", createLibraryFolder);
+  libraryFolderNameCancelBtn.addEventListener("click", closeLibraryFolderNameModal);
+  libraryFolderNameInput.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); createLibraryFolder(); }
+    if (e.key === "Escape") { closeLibraryFolderNameModal(); }
+  });
+  libraryFolderNameOverlay.addEventListener("click", function (e) {
+    if (e.target === libraryFolderNameOverlay) closeLibraryFolderNameModal();
   });
 
   var reportActionOverlay = document.getElementById("reportActionOverlay");
@@ -6013,6 +6258,7 @@
       tasks: d.tasks || [],
       reports: d.reports || [],
       files: d.files || [],
+      folders: d.folders || null,
       ended: d.ended || false,
       endedDate: d.endedDate || null,
       members: row.members || [],
