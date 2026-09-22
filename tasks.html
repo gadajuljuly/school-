@@ -3633,7 +3633,7 @@
 
   function uploadAndSendChatFile(file) {
     if (!activeChatSheetId || !supabaseClient) return;
-    var path = activeChatSheetId + "/files/" + uid() + "-" + file.name;
+    var path = activeChatSheetId + "/files/" + uid() + "-" + safeStorageFileName(file.name);
     supabaseClient.storage.from(LIBRARY_BUCKET).upload(path, file)
       .then(function (result) {
         if (result.error) throw result.error;
@@ -3765,6 +3765,20 @@
   });
 
   var LIBRARY_BUCKET = "project-files";
+
+  // Supabase Storage rejects object keys containing non-ASCII characters
+  // (e.g. Hebrew/Arabic file names) with "Invalid key" - the original name
+  // is still kept as display metadata separately, only the storage path
+  // itself needs to be safe.
+  function safeStorageFileName(name) {
+    var dot = name.lastIndexOf(".");
+    var base = dot > 0 ? name.slice(0, dot) : name;
+    var ext = dot > 0 ? name.slice(dot) : "";
+    base = base.replace(/[^a-zA-Z0-9_-]+/g, "_").replace(/^_+|_+$/g, "");
+    ext = ext.replace(/[^a-zA-Z0-9.]+/g, "");
+    return (base || "file") + ext;
+  }
+
   var libraryBtn = document.getElementById("libraryBtn");
   var libraryView = document.getElementById("libraryView");
   var libraryBackBtn = document.getElementById("libraryBackBtn");
@@ -3857,7 +3871,7 @@
     if (!sheet) return;
     sheet.files = sheet.files || [];
     Array.prototype.slice.call(fileList).forEach(function (file) {
-      var path = sheet.id + "/" + uid() + "-" + file.name;
+      var path = sheet.id + "/" + uid() + "-" + safeStorageFileName(file.name);
       supabaseClient.storage.from(LIBRARY_BUCKET).upload(path, file).then(function (result) {
         if (result.error) throw result.error;
         sheet.files.push({
