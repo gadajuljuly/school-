@@ -3439,16 +3439,29 @@
     if (!supabaseClient || !sheetId) return;
     supabaseClient.from(SHARED_TABLE).select("messages").eq("id", sheetId).maybeSingle()
       .then(function (result) {
+        if (result && result.error) {
+          console.error("sendChatSystemMessage select failed:", result.error);
+          alert("DEBUG system msg select error: " + result.error.message);
+          return;
+        }
         var current = (result && result.data && result.data.messages) || [];
         var msg = { id: uid(), type: "system", text: text, ts: Date.now() };
         var updated = current.concat([msg]).slice(-200);
         return supabaseClient.from(SHARED_TABLE).update({ messages: updated }).eq("id", sheetId)
-          .then(function () {
+          .then(function (updateResult) {
+            if (updateResult && updateResult.error) {
+              console.error("sendChatSystemMessage update failed:", updateResult.error);
+              alert("DEBUG system msg update error: " + updateResult.error.message);
+              return;
+            }
             var sheet = sharedSheets.find(function (s) { return s.id === sheetId; });
             if (sheet) sheet.messages = updated;
             if (activeChatSheetId === sheetId) renderChatMessages();
           });
-      }, function () {});
+      }, function (err) {
+        console.error("sendChatSystemMessage select rejected:", err);
+        alert("DEBUG system msg select rejected: " + (err && err.message ? err.message : JSON.stringify(err)));
+      });
   }
 
   function sendChatMessage(sheetId, text) {
