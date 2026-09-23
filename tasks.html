@@ -781,6 +781,38 @@
   .site-log-list-wrap { flex: 1; overflow: auto; padding: 14px; }
   .site-log-list { display: flex; flex-direction: column; gap: 8px; max-width: 320px; margin: 0 auto; }
   .site-log-list .site-log-add-btn { align-self: center; margin-top: 2px; }
+  .site-log-work-entry {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+  }
+  .site-log-work-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; }
+  .site-log-work-text { font-size: 0.82rem; flex: 1; word-break: break-word; }
+  .site-log-work-attach-btn {
+    border: 1px dashed var(--rule);
+    background: transparent;
+    color: var(--ink-muted);
+    font-size: 0.85rem;
+    padding: 5px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    align-self: flex-start;
+  }
+  .site-log-work-attachment-preview { display: flex; align-items: center; gap: 8px; }
+  .site-log-work-attachment-thumb { width: 44px; height: 44px; border-radius: 6px; object-fit: cover; border: 1px solid var(--rule); flex-shrink: 0; }
+  .site-log-work-attachment-name {
+    font-size: 0.72rem;
+    color: var(--ink-muted);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .site-log-work-attachment-remove { border: none; background: transparent; color: var(--ink-muted); cursor: pointer; font-size: 0.72rem; flex-shrink: 0; }
   .site-log-number-input {
     width: 100%;
     box-sizing: border-box;
@@ -2225,6 +2257,17 @@
     <div class="site-log-list-wrap">
       <div class="site-log-list" id="siteLogContractorsList"></div>
     </div>
+  </div>
+
+  <div class="report-view" id="siteLogWorksView" hidden>
+    <div class="report-head">
+      <button type="button" class="report-back-btn" id="siteLogWorksBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
+      <div class="report-head-title" data-i18n="siteLogWorks">עבודות</div>
+    </div>
+    <div class="site-log-list-wrap">
+      <div class="site-log-list" id="siteLogWorksList"></div>
+    </div>
+    <input type="file" id="siteLogWorksFileInput" hidden>
   </div>
 
   <input type="file" accept="image/*" capture="environment" id="reportImageCameraInput" style="display:none">
@@ -4946,6 +4989,11 @@
   var siteLogContractorsView = document.getElementById("siteLogContractorsView");
   var siteLogContractorsBackBtn = document.getElementById("siteLogContractorsBackBtn");
   var siteLogContractorsList = document.getElementById("siteLogContractorsList");
+  var siteLogWorksView = document.getElementById("siteLogWorksView");
+  var siteLogWorksBackBtn = document.getElementById("siteLogWorksBackBtn");
+  var siteLogWorksList = document.getElementById("siteLogWorksList");
+  var siteLogWorksFileInput = document.getElementById("siteLogWorksFileInput");
+  var siteLogWorksPendingEntryId = null;
 
   function openSiteLogCategoriesView(dateISO) {
     activeSiteLogDate = dateISO;
@@ -4958,7 +5006,6 @@
   }
   siteLogCategoriesBackBtn.addEventListener("click", closeSiteLogCategoriesView);
 
-  siteLogWorksBtn.addEventListener("click", function () { showToast(tr("siteLogComingSoon")); });
 
   // Shared by every simple "growable list of names with a + at the bottom"
   // site-log category (attendance columns, contractors, ...): renders the
@@ -5144,6 +5191,168 @@
   }
   siteLogContractorsBtn.addEventListener("click", openSiteLogContractorsView);
   siteLogContractorsBackBtn.addEventListener("click", closeSiteLogContractorsView);
+
+  function renderSiteLogWorksList() {
+    siteLogWorksList.innerHTML = "";
+    var sheet = activeSheet();
+    var log = findSiteLog(sheet, activeSiteLogDate);
+    var entries = (log && log.works) || [];
+
+    entries.forEach(function (entry) {
+      var wrap = document.createElement("div");
+      wrap.className = "site-log-work-entry";
+
+      var row = document.createElement("div");
+      row.className = "site-log-work-row";
+      var textSpan = document.createElement("span");
+      textSpan.className = "site-log-work-text";
+      textSpan.textContent = entry.text;
+      row.appendChild(textSpan);
+      var removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "site-log-entry-remove";
+      removeBtn.textContent = "✕";
+      removeBtn.addEventListener("click", function () {
+        var liveLog = findSiteLog(activeSheet(), activeSiteLogDate);
+        if (!liveLog) return;
+        var target = liveLog.works.find(function (e) { return e.id === entry.id; });
+        var removePromise = (target && target.attachment && supabaseClient)
+          ? supabaseClient.storage.from(LIBRARY_BUCKET).remove([target.attachment.path]).catch(function () {})
+          : Promise.resolve();
+        removePromise.then(function () {
+          liveLog.works = liveLog.works.filter(function (e) { return e.id !== entry.id; });
+          saveData();
+          renderSiteLogWorksList();
+        });
+      });
+      row.appendChild(removeBtn);
+      wrap.appendChild(row);
+
+      if (entry.attachment) {
+        var previewWrap = document.createElement("div");
+        previewWrap.className = "site-log-work-attachment-preview";
+        if (isImageFile(entry.attachment)) {
+          var thumb = document.createElement("img");
+          thumb.className = "site-log-work-attachment-thumb";
+          thumb.src = entry.attachment.url;
+          thumb.alt = "";
+          previewWrap.appendChild(thumb);
+        } else {
+          var icon = document.createElement("span");
+          icon.textContent = "\u{1F4CE}";
+          previewWrap.appendChild(icon);
+        }
+        var link = document.createElement("a");
+        link.className = "site-log-work-attachment-name";
+        link.textContent = entry.attachment.name;
+        link.href = entry.attachment.url;
+        link.target = "_blank";
+        link.rel = "noopener";
+        previewWrap.appendChild(link);
+        var removeAttachBtn = document.createElement("button");
+        removeAttachBtn.type = "button";
+        removeAttachBtn.className = "site-log-work-attachment-remove";
+        removeAttachBtn.textContent = "✕";
+        removeAttachBtn.addEventListener("click", function () {
+          var liveLog = findSiteLog(activeSheet(), activeSiteLogDate);
+          var target = liveLog && liveLog.works.find(function (e) { return e.id === entry.id; });
+          if (!target || !target.attachment) return;
+          var path = target.attachment.path;
+          var removePromise = supabaseClient ? supabaseClient.storage.from(LIBRARY_BUCKET).remove([path]).catch(function () {}) : Promise.resolve();
+          removePromise.then(function () {
+            target.attachment = null;
+            saveData();
+            renderSiteLogWorksList();
+          });
+        });
+        previewWrap.appendChild(removeAttachBtn);
+        wrap.appendChild(previewWrap);
+      } else {
+        var attachBtn = document.createElement("button");
+        attachBtn.type = "button";
+        attachBtn.className = "site-log-work-attach-btn";
+        attachBtn.textContent = "\u{1F4CE}";
+        attachBtn.title = tr("chatAttachBtnTitle");
+        attachBtn.addEventListener("click", function () {
+          siteLogWorksPendingEntryId = entry.id;
+          siteLogWorksFileInput.click();
+        });
+        wrap.appendChild(attachBtn);
+      }
+
+      siteLogWorksList.appendChild(wrap);
+    });
+
+    var addBtn = document.createElement("button");
+    addBtn.type = "button";
+    addBtn.className = "site-log-add-btn";
+    var addBtnImg = document.createElement("img");
+    addBtnImg.src = "tasks-plus-icon.webp";
+    addBtnImg.alt = "+";
+    addBtn.appendChild(addBtnImg);
+    addBtn.addEventListener("click", function () {
+      var input = document.createElement("input");
+      input.type = "text";
+      input.className = "site-log-add-input";
+      input.maxLength = 200;
+      siteLogWorksList.replaceChild(input, addBtn);
+      input.focus();
+      var committed = false;
+      function commit() {
+        if (committed) return;
+        committed = true;
+        var text = input.value.trim();
+        if (text) {
+          var liveLog = findOrCreateSiteLog(activeSheet(), activeSiteLogDate);
+          liveLog.works.push({ id: uid(), text: text, attachment: null });
+          saveData();
+        }
+        renderSiteLogWorksList();
+      }
+      input.addEventListener("blur", commit);
+      input.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") { e.preventDefault(); input.blur(); }
+        else if (e.key === "Escape") { committed = true; renderSiteLogWorksList(); }
+      });
+    });
+    siteLogWorksList.appendChild(addBtn);
+  }
+
+  siteLogWorksFileInput.addEventListener("change", function () {
+    var file = siteLogWorksFileInput.files && siteLogWorksFileInput.files[0];
+    siteLogWorksFileInput.value = "";
+    var entryId = siteLogWorksPendingEntryId;
+    siteLogWorksPendingEntryId = null;
+    if (!file || !entryId || !supabaseClient) return;
+    var sheet = activeSheet();
+    var path = sheet.id + "/site-logs/" + activeSiteLogDate + "/" + uid() + "-" + safeStorageFileName(file.name);
+    supabaseClient.storage.from(LIBRARY_BUCKET).upload(path, file).then(function (result) {
+      if (result.error) throw result.error;
+      var url = libraryPublicUrl(path);
+      var liveLog = findSiteLog(activeSheet(), activeSiteLogDate);
+      var entry = liveLog && liveLog.works.find(function (e) { return e.id === entryId; });
+      if (entry) {
+        entry.attachment = { name: file.name, path: path, url: url, type: file.type || "" };
+        saveData();
+        renderSiteLogWorksList();
+      }
+    }).catch(function (err) {
+      console.error("site log work attachment upload failed:", err);
+      alert(tr("libraryUploadError"));
+    });
+  });
+
+  function openSiteLogWorksView() {
+    renderSiteLogWorksList();
+    siteLogCategoriesView.hidden = true;
+    siteLogWorksView.hidden = false;
+  }
+  function closeSiteLogWorksView() {
+    siteLogWorksView.hidden = true;
+    siteLogCategoriesView.hidden = false;
+  }
+  siteLogWorksBtn.addEventListener("click", openSiteLogWorksView);
+  siteLogWorksBackBtn.addEventListener("click", closeSiteLogWorksView);
 
   function renderSheetReportsList() {
     sheetReportsList.innerHTML = "";
