@@ -5204,6 +5204,10 @@
     });
   }
 
+  function siteLogGeneralFileName(sheet, log, number) {
+    return tr("siteLogGeneralReportTitle") + " " + number + ' "' + sheet.name + '" - ' + isoToFullDisplay(log.date) + ".pdf";
+  }
+
   function closeSiteLog() {
     var sheet = activeSheet();
     var log = findOrCreateSiteLog(sheet, activeSiteLogDate);
@@ -5213,7 +5217,7 @@
     siteLogCloseBtn.disabled = true;
     siteLogCloseBtn.innerHTML = "&#8987;";
     var element = buildSiteLogGeneralPdfElement(sheet, log, number);
-    var fileName = tr("siteLogGeneralReportTitle") + " " + number + ".pdf";
+    var fileName = siteLogGeneralFileName(sheet, log, number);
     buildPdfBlobFromElement(element, fileName).then(function (result) {
       return uploadClosedLogPdfToLibrary(sheet, result.blob, result.fileName).then(function () {
         var liveLog = findOrCreateSiteLog(activeSheet(), activeSiteLogDate);
@@ -5240,7 +5244,7 @@
     siteLogShareGeneralBtn.disabled = true;
     siteLogShareGeneralBtn.innerHTML = "&#8987;";
     var element = buildSiteLogGeneralPdfElement(sheet, log, log.number);
-    var fileName = tr("siteLogGeneralReportTitle") + " " + log.number + ".pdf";
+    var fileName = siteLogGeneralFileName(sheet, log, log.number);
     buildPdfBlobFromElement(element, fileName).then(function (result) {
       attemptShare(result.blob, result.fileName);
     }).catch(function (err) {
