@@ -2491,6 +2491,7 @@
 
   function saveData() {
     if (dataLoadBlocked || !privateDataSettled) return;
+    editedSinceLastLoad = true;
     saveLocalData();
     if (supabaseClient) {
       supabaseClient.from("app_state")
@@ -2565,6 +2566,12 @@
   // Gate every render() triggered by the shared-projects path behind this
   // flag so the very first paint always reflects the private read's outcome.
   var privateDataSettled = false;
+  // Set whenever saveData() actually runs. Lets startWithSupabase() tell
+  // whether the user made a real edit against an instantly-rendered local
+  // snapshot before the authoritative server fetch came back - if so, the
+  // fetch's (now possibly stale-relative-to-that-edit) result must not
+  // blindly overwrite `data`, or a fast edit could be silently lost.
+  var editedSinceLastLoad = false;
   var state = { filter: "all", renamingSheetId: null, menuOpen: false, editingTaskId: null, viewDate: todayISO(), searchOpen: false, highlightTaskId: null, viewMode: "tasks" };
 
   var dateLabel = document.getElementById("dateLabel");
@@ -6268,6 +6275,26 @@
   }
 
   function startWithSupabase() {
+    editedSinceLastLoad = false;
+    // Render the last known-good local snapshot immediately, if there is
+    // one, instead of always waiting on the network before showing
+    // anything - a real local cache was already the safe fallback for any
+    // read failure below; this just uses it right away so the app feels
+    // instant, while the real fetch still runs and quietly reconciles once
+    // it lands. `data` never holds a placeholder/empty default here, only
+    // a real prior snapshot, so this doesn't reopen the original
+    // startup-race bug (rendering before we know anything real).
+    var usedInstantLocal = false;
+    var instantLocal = loadLocalData() || findLegacyLocalData();
+    if (instantLocal) {
+      data = instantLocal;
+      privateDataSettled = true;
+      usedInstantLocal = true;
+      if (applyDailyRollover(data)) saveData();
+      applyTaskLinkFromURL();
+      render();
+    }
+
     // A request here must never be able to leave the app stuck on the
     // loading screen forever with no way out - wrap it in a timeout (and a
     // sync try/catch, in case building the request itself throws) so any
@@ -6289,8 +6316,21 @@
         // default over a row we simply failed to read cleanly. Only proceed
         // here when there's real data, or this is a confirmed brand-new
         // user (no row exists yet for this id at all).
-        if (isFreshDefault && !confirmedNewUser) { showDataLoadError(); return; }
+        if (isFreshDefault && !confirmedNewUser) {
+          // Already showing a valid local snapshot instantly above - leave
+          // it up rather than blocking a perfectly good view.
+          if (!usedInstantLocal) showDataLoadError();
+          return;
+        }
         hideDataLoadError();
+        if (usedInstantLocal && editedSinceLastLoad) {
+          // The user already made a real edit against the instantly
+          // rendered local snapshot before this fetch resolved - their own
+          // saveData() calls already own persisting from here on, so don't
+          // overwrite with what may now be a stale-relative-to-that-edit
+          // server snapshot.
+          return;
+        }
         data = remote || local || defaultData();
         // Backups are a nice-to-have safety net, never allowed to disrupt
         // the core load/save flow if the backup table/call misbehaves.
@@ -6299,11 +6339,14 @@
         if ((rolled && !isFreshDefault) || confirmedNewUser) saveData();
         applyTaskLinkFromURL();
         render();
-      }, startLocalOnly)
-        .catch(startLocalOnly);
+      }, function () {
+        if (!usedInstantLocal) startLocalOnly();
+      }).catch(function () {
+        if (!usedInstantLocal) startLocalOnly();
+      });
     } catch (e) {
       console.error("startWithSupabase sync error:", e);
-      startLocalOnly();
+      if (!usedInstantLocal) startLocalOnly();
     }
     loadSharedSheets();
   }
