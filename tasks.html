@@ -706,6 +706,78 @@
     font-size: 0.78rem;
   }
   .report-table td.report-col-task { text-align: start; }
+  .site-log-attendance-wrap { flex: 1; overflow: auto; padding: 12px; }
+  .site-log-attendance-columns { display: flex; gap: 8px; align-items: flex-start; min-width: max-content; }
+  .site-log-col { display: flex; flex-direction: column; width: 110px; flex-shrink: 0; }
+  .site-log-col-header {
+    background: var(--paper-alt);
+    border: 1px solid var(--rule);
+    font-family: "Rubik", "Assistant", sans-serif;
+    font-weight: 700;
+    font-size: 0.76rem;
+    text-align: center;
+    padding: 8px 4px;
+    border-radius: 8px 8px 0 0;
+  }
+  .site-log-col-body {
+    border: 1px solid var(--rule);
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    padding: 8px 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 60px;
+  }
+  .site-log-entry {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+    font-size: 0.8rem;
+    padding: 5px 7px;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    word-break: break-word;
+  }
+  .site-log-entry-remove {
+    border: none;
+    background: transparent;
+    color: var(--ink-muted);
+    cursor: pointer;
+    font-size: 0.75rem;
+    padding: 0 2px;
+    flex-shrink: 0;
+    line-height: 1;
+  }
+  .site-log-add-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 5px 7px;
+    font-size: 0.8rem;
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    font-family: inherit;
+  }
+  .site-log-add-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: none;
+    background: var(--accent);
+    color: var(--accent-contrast);
+    font-size: 1rem;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    align-self: center;
+    overflow: hidden;
+    padding: 0;
+  }
+  .site-log-add-btn img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .report-cell-btn {
     width: 100%;
     min-height: 28px;
@@ -2085,6 +2157,41 @@
     </div>
   </div>
 
+  <div class="report-view" id="siteLogCategoriesView" hidden>
+    <div class="report-head">
+      <button type="button" class="report-back-btn" id="siteLogCategoriesBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
+      <div class="report-head-title" id="siteLogCategoriesHeadTitle"></div>
+    </div>
+    <div class="library-grid">
+      <div class="library-item" id="siteLogAttendanceBtn">
+        <div class="library-item-thumb"><img src="tasks-attendance-icon.webp" alt=""></div>
+        <div class="library-item-name" data-i18n="siteLogAttendance">נוכחות</div>
+      </div>
+      <div class="library-item" id="siteLogToolsBtn">
+        <div class="library-item-thumb"><img src="tasks-tools-icon.webp" alt=""></div>
+        <div class="library-item-name" data-i18n="siteLogTools">כלים</div>
+      </div>
+      <div class="library-item" id="siteLogContractorsBtn">
+        <div class="library-item-thumb"><img src="tasks-contractors-icon.webp" alt=""></div>
+        <div class="library-item-name" data-i18n="siteLogContractors">קבלנים</div>
+      </div>
+      <div class="library-item" id="siteLogWorksBtn">
+        <div class="library-item-thumb"><img src="tasks-works-icon.webp" alt=""></div>
+        <div class="library-item-name" data-i18n="siteLogWorks">עבודות</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="report-view" id="siteLogAttendanceView" hidden>
+    <div class="report-head">
+      <button type="button" class="report-back-btn" id="siteLogAttendanceBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
+      <div class="report-head-title" data-i18n="siteLogAttendance">נוכחות</div>
+    </div>
+    <div class="site-log-attendance-wrap">
+      <div class="site-log-attendance-columns" id="siteLogAttendanceColumns"></div>
+    </div>
+  </div>
+
   <input type="file" accept="image/*" capture="environment" id="reportImageCameraInput" style="display:none">
   <input type="file" accept="image/*" id="reportImageGalleryInput" style="display:none">
 
@@ -2238,6 +2345,16 @@
     reportsBtnTitle: { he: "דוחות פגישות וסיורים", en: "Meeting and tour reports", ar: "تقارير الاجتماعات والجولات", ru: "Отчёты о встречах и обходах" },
     tasksBtnTitle: { he: "חזרה למשימות", en: "Back to tasks", ar: "العودة إلى المهام", ru: "Назад к задачам" },
     calendarBtnTitle: { he: "בחירת תאריך", en: "Pick a date", ar: "اختيار تاريخ", ru: "Выбрать дату" },
+    siteLogAttendance: { he: "נוכחות", en: "Attendance", ar: "الحضور", ru: "Присутствие" },
+    siteLogTools: { he: "כלים", en: "Tools", ar: "المعدات", ru: "Оборудование" },
+    siteLogContractors: { he: "קבלנים", en: "Contractors", ar: "المقاولون", ru: "Подрядчики" },
+    siteLogWorks: { he: "עבודות", en: "Works", ar: "الأعمال", ru: "Работы" },
+    siteLogColForeman: { he: "מנהל עבודה", en: "Foreman", ar: "مدير الأعمال", ru: "Прораб" },
+    siteLogColEngineer: { he: "מהנדס", en: "Engineer", ar: "مهندس", ru: "Инженер" },
+    siteLogColWorkers: { he: "פועלים", en: "Workers", ar: "عمال", ru: "Рабочие" },
+    siteLogColOperators: { he: "מפעילים", en: "Operators", ar: "مشغلون", ru: "Операторы" },
+    siteLogColConsultants: { he: "יועצים", en: "Consultants", ar: "مستشارون", ru: "Консультанты" },
+    siteLogComingSoon: { he: "הקטגוריה הזו עוד בבנייה", en: "This category is still being built", ar: "هذه الفئة لا تزال قيد الإنشاء", ru: "Эта категория ещё в разработке" },
     reportsListTitle: { he: "דוחות פגישות וסיורים", en: "Meeting and tour reports", ar: "تقارير الاجتماعات والجولات", ru: "Отчёты о встречах и обходах" },
     reportsListEmpty: { he: "עדיין אין דוחות", en: "No reports yet", ar: "لا توجد تقارير بعد", ru: "Пока нет отчётов" },
     newReportBtn: { he: "+ חדש", en: "+ New", ar: "+ جديد", ru: "+ Новый" },
@@ -2442,9 +2559,22 @@
   function defaultData() {
     var sheetId = uid();
     return {
-      sheets: [{ id: sheetId, name: tr("projectWord") + " 1", tasks: [], reports: [], files: [] }],
+      sheets: [{ id: sheetId, name: tr("projectWord") + " 1", tasks: [], reports: [], files: [], siteLogs: [] }],
       activeSheetId: sheetId
     };
+  }
+
+  var SITE_LOG_ATTENDANCE_COLUMNS = ["foreman", "engineer", "workers", "operators", "consultants"];
+
+  function normalizeSiteLog(log) {
+    if (!log.attendance || typeof log.attendance !== "object") log.attendance = {};
+    SITE_LOG_ATTENDANCE_COLUMNS.forEach(function (col) {
+      if (!Array.isArray(log.attendance[col])) log.attendance[col] = [];
+    });
+    if (!Array.isArray(log.tools)) log.tools = [];
+    if (!Array.isArray(log.contractors)) log.contractors = [];
+    if (!Array.isArray(log.works)) log.works = [];
+    return log;
   }
 
   function normalizeData(parsed) {
@@ -2462,6 +2592,8 @@
       });
       if (!Array.isArray(sheet.reports)) sheet.reports = [];
       if (!Array.isArray(sheet.files)) sheet.files = [];
+      if (!Array.isArray(sheet.siteLogs)) sheet.siteLogs = [];
+      sheet.siteLogs.forEach(normalizeSiteLog);
       sheet.reports.forEach(function (report) {
         if (!Array.isArray(report.rows)) report.rows = [];
         report.rows.forEach(function (row) {
@@ -2629,6 +2761,12 @@
   // blindly overwrite `data`, or a fast edit could be silently lost.
   var editedSinceLastLoad = false;
   var state = { filter: "all", renamingSheetId: null, menuOpen: false, editingTaskId: null, viewDate: todayISO(), searchOpen: false, highlightTaskId: null, viewMode: "tasks" };
+  // dateInput is shared by two triggers: the top date label (normal day
+  // navigation) and the footer calendar button (opens the site log for the
+  // chosen date). This flag lets the single "change" handler tell which one
+  // opened the native picker, since the event itself doesn't say.
+  var dateInputPurpose = "navigate";
+  var activeSiteLogDate = null;
 
   var dateLabel = document.getElementById("dateLabel");
   var sheetsBar = document.getElementById("sheetsBar");
@@ -2840,7 +2978,12 @@
   var todayBtn = document.getElementById("todayBtn");
 
   dateInput.addEventListener("change", function () {
-    if (dateInput.value) {
+    var purpose = dateInputPurpose;
+    dateInputPurpose = "navigate";
+    if (!dateInput.value) return;
+    if (purpose === "siteLog") {
+      openSiteLogCategoriesView(dateInput.value);
+    } else {
       state.viewDate = dateInput.value;
       render();
     }
@@ -4643,6 +4786,7 @@
 
   var calendarFabBtn = document.getElementById("calendarFabBtn");
   calendarFabBtn.addEventListener("click", function () {
+    dateInputPurpose = "siteLog";
     if (dateInput.showPicker) {
       try { dateInput.showPicker(); return; } catch (e) {}
     }
@@ -4727,6 +4871,139 @@
     }
     return null;
   }
+
+  function findSiteLog(sheet, dateISO) {
+    return (sheet.siteLogs || []).find(function (l) { return l.date === dateISO; }) || null;
+  }
+  function findOrCreateSiteLog(sheet, dateISO) {
+    var log = findSiteLog(sheet, dateISO);
+    if (log) return log;
+    log = normalizeSiteLog({ id: uid(), date: dateISO });
+    if (!sheet.siteLogs) sheet.siteLogs = [];
+    sheet.siteLogs.push(log);
+    return log;
+  }
+
+  var siteLogCategoriesView = document.getElementById("siteLogCategoriesView");
+  var siteLogCategoriesBackBtn = document.getElementById("siteLogCategoriesBackBtn");
+  var siteLogCategoriesHeadTitle = document.getElementById("siteLogCategoriesHeadTitle");
+  var siteLogAttendanceBtn = document.getElementById("siteLogAttendanceBtn");
+  var siteLogToolsBtn = document.getElementById("siteLogToolsBtn");
+  var siteLogContractorsBtn = document.getElementById("siteLogContractorsBtn");
+  var siteLogWorksBtn = document.getElementById("siteLogWorksBtn");
+  var siteLogAttendanceView = document.getElementById("siteLogAttendanceView");
+  var siteLogAttendanceBackBtn = document.getElementById("siteLogAttendanceBackBtn");
+  var siteLogAttendanceColumns = document.getElementById("siteLogAttendanceColumns");
+
+  function openSiteLogCategoriesView(dateISO) {
+    activeSiteLogDate = dateISO;
+    siteLogCategoriesHeadTitle.textContent = isoToFullDisplay(dateISO);
+    siteLogCategoriesView.hidden = false;
+  }
+  function closeSiteLogCategoriesView() {
+    siteLogCategoriesView.hidden = true;
+    activeSiteLogDate = null;
+  }
+  siteLogCategoriesBackBtn.addEventListener("click", closeSiteLogCategoriesView);
+
+  siteLogToolsBtn.addEventListener("click", function () { showToast(tr("siteLogComingSoon")); });
+  siteLogContractorsBtn.addEventListener("click", function () { showToast(tr("siteLogComingSoon")); });
+  siteLogWorksBtn.addEventListener("click", function () { showToast(tr("siteLogComingSoon")); });
+
+  function renderSiteLogAttendanceColumn(colKey) {
+    var col = document.createElement("div");
+    col.className = "site-log-col";
+
+    var header = document.createElement("div");
+    header.className = "site-log-col-header";
+    header.textContent = tr("siteLogCol" + colKey.charAt(0).toUpperCase() + colKey.slice(1));
+    col.appendChild(header);
+
+    var body = document.createElement("div");
+    body.className = "site-log-col-body";
+
+    var sheet = activeSheet();
+    var log = findSiteLog(sheet, activeSiteLogDate);
+    var entries = (log && log.attendance[colKey]) || [];
+
+    entries.forEach(function (entry) {
+      var row = document.createElement("div");
+      row.className = "site-log-entry";
+      var nameSpan = document.createElement("span");
+      nameSpan.textContent = entry.name;
+      row.appendChild(nameSpan);
+      var removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "site-log-entry-remove";
+      removeBtn.textContent = "✕";
+      removeBtn.addEventListener("click", function () {
+        var liveLog = findSiteLog(activeSheet(), activeSiteLogDate);
+        if (!liveLog) return;
+        liveLog.attendance[colKey] = liveLog.attendance[colKey].filter(function (e) { return e.id !== entry.id; });
+        saveData();
+        renderSiteLogAttendanceColumns();
+      });
+      row.appendChild(removeBtn);
+      body.appendChild(row);
+    });
+
+    var addBtn = document.createElement("button");
+    addBtn.type = "button";
+    addBtn.className = "site-log-add-btn";
+    var addBtnImg = document.createElement("img");
+    addBtnImg.src = "tasks-plus-icon.webp";
+    addBtnImg.alt = "+";
+    addBtn.appendChild(addBtnImg);
+    addBtn.addEventListener("click", function () {
+      var input = document.createElement("input");
+      input.type = "text";
+      input.className = "site-log-add-input";
+      input.maxLength = 60;
+      body.replaceChild(input, addBtn);
+      input.focus();
+      var committed = false;
+      function commit() {
+        if (committed) return;
+        committed = true;
+        var name = input.value.trim();
+        if (name) {
+          var liveSheet = activeSheet();
+          var liveLog = findOrCreateSiteLog(liveSheet, activeSiteLogDate);
+          liveLog.attendance[colKey].push({ id: uid(), name: name });
+          saveData();
+        }
+        renderSiteLogAttendanceColumns();
+      }
+      input.addEventListener("blur", commit);
+      input.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") { e.preventDefault(); input.blur(); }
+        else if (e.key === "Escape") { committed = true; renderSiteLogAttendanceColumns(); }
+      });
+    });
+    body.appendChild(addBtn);
+
+    col.appendChild(body);
+    return col;
+  }
+
+  function renderSiteLogAttendanceColumns() {
+    siteLogAttendanceColumns.innerHTML = "";
+    SITE_LOG_ATTENDANCE_COLUMNS.forEach(function (colKey) {
+      siteLogAttendanceColumns.appendChild(renderSiteLogAttendanceColumn(colKey));
+    });
+  }
+
+  function openSiteLogAttendanceView() {
+    renderSiteLogAttendanceColumns();
+    siteLogCategoriesView.hidden = true;
+    siteLogAttendanceView.hidden = false;
+  }
+  function closeSiteLogAttendanceView() {
+    siteLogAttendanceView.hidden = true;
+    siteLogCategoriesView.hidden = false;
+  }
+  siteLogAttendanceBtn.addEventListener("click", openSiteLogAttendanceView);
+  siteLogAttendanceBackBtn.addEventListener("click", closeSiteLogAttendanceView);
 
   function renderSheetReportsList() {
     sheetReportsList.innerHTML = "";
@@ -6453,6 +6730,7 @@
       tasks: d.tasks || [],
       reports: d.reports || [],
       files: d.files || [],
+      siteLogs: (d.siteLogs || []).map(normalizeSiteLog),
       folders: d.folders || null,
       ended: d.ended || false,
       endedDate: d.endedDate || null,

@@ -1,4 +1,4 @@
-var CACHE_NAME = "tasks-app-v24";
+var CACHE_NAME = "tasks-app-v25";
 var CORE_ASSETS = [
   "./tasks.html",
   "./tasks-manifest.json",
@@ -10,6 +10,10 @@ var CORE_ASSETS = [
   "./tasks-menu-icon.webp",
   "./tasks-plus-icon.webp",
   "./tasks-calendar-icon.webp",
+  "./tasks-attendance-icon.webp",
+  "./tasks-tools-icon.webp",
+  "./tasks-contractors-icon.webp",
+  "./tasks-works-icon.webp",
   "./vendor/html2canvas.min.js",
   "./vendor/jspdf.umd.min.js"
 ];
