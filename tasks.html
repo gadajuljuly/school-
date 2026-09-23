@@ -1847,6 +1847,9 @@
       <button type="button" class="tasks-fab" id="tasksFabBtn" data-i18n-title="tasksBtnTitle" title="חזרה למשימות">
         <img src="tasks-icon-192.png" alt="">
       </button>
+      <button type="button" class="tasks-fab calendar-fab" id="calendarFabBtn" data-i18n-title="calendarBtnTitle" title="בחירת תאריך">
+        <img src="tasks-calendar-icon.webp" alt="">
+      </button>
       <button type="button" class="report-fab" id="reportFabBtn" data-i18n-title="reportsBtnTitle" title="דוחות פגישות וסיורים">
         <img src="tasks-report-icon.webp" alt="">
       </button>
@@ -2234,6 +2237,7 @@
     },
     reportsBtnTitle: { he: "דוחות פגישות וסיורים", en: "Meeting and tour reports", ar: "تقارير الاجتماعات والجولات", ru: "Отчёты о встречах и обходах" },
     tasksBtnTitle: { he: "חזרה למשימות", en: "Back to tasks", ar: "العودة إلى المهام", ru: "Назад к задачам" },
+    calendarBtnTitle: { he: "בחירת תאריך", en: "Pick a date", ar: "اختيار تاريخ", ru: "Выбрать дату" },
     reportsListTitle: { he: "דוחות פגישות וסיורים", en: "Meeting and tour reports", ar: "تقارير الاجتماعات والجولات", ru: "Отчёты о встречах и обходах" },
     reportsListEmpty: { he: "עדיין אין דוחות", en: "No reports yet", ar: "لا توجد تقارير بعد", ru: "Пока нет отчётов" },
     newReportBtn: { he: "+ חדש", en: "+ New", ar: "+ جديد", ru: "+ Новый" },
@@ -4636,6 +4640,15 @@
 
   var sheetReportsList = document.getElementById("sheetReportsList");
   var tasksFabBtn = document.getElementById("tasksFabBtn");
+
+  var calendarFabBtn = document.getElementById("calendarFabBtn");
+  calendarFabBtn.addEventListener("click", function () {
+    if (dateInput.showPicker) {
+      try { dateInput.showPicker(); return; } catch (e) {}
+    }
+    dateInput.focus();
+    dateInput.click();
+  });
 
   var reportTypeOverlay = document.getElementById("reportTypeOverlay");
   var reportTypeMeetingBtn = document.getElementById("reportTypeMeetingBtn");
