@@ -543,7 +543,7 @@
   }
   .library-item-thumb img { width: 100%; height: 100%; object-fit: cover; }
   .site-log-categories-grid .library-item-thumb {
-    background: transparent;
+    background: var(--paper);
     border: none;
   }
   .site-log-categories-grid .library-item-name {
@@ -5402,14 +5402,19 @@
       container.appendChild(row);
     });
 
-    var addBtn = document.createElement("button");
-    addBtn.type = "button";
-    addBtn.className = "site-log-add-btn";
-    var addBtnImg = document.createElement("img");
-    addBtnImg.src = "tasks-plus-icon.webp";
-    addBtnImg.alt = "+";
-    addBtn.appendChild(addBtnImg);
-    addBtn.addEventListener("click", function () {
+    function createAddBtn() {
+      var addBtn = document.createElement("button");
+      addBtn.type = "button";
+      addBtn.className = "site-log-add-btn";
+      var addBtnImg = document.createElement("img");
+      addBtnImg.src = "tasks-plus-icon.webp";
+      addBtnImg.alt = "+";
+      addBtn.appendChild(addBtnImg);
+      addBtn.addEventListener("click", function () { activateAddBtn(addBtn); });
+      return addBtn;
+    }
+
+    function activateAddBtn(addBtn) {
       var input = document.createElement("input");
       input.type = "text";
       input.className = "site-log-add-input";
@@ -5417,6 +5422,7 @@
       container.replaceChild(input, addBtn);
       input.focus();
       var committed = false;
+      var nextBtnShown = false;
       function commit() {
         if (committed) return;
         committed = true;
@@ -5429,8 +5435,16 @@
         if (e.key === "Enter") { e.preventDefault(); input.blur(); }
         else if (e.key === "Escape") { committed = true; rerender(); }
       });
-    });
-    container.appendChild(addBtn);
+      // Show the next "+" the moment typing starts, instead of waiting for
+      // this entry to be committed first.
+      input.addEventListener("input", function () {
+        if (nextBtnShown || !input.value.trim()) return;
+        nextBtnShown = true;
+        container.appendChild(createAddBtn());
+      });
+    }
+
+    container.appendChild(createAddBtn());
   }
 
   function renderSiteLogAttendanceColumn(colKey) {
@@ -5656,14 +5670,19 @@
       siteLogWorksList.appendChild(wrap);
     });
 
-    var addBtn = document.createElement("button");
-    addBtn.type = "button";
-    addBtn.className = "site-log-add-btn";
-    var addBtnImg = document.createElement("img");
-    addBtnImg.src = "tasks-plus-icon.webp";
-    addBtnImg.alt = "+";
-    addBtn.appendChild(addBtnImg);
-    addBtn.addEventListener("click", function () {
+    function createWorksAddBtn() {
+      var addBtn = document.createElement("button");
+      addBtn.type = "button";
+      addBtn.className = "site-log-add-btn";
+      var addBtnImg = document.createElement("img");
+      addBtnImg.src = "tasks-plus-icon.webp";
+      addBtnImg.alt = "+";
+      addBtn.appendChild(addBtnImg);
+      addBtn.addEventListener("click", function () { activateWorksAddBtn(addBtn); });
+      return addBtn;
+    }
+
+    function activateWorksAddBtn(addBtn) {
       var input = document.createElement("input");
       input.type = "text";
       input.className = "site-log-add-input";
@@ -5671,6 +5690,7 @@
       siteLogWorksList.replaceChild(input, addBtn);
       input.focus();
       var committed = false;
+      var nextBtnShown = false;
       function commit() {
         if (committed) return;
         committed = true;
@@ -5687,8 +5707,14 @@
         if (e.key === "Enter") { e.preventDefault(); input.blur(); }
         else if (e.key === "Escape") { committed = true; renderSiteLogWorksList(); }
       });
-    });
-    siteLogWorksList.appendChild(addBtn);
+      input.addEventListener("input", function () {
+        if (nextBtnShown || !input.value.trim()) return;
+        nextBtnShown = true;
+        siteLogWorksList.appendChild(createWorksAddBtn());
+      });
+    }
+
+    siteLogWorksList.appendChild(createWorksAddBtn());
   }
 
   siteLogWorksFileInput.addEventListener("change", function () {
