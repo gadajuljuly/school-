@@ -335,6 +335,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
+    padding: 0;
     cursor: pointer;
     margin: 6px auto 0;
   }
@@ -391,6 +393,10 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
+  }
+  #libraryAddBtn {
+    overflow: hidden;
+    padding: 0;
   }
   .report-meta {
     padding: 0 20px 10px;
@@ -847,6 +853,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
+    padding: 0;
     cursor: pointer;
     margin: 0 auto;
   }
@@ -1218,6 +1226,14 @@
   .add-sheet-tab:hover {
     color: var(--accent);
   }
+  .add-sheet-tab img {
+    width: 16px;
+    height: 16px;
+    object-fit: cover;
+    border-radius: 4px;
+    vertical-align: middle;
+    display: inline-block;
+  }
 
   .ruled-body {
     position: relative;
@@ -1428,7 +1444,21 @@
     color: var(--accent-contrast);
     font-size: 1rem;
     line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    padding: 0;
     cursor: pointer;
+  }
+  .add-row button.add-btn img,
+  .sheet-reports-add-btn img,
+  .report-add-row-btn img,
+  #libraryAddBtn img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
   }
 
   .empty-state {
@@ -1808,7 +1838,7 @@
       <form class="add-row" id="addForm">
         <span class="row-mark" aria-hidden="true"><svg viewBox="0 0 20 18" xmlns="http://www.w3.org/2000/svg"><path d="M4 3 L16 15 M1.5 3 L6.5 3 M13.5 3 L18.5 3 M1.5 15 L6.5 15 M13.5 15 L18.5 15" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg></span>
         <input type="text" id="taskInput" data-i18n-ph="taskInputPlaceholder" placeholder="חדש..." maxlength="200" required autocomplete="off">
-        <button type="submit" class="add-btn" data-i18n-title="addBtnTitle" title="הוספה">+</button>
+        <button type="submit" class="add-btn" data-i18n-title="addBtnTitle" title="הוספה"><img src="tasks-plus-icon.webp" alt="+"></button>
       </form>
       <div class="sheet-reports-list" id="sheetReportsList" hidden></div>
     </div>
@@ -2019,7 +2049,7 @@
     <div class="report-head">
       <button type="button" class="report-back-btn" id="libraryBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
       <div class="report-head-title" id="libraryHeadTitle"></div>
-      <button type="button" class="report-share-btn" id="libraryAddBtn" data-i18n-title="libraryAddBtnTitle" title="הוספת קובץ">&#10133;</button>
+      <button type="button" class="report-share-btn" id="libraryAddBtn" data-i18n-title="libraryAddBtnTitle" title="הוספת קובץ"><img src="tasks-plus-icon.webp" alt="+"></button>
     </div>
     <div class="library-grid" id="libraryGrid"></div>
     <input type="file" id="libraryFileInput" multiple hidden>
@@ -4750,7 +4780,10 @@
     var addBtn = document.createElement("button");
     addBtn.type = "button";
     addBtn.className = "sheet-reports-add-btn";
-    addBtn.textContent = "+";
+    var addBtnImg = document.createElement("img");
+    addBtnImg.src = "tasks-plus-icon.webp";
+    addBtnImg.alt = "+";
+    addBtn.appendChild(addBtnImg);
     addBtn.title = tr("addBtnTitle");
     addBtn.addEventListener("click", function () {
       reportTypeOverlay.hidden = false;
@@ -5095,7 +5128,10 @@
     var addBtn = document.createElement("button");
     addBtn.type = "button";
     addBtn.className = "report-add-row-btn";
-    addBtn.textContent = "+";
+    var addRowBtnImg = document.createElement("img");
+    addRowBtnImg.src = "tasks-plus-icon.webp";
+    addRowBtnImg.alt = "+";
+    addBtn.appendChild(addRowBtnImg);
     addBtn.title = tr("addBtnTitle");
     addBtn.addEventListener("mousedown", function (e) {
       e.preventDefault();
@@ -5802,7 +5838,10 @@
     addBtn.className = "sheet-tab add-sheet-tab";
     addBtn.type = "button";
     addBtn.title = tr("addProjectTitle") + " / " + tr("addSharedProjectHint");
-    addBtn.textContent = "+";
+    var addSheetBtnImg = document.createElement("img");
+    addSheetBtnImg.src = "tasks-plus-icon.webp";
+    addSheetBtnImg.alt = "+";
+    addBtn.appendChild(addSheetBtnImg);
     var addBtnLongPressFired = false;
     addBtn.addEventListener("click", function () {
       if (addBtnLongPressFired) { addBtnLongPressFired = false; return; }
