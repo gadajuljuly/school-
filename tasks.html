@@ -1672,7 +1672,6 @@
 </div>
 
 <div class="app" id="appRoot" hidden>
-  <div id="loginDebugStatus" hidden style="position:fixed; top:0; left:0; right:0; z-index:9999; white-space:pre-wrap; font-size:12px; padding:8px; direction:ltr; text-align:left; color:#000; background:#fffae0; max-height:40vh; overflow-y:auto;"></div>
   <div class="app-loading-overlay" id="appLoadingOverlay">
     <div class="app-loading-text" data-i18n="appLoadingText">טוען...</div>
   </div>
@@ -6507,20 +6506,11 @@
   // it in as this client's Authorization header so auth.uid()/auth.jwt()
   // in RLS policies now correctly reflect who's actually asking.
   var pendingFirebaseUserForToken = null;
-  var loginDebugStatusEl = document.getElementById("loginDebugStatus");
-  function loginDebugLog(line) {
-    if (!loginDebugStatusEl) return;
-    loginDebugStatusEl.hidden = false;
-    loginDebugStatusEl.textContent += (loginDebugStatusEl.textContent ? "\n" : "") + line;
-  }
 
   function mintSupabaseSessionToken(firebaseUser) {
-    loginDebugLog("getting Firebase ID token...");
     return firebaseUser.getIdToken().then(function (idToken) {
-      loginDebugLog("got Firebase ID token (len=" + idToken.length + "), calling mint-session-token...");
       return supabaseClient.functions.invoke("mint-session-token", { body: { idToken: idToken } });
     }).then(function (result) {
-      loginDebugLog("mint-session-token responded: error=" + JSON.stringify(result.error) + " hasToken=" + !!(result.data && result.data.token));
       if (result.error || !result.data || !result.data.token) {
         throw (result.error || new Error("mint-session-token returned no token"));
       }
@@ -6538,13 +6528,11 @@
   }
   function beginAuthenticatedSession(firebaseUser) {
     pendingFirebaseUserForToken = firebaseUser;
-    loginDebugLog("beginAuthenticatedSession for " + firebaseUser.phoneNumber);
     withTimeout(mintSupabaseSessionToken(firebaseUser), 15000, "mintSupabaseSessionToken").then(function (rowId) {
       pendingFirebaseUserForToken = null;
       showApp(firebaseUser.phoneNumber, rowId);
     }, function (err) {
       console.error("mintSupabaseSessionToken failed:", err);
-      loginDebugLog("FAILED: " + (err && (err.message || err)) + " / " + JSON.stringify(err));
       showDataLoadError();
     });
   }
