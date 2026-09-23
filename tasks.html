@@ -745,8 +745,22 @@
     font-size: 0.85rem;
     cursor: pointer;
   }
-  .site-log-preview-wrap { flex: 1; overflow: auto; background: var(--paper-alt); padding: 16px 10px; }
-  .site-log-preview-wrap .pdf-doc { margin: 0 auto; box-shadow: 0 2px 10px var(--shadow); }
+  .site-log-preview-wrap { flex: 1; overflow-y: auto; overflow-x: hidden; background: var(--paper-alt); padding: 16px 10px; }
+  .site-log-preview-wrap .pdf-doc {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 16px 10px;
+    margin: 0 auto;
+    box-shadow: 0 2px 10px var(--shadow);
+  }
+  .site-log-preview-wrap .pdf-doc-table { font-size: 0.62rem; table-layout: fixed; }
+  .site-log-preview-wrap .pdf-doc-table th, .site-log-preview-wrap .pdf-doc-table td {
+    padding: 5px 2px;
+    word-break: break-word;
+  }
+  .site-log-preview-wrap .pdf-doc-title { font-size: 1.2rem; }
+  .site-log-preview-wrap .pdf-doc-work-row-image { width: 44px; height: 44px; }
   .site-log-copy-prev-btn {
     margin: 10px 14px 14px;
     padding: 12px;
