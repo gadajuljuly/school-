@@ -6217,8 +6217,18 @@
   }
 
   function startWithSupabase() {
-    supabaseClient.from("app_state").select("data").eq("id", SUPABASE_ROW_ID).maybeSingle()
-      .then(function (result) {
+    // A request here must never be able to leave the app stuck on the
+    // loading screen forever with no way out - wrap it in a timeout (and a
+    // sync try/catch, in case building the request itself throws) so any
+    // failure mode, including one that never resolves or rejects, still
+    // converges on startLocalOnly's own safe fallback (real local cache, or
+    // a visible blocked/retry state - never a silent empty default).
+    try {
+      withTimeout(
+        supabaseClient.from("app_state").select("data").eq("id", SUPABASE_ROW_ID).maybeSingle(),
+        15000,
+        "app_state load"
+      ).then(function (result) {
         var row = result && result.data;
         var remote = row && row.data ? normalizeData(row.data) : null;
         var local = remote ? null : (loadLocalData() || findLegacyLocalData());
@@ -6239,7 +6249,11 @@
         applyTaskLinkFromURL();
         render();
       }, startLocalOnly)
-      .catch(startLocalOnly);
+        .catch(startLocalOnly);
+    } catch (e) {
+      console.error("startWithSupabase sync error:", e);
+      startLocalOnly();
+    }
     loadSharedSheets();
   }
 
