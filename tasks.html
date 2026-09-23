@@ -2124,6 +2124,19 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="reportRowActionOverlay" hidden>
+    <div class="modal-box" role="alertdialog" aria-modal="true">
+      <p class="modal-message" data-i18n="reportRowActionModalMessage">מה לעשות עם השורה?</p>
+      <div class="move-task-mode">
+        <button type="button" class="danger-btn" id="reportRowActionDeleteBtn" data-i18n="deleteBtn">מחיקה</button>
+        <button type="button" id="reportRowActionCopyBtn" data-i18n="reportRowActionCopyBtn">העתקה</button>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="modal-btn modal-btn-no" id="reportRowActionCancelBtn" data-i18n="cancelBtn">ביטול</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="confirmOverlay" hidden>
     <div class="modal-box" role="alertdialog" aria-modal="true">
       <p class="modal-message" id="confirmMessage"></p>
@@ -2513,7 +2526,10 @@
     confirmEndProjectGeneric: { he: "לסמן את הפרויקט כמסתיים?", en: "Mark the project as finished?", ar: "هل تريد وضع علامة \"منتهٍ\" على هذا المشروع؟", ru: "Отметить проект как завершённый?" },
     confirmShareProject: { he: 'לשתף את הפרויקט "{name}"?', en: 'Share the project "{name}"?', ar: 'هل تريد مشاركة المشروع "{name}"؟', ru: 'Поделиться проектом «{name}»?' },
     confirmDeleteReport: { he: 'למחוק את הדוח "{name}"?', en: 'Delete the report "{name}"?', ar: 'هل تريد حذف التقرير "{name}"؟', ru: 'Удалить отчёт «{name}»?' },
+    confirmDeleteReportRow: { he: "למחוק את השורה הזו?", en: "Delete this row?", ar: "هل تريد حذف هذا السطر؟", ru: "Удалить эту строку?" },
     reportActionModalMessage: { he: "מה לעשות עם הדוח?", en: "What would you like to do with this report?", ar: "ماذا تريد أن تفعل بهذا التقرير؟", ru: "Что сделать с этим отчётом?" },
+    reportRowActionModalMessage: { he: "מה לעשות עם השורה?", en: "What would you like to do with this row?", ar: "ماذا تريد أن تفعل بهذا السطر؟", ru: "Что сделать с этой строкой?" },
+    reportRowActionCopyBtn: { he: "העתקה", en: "Duplicate", ar: "نسخ", ru: "Дублировать" },
     projectContentCopied: { he: "תוכן הפרויקט הועתק ללוח", en: "Project content copied to clipboard", ar: "تم نسخ محتوى المشروع إلى الحافظة", ru: "Содержимое проекта скопировано в буфер обмена" },
     shareNotSupported: { he: "השיתוף לא נתמך בדפדפן הזה", en: "Sharing isn't supported in this browser", ar: "المشاركة غير مدعومة في هذا المتصفح", ru: "Обмен не поддерживается в этом браузере" },
     remindersActive: { he: "תזכורות פעילות", en: "Reminders active", ar: "التذكيرات نشطة", ru: "Напоминания включены" },
@@ -4742,6 +4758,55 @@
     var report = findReport(id);
     if (report) generateReportPdf(report, "share");
   });
+
+  var reportRowActionOverlay = document.getElementById("reportRowActionOverlay");
+  var reportRowActionDeleteBtn = document.getElementById("reportRowActionDeleteBtn");
+  var reportRowActionCopyBtn = document.getElementById("reportRowActionCopyBtn");
+  var reportRowActionCancelBtn = document.getElementById("reportRowActionCancelBtn");
+  var pendingReportRowActionId = null;
+
+  function openReportRowActionModal(rowId) {
+    pendingReportRowActionId = rowId;
+    reportRowActionOverlay.hidden = false;
+  }
+  function closeReportRowActionModal() {
+    reportRowActionOverlay.hidden = true;
+    pendingReportRowActionId = null;
+  }
+  function deleteReportRow(rowId) {
+    var report = findReport(activeReportId);
+    if (!report) return;
+    askConfirm(tr("confirmDeleteReportRow"), function () {
+      report.rows = report.rows.filter(function (r) { return r.id !== rowId; });
+      saveData();
+      renderReportView();
+    });
+  }
+  function duplicateReportRow(rowId) {
+    var report = findReport(activeReportId);
+    if (!report) return;
+    var idx = report.rows.findIndex(function (r) { return r.id === rowId; });
+    if (idx === -1) return;
+    var copy = Object.assign({}, report.rows[idx], { id: uid() });
+    report.rows.splice(idx + 1, 0, copy);
+    saveData();
+    renderReportView();
+  }
+  reportRowActionDeleteBtn.addEventListener("click", function () {
+    var rowId = pendingReportRowActionId;
+    closeReportRowActionModal();
+    deleteReportRow(rowId);
+  });
+  reportRowActionCopyBtn.addEventListener("click", function () {
+    var rowId = pendingReportRowActionId;
+    closeReportRowActionModal();
+    duplicateReportRow(rowId);
+  });
+  reportRowActionCancelBtn.addEventListener("click", closeReportRowActionModal);
+  reportRowActionOverlay.addEventListener("click", function (e) {
+    if (e.target === reportRowActionOverlay) closeReportRowActionModal();
+  });
+
   function addReportRowsToTaskList(reportId) {
     var report = findReport(reportId);
     if (!report) return 0;
@@ -6050,6 +6115,35 @@
 
       var numTd = document.createElement("td");
       numTd.textContent = String(index + 1);
+      (function (rowId) {
+        var rowLongPressFired = false;
+        var rowPressStartX = 0, rowPressStartY = 0;
+        var startRowPress = function (e) {
+          var point = e.touches ? e.touches[0] : e;
+          rowPressStartX = point.clientX;
+          rowPressStartY = point.clientY;
+          rowLongPressFired = false;
+          clearTimeout(longPressTimer);
+          longPressTimer = setTimeout(function () {
+            rowLongPressFired = true;
+            openReportRowActionModal(rowId);
+          }, 1000);
+        };
+        var cancelRowPress = function () { clearTimeout(longPressTimer); };
+        var moveRowPress = function (e) {
+          var point = e.touches ? e.touches[0] : e;
+          if (Math.abs(point.clientX - rowPressStartX) > 10 || Math.abs(point.clientY - rowPressStartY) > 10) {
+            cancelRowPress();
+          }
+        };
+        numTd.addEventListener("mousedown", startRowPress);
+        numTd.addEventListener("mouseup", cancelRowPress);
+        numTd.addEventListener("mouseleave", cancelRowPress);
+        numTd.addEventListener("mousemove", moveRowPress);
+        numTd.addEventListener("touchstart", startRowPress, { passive: true });
+        numTd.addEventListener("touchend", cancelRowPress);
+        numTd.addEventListener("touchmove", moveRowPress, { passive: true });
+      })(row.id);
       rowEl.appendChild(numTd);
 
       var taskTd = document.createElement("td");
