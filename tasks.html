@@ -8124,7 +8124,32 @@
 
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     window.addEventListener("load", function () {
-      navigator.serviceWorker.register("tasks-sw.js").catch(function () {});
+      navigator.serviceWorker.register("tasks-sw.js").then(function (reg) {
+        // A new SW version can finish installing and take over (via
+        // skipWaiting + clients.claim in tasks-sw.js) while this exact page
+        // instance is still open - e.g. an installed PWA resumed from the
+        // background instead of getting a true cold reload. That alone
+        // doesn't refresh anything already rendered (images, this script's
+        // own in-memory state), so without an explicit reload here, a
+        // pushed fix can silently activate in the background while the
+        // visible page keeps showing the stale version indefinitely.
+        var reloadedForUpdate = false;
+        function reloadOnce() {
+          if (reloadedForUpdate) return;
+          reloadedForUpdate = true;
+          window.location.reload();
+        }
+        navigator.serviceWorker.addEventListener("controllerchange", reloadOnce);
+        if (reg.waiting) reloadOnce();
+        reg.addEventListener("updatefound", function () {
+          var installing = reg.installing;
+          if (!installing) return;
+          installing.addEventListener("statechange", function () {
+            if (installing.state === "activated") reloadOnce();
+          });
+        });
+        reg.update().catch(function () {});
+      }).catch(function () {});
     });
   }
 })();
