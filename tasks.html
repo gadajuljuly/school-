@@ -860,6 +860,14 @@
     cursor: pointer;
     font-family: inherit;
   }
+  .notebook-app-name {
+    font-family: "Rubik", "Assistant", sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    pointer-events: none;
+  }
   .head-right {
     display: flex;
     align-items: center;
@@ -1690,6 +1698,7 @@
         </span>
         <button type="button" class="today-btn" id="todayBtn" data-i18n="todayBtn" hidden>היום</button>
       </span>
+      <div class="notebook-app-name">ITASK</div>
       <div class="head-right">
         <span class="notebook-progress" id="progressText"></span>
         <button class="menu-btn" id="menuBtn" data-i18n-title="menuBtnTitle" title="תפריט" aria-haspopup="true" aria-expanded="false"><img src="tasks-menu-icon.webp" alt=""></button>
