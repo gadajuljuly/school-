@@ -2828,6 +2828,7 @@
     if (typeof log.closed !== "boolean") log.closed = false;
     if (typeof log.number !== "number") log.number = null;
     if (typeof log.closedAt !== "number") log.closedAt = null;
+    if (!log.closedFile || typeof log.closedFile !== "object") log.closedFile = null;
     return log;
   }
 
@@ -5393,13 +5394,34 @@
     return Promise.resolve();
   }
 
+  function removeLibraryFileEntry(sheet, folderId, entryId, path) {
+    var removePromise = supabaseClient ? supabaseClient.storage.from(LIBRARY_BUCKET).remove([path]).catch(function () {}) : Promise.resolve();
+    return removePromise.then(function () {
+      if (sheet.shared) {
+        return applySharedLibraryFolders(sheet.id, function (folders) {
+          return folders.map(function (f) {
+            if (f.id !== folderId) return f;
+            return Object.assign({}, f, { files: (f.files || []).filter(function (x) { return x.id !== entryId; }) });
+          });
+        });
+      }
+      var liveSheet = data.sheets.find(function (s) { return s.id === sheet.id; });
+      var liveFolder = liveSheet && liveSheet.folders && liveSheet.folders.find(function (f) { return f.id === folderId; });
+      if (liveFolder) {
+        liveFolder.files = (liveFolder.files || []).filter(function (f) { return f.id !== entryId; });
+        saveData();
+      }
+      return Promise.resolve();
+    });
+  }
+
   function uploadClosedLogPdfToLibrary(sheet, blob, fileName) {
     return ensureSiteLogsFolder(sheet).then(function (folderId) {
       var path = sheet.id + "/" + folderId + "/" + uid() + "-" + safeStorageFileName(fileName);
       return supabaseClient.storage.from(LIBRARY_BUCKET).upload(path, blob, { contentType: "application/pdf" }).then(function (result) {
         if (result.error) throw result.error;
         var entry = { id: uid(), name: fileName, path: path, type: "application/pdf", size: blob.size || 0, uploadedAt: Date.now() };
-        return addFileToLibraryFolder(sheet, folderId, entry).then(function () { return entry; });
+        return addFileToLibraryFolder(sheet, folderId, entry).then(function () { return { entry: entry, folderId: folderId }; });
       });
     });
   }
@@ -5418,12 +5440,23 @@
     siteLogCloseBtn.innerHTML = "&#8987;";
     var element = buildSiteLogGeneralPdfElement(sheet, log, number);
     var fileName = siteLogGeneralFileName(sheet, log, number);
+    var previousFile = log.closedFile;
     buildPdfBlobFromElement(element, fileName).then(function (result) {
-      return uploadClosedLogPdfToLibrary(sheet, result.blob, result.fileName).then(function () {
+      // Closing again (after further edits) replaces the previous PDF in
+      // the library rather than piling up a new copy each time - remove
+      // the old one first so the folder only ever holds this log's latest
+      // version.
+      var removePrevious = previousFile
+        ? removeLibraryFileEntry(sheet, previousFile.folderId, previousFile.entryId, previousFile.path).catch(function () {})
+        : Promise.resolve();
+      return removePrevious.then(function () {
+        return uploadClosedLogPdfToLibrary(sheet, result.blob, result.fileName);
+      }).then(function (uploaded) {
         var liveLog = findOrCreateSiteLog(activeSheet(), activeSiteLogDate);
         liveLog.number = number;
         liveLog.closed = true;
         liveLog.closedAt = Date.now();
+        liveLog.closedFile = { folderId: uploaded.folderId, entryId: uploaded.entry.id, path: uploaded.entry.path };
         saveData();
         updateSiteLogCloseShareButtons();
       });
