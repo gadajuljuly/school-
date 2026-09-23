@@ -778,6 +778,9 @@
     padding: 0;
   }
   .site-log-add-btn img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .site-log-list-wrap { flex: 1; overflow: auto; padding: 14px; }
+  .site-log-list { display: flex; flex-direction: column; gap: 8px; max-width: 320px; margin: 0 auto; }
+  .site-log-list .site-log-add-btn { align-self: center; margin-top: 2px; }
   .site-log-number-input {
     width: 100%;
     box-sizing: border-box;
@@ -2211,6 +2214,16 @@
     </div>
     <div class="site-log-attendance-wrap">
       <div class="site-log-attendance-columns" id="siteLogToolsColumns"></div>
+    </div>
+  </div>
+
+  <div class="report-view" id="siteLogContractorsView" hidden>
+    <div class="report-head">
+      <button type="button" class="report-back-btn" id="siteLogContractorsBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
+      <div class="report-head-title" data-i18n="siteLogContractors">קבלנים</div>
+    </div>
+    <div class="site-log-list-wrap">
+      <div class="site-log-list" id="siteLogContractorsList"></div>
     </div>
   </div>
 
@@ -4930,6 +4943,9 @@
   var siteLogToolsView = document.getElementById("siteLogToolsView");
   var siteLogToolsBackBtn = document.getElementById("siteLogToolsBackBtn");
   var siteLogToolsColumns = document.getElementById("siteLogToolsColumns");
+  var siteLogContractorsView = document.getElementById("siteLogContractorsView");
+  var siteLogContractorsBackBtn = document.getElementById("siteLogContractorsBackBtn");
+  var siteLogContractorsList = document.getElementById("siteLogContractorsList");
 
   function openSiteLogCategoriesView(dateISO) {
     activeSiteLogDate = dateISO;
@@ -4942,26 +4958,15 @@
   }
   siteLogCategoriesBackBtn.addEventListener("click", closeSiteLogCategoriesView);
 
-  siteLogContractorsBtn.addEventListener("click", function () { showToast(tr("siteLogComingSoon")); });
   siteLogWorksBtn.addEventListener("click", function () { showToast(tr("siteLogComingSoon")); });
 
-  function renderSiteLogAttendanceColumn(colKey) {
-    var col = document.createElement("div");
-    col.className = "site-log-col";
-
-    var header = document.createElement("div");
-    header.className = "site-log-col-header";
-    header.textContent = tr("siteLogCol" + colKey.charAt(0).toUpperCase() + colKey.slice(1));
-    col.appendChild(header);
-
-    var body = document.createElement("div");
-    body.className = "site-log-col-body";
-
-    var sheet = activeSheet();
-    var log = findSiteLog(sheet, activeSiteLogDate);
-    var entries = (log && log.attendance[colKey]) || [];
-
-    entries.forEach(function (entry) {
+  // Shared by every simple "growable list of names with a + at the bottom"
+  // site-log category (attendance columns, contractors, ...): renders the
+  // existing entries plus a + that turns into a text input, committing a
+  // new entry and putting a fresh + below it once you start typing.
+  function renderSiteLogNameList(container, getEntries, addEntry, removeEntry, rerender) {
+    container.innerHTML = "";
+    getEntries().forEach(function (entry) {
       var row = document.createElement("div");
       row.className = "site-log-entry";
       var nameSpan = document.createElement("span");
@@ -4972,14 +4977,12 @@
       removeBtn.className = "site-log-entry-remove";
       removeBtn.textContent = "✕";
       removeBtn.addEventListener("click", function () {
-        var liveLog = findSiteLog(activeSheet(), activeSiteLogDate);
-        if (!liveLog) return;
-        liveLog.attendance[colKey] = liveLog.attendance[colKey].filter(function (e) { return e.id !== entry.id; });
+        removeEntry(entry.id);
         saveData();
-        renderSiteLogAttendanceColumns();
+        rerender();
       });
       row.appendChild(removeBtn);
-      body.appendChild(row);
+      container.appendChild(row);
     });
 
     var addBtn = document.createElement("button");
@@ -4994,28 +4997,46 @@
       input.type = "text";
       input.className = "site-log-add-input";
       input.maxLength = 60;
-      body.replaceChild(input, addBtn);
+      container.replaceChild(input, addBtn);
       input.focus();
       var committed = false;
       function commit() {
         if (committed) return;
         committed = true;
         var name = input.value.trim();
-        if (name) {
-          var liveSheet = activeSheet();
-          var liveLog = findOrCreateSiteLog(liveSheet, activeSiteLogDate);
-          liveLog.attendance[colKey].push({ id: uid(), name: name });
-          saveData();
-        }
-        renderSiteLogAttendanceColumns();
+        if (name) { addEntry(name); saveData(); }
+        rerender();
       }
       input.addEventListener("blur", commit);
       input.addEventListener("keydown", function (e) {
         if (e.key === "Enter") { e.preventDefault(); input.blur(); }
-        else if (e.key === "Escape") { committed = true; renderSiteLogAttendanceColumns(); }
+        else if (e.key === "Escape") { committed = true; rerender(); }
       });
     });
-    body.appendChild(addBtn);
+    container.appendChild(addBtn);
+  }
+
+  function renderSiteLogAttendanceColumn(colKey) {
+    var col = document.createElement("div");
+    col.className = "site-log-col";
+
+    var header = document.createElement("div");
+    header.className = "site-log-col-header";
+    header.textContent = tr("siteLogCol" + colKey.charAt(0).toUpperCase() + colKey.slice(1));
+    col.appendChild(header);
+
+    var body = document.createElement("div");
+    body.className = "site-log-col-body";
+    renderSiteLogNameList(
+      body,
+      function () { var log = findSiteLog(activeSheet(), activeSiteLogDate); return (log && log.attendance[colKey]) || []; },
+      function (name) { findOrCreateSiteLog(activeSheet(), activeSiteLogDate).attendance[colKey].push({ id: uid(), name: name }); },
+      function (id) {
+        var log = findSiteLog(activeSheet(), activeSiteLogDate);
+        if (log) log.attendance[colKey] = log.attendance[colKey].filter(function (e) { return e.id !== id; });
+      },
+      renderSiteLogAttendanceColumns
+    );
 
     col.appendChild(body);
     return col;
@@ -5098,6 +5119,31 @@
   }
   siteLogToolsBtn.addEventListener("click", openSiteLogToolsView);
   siteLogToolsBackBtn.addEventListener("click", closeSiteLogToolsView);
+
+  function renderSiteLogContractorsList() {
+    renderSiteLogNameList(
+      siteLogContractorsList,
+      function () { var log = findSiteLog(activeSheet(), activeSiteLogDate); return (log && log.contractors) || []; },
+      function (name) { findOrCreateSiteLog(activeSheet(), activeSiteLogDate).contractors.push({ id: uid(), name: name }); },
+      function (id) {
+        var log = findSiteLog(activeSheet(), activeSiteLogDate);
+        if (log) log.contractors = log.contractors.filter(function (e) { return e.id !== id; });
+      },
+      renderSiteLogContractorsList
+    );
+  }
+
+  function openSiteLogContractorsView() {
+    renderSiteLogContractorsList();
+    siteLogCategoriesView.hidden = true;
+    siteLogContractorsView.hidden = false;
+  }
+  function closeSiteLogContractorsView() {
+    siteLogContractorsView.hidden = true;
+    siteLogCategoriesView.hidden = false;
+  }
+  siteLogContractorsBtn.addEventListener("click", openSiteLogContractorsView);
+  siteLogContractorsBackBtn.addEventListener("click", closeSiteLogContractorsView);
 
   function renderSheetReportsList() {
     sheetReportsList.innerHTML = "";
