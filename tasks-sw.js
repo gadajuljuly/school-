@@ -1,4 +1,4 @@
-var CACHE_NAME = "tasks-app-v27";
+var CACHE_NAME = "tasks-app-v28";
 var CORE_ASSETS = [
   "./tasks.html",
   "./tasks-manifest.json",
@@ -46,7 +46,7 @@ self.addEventListener("fetch", function (event) {
   // shows up immediately; fall back to the cached copy only when offline.
   if (event.request.mode === "navigate" || event.request.destination === "document") {
     event.respondWith(
-      fetch(event.request).then(function (response) {
+      fetch(event.request, { cache: "no-store" }).then(function (response) {
         if (response && response.ok && isSameOrigin) {
           var copy = response.clone();
           caches.open(CACHE_NAME).then(function (cache) { cache.put(event.request, copy); });
