@@ -2665,7 +2665,6 @@
     libraryFolderDiaries: { he: "יומנים", en: "Journals", ar: "يوميات", ru: "Дневники" },
     libraryFolderReports: { he: "דוחות", en: "Reports", ar: "تقارير", ru: "Отчёты" },
     libraryFolderGeneral: { he: "כללי", en: "General", ar: "عام", ru: "Общее" },
-    libraryFolderLogs: { he: "יומנים", en: "Logs", ar: "السجلات", ru: "Журналы" },
     libraryConfirmDeleteFolder: { he: "למחוק את התיקייה הזו וכל הקבצים שבה?", en: "Delete this folder and all its files?", ar: "هل تريد حذف هذا المجلد وجميع ملفاته؟", ru: "Удалить эту папку со всеми файлами?" },
     libraryTitlePrefix: { he: "ספריית ", en: "Library: ", ar: "مكتبة ", ru: "Библиотека: " },
     libraryFolderCreateBtn: { he: "יצירה", en: "Create", ar: "إنشاء", ru: "Создать" },
@@ -5334,26 +5333,37 @@
   siteLogPreviewBtn.addEventListener("click", openSiteLogPreviewView);
   siteLogPreviewBackBtn.addEventListener("click", closeSiteLogPreviewView);
 
-  var SITE_LOG_FOLDER_KEY = "logs";
+  // The library already gives every project a default "diaries" folder
+  // (displayed as "יומנים" in Hebrew - the same word used for these logs)
+  // via DEFAULT_LIBRARY_FOLDER_KEYS/buildDefaultLibraryFolders(). Closed
+  // logs belong in that existing folder, not a separate new one - an
+  // earlier version of this invented its own "logs" key, which not only
+  // duplicated the existing folder but, matched by display name as a fix,
+  // collided with "diaries" since both read "יומנים" in Hebrew.
+  var SITE_LOG_FOLDER_KEY = "diaries";
+
+  function isSiteLogsFolder(f) {
+    return f.key === SITE_LOG_FOLDER_KEY;
+  }
 
   function ensureSiteLogsFolder(sheet) {
     return new Promise(function (resolve) {
       ensureLibraryFolders(sheet, function (folders) {
-        var existing = folders.find(function (f) { return f.key === SITE_LOG_FOLDER_KEY; });
+        var existing = folders.find(isSiteLogsFolder);
         if (existing) { resolve(existing.id); return; }
         var newId = uid();
         if (sheet.shared) {
           applySharedLibraryFolders(sheet.id, function (liveFolders) {
-            if (liveFolders.some(function (f) { return f.key === SITE_LOG_FOLDER_KEY; })) return liveFolders;
+            if (liveFolders.some(isSiteLogsFolder)) return liveFolders;
             return liveFolders.concat([{ id: newId, key: SITE_LOG_FOLDER_KEY, name: null, files: [] }]);
           }).then(function (updated) {
-            var folder = updated.find(function (f) { return f.key === SITE_LOG_FOLDER_KEY; });
+            var folder = updated.find(isSiteLogsFolder);
             resolve(folder ? folder.id : newId);
           });
         } else {
           var liveSheet = data.sheets.find(function (s) { return s.id === sheet.id; });
           if (!liveSheet.folders) liveSheet.folders = folders;
-          var folder = liveSheet.folders.find(function (f) { return f.key === SITE_LOG_FOLDER_KEY; });
+          var folder = liveSheet.folders.find(isSiteLogsFolder);
           if (!folder) {
             folder = { id: newId, key: SITE_LOG_FOLDER_KEY, name: null, files: [] };
             liveSheet.folders.push(folder);
