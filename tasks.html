@@ -153,6 +153,26 @@
     text-align: center;
   }
   .data-error-overlay[hidden] { display: none; }
+  .app-toast {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%);
+    max-width: 90vw;
+    z-index: 60;
+    background: var(--ink);
+    color: var(--paper);
+    font-size: 0.85rem;
+    line-height: 1.4;
+    padding: 10px 18px;
+    border-radius: 10px;
+    box-shadow: 0 6px 16px var(--shadow);
+    text-align: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+  .app-toast.app-toast-visible { opacity: 1; }
   .data-error-text {
     color: var(--ink);
     font-size: 0.95rem;
@@ -1654,6 +1674,7 @@
 </head>
 <body>
 <div id="navDebugToast" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#222;color:#fff;font-size:13px;line-height:1.4;padding:8px 12px;direction:rtl;display:none;white-space:pre-wrap;"></div>
+<div class="app-toast" id="appToast"></div>
 <div class="splash-screen" id="splashScreen">
   <img src="tasks-icon-512.png" class="splash-logo" alt="ITASK">
   <div class="splash-app-name">ITASK</div>
@@ -2274,7 +2295,8 @@
     reportPdfTitleMeeting: { he: "סיכום פגישה", en: "Meeting Summary", ar: "ملخص الاجتماع", ru: "Итоги встречи" },
     reportPdfFooter: { he: "מסמך זה הופק באמצעות ITASK", en: "This document was produced using ITASK", ar: "تم إنتاج هذا المستند باستخدام ITASK", ru: "Этот документ создан с помощью ITASK" },
     reportPdfTitleTour: { he: "סיכום סיור", en: "Tour Summary", ar: "ملخص الجولة", ru: "Итоги обхода" },
-    reportPdfError: { he: "אירעה שגיאה ביצירת ה-PDF", en: "An error occurred creating the PDF", ar: "حدث خطأ أثناء إنشاء PDF", ru: "Ошибка при создании PDF" }
+    reportPdfError: { he: "אירעה שגיאה ביצירת ה-PDF", en: "An error occurred creating the PDF", ar: "حدث خطأ أثناء إنشاء PDF", ru: "Ошибка при создании PDF" },
+    shareFallbackToSaveMsg: { he: "השיתוף לא זמין כאן - הקובץ נשמר במכשיר, אפשר לשתף אותו משם", en: "Sharing isn't available here - the file was saved to your device, you can share it from there", ar: "المشاركة غير متاحة هنا - تم حفظ الملف على جهازك، يمكنك مشاركته من هناك", ru: "Здесь недоступен общий доступ - файл сохранён на устройстве, поделиться им можно оттуда" }
   };
 
   var LANG_STORAGE_KEY = "itask-lang";
@@ -5393,6 +5415,18 @@
     return loadedScripts[src];
   }
 
+  var appToastEl = document.getElementById("appToast");
+  var appToastTimer = null;
+  function showToast(message, duration) {
+    if (!appToastEl) return;
+    appToastEl.textContent = message;
+    appToastEl.classList.add("app-toast-visible");
+    clearTimeout(appToastTimer);
+    appToastTimer = setTimeout(function () {
+      appToastEl.classList.remove("app-toast-visible");
+    }, duration || 4500);
+  }
+
   function downloadBlob(blob, fileName) {
     var url = URL.createObjectURL(blob);
     var a = document.createElement("a");
@@ -5410,7 +5444,11 @@
     // Some Android browsers support sharing files via navigator.share()
     // without exposing (or correctly answering) navigator.canShare, so
     // don't let a missing/false canShare rule out trying share() itself -
-    // only skip it when share() is entirely absent.
+    // only skip it when share() is entirely absent. An installed/standalone
+    // PWA in particular often can't share files at all even though the same
+    // browser engine supports it fine in a normal tab - when that forces
+    // the fallback to a plain download, say so, or it just looks like the
+    // share button silently did the wrong thing.
     var hasShare = !!navigator.share;
     var canShareResult = navigator.canShare ? navigator.canShare(shareData) : "missing";
     var canShareFiles = hasShare && (canShareResult === "missing" || canShareResult);
@@ -5419,14 +5457,17 @@
         navigator.share(shareData).catch(function (err) {
           if (err && err.name === "AbortError") return;
           downloadBlob(blob, fileName);
+          showToast(tr("shareFallbackToSaveMsg"));
         });
         return;
       } catch (err) {
         downloadBlob(blob, fileName);
+        showToast(tr("shareFallbackToSaveMsg"));
         return;
       }
     }
     downloadBlob(blob, fileName);
+    showToast(tr("shareFallbackToSaveMsg"));
   }
 
   function buildReportPdfBlob(report) {
