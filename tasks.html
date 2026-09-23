@@ -6343,7 +6343,13 @@
   dataErrorRetryBtn.addEventListener("click", function () {
     dataErrorOverlay.hidden = true;
     appLoadingOverlay.hidden = false;
-    if (supabaseClient) startWithSupabase(); else startLocalOnly();
+    if (pendingFirebaseUserForToken) {
+      beginAuthenticatedSession(pendingFirebaseUserForToken);
+    } else if (supabaseClient) {
+      startWithSupabase();
+    } else {
+      startLocalOnly();
+    }
   });
   var authPhoneForm = document.getElementById("authPhoneForm");
   var authPhone = document.getElementById("authPhone");
@@ -6490,6 +6496,40 @@
     pendingConfirmationResult = null;
   }
 
+  // The app authenticates via Firebase phone auth, not Supabase Auth, so
+  // without this step every Postgres RLS policy relying on auth.uid()
+  // would never match any request - that's why RLS had to stay off
+  // entirely until now. Right after Firebase confirms the phone, exchange
+  // that credential for a short JWT signed with this Supabase project's
+  // own JWT secret (minted server-side by mint-session-token, which
+  // verifies the Firebase token itself before signing anything), and swap
+  // it in as this client's Authorization header so auth.uid()/auth.jwt()
+  // in RLS policies now correctly reflect who's actually asking.
+  var pendingFirebaseUserForToken = null;
+  function mintSupabaseSessionToken(firebaseUser) {
+    return firebaseUser.getIdToken().then(function (idToken) {
+      return supabaseClient.functions.invoke("mint-session-token", { body: { idToken: idToken } });
+    }).then(function (result) {
+      if (result.error || !result.data || !result.data.token) {
+        throw (result.error || new Error("mint-session-token returned no token"));
+      }
+      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+        global: { headers: { Authorization: "Bearer " + result.data.token } }
+      });
+      return result.data.userId || phoneToUuid(firebaseUser.phoneNumber);
+    });
+  }
+  function beginAuthenticatedSession(firebaseUser) {
+    pendingFirebaseUserForToken = firebaseUser;
+    mintSupabaseSessionToken(firebaseUser).then(function (rowId) {
+      pendingFirebaseUserForToken = null;
+      showApp(firebaseUser.phoneNumber, rowId);
+    }, function (err) {
+      console.error("mintSupabaseSessionToken failed:", err);
+      showDataLoadError();
+    });
+  }
+
   if (!supabaseClient || !firebaseAuth) {
     appRoot.hidden = false;
     authGate.hidden = true;
@@ -6501,9 +6541,13 @@
   } else {
     firebaseAuth.onAuthStateChanged(function (firebaseUser) {
       if (firebaseUser && firebaseUser.phoneNumber) {
-        phoneToUuid(firebaseUser.phoneNumber).then(function (rowId) {
-          showApp(firebaseUser.phoneNumber, rowId);
-        });
+        if (supabaseClient.functions) {
+          beginAuthenticatedSession(firebaseUser);
+        } else {
+          phoneToUuid(firebaseUser.phoneNumber).then(function (rowId) {
+            showApp(firebaseUser.phoneNumber, rowId);
+          });
+        }
       } else {
         showAuthGate();
       }
