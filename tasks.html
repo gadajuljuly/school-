@@ -4961,11 +4961,21 @@
   var calendarFabBtn = document.getElementById("calendarFabBtn");
   calendarFabBtn.addEventListener("click", function () {
     dateInputPurpose = "siteLog";
+    // A native date input only fires "change" when its value actually
+    // changes - picking the same date already showing (e.g. today, the
+    // app's default view) would otherwise silently do nothing. Clearing it
+    // first guarantees any pick, including today's date, is a real change.
+    dateInput.value = "";
     if (dateInput.showPicker) {
       try { dateInput.showPicker(); return; } catch (e) {}
     }
     dateInput.focus();
     dateInput.click();
+  });
+  // If the picker is dismissed without picking a date, put the input's
+  // value back so a later normal (non-siteLog) use of it isn't left blank.
+  dateInput.addEventListener("blur", function () {
+    if (!dateInput.value) dateInput.value = state.viewDate;
   });
 
   var reportTypeOverlay = document.getElementById("reportTypeOverlay");
