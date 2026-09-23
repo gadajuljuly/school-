@@ -382,6 +382,7 @@
   }
   .report-head-title { font-family: "Rubik", "Assistant", sans-serif; font-weight: 700; font-size: 1.05rem; text-align: center; flex: 1; }
   .site-log-header-project { font-family: "Assistant", sans-serif; font-weight: 400; font-size: 0.68rem; color: var(--ink-muted); margin-bottom: 1px; }
+  #siteLogCategoriesProjectName { font-size: 0.95rem; font-weight: 600; }
   .report-back-btn, .report-share-btn {
     width: 36px;
     height: 36px;
@@ -745,6 +746,18 @@
     font-size: 0.85rem;
     cursor: pointer;
   }
+  .site-log-periodic-btn {
+    margin: 0 14px 14px;
+    padding: 12px 8px;
+    border-radius: 10px;
+    border: 1px solid var(--rule);
+    background: var(--paper-alt);
+    color: var(--ink);
+    font-family: "Rubik", "Assistant", sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
   .site-log-preview-wrap { flex: 1; overflow-y: auto; overflow-x: hidden; background: var(--paper-alt); padding: 16px 10px; }
   .site-log-preview-wrap .pdf-doc {
     width: 100%;
@@ -967,6 +980,7 @@
   }
   .pdf-doc-table td.pdf-doc-col-task { text-align: start; }
   .pdf-doc-empty { color: #8a8471; padding: 18px; }
+  .pdf-doc-periodic-section { margin-top: 30px; border-top: 3px dashed #cfc8b4; }
   .pdf-doc-footer {
     margin-top: 24px;
     padding-top: 8px;
@@ -2361,6 +2375,21 @@
       <button type="button" class="site-log-close-btn" id="siteLogCloseBtn" data-i18n="siteLogCloseBtn">סגירת יומן</button>
       <button type="button" class="site-log-share-btn" id="siteLogShareGeneralBtn" data-i18n="siteLogShareBtn" disabled>שיתוף יומן</button>
     </div>
+    <button type="button" class="site-log-periodic-btn" id="siteLogPeriodicBtn" data-i18n="siteLogPeriodicBtn">הפקת דו"ח יומנים תקופתי</button>
+  </div>
+
+  <div class="modal-overlay" id="siteLogPeriodicRangeOverlay" hidden>
+    <div class="modal-box" role="alertdialog" aria-modal="true">
+      <p class="modal-message" data-i18n="siteLogPeriodicRangeTitle">הפקת דו"ח יומנים תקופתי</p>
+      <div class="modal-submessage" data-i18n="siteLogPeriodicFromLabel">מתאריך</div>
+      <input type="date" id="siteLogPeriodicFromInput" class="auth-input">
+      <div class="modal-submessage" data-i18n="siteLogPeriodicToLabel">עד תאריך</div>
+      <input type="date" id="siteLogPeriodicToInput" class="auth-input">
+      <div class="modal-actions">
+        <button type="button" class="modal-btn modal-btn-primary" id="siteLogPeriodicGenerateBtn" data-i18n="siteLogPeriodicGenerateBtn">הפקת דו"ח</button>
+        <button type="button" class="modal-btn modal-btn-no" id="siteLogPeriodicCancelBtn" data-i18n="cancelBtn">ביטול</button>
+      </div>
+    </div>
   </div>
 
   <div class="report-view" id="siteLogPreviewView" hidden>
@@ -2600,6 +2629,15 @@
     siteLogShareBtn: { he: "שיתוף יומן", en: "Share log", ar: "مشاركة السجل", ru: "Поделиться журналом" },
     siteLogPreviewBtn: { he: "הצגת יומן", en: "Show log", ar: "عرض السجل", ru: "Показать журнал" },
     siteLogGeneralReportTitle: { he: "יומן עבודה מס'", en: "Work Log No.", ar: "سجل العمل رقم", ru: "Рабочий журнал №" },
+    siteLogPeriodicBtn: { he: "הפקת דו\"ח יומנים תקופתי", en: "Generate periodic logs report", ar: "إصدار تقرير سجلات دوري", ru: "Сформировать периодический отчёт журналов" },
+    siteLogPeriodicRangeTitle: { he: "הפקת דו\"ח יומנים תקופתי", en: "Generate periodic logs report", ar: "إصدار تقرير سجلات دوري", ru: "Сформировать периодический отчёт журналов" },
+    siteLogPeriodicFromLabel: { he: "מתאריך", en: "From date", ar: "من تاريخ", ru: "С даты" },
+    siteLogPeriodicToLabel: { he: "עד תאריך", en: "To date", ar: "إلى تاريخ", ru: "По дату" },
+    siteLogPeriodicGenerateBtn: { he: "הפקת דו\"ח", en: "Generate report", ar: "إصدار التقرير", ru: "Сформировать отчёт" },
+    siteLogPeriodicMissingDatesMsg: { he: "יש לבחור תאריך התחלה ותאריך סיום", en: "Please select a start and end date", ar: "الرجاء اختيار تاريخ بداية وتاريخ نهاية", ru: "Выберите дату начала и окончания" },
+    siteLogPeriodicInvalidRangeMsg: { he: "תאריך ההתחלה חייב להיות לפני תאריך הסיום", en: "The start date must be before the end date", ar: "يجب أن يكون تاريخ البداية قبل تاريخ النهاية", ru: "Дата начала должна быть раньше даты окончания" },
+    siteLogPeriodicNoLogsMsg: { he: "לא נמצאו יומנים סגורים בתקופה שנבחרה", en: "No closed logs were found in the selected period", ar: "لم يتم العثور على سجلات مغلقة في الفترة المحددة", ru: "В выбранном периоде не найдено закрытых журналов" },
+    siteLogPeriodicFileNamePrefix: { he: "דוח יומנים תקופתי", en: "Periodic logs report", ar: "تقرير سجلات دوري", ru: "Периодический отчёт журналов" },
     siteLogWorksTourTitle: { he: "תיאור עבודות", en: "Works Description", ar: "وصف الأعمال", ru: "Описание работ" },
     siteLogCloseFirstMsg: { he: "יש לסגור את היומן קודם", en: "Close the log first", ar: "يجب إغلاق السجل أولاً", ru: "Сначала закройте журнал" },
     siteLogCopyPrevBtn: { he: "העתקת יומן קודם", en: "Copy previous log", ar: "نسخ السجل السابق", ru: "Скопировать предыдущий журнал" },
@@ -4501,7 +4539,13 @@
           openLibraryFolderView(sheet, folder);
         });
 
-        if (!folder.key) {
+        // Deletable: any folder that isn't one of today's 4 actual default
+        // folders - covers both custom (keyless) folders and orphaned
+        // folders left over from an old key (e.g. a stale "logs" folder
+        // from before site logs were pointed at the "diaries" key), which
+        // would otherwise be stuck undeletable with a blank display name
+        // since LIBRARY_FOLDER_KEY_LABELS has no entry for it either.
+        if (DEFAULT_LIBRARY_FOLDER_KEYS.indexOf(folder.key) === -1) {
           var delBtn = document.createElement("button");
           delBtn.type = "button";
           delBtn.className = "library-item-delete";
@@ -5346,6 +5390,12 @@
   var siteLogWorksBtn = document.getElementById("siteLogWorksBtn");
   var siteLogCloseBtn = document.getElementById("siteLogCloseBtn");
   var siteLogShareGeneralBtn = document.getElementById("siteLogShareGeneralBtn");
+  var siteLogPeriodicBtn = document.getElementById("siteLogPeriodicBtn");
+  var siteLogPeriodicRangeOverlay = document.getElementById("siteLogPeriodicRangeOverlay");
+  var siteLogPeriodicFromInput = document.getElementById("siteLogPeriodicFromInput");
+  var siteLogPeriodicToInput = document.getElementById("siteLogPeriodicToInput");
+  var siteLogPeriodicGenerateBtn = document.getElementById("siteLogPeriodicGenerateBtn");
+  var siteLogPeriodicCancelBtn = document.getElementById("siteLogPeriodicCancelBtn");
   var siteLogAttendanceView = document.getElementById("siteLogAttendanceView");
   var siteLogAttendanceBackBtn = document.getElementById("siteLogAttendanceBackBtn");
   var siteLogAttendanceColumns = document.getElementById("siteLogAttendanceColumns");
@@ -5563,6 +5613,57 @@
   siteLogCloseBtn.addEventListener("click", closeSiteLog);
   siteLogShareGeneralBtn.addEventListener("click", shareSiteLogGeneral);
 
+  function openSiteLogPeriodicModal() {
+    siteLogPeriodicFromInput.value = "";
+    siteLogPeriodicToInput.value = "";
+    siteLogPeriodicFromInput.max = todayISO();
+    siteLogPeriodicToInput.max = todayISO();
+    siteLogPeriodicRangeOverlay.hidden = false;
+  }
+  function closeSiteLogPeriodicModal() {
+    siteLogPeriodicRangeOverlay.hidden = true;
+  }
+  function buildSiteLogPeriodicPdfElement(sheet, logs) {
+    var wrap = document.createElement("div");
+    logs.forEach(function (log, index) {
+      var docEl = buildSiteLogGeneralPdfElement(sheet, log, log.number);
+      if (index > 0) docEl.classList.add("pdf-doc-periodic-section");
+      wrap.appendChild(docEl);
+    });
+    return wrap;
+  }
+  function generateSiteLogPeriodicReport() {
+    var from = siteLogPeriodicFromInput.value;
+    var to = siteLogPeriodicToInput.value;
+    if (!from || !to) { alert(tr("siteLogPeriodicMissingDatesMsg")); return; }
+    if (from > to) { alert(tr("siteLogPeriodicInvalidRangeMsg")); return; }
+    var sheet = activeSheet();
+    var logs = (sheet.siteLogs || []).filter(function (l) {
+      return l.closed && l.date >= from && l.date <= to;
+    }).sort(function (a, b) { return a.date < b.date ? -1 : 1; });
+    if (!logs.length) { alert(tr("siteLogPeriodicNoLogsMsg")); return; }
+    closeSiteLogPeriodicModal();
+    var originalContent = siteLogPeriodicBtn.textContent;
+    siteLogPeriodicBtn.disabled = true;
+    siteLogPeriodicBtn.innerHTML = "&#8987;";
+    var element = buildSiteLogPeriodicPdfElement(sheet, logs);
+    var fileName = tr("siteLogPeriodicFileNamePrefix") + " " + sheet.name + " " + isoToFileNameDate(from) + " - " + isoToFileNameDate(to) + ".pdf";
+    buildPdfBlobFromElement(element, fileName).then(function (result) {
+      attemptShare(result.blob, result.fileName);
+    }).catch(function (err) {
+      console.error("periodic site log report failed:", err);
+      alert(tr("reportPdfError"));
+    }).then(function () {
+      siteLogPeriodicBtn.disabled = false;
+      siteLogPeriodicBtn.textContent = originalContent;
+    });
+  }
+  siteLogPeriodicBtn.addEventListener("click", openSiteLogPeriodicModal);
+  siteLogPeriodicCancelBtn.addEventListener("click", closeSiteLogPeriodicModal);
+  siteLogPeriodicRangeOverlay.addEventListener("click", function (e) {
+    if (e.target === siteLogPeriodicRangeOverlay) closeSiteLogPeriodicModal();
+  });
+  siteLogPeriodicGenerateBtn.addEventListener("click", generateSiteLogPeriodicReport);
 
   // Shared by every simple "growable list of names with a + at the bottom"
   // site-log category (attendance columns, contractors, ...): renders the
