@@ -732,6 +732,21 @@
     opacity: 0.5;
     cursor: not-allowed;
   }
+  .site-log-preview-btn {
+    margin: 0 14px 10px;
+    padding: 12px 8px;
+    border-radius: 10px;
+    border: none;
+    background: var(--paper-alt);
+    color: var(--ink);
+    border: 1px solid var(--rule);
+    font-family: "Rubik", "Assistant", sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+  .site-log-preview-wrap { flex: 1; overflow: auto; background: var(--paper-alt); padding: 16px 10px; }
+  .site-log-preview-wrap .pdf-doc { margin: 0 auto; box-shadow: 0 2px 10px var(--shadow); }
   .site-log-copy-prev-btn {
     margin: 10px 14px 14px;
     padding: 12px;
@@ -2279,7 +2294,10 @@
   <div class="report-view" id="siteLogCategoriesView" hidden>
     <div class="report-head">
       <button type="button" class="report-back-btn" id="siteLogCategoriesBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
-      <div class="report-head-title" id="siteLogCategoriesHeadTitle"></div>
+      <div class="report-head-title">
+        <div id="siteLogCategoriesHeadTitle"></div>
+        <div class="site-log-header-project" id="siteLogCategoriesProjectName"></div>
+      </div>
     </div>
     <div class="library-grid site-log-categories-grid">
       <div class="library-item" id="siteLogAttendanceBtn">
@@ -2299,10 +2317,19 @@
         <div class="library-item-name" data-i18n="siteLogWorks">עבודות</div>
       </div>
     </div>
+    <button type="button" class="site-log-preview-btn" id="siteLogPreviewBtn" data-i18n="siteLogPreviewBtn">הצגת יומן</button>
     <div class="site-log-close-share-row">
       <button type="button" class="site-log-close-btn" id="siteLogCloseBtn" data-i18n="siteLogCloseBtn">סגירת יומן</button>
       <button type="button" class="site-log-share-btn" id="siteLogShareGeneralBtn" data-i18n="siteLogShareBtn" disabled>שיתוף יומן</button>
     </div>
+  </div>
+
+  <div class="report-view" id="siteLogPreviewView" hidden>
+    <div class="report-head">
+      <button type="button" class="report-back-btn" id="siteLogPreviewBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
+      <div class="report-head-title" data-i18n="siteLogPreviewBtn">הצגת יומן</div>
+    </div>
+    <div class="site-log-preview-wrap" id="siteLogPreviewContent"></div>
   </div>
 
   <div class="report-view" id="siteLogAttendanceView" hidden>
@@ -2529,6 +2556,7 @@
     siteLogComingSoon: { he: "הקטגוריה הזו עוד בבנייה", en: "This category is still being built", ar: "هذه الفئة لا تزال قيد الإنشاء", ru: "Эта категория ещё в разработке" },
     siteLogCloseBtn: { he: "סגירת יומן", en: "Close log", ar: "إغلاق السجل", ru: "Закрыть журнал" },
     siteLogShareBtn: { he: "שיתוף יומן", en: "Share log", ar: "مشاركة السجل", ru: "Поделиться журналом" },
+    siteLogPreviewBtn: { he: "הצגת יומן", en: "Show log", ar: "عرض السجل", ru: "Показать журнал" },
     siteLogGeneralReportTitle: { he: "יומן עבודה מס'", en: "Work Log No.", ar: "سجل العمل رقم", ru: "Рабочий журнал №" },
     siteLogWorksTourTitle: { he: "סיור עבודות", en: "Works Tour", ar: "جولة الأعمال", ru: "Обход работ" },
     siteLogCloseFirstMsg: { he: "יש לסגור את היומן קודם", en: "Close the log first", ar: "يجب إغلاق السجل أولاً", ru: "Сначала закройте журнал" },
@@ -5096,10 +5124,23 @@
     candidates.sort(function (a, b) { return a.date < b.date ? 1 : -1; });
     return candidates[0];
   }
+  // Read-only lookup for previewing a log that may not have been created
+  // yet (nothing has been added to any category) - never mutates sheet.siteLogs.
+  function getSiteLogOrEmpty(sheet, dateISO) {
+    return findSiteLog(sheet, dateISO) || normalizeSiteLog({ id: null, date: dateISO });
+  }
+  function nextSiteLogNumber(sheet, log) {
+    return log.number || ((sheet.siteLogs || []).reduce(function (max, l) { return l.number ? Math.max(max, l.number) : max; }, 0) + 1);
+  }
 
   var siteLogCategoriesView = document.getElementById("siteLogCategoriesView");
   var siteLogCategoriesBackBtn = document.getElementById("siteLogCategoriesBackBtn");
   var siteLogCategoriesHeadTitle = document.getElementById("siteLogCategoriesHeadTitle");
+  var siteLogCategoriesProjectName = document.getElementById("siteLogCategoriesProjectName");
+  var siteLogPreviewBtn = document.getElementById("siteLogPreviewBtn");
+  var siteLogPreviewView = document.getElementById("siteLogPreviewView");
+  var siteLogPreviewBackBtn = document.getElementById("siteLogPreviewBackBtn");
+  var siteLogPreviewContent = document.getElementById("siteLogPreviewContent");
   var siteLogAttendanceBtn = document.getElementById("siteLogAttendanceBtn");
   var siteLogToolsBtn = document.getElementById("siteLogToolsBtn");
   var siteLogContractorsBtn = document.getElementById("siteLogContractorsBtn");
@@ -5139,6 +5180,7 @@
   function openSiteLogCategoriesView(dateISO) {
     activeSiteLogDate = dateISO;
     siteLogCategoriesHeadTitle.textContent = isoToFullDisplay(dateISO);
+    siteLogCategoriesProjectName.textContent = activeSheet().name;
     siteLogCategoriesView.hidden = false;
     updateSiteLogCloseShareButtons();
   }
@@ -5147,6 +5189,22 @@
     activeSiteLogDate = null;
   }
   siteLogCategoriesBackBtn.addEventListener("click", closeSiteLogCategoriesView);
+
+  function openSiteLogPreviewView() {
+    var sheet = activeSheet();
+    var log = getSiteLogOrEmpty(sheet, activeSiteLogDate);
+    var number = log.number || nextSiteLogNumber(sheet, log);
+    siteLogPreviewContent.innerHTML = "";
+    siteLogPreviewContent.appendChild(buildSiteLogGeneralPdfElement(sheet, log, number));
+    siteLogCategoriesView.hidden = true;
+    siteLogPreviewView.hidden = false;
+  }
+  function closeSiteLogPreviewView() {
+    siteLogPreviewView.hidden = true;
+    siteLogCategoriesView.hidden = false;
+  }
+  siteLogPreviewBtn.addEventListener("click", openSiteLogPreviewView);
+  siteLogPreviewBackBtn.addEventListener("click", closeSiteLogPreviewView);
 
   var SITE_LOG_FOLDER_KEY = "logs";
 
@@ -5216,7 +5274,7 @@
     var sheet = activeSheet();
     var log = findOrCreateSiteLog(sheet, activeSiteLogDate);
     if (!supabaseClient) { alert(tr("libraryUploadError")); return; }
-    var number = log.number || ((sheet.siteLogs || []).reduce(function (max, l) { return l.number ? Math.max(max, l.number) : max; }, 0) + 1);
+    var number = nextSiteLogNumber(sheet, log);
     var originalContent = siteLogCloseBtn.textContent;
     siteLogCloseBtn.disabled = true;
     siteLogCloseBtn.innerHTML = "&#8987;";
