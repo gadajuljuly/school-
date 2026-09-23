@@ -381,6 +381,7 @@
     flex-shrink: 0;
   }
   .report-head-title { font-family: "Rubik", "Assistant", sans-serif; font-weight: 700; font-size: 1.05rem; text-align: center; flex: 1; }
+  .site-log-header-project { font-family: "Assistant", sans-serif; font-weight: 400; font-size: 0.68rem; color: var(--ink-muted); margin-bottom: 1px; }
   .report-back-btn, .report-share-btn {
     width: 36px;
     height: 36px;
@@ -541,6 +542,10 @@
     overflow: hidden;
   }
   .library-item-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .site-log-categories-grid .library-item-thumb {
+    background: transparent;
+    border: none;
+  }
   .library-item-name {
     font-size: 0.68rem;
     color: var(--ink);
@@ -2272,7 +2277,7 @@
       <button type="button" class="report-back-btn" id="siteLogCategoriesBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
       <div class="report-head-title" id="siteLogCategoriesHeadTitle"></div>
     </div>
-    <div class="library-grid">
+    <div class="library-grid site-log-categories-grid">
       <div class="library-item" id="siteLogAttendanceBtn">
         <div class="library-item-thumb"><img src="tasks-attendance-icon.webp" alt=""></div>
         <div class="library-item-name" data-i18n="siteLogAttendance">נוכחות</div>
@@ -2299,7 +2304,10 @@
   <div class="report-view" id="siteLogAttendanceView" hidden>
     <div class="report-head">
       <button type="button" class="report-back-btn" id="siteLogAttendanceBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
-      <div class="report-head-title" data-i18n="siteLogAttendance">נוכחות</div>
+      <div class="report-head-title">
+        <div class="site-log-header-project" id="siteLogAttendanceProjectName"></div>
+        <div data-i18n="siteLogAttendance">נוכחות</div>
+      </div>
       <button type="button" class="report-share-btn" id="siteLogAttendanceShareBtn" data-i18n-title="shareBtn" title="שיתוף">&#128228;</button>
     </div>
     <div class="site-log-attendance-wrap">
@@ -2311,7 +2319,10 @@
   <div class="report-view" id="siteLogToolsView" hidden>
     <div class="report-head">
       <button type="button" class="report-back-btn" id="siteLogToolsBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
-      <div class="report-head-title" data-i18n="siteLogTools">כלים</div>
+      <div class="report-head-title">
+        <div class="site-log-header-project" id="siteLogToolsProjectName"></div>
+        <div data-i18n="siteLogTools">כלים</div>
+      </div>
       <button type="button" class="report-share-btn" id="siteLogToolsShareBtn" data-i18n-title="shareBtn" title="שיתוף">&#128228;</button>
     </div>
     <div class="site-log-attendance-wrap">
@@ -2323,7 +2334,10 @@
   <div class="report-view" id="siteLogContractorsView" hidden>
     <div class="report-head">
       <button type="button" class="report-back-btn" id="siteLogContractorsBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
-      <div class="report-head-title" data-i18n="siteLogContractors">קבלנים</div>
+      <div class="report-head-title">
+        <div class="site-log-header-project" id="siteLogContractorsProjectName"></div>
+        <div data-i18n="siteLogContractors">קבלנים</div>
+      </div>
     </div>
     <div class="site-log-list-wrap">
       <div class="site-log-list" id="siteLogContractorsList"></div>
@@ -2334,7 +2348,10 @@
   <div class="report-view" id="siteLogWorksView" hidden>
     <div class="report-head">
       <button type="button" class="report-back-btn" id="siteLogWorksBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
-      <div class="report-head-title" data-i18n="siteLogWorks">עבודות</div>
+      <div class="report-head-title">
+        <div class="site-log-header-project" id="siteLogWorksProjectName"></div>
+        <div data-i18n="siteLogWorks">עבודות</div>
+      </div>
     </div>
     <div class="site-log-list-wrap">
       <div class="site-log-list" id="siteLogWorksList"></div>
@@ -2514,6 +2531,8 @@
     siteLogCopyPrevBtn: { he: "העתקת יומן קודם", en: "Copy previous log", ar: "نسخ السجل السابق", ru: "Скопировать предыдущий журнал" },
     siteLogCopyPrevConfirm: { he: "להעתיק את הנתונים מהיומן הקודם? הפעולה תחליף את התוכן הקיים כאן.", en: "Copy the data from the previous log? This will replace the content here.", ar: "هل تريد نسخ البيانات من السجل السابق؟ سيتم استبدال المحتوى الحالي هنا.", ru: "Скопировать данные из предыдущего журнала? Это заменит текущее содержимое." },
     siteLogNoPreviousLog: { he: "אין יומן קודם להעתיק ממנו", en: "No previous log to copy from", ar: "لا يوجد سجل سابق للنسخ منه", ru: "Нет предыдущего журнала для копирования" },
+    siteLogAttendanceReportFileNamePrefix: { he: "דוח נוכחות פרויקט", en: "Attendance report project", ar: "تقرير حضور مشروع", ru: "Отчёт о посещаемости проекта" },
+    siteLogToolsReportFileNamePrefix: { he: "דוח כלים פרויקט", en: "Tools report project", ar: "تقرير معدات مشروع", ru: "Отчёт об оборудовании проекта" },
     siteLogColExcavator: { he: "מחפרון", en: "Excavator", ar: "حفارة", ru: "Экскаватор-погрузчик" },
     siteLogColLoader: { he: "שופל", en: "Loader", ar: "شيول", ru: "Погрузчик" },
     siteLogColBagger: { he: "באגר", en: "Bagger", ar: "بيجر", ru: "Экскаватор" },
@@ -5088,20 +5107,24 @@
   var siteLogAttendanceColumns = document.getElementById("siteLogAttendanceColumns");
   var siteLogAttendanceShareBtn = document.getElementById("siteLogAttendanceShareBtn");
   var siteLogAttendanceCopyPrevBtn = document.getElementById("siteLogAttendanceCopyPrevBtn");
+  var siteLogAttendanceProjectName = document.getElementById("siteLogAttendanceProjectName");
   var siteLogToolsView = document.getElementById("siteLogToolsView");
   var siteLogToolsBackBtn = document.getElementById("siteLogToolsBackBtn");
   var siteLogToolsColumns = document.getElementById("siteLogToolsColumns");
   var siteLogToolsShareBtn = document.getElementById("siteLogToolsShareBtn");
   var siteLogToolsCopyPrevBtn = document.getElementById("siteLogToolsCopyPrevBtn");
+  var siteLogToolsProjectName = document.getElementById("siteLogToolsProjectName");
   var siteLogContractorsView = document.getElementById("siteLogContractorsView");
   var siteLogContractorsBackBtn = document.getElementById("siteLogContractorsBackBtn");
   var siteLogContractorsList = document.getElementById("siteLogContractorsList");
   var siteLogContractorsCopyPrevBtn = document.getElementById("siteLogContractorsCopyPrevBtn");
+  var siteLogContractorsProjectName = document.getElementById("siteLogContractorsProjectName");
   var siteLogWorksView = document.getElementById("siteLogWorksView");
   var siteLogWorksBackBtn = document.getElementById("siteLogWorksBackBtn");
   var siteLogWorksList = document.getElementById("siteLogWorksList");
   var siteLogWorksFileInput = document.getElementById("siteLogWorksFileInput");
   var siteLogWorksCopyPrevBtn = document.getElementById("siteLogWorksCopyPrevBtn");
+  var siteLogWorksProjectName = document.getElementById("siteLogWorksProjectName");
   var siteLogWorksPendingEntryId = null;
 
   function updateSiteLogCloseShareButtons() {
@@ -5323,6 +5346,7 @@
   }
 
   function openSiteLogAttendanceView() {
+    siteLogAttendanceProjectName.textContent = activeSheet().name;
     renderSiteLogAttendanceColumns();
     siteLogCategoriesView.hidden = true;
     siteLogAttendanceView.hidden = false;
@@ -5382,6 +5406,7 @@
   }
 
   function openSiteLogToolsView() {
+    siteLogToolsProjectName.textContent = activeSheet().name;
     renderSiteLogToolsColumns();
     siteLogCategoriesView.hidden = true;
     siteLogToolsView.hidden = false;
@@ -5407,6 +5432,7 @@
   }
 
   function openSiteLogContractorsView() {
+    siteLogContractorsProjectName.textContent = activeSheet().name;
     renderSiteLogContractorsList();
     siteLogCategoriesView.hidden = true;
     siteLogContractorsView.hidden = false;
@@ -5569,6 +5595,7 @@
   });
 
   function openSiteLogWorksView() {
+    siteLogWorksProjectName.textContent = activeSheet().name;
     renderSiteLogWorksList();
     siteLogCategoriesView.hidden = true;
     siteLogWorksView.hidden = false;
@@ -6412,17 +6439,23 @@
     doc.className = "pdf-doc";
     doc.dir = RTL_LANGS[currentLang] ? "rtl" : "ltr";
 
-    var titleEl = document.createElement("div");
-    titleEl.className = "pdf-doc-title";
-    titleEl.textContent = tr("siteLogAttendance");
-    doc.appendChild(titleEl);
+    var sheet = activeSheet();
+    var projectTitle = document.createElement("div");
+    projectTitle.className = "pdf-doc-title";
+    projectTitle.textContent = sheet.name;
+    doc.appendChild(projectTitle);
+
+    var categoryTitle = document.createElement("div");
+    categoryTitle.className = "pdf-doc-info-title";
+    categoryTitle.textContent = tr("siteLogAttendance");
+    doc.appendChild(categoryTitle);
 
     var infoDate = document.createElement("div");
     infoDate.className = "pdf-doc-info-date";
     infoDate.textContent = isoToFullDisplay(dateISO);
     doc.appendChild(infoDate);
 
-    var log = findSiteLog(activeSheet(), dateISO);
+    var log = findSiteLog(sheet, dateISO);
     doc.appendChild(buildAttendanceTableElement(log));
 
     var footerEl = document.createElement("div");
@@ -6438,17 +6471,23 @@
     doc.className = "pdf-doc";
     doc.dir = RTL_LANGS[currentLang] ? "rtl" : "ltr";
 
-    var titleEl = document.createElement("div");
-    titleEl.className = "pdf-doc-title";
-    titleEl.textContent = tr("siteLogTools");
-    doc.appendChild(titleEl);
+    var sheet = activeSheet();
+    var projectTitle = document.createElement("div");
+    projectTitle.className = "pdf-doc-title";
+    projectTitle.textContent = sheet.name;
+    doc.appendChild(projectTitle);
+
+    var categoryTitle = document.createElement("div");
+    categoryTitle.className = "pdf-doc-info-title";
+    categoryTitle.textContent = tr("siteLogTools");
+    doc.appendChild(categoryTitle);
 
     var infoDate = document.createElement("div");
     infoDate.className = "pdf-doc-info-date";
     infoDate.textContent = isoToFullDisplay(dateISO);
     doc.appendChild(infoDate);
 
-    var log = findSiteLog(activeSheet(), dateISO);
+    var log = findSiteLog(sheet, dateISO);
     doc.appendChild(buildToolsTableElement(log));
 
     var footerEl = document.createElement("div");
@@ -6559,12 +6598,12 @@
     return doc;
   }
 
-  function shareSiteLogPdf(btn, buildElementFn, fileNamePrefix, dateISO) {
+  function shareSiteLogPdf(btn, buildElementFn, buildFileNameFn, dateISO) {
     var originalContent = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = "&#8987;";
     function restore() { btn.disabled = false; btn.innerHTML = originalContent; }
-    var fileName = fileNamePrefix + " - " + isoToDisplay(dateISO) + ".pdf";
+    var fileName = buildFileNameFn(dateISO);
     buildPdfBlobFromElement(buildElementFn(dateISO), fileName).then(function (result) {
       restore();
       attemptShare(result.blob, result.fileName);
@@ -6577,11 +6616,15 @@
 
   siteLogAttendanceShareBtn.addEventListener("click", function () {
     if (!activeSiteLogDate) return;
-    shareSiteLogPdf(siteLogAttendanceShareBtn, buildSiteLogAttendancePdfElement, tr("siteLogAttendance"), activeSiteLogDate);
+    shareSiteLogPdf(siteLogAttendanceShareBtn, buildSiteLogAttendancePdfElement, function (dateISO) {
+      return tr("siteLogAttendanceReportFileNamePrefix") + ' "' + activeSheet().name + '" - ' + isoToFullDisplay(dateISO) + ".pdf";
+    }, activeSiteLogDate);
   });
   siteLogToolsShareBtn.addEventListener("click", function () {
     if (!activeSiteLogDate) return;
-    shareSiteLogPdf(siteLogToolsShareBtn, buildSiteLogToolsPdfElement, tr("siteLogTools"), activeSiteLogDate);
+    shareSiteLogPdf(siteLogToolsShareBtn, buildSiteLogToolsPdfElement, function (dateISO) {
+      return tr("siteLogToolsReportFileNamePrefix") + ' "' + activeSheet().name + '" - ' + isoToFullDisplay(dateISO) + ".pdf";
+    }, activeSiteLogDate);
   });
 
   function waitForImagesLoaded(container) {
