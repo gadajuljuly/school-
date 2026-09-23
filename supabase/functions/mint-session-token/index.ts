@@ -1,8 +1,11 @@
 // Deploy with: supabase functions deploy mint-session-token --no-verify-jwt
 // Required secret (in addition to the ones already used by the other
-// functions): SUPABASE_JWT_SECRET (the project's own "JWT Secret" from
-// Project Settings -> API -> JWT Settings - NOT the service role key, and
-// NOT provided automatically like SUPABASE_URL is).
+// functions): APP_JWT_SECRET (the project's own "Legacy JWT Secret" from
+// Project Settings -> API -> JWT Keys -> Legacy JWT Secret tab - NOT the
+// service role key, and NOT provided automatically like SUPABASE_URL is.
+// Named APP_JWT_SECRET rather than SUPABASE_JWT_SECRET because the
+// Supabase CLI reserves any secret name starting with SUPABASE_ for its
+// own auto-injected variables and refuses to set one with that prefix).
 //
 // Called directly by the client right after Firebase phone auth succeeds.
 // The app has no real Supabase Auth session (it authenticates via Firebase
@@ -24,7 +27,7 @@ import * as jose from "npm:jose@5";
 // (it's already public in the client bundle), so it's hardcoded here
 // rather than requiring one more secret to configure.
 const FIREBASE_PROJECT_ID = "itask-93f4f";
-const SUPABASE_JWT_SECRET = Deno.env.get("SUPABASE_JWT_SECRET")!;
+const APP_JWT_SECRET = Deno.env.get("APP_JWT_SECRET")!;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -86,7 +89,7 @@ Deno.serve(async (req) => {
   }
 
   const userId = await phoneToUuid(phoneNumber);
-  const secret = new TextEncoder().encode(SUPABASE_JWT_SECRET);
+  const secret = new TextEncoder().encode(APP_JWT_SECRET);
   const now = Math.floor(Date.now() / 1000);
 
   const token = await new jose.SignJWT({
