@@ -2233,6 +2233,7 @@
     <div class="report-head">
       <button type="button" class="report-back-btn" id="siteLogAttendanceBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
       <div class="report-head-title" data-i18n="siteLogAttendance">נוכחות</div>
+      <button type="button" class="report-share-btn" id="siteLogAttendanceShareBtn" data-i18n-title="shareBtn" title="שיתוף">&#128228;</button>
     </div>
     <div class="site-log-attendance-wrap">
       <div class="site-log-attendance-columns" id="siteLogAttendanceColumns"></div>
@@ -2243,6 +2244,7 @@
     <div class="report-head">
       <button type="button" class="report-back-btn" id="siteLogToolsBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
       <div class="report-head-title" data-i18n="siteLogTools">כלים</div>
+      <button type="button" class="report-share-btn" id="siteLogToolsShareBtn" data-i18n-title="shareBtn" title="שיתוף">&#128228;</button>
     </div>
     <div class="site-log-attendance-wrap">
       <div class="site-log-attendance-columns" id="siteLogToolsColumns"></div>
@@ -4983,9 +4985,11 @@
   var siteLogAttendanceView = document.getElementById("siteLogAttendanceView");
   var siteLogAttendanceBackBtn = document.getElementById("siteLogAttendanceBackBtn");
   var siteLogAttendanceColumns = document.getElementById("siteLogAttendanceColumns");
+  var siteLogAttendanceShareBtn = document.getElementById("siteLogAttendanceShareBtn");
   var siteLogToolsView = document.getElementById("siteLogToolsView");
   var siteLogToolsBackBtn = document.getElementById("siteLogToolsBackBtn");
   var siteLogToolsColumns = document.getElementById("siteLogToolsColumns");
+  var siteLogToolsShareBtn = document.getElementById("siteLogToolsShareBtn");
   var siteLogContractorsView = document.getElementById("siteLogContractorsView");
   var siteLogContractorsBackBtn = document.getElementById("siteLogContractorsBackBtn");
   var siteLogContractorsList = document.getElementById("siteLogContractorsList");
@@ -6065,6 +6069,146 @@
     return doc;
   }
 
+  function siteLogColLabel(colKey) {
+    return tr("siteLogCol" + colKey.charAt(0).toUpperCase() + colKey.slice(1));
+  }
+
+  function buildSiteLogAttendancePdfElement(dateISO) {
+    var doc = document.createElement("div");
+    doc.className = "pdf-doc";
+    doc.dir = RTL_LANGS[currentLang] ? "rtl" : "ltr";
+
+    var titleEl = document.createElement("div");
+    titleEl.className = "pdf-doc-title";
+    titleEl.textContent = tr("siteLogAttendance");
+    doc.appendChild(titleEl);
+
+    var infoDate = document.createElement("div");
+    infoDate.className = "pdf-doc-info-date";
+    infoDate.textContent = isoToFullDisplay(dateISO);
+    doc.appendChild(infoDate);
+
+    var log = findSiteLog(activeSheet(), dateISO);
+    var colLists = SITE_LOG_ATTENDANCE_COLUMNS.map(function (colKey) {
+      return (log && log.attendance[colKey]) || [];
+    });
+    var maxRows = Math.max.apply(null, colLists.map(function (l) { return l.length; }));
+
+    var table = document.createElement("table");
+    table.className = "pdf-doc-table";
+    var thead = document.createElement("thead");
+    var headRow = document.createElement("tr");
+    SITE_LOG_ATTENDANCE_COLUMNS.forEach(function (colKey) {
+      var th = document.createElement("th");
+      th.textContent = siteLogColLabel(colKey);
+      headRow.appendChild(th);
+    });
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+
+    var tbody = document.createElement("tbody");
+    if (maxRows === 0) {
+      var emptyRow = document.createElement("tr");
+      var emptyTd = document.createElement("td");
+      emptyTd.className = "pdf-doc-empty";
+      emptyTd.colSpan = SITE_LOG_ATTENDANCE_COLUMNS.length;
+      emptyTd.textContent = tr("reportShareNoRows");
+      emptyRow.appendChild(emptyTd);
+      tbody.appendChild(emptyRow);
+    } else {
+      for (var i = 0; i < maxRows; i++) {
+        var rowEl = document.createElement("tr");
+        colLists.forEach(function (list) {
+          var td = document.createElement("td");
+          td.textContent = list[i] ? list[i].name : "";
+          rowEl.appendChild(td);
+        });
+        tbody.appendChild(rowEl);
+      }
+    }
+    table.appendChild(tbody);
+    doc.appendChild(table);
+
+    var footerEl = document.createElement("div");
+    footerEl.className = "pdf-doc-footer";
+    footerEl.textContent = tr("reportPdfFooter");
+    doc.appendChild(footerEl);
+
+    return doc;
+  }
+
+  function buildSiteLogToolsPdfElement(dateISO) {
+    var doc = document.createElement("div");
+    doc.className = "pdf-doc";
+    doc.dir = RTL_LANGS[currentLang] ? "rtl" : "ltr";
+
+    var titleEl = document.createElement("div");
+    titleEl.className = "pdf-doc-title";
+    titleEl.textContent = tr("siteLogTools");
+    doc.appendChild(titleEl);
+
+    var infoDate = document.createElement("div");
+    infoDate.className = "pdf-doc-info-date";
+    infoDate.textContent = isoToFullDisplay(dateISO);
+    doc.appendChild(infoDate);
+
+    var log = findSiteLog(activeSheet(), dateISO);
+    var table = document.createElement("table");
+    table.className = "pdf-doc-table";
+    var thead = document.createElement("thead");
+    var headRow = document.createElement("tr");
+    SITE_LOG_TOOLS_COLUMNS.forEach(function (colKey) {
+      var th = document.createElement("th");
+      th.textContent = siteLogColLabel(colKey);
+      headRow.appendChild(th);
+    });
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+
+    var tbody = document.createElement("tbody");
+    var rowEl = document.createElement("tr");
+    SITE_LOG_TOOLS_COLUMNS.forEach(function (colKey) {
+      var td = document.createElement("td");
+      td.textContent = (log && log.tools[colKey]) || "";
+      rowEl.appendChild(td);
+    });
+    tbody.appendChild(rowEl);
+    table.appendChild(tbody);
+    doc.appendChild(table);
+
+    var footerEl = document.createElement("div");
+    footerEl.className = "pdf-doc-footer";
+    footerEl.textContent = tr("reportPdfFooter");
+    doc.appendChild(footerEl);
+
+    return doc;
+  }
+
+  function shareSiteLogPdf(btn, buildElementFn, fileNamePrefix, dateISO) {
+    var originalContent = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = "&#8987;";
+    function restore() { btn.disabled = false; btn.innerHTML = originalContent; }
+    var fileName = fileNamePrefix + " - " + isoToDisplay(dateISO) + ".pdf";
+    buildPdfBlobFromElement(buildElementFn(dateISO), fileName).then(function (result) {
+      restore();
+      attemptShare(result.blob, result.fileName);
+    }).catch(function (err) {
+      console.error(err);
+      restore();
+      alert(tr("reportPdfError"));
+    });
+  }
+
+  siteLogAttendanceShareBtn.addEventListener("click", function () {
+    if (!activeSiteLogDate) return;
+    shareSiteLogPdf(siteLogAttendanceShareBtn, buildSiteLogAttendancePdfElement, tr("siteLogAttendance"), activeSiteLogDate);
+  });
+  siteLogToolsShareBtn.addEventListener("click", function () {
+    if (!activeSiteLogDate) return;
+    shareSiteLogPdf(siteLogToolsShareBtn, buildSiteLogToolsPdfElement, tr("siteLogTools"), activeSiteLogDate);
+  });
+
   function waitForImagesLoaded(container) {
     var imgs = Array.prototype.slice.call(container.querySelectorAll("img"));
     return Promise.all(imgs.map(function (img) {
@@ -6145,7 +6289,7 @@
     showToast(tr("shareFallbackToSaveMsg"));
   }
 
-  function buildReportPdfBlob(report) {
+  function buildPdfBlobFromElement(element, fileName) {
     var ready = (window.html2canvas && window.jspdf) ? Promise.resolve() : Promise.all([
       window.html2canvas ? Promise.resolve() : loadScriptOnce("vendor/html2canvas.min.js"),
       window.jspdf ? Promise.resolve() : loadScriptOnce("vendor/jspdf.umd.min.js")
@@ -6156,7 +6300,7 @@
       container.style.position = "fixed";
       container.style.top = "0";
       container.style.left = "-99999px";
-      container.appendChild(buildReportPdfElement(report));
+      container.appendChild(element);
       document.body.appendChild(container);
 
       return waitForImagesLoaded(container).then(function () {
@@ -6179,14 +6323,18 @@
           heightLeft -= pageHeight;
         }
         document.body.removeChild(container);
-        var typeLabel = report.type === "meeting" ? tr("reportTypeMeeting") : tr("reportTypeTour");
-        var fileName = (report.title || typeLabel) + ".pdf";
         return { blob: pdf.output("blob"), fileName: fileName };
       }).catch(function (err) {
         if (container.parentNode) document.body.removeChild(container);
         throw err;
       });
     });
+  }
+
+  function buildReportPdfBlob(report) {
+    var typeLabel = report.type === "meeting" ? tr("reportTypeMeeting") : tr("reportTypeTour");
+    var fileName = (report.title || typeLabel) + ".pdf";
+    return buildPdfBlobFromElement(buildReportPdfElement(report), fileName);
   }
 
   // Cache the last generated PDF per report so tapping "share" can call
