@@ -6404,6 +6404,7 @@
   function signOutDueToOtherDevice() {
     try { localStorage.removeItem(SESSION_TOKEN_KEY); } catch (e) {}
     try { localStorage.setItem("itask-kicked", "1"); } catch (e) {}
+    clearCachedSessionJwt();
     firebaseAuth.signOut().then(function () { location.reload(); }, function () { location.reload(); });
   }
 
@@ -6521,6 +6522,36 @@
   // in RLS policies now correctly reflect who's actually asking.
   var pendingFirebaseUserForToken = null;
 
+  // Minting a session token is a real network round-trip (verify the
+  // Firebase credential server-side, sign a new JWT), so doing it on every
+  // single app open would add a full extra round-trip to every login -
+  // exactly the "why is this slower than WhatsApp" complaint. The token is
+  // valid for 30 days and its content never changes until then, so cache it
+  // in localStorage and only re-mint once it's actually close to expiring.
+  var SESSION_JWT_CACHE_KEY = "itask-session-jwt-v1";
+  var SESSION_JWT_CACHE_LIFETIME_MS = 25 * 24 * 60 * 60 * 1000; // server mints for 30 days; 5-day safety margin
+  function loadCachedSessionJwt(phone) {
+    try {
+      var cached = JSON.parse(localStorage.getItem(SESSION_JWT_CACHE_KEY));
+      if (!cached || cached.phone !== phone || !cached.token || !cached.userId || !cached.mintedAt) return null;
+      if (Date.now() - cached.mintedAt > SESSION_JWT_CACHE_LIFETIME_MS) return null;
+      return cached;
+    } catch (e) { return null; }
+  }
+  function saveCachedSessionJwt(phone, token, userId) {
+    try {
+      localStorage.setItem(SESSION_JWT_CACHE_KEY, JSON.stringify({ phone: phone, token: token, userId: userId, mintedAt: Date.now() }));
+    } catch (e) {}
+  }
+  function clearCachedSessionJwt() {
+    try { localStorage.removeItem(SESSION_JWT_CACHE_KEY); } catch (e) {}
+  }
+  function applySessionToken(token) {
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+      global: { headers: { Authorization: "Bearer " + token } }
+    });
+  }
+
   function mintSupabaseSessionToken(firebaseUser) {
     return firebaseUser.getIdToken().then(function (idToken) {
       return supabaseClient.functions.invoke("mint-session-token", { body: { idToken: idToken } });
@@ -6528,10 +6559,12 @@
       if (result.error || !result.data || !result.data.token) {
         throw (result.error || new Error("mint-session-token returned no token"));
       }
-      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-        global: { headers: { Authorization: "Bearer " + result.data.token } }
+      var token = result.data.token;
+      applySessionToken(token);
+      return Promise.resolve(result.data.userId || phoneToUuid(firebaseUser.phoneNumber)).then(function (userId) {
+        saveCachedSessionJwt(firebaseUser.phoneNumber, token, userId);
+        return userId;
       });
-      return result.data.userId || phoneToUuid(firebaseUser.phoneNumber);
     });
   }
   function withTimeout(promise, ms, label) {
@@ -6541,6 +6574,12 @@
     });
   }
   function beginAuthenticatedSession(firebaseUser) {
+    var cached = loadCachedSessionJwt(firebaseUser.phoneNumber);
+    if (cached) {
+      applySessionToken(cached.token);
+      showApp(firebaseUser.phoneNumber, cached.userId);
+      return;
+    }
     pendingFirebaseUserForToken = firebaseUser;
     withTimeout(mintSupabaseSessionToken(firebaseUser), 15000, "mintSupabaseSessionToken").then(function (rowId) {
       pendingFirebaseUserForToken = null;
