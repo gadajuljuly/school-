@@ -751,6 +751,14 @@
   }
   .pdf-doc-table td.pdf-doc-col-task { text-align: start; }
   .pdf-doc-empty { color: #8a8471; padding: 18px; }
+  .pdf-doc-footer {
+    margin-top: 24px;
+    padding-top: 8px;
+    border-top: 1px solid #cfc8b4;
+    font-size: 0.68rem;
+    color: #8a8471;
+    text-align: center;
+  }
   .pdf-doc-priority-tag {
     display: inline-block;
     padding: 2px 10px;
@@ -2261,6 +2269,7 @@
     reportShareParticipantsLabel: { he: "משתתפים: ", en: "Participants: ", ar: "المشاركون: ", ru: "Участники: " },
     reportShareNoRows: { he: "(אין שורות)", en: "(no rows)", ar: "(لا توجد عناصر)", ru: "(нет записей)" },
     reportPdfTitleMeeting: { he: "סיכום פגישה", en: "Meeting Summary", ar: "ملخص الاجتماع", ru: "Итоги встречи" },
+    reportPdfFooter: { he: "מסמך זה הופק באמצעות ITASK", en: "This document was produced using ITASK", ar: "تم إنتاج هذا المستند باستخدام ITASK", ru: "Этот документ создан с помощью ITASK" },
     reportPdfTitleTour: { he: "סיכום סיור", en: "Tour Summary", ar: "ملخص الجولة", ru: "Итоги обхода" },
     reportPdfError: { he: "אירעה שגיאה ביצירת ה-PDF", en: "An error occurred creating the PDF", ar: "حدث خطأ أثناء إنشاء PDF", ru: "Ошибка при создании PDF" }
   };
@@ -5335,6 +5344,11 @@
     }
     table.appendChild(tbody);
     doc.appendChild(table);
+
+    var footerEl = document.createElement("div");
+    footerEl.className = "pdf-doc-footer";
+    footerEl.textContent = tr("reportPdfFooter");
+    doc.appendChild(footerEl);
 
     return doc;
   }
