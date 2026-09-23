@@ -3228,6 +3228,14 @@
     var parts = iso.split("-");
     return parts[2] + "/" + parts[1] + "/" + parts[0];
   }
+  // "/" in a filename is a path separator, not punctuation - browsers and
+  // the OS silently drop everything before the last one (a share/download
+  // named "... 23/09/2026.pdf" becomes just "2026.pdf"). Use this instead
+  // of isoToFullDisplay/isoToDisplay anywhere a date is part of a file name.
+  function isoToFileNameDate(iso) {
+    var parts = iso.split("-");
+    return parts[2] + "-" + parts[1] + "-" + parts[0];
+  }
 
   var dateInput = document.getElementById("dateInput");
   var todayBtn = document.getElementById("todayBtn");
@@ -5387,7 +5395,7 @@
   }
 
   function siteLogGeneralFileName(sheet, log, number) {
-    return tr("siteLogGeneralReportTitle") + " " + number + ' "' + sheet.name + '" - ' + isoToFullDisplay(log.date) + ".pdf";
+    return tr("siteLogGeneralReportTitle") + " " + number + " " + sheet.name + " " + isoToFileNameDate(log.date) + ".pdf";
   }
 
   function closeSiteLog() {
@@ -6858,13 +6866,13 @@
   siteLogAttendanceShareBtn.addEventListener("click", function () {
     if (!activeSiteLogDate) return;
     shareSiteLogPdf(siteLogAttendanceShareBtn, buildSiteLogAttendancePdfElement, function (dateISO) {
-      return tr("siteLogAttendanceReportFileNamePrefix") + ' "' + activeSheet().name + '" - ' + isoToFullDisplay(dateISO) + ".pdf";
+      return tr("siteLogAttendanceReportFileNamePrefix") + " " + activeSheet().name + " " + isoToFileNameDate(dateISO) + ".pdf";
     }, activeSiteLogDate);
   });
   siteLogToolsShareBtn.addEventListener("click", function () {
     if (!activeSiteLogDate) return;
     shareSiteLogPdf(siteLogToolsShareBtn, buildSiteLogToolsPdfElement, function (dateISO) {
-      return tr("siteLogToolsReportFileNamePrefix") + ' "' + activeSheet().name + '" - ' + isoToFullDisplay(dateISO) + ".pdf";
+      return tr("siteLogToolsReportFileNamePrefix") + " " + activeSheet().name + " " + isoToFileNameDate(dateISO) + ".pdf";
     }, activeSiteLogDate);
   });
 
@@ -6909,14 +6917,24 @@
     var url = URL.createObjectURL(blob);
     var a = document.createElement("a");
     a.href = url;
-    a.download = fileName;
+    a.download = sanitizeFileName(fileName);
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
   }
 
+  function sanitizeFileName(name) {
+    // "/" (and other path-separator-like characters) silently truncate a
+    // shared/downloaded file's name down to whatever follows the last one -
+    // this is the last line of defense on top of using isoToFileNameDate()
+    // at each call site, since a free-typed project/report name could also
+    // contain one.
+    return name.replace(/[\\/:*?"<>|]/g, "-");
+  }
+
   function attemptShare(blob, fileName) {
+    fileName = sanitizeFileName(fileName);
     var file = new File([blob], fileName, { type: "application/pdf" });
     var shareData = { files: [file], title: fileName };
     // Some Android browsers support sharing files via navigator.share()
