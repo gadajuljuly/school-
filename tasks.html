@@ -3219,6 +3219,7 @@
   dateInput.addEventListener("change", function () {
     var purpose = dateInputPurpose;
     dateInputPurpose = "navigate";
+    dateInput.removeAttribute("max");
     if (!dateInput.value) return;
     if (purpose === "siteLog") {
       openSiteLogCategoriesView(dateInput.value);
@@ -3282,6 +3283,38 @@
         } else if (zone === "sheet") {
           switchSheetBySwipe(dx < 0 ? -1 : 1);
         }
+      }
+    }, { passive: true });
+  })();
+
+  // Swipe left/right on the site log's date header to move between days,
+  // matching the same gesture/thresholds as the main notebook date swipe.
+  // Left = go back a day (established convention here too); never allows
+  // swiping past today, since a log is a record of a day that happened.
+  (function setupSiteLogSwipeGestures() {
+    var head = document.querySelector("#siteLogCategoriesView .report-head");
+    if (!head) return;
+    var startX = 0, startY = 0, startTime = 0, tracking = false;
+
+    head.addEventListener("touchstart", function (e) {
+      if (e.touches.length !== 1) { tracking = false; return; }
+      tracking = true;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      startTime = Date.now();
+    }, { passive: true });
+
+    head.addEventListener("touchend", function (e) {
+      if (!tracking || !activeSiteLogDate) { tracking = false; return; }
+      tracking = false;
+      var touch = e.changedTouches[0];
+      var dx = touch.clientX - startX;
+      var dy = touch.clientY - startY;
+      var elapsed = Date.now() - startTime;
+      if (elapsed < 800 && Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+        var newDate = addDaysToISO(activeSiteLogDate, dx < 0 ? -1 : 1);
+        if (newDate > todayISO()) return;
+        openSiteLogCategoriesView(newDate);
       }
     }, { passive: true });
   })();
@@ -5031,6 +5064,10 @@
     // app's default view) would otherwise silently do nothing. Clearing it
     // first guarantees any pick, including today's date, is a real change.
     dateInput.value = "";
+    // Site log entries are a record of a day that already happened - never
+    // let this picker offer a future date. Only this flow is restricted;
+    // the plain top date label (normal task day-navigation) isn't.
+    dateInput.max = todayISO();
     if (dateInput.showPicker) {
       try { dateInput.showPicker(); return; } catch (e) {}
     }
@@ -5038,8 +5075,12 @@
     dateInput.click();
   });
   // If the picker is dismissed without picking a date, put the input's
-  // value back so a later normal (non-siteLog) use of it isn't left blank.
+  // value back so a later normal (non-siteLog) use of it isn't left blank,
+  // and always drop the max restriction so it never leaks into the plain
+  // top date label's own (unrestricted) day navigation.
   dateInput.addEventListener("blur", function () {
+    dateInputPurpose = "navigate";
+    dateInput.removeAttribute("max");
     if (!dateInput.value) dateInput.value = state.viewDate;
   });
 
