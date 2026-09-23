@@ -778,6 +778,18 @@
     padding: 0;
   }
   .site-log-add-btn img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .site-log-number-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 6px 4px;
+    font-size: 0.9rem;
+    text-align: center;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    font-family: inherit;
+    background: var(--paper);
+    color: var(--ink);
+  }
   .report-cell-btn {
     width: 100%;
     min-height: 28px;
@@ -2192,6 +2204,16 @@
     </div>
   </div>
 
+  <div class="report-view" id="siteLogToolsView" hidden>
+    <div class="report-head">
+      <button type="button" class="report-back-btn" id="siteLogToolsBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
+      <div class="report-head-title" data-i18n="siteLogTools">כלים</div>
+    </div>
+    <div class="site-log-attendance-wrap">
+      <div class="site-log-attendance-columns" id="siteLogToolsColumns"></div>
+    </div>
+  </div>
+
   <input type="file" accept="image/*" capture="environment" id="reportImageCameraInput" style="display:none">
   <input type="file" accept="image/*" id="reportImageGalleryInput" style="display:none">
 
@@ -2355,6 +2377,13 @@
     siteLogColOperators: { he: "מפעילים", en: "Operators", ar: "مشغلون", ru: "Операторы" },
     siteLogColConsultants: { he: "יועצים", en: "Consultants", ar: "مستشارون", ru: "Консультанты" },
     siteLogComingSoon: { he: "הקטגוריה הזו עוד בבנייה", en: "This category is still being built", ar: "هذه الفئة لا تزال قيد الإنشاء", ru: "Эта категория ещё в разработке" },
+    siteLogColExcavator: { he: "מחפרון", en: "Excavator", ar: "حفارة", ru: "Экскаватор-погрузчик" },
+    siteLogColLoader: { he: "שופל", en: "Loader", ar: "شيول", ru: "Погрузчик" },
+    siteLogColBagger: { he: "באגר", en: "Bagger", ar: "بيجر", ru: "Экскаватор" },
+    siteLogColMiniBagger: { he: "מיני באגר", en: "Mini bagger", ar: "بيجر صغير", ru: "Мини-экскаватор" },
+    siteLogColBobcat: { he: "בובקט", en: "Bobcat", ar: "بوبكات", ru: "Бобкэт" },
+    siteLogColRoller: { he: "מכבש", en: "Roller", ar: "مدحلة", ru: "Каток" },
+    siteLogColTruck: { he: "משאית", en: "Truck", ar: "شاحنة", ru: "Грузовик" },
     reportsListTitle: { he: "דוחות פגישות וסיורים", en: "Meeting and tour reports", ar: "تقارير الاجتماعات والجولات", ru: "Отчёты о встречах и обходах" },
     reportsListEmpty: { he: "עדיין אין דוחות", en: "No reports yet", ar: "لا توجد تقارير بعد", ru: "Пока нет отчётов" },
     newReportBtn: { he: "+ חדש", en: "+ New", ar: "+ جديد", ru: "+ Новый" },
@@ -2565,13 +2594,17 @@
   }
 
   var SITE_LOG_ATTENDANCE_COLUMNS = ["foreman", "engineer", "workers", "operators", "consultants"];
+  var SITE_LOG_TOOLS_COLUMNS = ["excavator", "loader", "bagger", "miniBagger", "bobcat", "roller", "truck"];
 
   function normalizeSiteLog(log) {
     if (!log.attendance || typeof log.attendance !== "object") log.attendance = {};
     SITE_LOG_ATTENDANCE_COLUMNS.forEach(function (col) {
       if (!Array.isArray(log.attendance[col])) log.attendance[col] = [];
     });
-    if (!Array.isArray(log.tools)) log.tools = [];
+    if (!log.tools || typeof log.tools !== "object" || Array.isArray(log.tools)) log.tools = {};
+    SITE_LOG_TOOLS_COLUMNS.forEach(function (col) {
+      if (typeof log.tools[col] !== "string") log.tools[col] = "";
+    });
     if (!Array.isArray(log.contractors)) log.contractors = [];
     if (!Array.isArray(log.works)) log.works = [];
     return log;
@@ -4894,6 +4927,9 @@
   var siteLogAttendanceView = document.getElementById("siteLogAttendanceView");
   var siteLogAttendanceBackBtn = document.getElementById("siteLogAttendanceBackBtn");
   var siteLogAttendanceColumns = document.getElementById("siteLogAttendanceColumns");
+  var siteLogToolsView = document.getElementById("siteLogToolsView");
+  var siteLogToolsBackBtn = document.getElementById("siteLogToolsBackBtn");
+  var siteLogToolsColumns = document.getElementById("siteLogToolsColumns");
 
   function openSiteLogCategoriesView(dateISO) {
     activeSiteLogDate = dateISO;
@@ -4906,7 +4942,6 @@
   }
   siteLogCategoriesBackBtn.addEventListener("click", closeSiteLogCategoriesView);
 
-  siteLogToolsBtn.addEventListener("click", function () { showToast(tr("siteLogComingSoon")); });
   siteLogContractorsBtn.addEventListener("click", function () { showToast(tr("siteLogComingSoon")); });
   siteLogWorksBtn.addEventListener("click", function () { showToast(tr("siteLogComingSoon")); });
 
@@ -5004,6 +5039,65 @@
   }
   siteLogAttendanceBtn.addEventListener("click", openSiteLogAttendanceView);
   siteLogAttendanceBackBtn.addEventListener("click", closeSiteLogAttendanceView);
+
+  function renderSiteLogToolsColumn(colKey) {
+    var col = document.createElement("div");
+    col.className = "site-log-col";
+
+    var header = document.createElement("div");
+    header.className = "site-log-col-header";
+    header.textContent = tr("siteLogCol" + colKey.charAt(0).toUpperCase() + colKey.slice(1));
+    col.appendChild(header);
+
+    var body = document.createElement("div");
+    body.className = "site-log-col-body";
+
+    var sheet = activeSheet();
+    var log = findSiteLog(sheet, activeSiteLogDate);
+    var value = (log && log.tools[colKey]) || "";
+
+    var input = document.createElement("input");
+    input.type = "number";
+    input.min = "0";
+    input.inputMode = "numeric";
+    input.className = "site-log-number-input";
+    input.value = value;
+    input.addEventListener("change", function () {
+      var liveSheet = activeSheet();
+      var val = input.value.trim();
+      if (!val) {
+        var existing = findSiteLog(liveSheet, activeSiteLogDate);
+        if (existing) { existing.tools[colKey] = ""; saveData(); }
+        return;
+      }
+      var liveLog = findOrCreateSiteLog(liveSheet, activeSiteLogDate);
+      liveLog.tools[colKey] = val;
+      saveData();
+    });
+    body.appendChild(input);
+
+    col.appendChild(body);
+    return col;
+  }
+
+  function renderSiteLogToolsColumns() {
+    siteLogToolsColumns.innerHTML = "";
+    SITE_LOG_TOOLS_COLUMNS.forEach(function (colKey) {
+      siteLogToolsColumns.appendChild(renderSiteLogToolsColumn(colKey));
+    });
+  }
+
+  function openSiteLogToolsView() {
+    renderSiteLogToolsColumns();
+    siteLogCategoriesView.hidden = true;
+    siteLogToolsView.hidden = false;
+  }
+  function closeSiteLogToolsView() {
+    siteLogToolsView.hidden = true;
+    siteLogCategoriesView.hidden = false;
+  }
+  siteLogToolsBtn.addEventListener("click", openSiteLogToolsView);
+  siteLogToolsBackBtn.addEventListener("click", closeSiteLogToolsView);
 
   function renderSheetReportsList() {
     sheetReportsList.innerHTML = "";
