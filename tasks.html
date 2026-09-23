@@ -706,6 +706,36 @@
     font-size: 0.78rem;
   }
   .report-table td.report-col-task { text-align: start; }
+  .site-log-close-share-row { display: flex; gap: 10px; padding: 0 14px 14px; }
+  .site-log-close-btn, .site-log-share-btn {
+    flex: 1;
+    padding: 12px 8px;
+    border-radius: 10px;
+    border: none;
+    font-family: "Rubik", "Assistant", sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+  .site-log-close-btn { background: var(--accent); color: var(--accent-contrast); }
+  .site-log-share-btn { background: var(--report-green); color: #fdfbf5; }
+  .site-log-share-btn:disabled, .site-log-close-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .site-log-copy-prev-btn {
+    margin: 10px 14px 14px;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px dashed var(--rule);
+    background: var(--paper-alt);
+    color: var(--ink);
+    font-family: "Rubik", "Assistant", sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
   .site-log-attendance-wrap { flex: 1; overflow: auto; padding: 12px; }
   .site-log-attendance-columns { display: flex; gap: 8px; align-items: flex-start; min-width: max-content; }
   .site-log-col { display: flex; flex-direction: column; width: 110px; flex-shrink: 0; }
@@ -918,6 +948,39 @@
   .pdf-doc-priority-tag.urgent { background: #c0392b; }
   .pdf-doc-priority-tag.regular { background: #d9722a; }
   .pdf-doc-thumb { width: 60px; height: 60px; object-fit: cover; border-radius: 6px; }
+  .pdf-doc-section-heading {
+    font-family: "Rubik", "Assistant", sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    color: #35618f;
+    margin: 22px 0 8px;
+  }
+  .pdf-doc-contractors-list { font-size: 0.88rem; }
+  .pdf-doc-contractor-line { padding: 5px 0; border-bottom: 1px solid #efe9d8; }
+  .pdf-doc-works-frame {
+    border: 2px solid #35618f;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-top: 22px;
+  }
+  .pdf-doc-works-frame-title {
+    text-align: center;
+    font-family: "Rubik", "Assistant", sans-serif;
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: #35618f;
+    margin-bottom: 10px;
+  }
+  .pdf-doc-work-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid #efe9d8;
+  }
+  .pdf-doc-work-row:last-child { border-bottom: none; }
+  .pdf-doc-work-row-text { flex: 1; font-size: 0.85rem; }
+  .pdf-doc-work-row-image { width: 64px; height: 64px; object-fit: cover; border-radius: 6px; flex-shrink: 0; }
   .report-priority-popup {
     position: absolute;
     z-index: 30;
@@ -2227,6 +2290,10 @@
         <div class="library-item-name" data-i18n="siteLogWorks">עבודות</div>
       </div>
     </div>
+    <div class="site-log-close-share-row">
+      <button type="button" class="site-log-close-btn" id="siteLogCloseBtn" data-i18n="siteLogCloseBtn">סגירת יומן</button>
+      <button type="button" class="site-log-share-btn" id="siteLogShareGeneralBtn" data-i18n="siteLogShareBtn" disabled>שיתוף יומן</button>
+    </div>
   </div>
 
   <div class="report-view" id="siteLogAttendanceView" hidden>
@@ -2238,6 +2305,7 @@
     <div class="site-log-attendance-wrap">
       <div class="site-log-attendance-columns" id="siteLogAttendanceColumns"></div>
     </div>
+    <button type="button" class="site-log-copy-prev-btn" id="siteLogAttendanceCopyPrevBtn" data-i18n="siteLogCopyPrevBtn">העתקת יומן קודם</button>
   </div>
 
   <div class="report-view" id="siteLogToolsView" hidden>
@@ -2249,6 +2317,7 @@
     <div class="site-log-attendance-wrap">
       <div class="site-log-attendance-columns" id="siteLogToolsColumns"></div>
     </div>
+    <button type="button" class="site-log-copy-prev-btn" id="siteLogToolsCopyPrevBtn" data-i18n="siteLogCopyPrevBtn">העתקת יומן קודם</button>
   </div>
 
   <div class="report-view" id="siteLogContractorsView" hidden>
@@ -2259,6 +2328,7 @@
     <div class="site-log-list-wrap">
       <div class="site-log-list" id="siteLogContractorsList"></div>
     </div>
+    <button type="button" class="site-log-copy-prev-btn" id="siteLogContractorsCopyPrevBtn" data-i18n="siteLogCopyPrevBtn">העתקת יומן קודם</button>
   </div>
 
   <div class="report-view" id="siteLogWorksView" hidden>
@@ -2269,6 +2339,7 @@
     <div class="site-log-list-wrap">
       <div class="site-log-list" id="siteLogWorksList"></div>
     </div>
+    <button type="button" class="site-log-copy-prev-btn" id="siteLogWorksCopyPrevBtn" data-i18n="siteLogCopyPrevBtn">העתקת יומן קודם</button>
     <input type="file" id="siteLogWorksFileInput" hidden>
   </div>
 
@@ -2435,6 +2506,14 @@
     siteLogColOperators: { he: "מפעילים", en: "Operators", ar: "مشغلون", ru: "Операторы" },
     siteLogColConsultants: { he: "יועצים", en: "Consultants", ar: "مستشارون", ru: "Консультанты" },
     siteLogComingSoon: { he: "הקטגוריה הזו עוד בבנייה", en: "This category is still being built", ar: "هذه الفئة لا تزال قيد الإنشاء", ru: "Эта категория ещё в разработке" },
+    siteLogCloseBtn: { he: "סגירת יומן", en: "Close log", ar: "إغلاق السجل", ru: "Закрыть журнал" },
+    siteLogShareBtn: { he: "שיתוף יומן", en: "Share log", ar: "مشاركة السجل", ru: "Поделиться журналом" },
+    siteLogGeneralReportTitle: { he: "יומן עבודה מס'", en: "Work Log No.", ar: "سجل العمل رقم", ru: "Рабочий журнал №" },
+    siteLogWorksTourTitle: { he: "סיור עבודות", en: "Works Tour", ar: "جولة الأعمال", ru: "Обход работ" },
+    siteLogCloseFirstMsg: { he: "יש לסגור את היומן קודם", en: "Close the log first", ar: "يجب إغلاق السجل أولاً", ru: "Сначала закройте журнал" },
+    siteLogCopyPrevBtn: { he: "העתקת יומן קודם", en: "Copy previous log", ar: "نسخ السجل السابق", ru: "Скопировать предыдущий журнал" },
+    siteLogCopyPrevConfirm: { he: "להעתיק את הנתונים מהיומן הקודם? הפעולה תחליף את התוכן הקיים כאן.", en: "Copy the data from the previous log? This will replace the content here.", ar: "هل تريد نسخ البيانات من السجل السابق؟ سيتم استبدال المحتوى الحالي هنا.", ru: "Скопировать данные из предыдущего журнала? Это заменит текущее содержимое." },
+    siteLogNoPreviousLog: { he: "אין יומן קודם להעתיק ממנו", en: "No previous log to copy from", ar: "لا يوجد سجل سابق للنسخ منه", ru: "Нет предыдущего журнала для копирования" },
     siteLogColExcavator: { he: "מחפרון", en: "Excavator", ar: "حفارة", ru: "Экскаватор-погрузчик" },
     siteLogColLoader: { he: "שופל", en: "Loader", ar: "شيول", ru: "Погрузчик" },
     siteLogColBagger: { he: "באגר", en: "Bagger", ar: "بيجر", ru: "Экскаватор" },
@@ -2505,6 +2584,7 @@
     libraryFolderDiaries: { he: "יומנים", en: "Journals", ar: "يوميات", ru: "Дневники" },
     libraryFolderReports: { he: "דוחות", en: "Reports", ar: "تقارير", ru: "Отчёты" },
     libraryFolderGeneral: { he: "כללי", en: "General", ar: "عام", ru: "Общее" },
+    libraryFolderLogs: { he: "יומנים", en: "Logs", ar: "السجلات", ru: "Журналы" },
     libraryConfirmDeleteFolder: { he: "למחוק את התיקייה הזו וכל הקבצים שבה?", en: "Delete this folder and all its files?", ar: "هل تريد حذف هذا المجلد وجميع ملفاته؟", ru: "Удалить эту папку со всеми файлами?" },
     libraryTitlePrefix: { he: "ספריית ", en: "Library: ", ar: "مكتبة ", ru: "Библиотека: " },
     libraryFolderCreateBtn: { he: "יצירה", en: "Create", ar: "إنشاء", ru: "Создать" },
@@ -2665,6 +2745,9 @@
     });
     if (!Array.isArray(log.contractors)) log.contractors = [];
     if (!Array.isArray(log.works)) log.works = [];
+    if (typeof log.closed !== "boolean") log.closed = false;
+    if (typeof log.number !== "number") log.number = null;
+    if (typeof log.closedAt !== "number") log.closedAt = null;
     return log;
   }
 
@@ -4974,6 +5057,12 @@
     sheet.siteLogs.push(log);
     return log;
   }
+  function findPreviousSiteLog(sheet, dateISO) {
+    var candidates = (sheet.siteLogs || []).filter(function (l) { return l.date < dateISO; });
+    if (!candidates.length) return null;
+    candidates.sort(function (a, b) { return a.date < b.date ? 1 : -1; });
+    return candidates[0];
+  }
 
   var siteLogCategoriesView = document.getElementById("siteLogCategoriesView");
   var siteLogCategoriesBackBtn = document.getElementById("siteLogCategoriesBackBtn");
@@ -4982,33 +5071,156 @@
   var siteLogToolsBtn = document.getElementById("siteLogToolsBtn");
   var siteLogContractorsBtn = document.getElementById("siteLogContractorsBtn");
   var siteLogWorksBtn = document.getElementById("siteLogWorksBtn");
+  var siteLogCloseBtn = document.getElementById("siteLogCloseBtn");
+  var siteLogShareGeneralBtn = document.getElementById("siteLogShareGeneralBtn");
   var siteLogAttendanceView = document.getElementById("siteLogAttendanceView");
   var siteLogAttendanceBackBtn = document.getElementById("siteLogAttendanceBackBtn");
   var siteLogAttendanceColumns = document.getElementById("siteLogAttendanceColumns");
   var siteLogAttendanceShareBtn = document.getElementById("siteLogAttendanceShareBtn");
+  var siteLogAttendanceCopyPrevBtn = document.getElementById("siteLogAttendanceCopyPrevBtn");
   var siteLogToolsView = document.getElementById("siteLogToolsView");
   var siteLogToolsBackBtn = document.getElementById("siteLogToolsBackBtn");
   var siteLogToolsColumns = document.getElementById("siteLogToolsColumns");
   var siteLogToolsShareBtn = document.getElementById("siteLogToolsShareBtn");
+  var siteLogToolsCopyPrevBtn = document.getElementById("siteLogToolsCopyPrevBtn");
   var siteLogContractorsView = document.getElementById("siteLogContractorsView");
   var siteLogContractorsBackBtn = document.getElementById("siteLogContractorsBackBtn");
   var siteLogContractorsList = document.getElementById("siteLogContractorsList");
+  var siteLogContractorsCopyPrevBtn = document.getElementById("siteLogContractorsCopyPrevBtn");
   var siteLogWorksView = document.getElementById("siteLogWorksView");
   var siteLogWorksBackBtn = document.getElementById("siteLogWorksBackBtn");
   var siteLogWorksList = document.getElementById("siteLogWorksList");
   var siteLogWorksFileInput = document.getElementById("siteLogWorksFileInput");
+  var siteLogWorksCopyPrevBtn = document.getElementById("siteLogWorksCopyPrevBtn");
   var siteLogWorksPendingEntryId = null;
+
+  function updateSiteLogCloseShareButtons() {
+    var log = findSiteLog(activeSheet(), activeSiteLogDate);
+    siteLogShareGeneralBtn.disabled = !(log && log.closed);
+  }
 
   function openSiteLogCategoriesView(dateISO) {
     activeSiteLogDate = dateISO;
     siteLogCategoriesHeadTitle.textContent = isoToFullDisplay(dateISO);
     siteLogCategoriesView.hidden = false;
+    updateSiteLogCloseShareButtons();
   }
   function closeSiteLogCategoriesView() {
     siteLogCategoriesView.hidden = true;
     activeSiteLogDate = null;
   }
   siteLogCategoriesBackBtn.addEventListener("click", closeSiteLogCategoriesView);
+
+  var SITE_LOG_FOLDER_KEY = "logs";
+
+  function ensureSiteLogsFolder(sheet) {
+    return new Promise(function (resolve) {
+      ensureLibraryFolders(sheet, function (folders) {
+        var existing = folders.find(function (f) { return f.key === SITE_LOG_FOLDER_KEY; });
+        if (existing) { resolve(existing.id); return; }
+        var newId = uid();
+        if (sheet.shared) {
+          applySharedLibraryFolders(sheet.id, function (liveFolders) {
+            if (liveFolders.some(function (f) { return f.key === SITE_LOG_FOLDER_KEY; })) return liveFolders;
+            return liveFolders.concat([{ id: newId, key: SITE_LOG_FOLDER_KEY, name: null, files: [] }]);
+          }).then(function (updated) {
+            var folder = updated.find(function (f) { return f.key === SITE_LOG_FOLDER_KEY; });
+            resolve(folder ? folder.id : newId);
+          });
+        } else {
+          var liveSheet = data.sheets.find(function (s) { return s.id === sheet.id; });
+          if (!liveSheet.folders) liveSheet.folders = folders;
+          var folder = liveSheet.folders.find(function (f) { return f.key === SITE_LOG_FOLDER_KEY; });
+          if (!folder) {
+            folder = { id: newId, key: SITE_LOG_FOLDER_KEY, name: null, files: [] };
+            liveSheet.folders.push(folder);
+            saveData();
+          }
+          resolve(folder.id);
+        }
+      });
+    });
+  }
+
+  function addFileToLibraryFolder(sheet, folderId, entry) {
+    if (sheet.shared) {
+      return applySharedLibraryFolders(sheet.id, function (folders) {
+        return folders.map(function (f) {
+          if (f.id !== folderId) return f;
+          return Object.assign({}, f, { files: (f.files || []).concat([entry]) });
+        });
+      });
+    }
+    var liveSheet = data.sheets.find(function (s) { return s.id === sheet.id; });
+    var liveFolder = liveSheet && liveSheet.folders && liveSheet.folders.find(function (f) { return f.id === folderId; });
+    if (liveFolder) {
+      liveFolder.files = (liveFolder.files || []).concat([entry]);
+      saveData();
+    }
+    return Promise.resolve();
+  }
+
+  function uploadClosedLogPdfToLibrary(sheet, blob, fileName) {
+    return ensureSiteLogsFolder(sheet).then(function (folderId) {
+      var path = sheet.id + "/" + folderId + "/" + uid() + "-" + safeStorageFileName(fileName);
+      return supabaseClient.storage.from(LIBRARY_BUCKET).upload(path, blob, { contentType: "application/pdf" }).then(function (result) {
+        if (result.error) throw result.error;
+        var entry = { id: uid(), name: fileName, path: path, type: "application/pdf", size: blob.size || 0, uploadedAt: Date.now() };
+        return addFileToLibraryFolder(sheet, folderId, entry).then(function () { return entry; });
+      });
+    });
+  }
+
+  function closeSiteLog() {
+    var sheet = activeSheet();
+    var log = findOrCreateSiteLog(sheet, activeSiteLogDate);
+    if (!supabaseClient) { alert(tr("libraryUploadError")); return; }
+    var number = log.number || ((sheet.siteLogs || []).reduce(function (max, l) { return l.number ? Math.max(max, l.number) : max; }, 0) + 1);
+    var originalContent = siteLogCloseBtn.textContent;
+    siteLogCloseBtn.disabled = true;
+    siteLogCloseBtn.innerHTML = "&#8987;";
+    var element = buildSiteLogGeneralPdfElement(sheet, log, number);
+    var fileName = tr("siteLogGeneralReportTitle") + " " + number + ".pdf";
+    buildPdfBlobFromElement(element, fileName).then(function (result) {
+      return uploadClosedLogPdfToLibrary(sheet, result.blob, result.fileName).then(function () {
+        var liveLog = findOrCreateSiteLog(activeSheet(), activeSiteLogDate);
+        liveLog.number = number;
+        liveLog.closed = true;
+        liveLog.closedAt = Date.now();
+        saveData();
+        updateSiteLogCloseShareButtons();
+      });
+    }).catch(function (err) {
+      console.error("close site log failed:", err);
+      alert(tr("reportPdfError"));
+    }).then(function () {
+      siteLogCloseBtn.disabled = false;
+      siteLogCloseBtn.textContent = originalContent;
+    });
+  }
+
+  function shareSiteLogGeneral() {
+    var sheet = activeSheet();
+    var log = findSiteLog(sheet, activeSiteLogDate);
+    if (!log || !log.closed) { showToast(tr("siteLogCloseFirstMsg")); return; }
+    var originalContent = siteLogShareGeneralBtn.textContent;
+    siteLogShareGeneralBtn.disabled = true;
+    siteLogShareGeneralBtn.innerHTML = "&#8987;";
+    var element = buildSiteLogGeneralPdfElement(sheet, log, log.number);
+    var fileName = tr("siteLogGeneralReportTitle") + " " + log.number + ".pdf";
+    buildPdfBlobFromElement(element, fileName).then(function (result) {
+      attemptShare(result.blob, result.fileName);
+    }).catch(function (err) {
+      console.error("share site log failed:", err);
+      alert(tr("reportPdfError"));
+    }).then(function () {
+      siteLogShareGeneralBtn.disabled = !log.closed;
+      siteLogShareGeneralBtn.textContent = originalContent;
+    });
+  }
+
+  siteLogCloseBtn.addEventListener("click", closeSiteLog);
+  siteLogShareGeneralBtn.addEventListener("click", shareSiteLogGeneral);
 
 
   // Shared by every simple "growable list of names with a + at the bottom"
@@ -5357,6 +5569,51 @@
   }
   siteLogWorksBtn.addEventListener("click", openSiteLogWorksView);
   siteLogWorksBackBtn.addEventListener("click", closeSiteLogWorksView);
+
+  function copyPreviousSiteLogCategory(applyFn, onDone) {
+    var sheet = activeSheet();
+    var prevLog = findPreviousSiteLog(sheet, activeSiteLogDate);
+    if (!prevLog) { showToast(tr("siteLogNoPreviousLog")); return; }
+    askConfirm(tr("siteLogCopyPrevConfirm"), function () {
+      var liveLog = findOrCreateSiteLog(sheet, activeSiteLogDate);
+      applyFn(liveLog, prevLog);
+      saveData();
+      onDone();
+    });
+  }
+
+  siteLogAttendanceCopyPrevBtn.addEventListener("click", function () {
+    copyPreviousSiteLogCategory(function (liveLog, prevLog) {
+      var copied = {};
+      SITE_LOG_ATTENDANCE_COLUMNS.forEach(function (col) {
+        copied[col] = (prevLog.attendance[col] || []).map(function (e) { return { id: uid(), name: e.name }; });
+      });
+      liveLog.attendance = copied;
+    }, renderSiteLogAttendanceColumns);
+  });
+
+  siteLogToolsCopyPrevBtn.addEventListener("click", function () {
+    copyPreviousSiteLogCategory(function (liveLog, prevLog) {
+      var copied = {};
+      SITE_LOG_TOOLS_COLUMNS.forEach(function (col) { copied[col] = prevLog.tools[col] || ""; });
+      liveLog.tools = copied;
+    }, renderSiteLogToolsColumns);
+  });
+
+  siteLogContractorsCopyPrevBtn.addEventListener("click", function () {
+    copyPreviousSiteLogCategory(function (liveLog, prevLog) {
+      liveLog.contractors = (prevLog.contractors || []).map(function (e) { return { id: uid(), name: e.name }; });
+    }, renderSiteLogContractorsList);
+  });
+
+  // Attachments aren't copied - a copied row would share the same Storage
+  // path as the original, and removing either row's attachment later would
+  // delete the file out from under the other, so only the text carries over.
+  siteLogWorksCopyPrevBtn.addEventListener("click", function () {
+    copyPreviousSiteLogCategory(function (liveLog, prevLog) {
+      liveLog.works = (prevLog.works || []).map(function (e) { return { id: uid(), text: e.text, attachment: null }; });
+    }, renderSiteLogWorksList);
+  });
 
   function renderSheetReportsList() {
     sheetReportsList.innerHTML = "";
@@ -6073,22 +6330,7 @@
     return tr("siteLogCol" + colKey.charAt(0).toUpperCase() + colKey.slice(1));
   }
 
-  function buildSiteLogAttendancePdfElement(dateISO) {
-    var doc = document.createElement("div");
-    doc.className = "pdf-doc";
-    doc.dir = RTL_LANGS[currentLang] ? "rtl" : "ltr";
-
-    var titleEl = document.createElement("div");
-    titleEl.className = "pdf-doc-title";
-    titleEl.textContent = tr("siteLogAttendance");
-    doc.appendChild(titleEl);
-
-    var infoDate = document.createElement("div");
-    infoDate.className = "pdf-doc-info-date";
-    infoDate.textContent = isoToFullDisplay(dateISO);
-    doc.appendChild(infoDate);
-
-    var log = findSiteLog(activeSheet(), dateISO);
+  function buildAttendanceTableElement(log) {
     var colLists = SITE_LOG_ATTENDANCE_COLUMNS.map(function (colKey) {
       return (log && log.attendance[colKey]) || [];
     });
@@ -6127,7 +6369,51 @@
       }
     }
     table.appendChild(tbody);
-    doc.appendChild(table);
+    return table;
+  }
+
+  function buildToolsTableElement(log) {
+    var table = document.createElement("table");
+    table.className = "pdf-doc-table";
+    var thead = document.createElement("thead");
+    var headRow = document.createElement("tr");
+    SITE_LOG_TOOLS_COLUMNS.forEach(function (colKey) {
+      var th = document.createElement("th");
+      th.textContent = siteLogColLabel(colKey);
+      headRow.appendChild(th);
+    });
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+
+    var tbody = document.createElement("tbody");
+    var rowEl = document.createElement("tr");
+    SITE_LOG_TOOLS_COLUMNS.forEach(function (colKey) {
+      var td = document.createElement("td");
+      td.textContent = (log && log.tools[colKey]) || "";
+      rowEl.appendChild(td);
+    });
+    tbody.appendChild(rowEl);
+    table.appendChild(tbody);
+    return table;
+  }
+
+  function buildSiteLogAttendancePdfElement(dateISO) {
+    var doc = document.createElement("div");
+    doc.className = "pdf-doc";
+    doc.dir = RTL_LANGS[currentLang] ? "rtl" : "ltr";
+
+    var titleEl = document.createElement("div");
+    titleEl.className = "pdf-doc-title";
+    titleEl.textContent = tr("siteLogAttendance");
+    doc.appendChild(titleEl);
+
+    var infoDate = document.createElement("div");
+    infoDate.className = "pdf-doc-info-date";
+    infoDate.textContent = isoToFullDisplay(dateISO);
+    doc.appendChild(infoDate);
+
+    var log = findSiteLog(activeSheet(), dateISO);
+    doc.appendChild(buildAttendanceTableElement(log));
 
     var footerEl = document.createElement("div");
     footerEl.className = "pdf-doc-footer";
@@ -6153,28 +6439,107 @@
     doc.appendChild(infoDate);
 
     var log = findSiteLog(activeSheet(), dateISO);
-    var table = document.createElement("table");
-    table.className = "pdf-doc-table";
-    var thead = document.createElement("thead");
-    var headRow = document.createElement("tr");
-    SITE_LOG_TOOLS_COLUMNS.forEach(function (colKey) {
-      var th = document.createElement("th");
-      th.textContent = siteLogColLabel(colKey);
-      headRow.appendChild(th);
-    });
-    thead.appendChild(headRow);
-    table.appendChild(thead);
+    doc.appendChild(buildToolsTableElement(log));
 
-    var tbody = document.createElement("tbody");
-    var rowEl = document.createElement("tr");
-    SITE_LOG_TOOLS_COLUMNS.forEach(function (colKey) {
-      var td = document.createElement("td");
-      td.textContent = (log && log.tools[colKey]) || "";
-      rowEl.appendChild(td);
-    });
-    tbody.appendChild(rowEl);
-    table.appendChild(tbody);
-    doc.appendChild(table);
+    var footerEl = document.createElement("div");
+    footerEl.className = "pdf-doc-footer";
+    footerEl.textContent = tr("reportPdfFooter");
+    doc.appendChild(footerEl);
+
+    return doc;
+  }
+
+  function isoToDayName(iso) {
+    var parts = iso.split("-").map(Number);
+    var d = new Date(parts[0], parts[1] - 1, parts[2]);
+    var localeMap = { he: "he-IL", en: "en-US", ar: "ar", ru: "ru-RU" };
+    return d.toLocaleDateString(localeMap[currentLang] || "he-IL", { weekday: "long" });
+  }
+
+  function buildSiteLogGeneralPdfElement(sheet, log, number) {
+    var doc = document.createElement("div");
+    doc.className = "pdf-doc";
+    doc.dir = RTL_LANGS[currentLang] ? "rtl" : "ltr";
+
+    var projectTitle = document.createElement("div");
+    projectTitle.className = "pdf-doc-title";
+    projectTitle.textContent = sheet.name;
+    doc.appendChild(projectTitle);
+
+    var logNumberEl = document.createElement("div");
+    logNumberEl.className = "pdf-doc-info-title";
+    logNumberEl.textContent = tr("siteLogGeneralReportTitle") + " " + number;
+    doc.appendChild(logNumberEl);
+
+    var dateEl = document.createElement("div");
+    dateEl.className = "pdf-doc-info-date";
+    dateEl.textContent = isoToFullDisplay(log.date) + " - " + isoToDayName(log.date);
+    doc.appendChild(dateEl);
+
+    var attendanceHeading = document.createElement("div");
+    attendanceHeading.className = "pdf-doc-section-heading";
+    attendanceHeading.textContent = tr("siteLogAttendance");
+    doc.appendChild(attendanceHeading);
+    doc.appendChild(buildAttendanceTableElement(log));
+
+    var toolsHeading = document.createElement("div");
+    toolsHeading.className = "pdf-doc-section-heading";
+    toolsHeading.textContent = tr("siteLogTools");
+    doc.appendChild(toolsHeading);
+    doc.appendChild(buildToolsTableElement(log));
+
+    var contractorsHeading = document.createElement("div");
+    contractorsHeading.className = "pdf-doc-section-heading";
+    contractorsHeading.textContent = tr("siteLogContractors");
+    doc.appendChild(contractorsHeading);
+    var contractorsList = document.createElement("div");
+    contractorsList.className = "pdf-doc-contractors-list";
+    var contractors = (log && log.contractors) || [];
+    if (!contractors.length) {
+      var emptyC = document.createElement("div");
+      emptyC.className = "pdf-doc-empty";
+      emptyC.textContent = tr("reportShareNoRows");
+      contractorsList.appendChild(emptyC);
+    } else {
+      contractors.forEach(function (c) {
+        var line = document.createElement("div");
+        line.className = "pdf-doc-contractor-line";
+        line.textContent = c.name;
+        contractorsList.appendChild(line);
+      });
+    }
+    doc.appendChild(contractorsList);
+
+    var worksFrame = document.createElement("div");
+    worksFrame.className = "pdf-doc-works-frame";
+    var worksTitle = document.createElement("div");
+    worksTitle.className = "pdf-doc-works-frame-title";
+    worksTitle.textContent = tr("siteLogWorksTourTitle");
+    worksFrame.appendChild(worksTitle);
+    var works = (log && log.works) || [];
+    if (!works.length) {
+      var emptyW = document.createElement("div");
+      emptyW.className = "pdf-doc-empty";
+      emptyW.textContent = tr("reportShareNoRows");
+      worksFrame.appendChild(emptyW);
+    } else {
+      works.forEach(function (w) {
+        var rowEl = document.createElement("div");
+        rowEl.className = "pdf-doc-work-row";
+        var textEl = document.createElement("div");
+        textEl.className = "pdf-doc-work-row-text";
+        textEl.textContent = w.text;
+        rowEl.appendChild(textEl);
+        if (w.attachment && isImageFile(w.attachment)) {
+          var imgEl = document.createElement("img");
+          imgEl.className = "pdf-doc-work-row-image";
+          imgEl.src = w.attachment.url;
+          rowEl.appendChild(imgEl);
+        }
+        worksFrame.appendChild(rowEl);
+      });
+    }
+    doc.appendChild(worksFrame);
 
     var footerEl = document.createElement("div");
     footerEl.className = "pdf-doc-footer";
