@@ -173,6 +173,21 @@
     transition: opacity 0.25s ease;
   }
   .app-toast.app-toast-visible { opacity: 1; }
+  .offline-sync-badge {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 65;
+    background: #a6650f;
+    color: #fff;
+    font-family: "Assistant", sans-serif;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    text-align: center;
+    padding: 6px 10px;
+    box-shadow: 0 2px 8px var(--shadow);
+  }
   .data-error-text {
     color: var(--ink);
     font-size: 0.95rem;
@@ -758,6 +773,25 @@
     font-size: 0.85rem;
     cursor: pointer;
   }
+  .company-dashboard-wrap { flex: 1; overflow-y: auto; padding: 10px 14px 20px; }
+  .company-dashboard-empty { color: var(--ink-muted); text-align: center; padding: 30px 10px; font-size: 0.9rem; }
+  .company-dashboard-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    background: var(--paper-alt);
+    cursor: pointer;
+  }
+  .company-dashboard-name { font-family: "Rubik", "Assistant", sans-serif; font-weight: 700; font-size: 0.95rem; }
+  .company-dashboard-status { font-size: 0.82rem; font-weight: 600; }
+  .company-dashboard-status-closed { color: #2f7a3d; }
+  .company-dashboard-status-open { color: #a6650f; }
+  .company-dashboard-status-missing { color: var(--danger); }
+  .company-dashboard-last { font-size: 0.72rem; color: var(--ink-muted); }
   .site-log-preview-wrap { flex: 1; overflow-y: auto; overflow-x: hidden; background: var(--paper-alt); padding: 16px 10px; }
   .site-log-preview-wrap .pdf-doc {
     width: 100%;
@@ -1939,6 +1973,7 @@
 <body>
 <div id="navDebugToast" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#222;color:#fff;font-size:13px;line-height:1.4;padding:8px 12px;direction:rtl;display:none;white-space:pre-wrap;"></div>
 <div class="app-toast" id="appToast"></div>
+<div class="offline-sync-badge" id="offlineSyncBadge" data-i18n="offlineSyncBadgeMsg" hidden>השינויים נשמרו במכשיר וישמרו בשרת כשיהיה חיבור לאינטרנט</div>
 <div class="splash-screen" id="splashScreen">
   <img src="tasks-icon-512.png" class="splash-logo" alt="ITASK">
   <div class="splash-app-name">ITASK</div>
@@ -2036,6 +2071,10 @@
               <option value="on" data-i18n="chatNotifOn">פעיל</option>
             </select>
             <p class="reminder-status" id="chatNotifStatus" hidden></p>
+          </div>
+          <div class="menu-section">
+            <div class="menu-label" data-i18n="menuLabelAllProjects">כל הפרויקטים</div>
+            <button id="companyDashboardBtn" data-i18n="companyDashboardBtn">תמונת מצב פרויקטים</button>
           </div>
           <div class="menu-section">
             <div class="menu-label" data-i18n="menuLabelApp">האפליקציה</div>
@@ -2459,6 +2498,16 @@
     <input type="file" id="siteLogWorksFileInput" hidden>
   </div>
 
+  <div class="report-view" id="companyDashboardView" hidden>
+    <div class="report-head">
+      <button type="button" class="report-back-btn" id="companyDashboardBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
+      <div class="report-head-title" data-i18n="companyDashboardTitle">תמונת מצב פרויקטים</div>
+    </div>
+    <div class="company-dashboard-wrap">
+      <div class="company-dashboard-list" id="companyDashboardList"></div>
+    </div>
+  </div>
+
   <input type="file" accept="image/*" capture="environment" id="reportImageCameraInput" style="display:none">
   <input type="file" accept="image/*" id="reportImageGalleryInput" style="display:none">
 
@@ -2745,7 +2794,16 @@
     reportPdfFooter: { he: "מסמך זה הופק באמצעות ITASK", en: "This document was produced using ITASK", ar: "تم إنتاج هذا المستند باستخدام ITASK", ru: "Этот документ создан с помощью ITASK" },
     reportPdfTitleTour: { he: "סיכום סיור", en: "Tour Summary", ar: "ملخص الجولة", ru: "Итоги обхода" },
     reportPdfError: { he: "אירעה שגיאה ביצירת ה-PDF", en: "An error occurred creating the PDF", ar: "حدث خطأ أثناء إنشاء PDF", ru: "Ошибка при создании PDF" },
-    shareFallbackToSaveMsg: { he: "השיתוף לא זמין כאן - הקובץ נשמר במכשיר, אפשר לשתף אותו משם", en: "Sharing isn't available here - the file was saved to your device, you can share it from there", ar: "المشاركة غير متاحة هنا - تم حفظ الملف على جهازك، يمكنك مشاركته من هناك", ru: "Здесь недоступен общий доступ - файл сохранён на устройстве, поделиться им можно оттуда" }
+    shareFallbackToSaveMsg: { he: "השיתוף לא זמין כאן - הקובץ נשמר במכשיר, אפשר לשתף אותו משם", en: "Sharing isn't available here - the file was saved to your device, you can share it from there", ar: "المشاركة غير متاحة هنا - تم حفظ الملف على جهازك، يمكنك مشاركته من هناك", ru: "Здесь недоступен общий доступ - файл сохранён на устройстве, поделиться им можно оттуда" },
+    offlineSyncBadgeMsg: { he: "השינויים נשמרו במכשיר וישמרו בשרת כשיהיה חיבור לאינטרנט", en: "Changes were saved on this device and will sync to the server once you're back online", ar: "تم حفظ التغييرات على هذا الجهاز وستتم مزامنتها مع الخادم عند توفر الاتصال بالإنترنت", ru: "Изменения сохранены на устройстве и будут синхронизированы с сервером при подключении к интернету" },
+    menuLabelAllProjects: { he: "כל הפרויקטים", en: "All projects", ar: "جميع المشاريع", ru: "Все проекты" },
+    companyDashboardBtn: { he: "תמונת מצב פרויקטים", en: "Projects status overview", ar: "نظرة عامة على حالة المشاريع", ru: "Обзор статуса проектов" },
+    companyDashboardTitle: { he: "תמונת מצב פרויקטים", en: "Projects status overview", ar: "نظرة عامة على حالة المشاريع", ru: "Обзор статуса проектов" },
+    companyDashboardEmpty: { he: "אין פרויקטים להצגה", en: "No projects to show", ar: "لا توجد مشاريع لعرضها", ru: "Нет проектов для отображения" },
+    companyDashboardClosedToday: { he: "✓ יומן נסגר היום", en: "✓ Log closed today", ar: "✓ تم إغلاق السجل اليوم", ru: "✓ Журнал закрыт сегодня" },
+    companyDashboardOpenNotClosed: { he: "יומן היום פתוח, לא נסגר", en: "Today's log is open, not closed yet", ar: "سجل اليوم مفتوح ولم يُغلق بعد", ru: "Журнал за сегодня открыт, не закрыт" },
+    companyDashboardNoLogToday: { he: "אין יומן היום", en: "No log for today", ar: "لا يوجد سجل لليوم", ru: "Нет журнала за сегодня" },
+    companyDashboardLastLog: { he: "יומן סגור אחרון:", en: "Last closed log:", ar: "آخر سجل مغلق:", ru: "Последний закрытый журнал:" }
   };
 
   var LANG_STORAGE_KEY = "itask-lang";
@@ -2988,9 +3046,13 @@
     editedSinceLastLoad = true;
     saveLocalData();
     if (supabaseClient) {
+      markPendingSyncDirty();
       supabaseClient.from("app_state")
         .upsert({ id: SUPABASE_ROW_ID, data: data, updated_at: new Date().toISOString() })
-        .then(function () {}, function () {});
+        .then(function (result) {
+          if (result && result.error) { scheduleSyncRetry(); return; }
+          clearPendingSyncDirty();
+        }, function () { scheduleSyncRetry(); });
     }
     saveSharedSheets();
   }
@@ -3002,14 +3064,69 @@
         .upsert({
           id: sheet.id,
           name: sheet.name,
-          data: { tasks: sheet.tasks, reports: sheet.reports, files: [], folders: sheet.folders || null, ended: sheet.ended || false, endedDate: sheet.endedDate || null },
+          data: { tasks: sheet.tasks, reports: sheet.reports, files: [], folders: sheet.folders || null, siteLogs: sheet.siteLogs || [], ended: sheet.ended || false, endedDate: sheet.endedDate || null },
           members: sheet.members,
           member_names: sheet.memberNames || {},
           updated_at: new Date().toISOString()
         })
-        .then(function () {}, function () {});
+        .then(function (result) {
+          if (result && result.error) scheduleSyncRetry();
+        }, function () { scheduleSyncRetry(); });
     });
   }
+
+  // Offline resilience: saveLocalData() above always succeeds (it's just
+  // localStorage), but the Supabase upsert can fail or never even fire
+  // (no connectivity) - previously that failure was silently swallowed and
+  // never retried, so an edit made offline could simply never reach the
+  // server, and worse, the *next* app load's remote fetch would overwrite
+  // the still-unsynced local snapshot with the older server row. This flag
+  // (persisted so it survives a reload/app close) tracks "the local copy
+  // may be ahead of what's confirmed saved" and drives a retry loop plus a
+  // small visible badge, and startWithSupabase() below checks it to avoid
+  // clobbering an unsynced local edit with a stale remote read.
+  var pendingSyncDirty = false;
+  var syncRetryTimer = null;
+  function pendingSyncStorageKey() { return "itask-pending-sync:" + SUPABASE_ROW_ID; }
+  function markPendingSyncDirty() {
+    pendingSyncDirty = true;
+    try { localStorage.setItem(pendingSyncStorageKey(), "1"); } catch (e) {}
+    updateOfflineSyncBadge();
+  }
+  function clearPendingSyncDirty() {
+    pendingSyncDirty = false;
+    try { localStorage.removeItem(pendingSyncStorageKey()); } catch (e) {}
+    updateOfflineSyncBadge();
+  }
+  function hasPendingSyncFromPreviousSession() {
+    try { return localStorage.getItem(pendingSyncStorageKey()) === "1"; } catch (e) { return false; }
+  }
+  function scheduleSyncRetry() {
+    updateOfflineSyncBadge();
+    if (syncRetryTimer) return;
+    syncRetryTimer = setTimeout(function () {
+      syncRetryTimer = null;
+      flushPendingSync();
+    }, 20000);
+  }
+  function flushPendingSync() {
+    if (!pendingSyncDirty || !supabaseClient || dataLoadBlocked || !privateDataSettled) return;
+    supabaseClient.from("app_state")
+      .upsert({ id: SUPABASE_ROW_ID, data: data, updated_at: new Date().toISOString() })
+      .then(function (result) {
+        if (result && result.error) { scheduleSyncRetry(); return; }
+        clearPendingSyncDirty();
+      }, function () { scheduleSyncRetry(); });
+    saveSharedSheets();
+  }
+  var offlineSyncBadge = document.getElementById("offlineSyncBadge");
+  function updateOfflineSyncBadge() {
+    if (offlineSyncBadge) offlineSyncBadge.hidden = !pendingSyncDirty;
+  }
+  window.addEventListener("online", flushPendingSync);
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible") flushPendingSync();
+  });
 
   var BACKUP_TABLE = "app_state_backups";
   var BACKUP_MIN_INTERVAL_MS = 30 * 60 * 1000;
@@ -4457,6 +4574,7 @@
         reports: currentData.reports || [],
         files: [],
         folders: updateFoldersFn(currentData.folders || buildDefaultLibraryFolders(currentData.files)),
+        siteLogs: currentData.siteLogs || [],
         ended: currentData.ended || false,
         endedDate: currentData.endedDate || null
       };
@@ -4502,6 +4620,7 @@
         reports: currentData.reports || [],
         files: [],
         folders: folders,
+        siteLogs: currentData.siteLogs || [],
         ended: currentData.ended || false,
         endedDate: currentData.endedDate || null
       };
@@ -4975,6 +5094,77 @@
     state.menuOpen = false;
     deleteSheet(activeSheet().id);
   });
+
+  var companyDashboardBtn = document.getElementById("companyDashboardBtn");
+  var companyDashboardView = document.getElementById("companyDashboardView");
+  var companyDashboardBackBtn = document.getElementById("companyDashboardBackBtn");
+  var companyDashboardList = document.getElementById("companyDashboardList");
+
+  function openCompanyDashboardView() {
+    companyDashboardView.hidden = false;
+    renderCompanyDashboard();
+  }
+  function closeCompanyDashboardView() {
+    companyDashboardView.hidden = true;
+  }
+  function renderCompanyDashboard() {
+    companyDashboardList.innerHTML = "";
+    var sheets = visibleSheets();
+    if (!sheets.length) {
+      var empty = document.createElement("div");
+      empty.className = "company-dashboard-empty";
+      empty.textContent = tr("companyDashboardEmpty");
+      companyDashboardList.appendChild(empty);
+      return;
+    }
+    var today = todayISO();
+    sheets.forEach(function (sheet) {
+      var row = document.createElement("div");
+      row.className = "company-dashboard-row";
+
+      var nameEl = document.createElement("div");
+      nameEl.className = "company-dashboard-name";
+      nameEl.textContent = (sheet.shared ? "👥 " : "") + sheet.name;
+      row.appendChild(nameEl);
+
+      var todayLog = findSiteLog(sheet, today);
+      var statusEl = document.createElement("div");
+      statusEl.className = "company-dashboard-status";
+      if (todayLog && todayLog.closed) {
+        statusEl.classList.add("company-dashboard-status-closed");
+        statusEl.textContent = tr("companyDashboardClosedToday");
+      } else if (todayLog) {
+        statusEl.classList.add("company-dashboard-status-open");
+        statusEl.textContent = tr("companyDashboardOpenNotClosed");
+      } else {
+        statusEl.classList.add("company-dashboard-status-missing");
+        statusEl.textContent = tr("companyDashboardNoLogToday");
+      }
+      row.appendChild(statusEl);
+
+      var closedLogs = (sheet.siteLogs || []).filter(function (l) { return l.closed; });
+      if (closedLogs.length) {
+        closedLogs.sort(function (a, b) { return a.date < b.date ? 1 : -1; });
+        var lastEl = document.createElement("div");
+        lastEl.className = "company-dashboard-last";
+        lastEl.textContent = tr("companyDashboardLastLog") + " " + isoToFullDisplay(closedLogs[0].date);
+        row.appendChild(lastEl);
+      }
+
+      row.addEventListener("click", function () {
+        closeCompanyDashboardView();
+        selectSheet(sheet.id);
+        openSiteLogCategoriesView(today);
+      });
+      companyDashboardList.appendChild(row);
+    });
+  }
+  companyDashboardBtn.addEventListener("click", function () {
+    state.menuOpen = false;
+    render();
+    openCompanyDashboardView();
+  });
+  companyDashboardBackBtn.addEventListener("click", closeCompanyDashboardView);
 
   var VAPID_PUBLIC_KEY = "BPdpuz8Hlv_j8NYip_kdmzpj6h6fhbhjY3_NeeLyBIoVo7K1qJiouH3RtdyOTNV6riNdmGB_X6u7qL_jVwejDrM";
 
@@ -8088,6 +8278,18 @@
           // saveData() calls already own persisting from here on, so don't
           // overwrite with what may now be a stale-relative-to-that-edit
           // server snapshot.
+          return;
+        }
+        if (usedInstantLocal && hasPendingSyncFromPreviousSession()) {
+          // An edit from a PRIOR session never got confirmed saved (e.g.
+          // the app was closed while offline) - the local snapshot is
+          // still ahead of this remote read, so keep it and push it now
+          // instead of quietly reverting to the older server row. This is
+          // a fresh page load, so the in-memory pendingSyncDirty flag was
+          // just reset to false and needs re-marking from the persisted
+          // localStorage flag before flushPendingSync() will act on it.
+          markPendingSyncDirty();
+          flushPendingSync();
           return;
         }
         data = remote || local || defaultData();
