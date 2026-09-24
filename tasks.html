@@ -2803,7 +2803,10 @@
     companyDashboardClosedToday: { he: "✓ יומן נסגר היום", en: "✓ Log closed today", ar: "✓ تم إغلاق السجل اليوم", ru: "✓ Журнал закрыт сегодня" },
     companyDashboardOpenNotClosed: { he: "יומן היום פתוח, לא נסגר", en: "Today's log is open, not closed yet", ar: "سجل اليوم مفتوح ولم يُغلق بعد", ru: "Журнал за сегодня открыт, не закрыт" },
     companyDashboardNoLogToday: { he: "אין יומן היום", en: "No log for today", ar: "لا يوجد سجل لليوم", ru: "Нет журнала за сегодня" },
-    companyDashboardLastLog: { he: "יומן סגור אחרון:", en: "Last closed log:", ar: "آخر سجل مغلق:", ru: "Последний закрытый журнал:" }
+    companyDashboardLastLog: { he: "יומן סגור אחרון:", en: "Last closed log:", ar: "آخر سجل مغلق:", ru: "Последний закрытый журнал:" },
+    taskDoneTransferToLogMsg: { he: "להעביר את המשימה ליומן העבודה?", en: "Transfer the task to the work log?", ar: "هل تريد نقل المهمة إلى سجل العمل؟", ru: "Перенести задачу в рабочий журнал?" },
+    taskDoneLogPrefix: { he: "בוצע", en: "Done", ar: "تم", ru: "Выполнено" },
+    taskTransferredToLogMsg: { he: "המשימה נוספה ליומן העבודה", en: "The task was added to the work log", ar: "تمت إضافة المهمة إلى سجل العمل", ru: "Задача добавлена в рабочий журнал" }
   };
 
   var LANG_STORAGE_KEY = "itask-lang";
@@ -7821,7 +7824,19 @@
         sendChatSystemMessage(sheet.id, t.status === 2 ? "done" : "undone", t.text, myDisplayNameIn(sheet));
       }
       render();
+      if (!wasDone && t.status === 2 && t.type === "task") {
+        askConfirm(tr("taskDoneTransferToLogMsg"), function () {
+          transferTaskToSiteLogWorks(sheet, t);
+        });
+      }
     }
+  }
+
+  function transferTaskToSiteLogWorks(sheet, task) {
+    var log = findOrCreateSiteLog(sheet, task.date);
+    log.works.push({ id: uid(), text: tr("taskDoneLogPrefix") + " " + task.text, attachment: null });
+    saveData();
+    showToast(tr("taskTransferredToLogMsg"));
   }
 
   function removeTask(id) {
