@@ -743,6 +743,7 @@
     cursor: pointer;
   }
   .site-log-close-btn { background: var(--accent); color: var(--accent-contrast); }
+  .report-close-btn { margin: 10px 14px 14px; }
   .site-log-share-btn { background: var(--report-green); color: #fdfbf5; }
   .site-log-share-btn:disabled, .site-log-close-btn:disabled {
     opacity: 0.5;
@@ -2381,6 +2382,7 @@
         <tbody id="reportTableBody"></tbody>
       </table>
     </div>
+    <button type="button" class="site-log-close-btn report-close-btn" id="reportCloseBtn" data-i18n="reportCloseBtn">סגירת הדוח</button>
   </div>
 
   <div class="report-view" id="siteLogCategoriesView" hidden>
@@ -2806,7 +2808,8 @@
     companyDashboardLastLog: { he: "יומן סגור אחרון:", en: "Last closed log:", ar: "آخر سجل مغلق:", ru: "Последний закрытый журнал:" },
     taskDoneTransferToLogMsg: { he: "להעביר את המשימה ליומן העבודה?", en: "Transfer the task to the work log?", ar: "هل تريد نقل المهمة إلى سجل العمل؟", ru: "Перенести задачу в рабочий журнал?" },
     taskDoneLogPrefix: { he: "בוצע", en: "Done", ar: "تم", ru: "Выполнено" },
-    taskTransferredToLogMsg: { he: "המשימה נוספה ליומן העבודה", en: "The task was added to the work log", ar: "تمت إضافة المهمة إلى سجل العمل", ru: "Задача добавлена в рабочий журнал" }
+    taskTransferredToLogMsg: { he: "המשימה נוספה ליומן העבודה", en: "The task was added to the work log", ar: "تمت إضافة المهمة إلى سجل العمل", ru: "Задача добавлена в рабочий журнал" },
+    reportCloseBtn: { he: "סגירת הדוח", en: "Close report", ar: "إغلاق التقرير", ru: "Закрыть отчёт" }
   };
 
   var LANG_STORAGE_KEY = "itask-lang";
@@ -2963,6 +2966,7 @@
       sheet.siteLogs.forEach(normalizeSiteLog);
       sheet.reports.forEach(function (report) {
         if (!Array.isArray(report.rows)) report.rows = [];
+        if (!report.closedFile || typeof report.closedFile !== "object") report.closedFile = null;
         report.rows.forEach(function (row) {
           if (typeof row.status !== "number") row.status = 0;
           if (row.priority !== "urgent" && row.priority !== "regular") row.priority = null;
@@ -5525,6 +5529,7 @@
   var reportShareBtn = document.getElementById("reportShareBtn");
   var reportSaveBtn = document.getElementById("reportSaveBtn");
   var reportEditBtn = document.getElementById("reportEditBtn");
+  var reportCloseBtn = document.getElementById("reportCloseBtn");
   var reportMeta = document.getElementById("reportMeta");
   var reportTableBody = document.getElementById("reportTableBody");
   var reportFabBtn = document.getElementById("reportFabBtn");
@@ -5737,6 +5742,64 @@
         var entry = { id: uid(), name: fileName, path: path, type: "application/pdf", size: blob.size || 0, uploadedAt: Date.now() };
         return addFileToLibraryFolder(sheet, folderId, entry).then(function () { return { entry: entry, folderId: folderId }; });
       });
+    });
+  }
+
+  // The "reports" folder (unlike the old "diaries"/site-logs one) is one of
+  // the 4 protected defaults every sheet already gets from
+  // buildDefaultLibraryFolders()/ensureLibraryFolders(), and it can never be
+  // deleted through the UI - so no "create it if missing" branch is needed
+  // here the way ensureSiteLogsFolder() needs one.
+  function ensureReportsFolder(sheet) {
+    return new Promise(function (resolve, reject) {
+      ensureLibraryFolders(sheet, function (folders) {
+        var folder = folders.find(function (f) { return f.key === "reports"; });
+        if (folder) resolve(folder.id); else reject(new Error("reports folder missing"));
+      });
+    });
+  }
+
+  function uploadReportPdfToLibrary(sheet, blob, fileName) {
+    return ensureReportsFolder(sheet).then(function (folderId) {
+      var path = sheet.id + "/" + folderId + "/" + uid() + "-" + safeStorageFileName(fileName);
+      return supabaseClient.storage.from(LIBRARY_BUCKET).upload(path, blob, { contentType: "application/pdf" }).then(function (result) {
+        if (result.error) throw result.error;
+        var entry = { id: uid(), name: fileName, path: path, type: "application/pdf", size: blob.size || 0, uploadedAt: Date.now() };
+        return addFileToLibraryFolder(sheet, folderId, entry).then(function () { return { entry: entry, folderId: folderId }; });
+      });
+    });
+  }
+
+  function closeReport() {
+    var report = findReport(activeReportId);
+    var sheet = activeSheet();
+    if (!report || !supabaseClient) { alert(tr("libraryUploadError")); return; }
+    var originalContent = reportCloseBtn.textContent;
+    reportCloseBtn.disabled = true;
+    reportCloseBtn.innerHTML = "&#8987;";
+    var previousFile = report.closedFile;
+    buildReportPdfBlob(report).then(function (result) {
+      var removePrevious = previousFile
+        ? removeLibraryFileEntry(sheet, previousFile.folderId, previousFile.entryId, previousFile.path).catch(function () {})
+        : Promise.resolve();
+      return removePrevious.then(function () {
+        return uploadReportPdfToLibrary(sheet, result.blob, result.fileName);
+      }).then(function (uploaded) {
+        var liveReport = findReport(report.id);
+        if (liveReport) liveReport.closedFile = { folderId: uploaded.folderId, entryId: uploaded.entry.id, path: uploaded.entry.path };
+        saveData();
+        // reportView is only ever hidden, never removed from the DOM, so
+        // this button's disabled/spinner state would otherwise still be
+        // showing the next time any report is opened.
+        reportCloseBtn.disabled = false;
+        reportCloseBtn.textContent = originalContent;
+        closeReportView();
+      });
+    }).catch(function (err) {
+      console.error("close report failed:", err);
+      alert(tr("reportPdfError"));
+      reportCloseBtn.disabled = false;
+      reportCloseBtn.textContent = originalContent;
     });
   }
 
@@ -6504,6 +6567,7 @@
   reportEditBtn.addEventListener("click", function () {
     if (activeReportId) openReportEditFlow(activeReportId);
   });
+  reportCloseBtn.addEventListener("click", closeReport);
 
   var renderReportViewDepth = 0;
   function renderReportView() {
