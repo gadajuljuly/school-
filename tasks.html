@@ -743,7 +743,20 @@
     cursor: pointer;
   }
   .site-log-close-btn { background: var(--accent); color: var(--accent-contrast); }
-  .report-close-btn { margin: 10px 14px 14px; }
+  .report-close-btn {
+    display: block;
+    margin: 10px auto 14px;
+    padding: 8px 20px;
+    border-radius: 8px;
+    border: none;
+    background: var(--accent);
+    color: var(--accent-contrast);
+    font-family: "Rubik", "Assistant", sans-serif;
+    font-weight: 700;
+    font-size: 0.78rem;
+    cursor: pointer;
+  }
+  .report-close-btn:disabled { opacity: 0.5; cursor: not-allowed; }
   .site-log-share-btn { background: var(--report-green); color: #fdfbf5; }
   .site-log-share-btn:disabled, .site-log-close-btn:disabled {
     opacity: 0.5;
@@ -2382,7 +2395,7 @@
         <tbody id="reportTableBody"></tbody>
       </table>
     </div>
-    <button type="button" class="site-log-close-btn report-close-btn" id="reportCloseBtn" data-i18n="reportCloseBtn">סגירת הדוח</button>
+    <button type="button" class="report-close-btn" id="reportCloseBtn" data-i18n="reportCloseBtn">סגירת הדוח</button>
   </div>
 
   <div class="report-view" id="siteLogCategoriesView" hidden>
