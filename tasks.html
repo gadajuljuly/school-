@@ -7862,16 +7862,23 @@
   }
 
   function buildAttendanceTableElement(log) {
-    var colLists = SITE_LOG_ATTENDANCE_COLUMNS.map(function (colKey) {
+    // A column (e.g. "מנהל עבודה") that nobody was assigned to for this log
+    // is dropped entirely, not shown as a blank column - same rule as an
+    // empty row elsewhere: nothing filled in means nothing shown.
+    var activeColumns = SITE_LOG_ATTENDANCE_COLUMNS.filter(function (colKey) {
+      return ((log && log.attendance[colKey]) || []).some(function (p) { return p && p.name && p.name.trim(); });
+    });
+    var headerColumns = activeColumns.length ? activeColumns : SITE_LOG_ATTENDANCE_COLUMNS;
+    var colLists = activeColumns.map(function (colKey) {
       return ((log && log.attendance[colKey]) || []).filter(function (p) { return p && p.name && p.name.trim(); });
     });
-    var maxRows = Math.max.apply(null, colLists.map(function (l) { return l.length; }));
+    var maxRows = colLists.length ? Math.max.apply(null, colLists.map(function (l) { return l.length; })) : 0;
 
     var table = document.createElement("table");
     table.className = "pdf-doc-table";
     var thead = document.createElement("thead");
     var headRow = document.createElement("tr");
-    SITE_LOG_ATTENDANCE_COLUMNS.forEach(function (colKey) {
+    headerColumns.forEach(function (colKey) {
       var th = document.createElement("th");
       th.textContent = siteLogColLabel(colKey);
       headRow.appendChild(th);
@@ -7884,7 +7891,7 @@
       var emptyRow = document.createElement("tr");
       var emptyTd = document.createElement("td");
       emptyTd.className = "pdf-doc-empty";
-      emptyTd.colSpan = SITE_LOG_ATTENDANCE_COLUMNS.length;
+      emptyTd.colSpan = headerColumns.length;
       emptyTd.textContent = tr("reportShareNoRows");
       emptyRow.appendChild(emptyTd);
       tbody.appendChild(emptyRow);
@@ -7904,11 +7911,18 @@
   }
 
   function buildToolsTableElement(log) {
+    // Same rule as attendance: a tool column (e.g. "משאית") left blank for
+    // this log is dropped entirely rather than shown as an empty column.
+    var activeColumns = SITE_LOG_TOOLS_COLUMNS.filter(function (colKey) {
+      return log && log.tools[colKey] && log.tools[colKey].trim();
+    });
+    var headerColumns = activeColumns.length ? activeColumns : SITE_LOG_TOOLS_COLUMNS;
+
     var table = document.createElement("table");
     table.className = "pdf-doc-table";
     var thead = document.createElement("thead");
     var headRow = document.createElement("tr");
-    SITE_LOG_TOOLS_COLUMNS.forEach(function (colKey) {
+    headerColumns.forEach(function (colKey) {
       var th = document.createElement("th");
       th.textContent = siteLogColLabel(colKey);
       headRow.appendChild(th);
@@ -7917,13 +7931,23 @@
     table.appendChild(thead);
 
     var tbody = document.createElement("tbody");
-    var rowEl = document.createElement("tr");
-    SITE_LOG_TOOLS_COLUMNS.forEach(function (colKey) {
-      var td = document.createElement("td");
-      td.textContent = (log && log.tools[colKey]) || "";
-      rowEl.appendChild(td);
-    });
-    tbody.appendChild(rowEl);
+    if (!activeColumns.length) {
+      var emptyRow = document.createElement("tr");
+      var emptyTd = document.createElement("td");
+      emptyTd.className = "pdf-doc-empty";
+      emptyTd.colSpan = headerColumns.length;
+      emptyTd.textContent = tr("reportShareNoRows");
+      emptyRow.appendChild(emptyTd);
+      tbody.appendChild(emptyRow);
+    } else {
+      var rowEl = document.createElement("tr");
+      activeColumns.forEach(function (colKey) {
+        var td = document.createElement("td");
+        td.textContent = log.tools[colKey];
+        rowEl.appendChild(td);
+      });
+      tbody.appendChild(rowEl);
+    }
     table.appendChild(tbody);
     return table;
   }
