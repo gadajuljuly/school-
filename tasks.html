@@ -4012,6 +4012,8 @@
     render();
   }
 
+  var contactPickerSupported = !!(navigator.contacts && window.ContactsManager);
+
   // --- Project invites: "שיתוף" on a project's tab sends a real invite to
   // one or more contacts instead of just dumping a text summary - each
   // invited phone only gains access after they explicitly approve (see the
@@ -4267,8 +4269,6 @@
     sharedProjectMembersList.appendChild(input);
     if (focusIt) input.focus();
   }
-
-  var contactPickerSupported = !!(navigator.contacts && window.ContactsManager);
 
   function pickContactsForSharedProject() {
     if (!contactPickerSupported) return;
