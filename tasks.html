@@ -3464,7 +3464,7 @@
   function pendingSyncStorageKey() { return "itask-pending-sync:" + SUPABASE_ROW_ID; }
   function markPendingSyncDirty() {
     pendingSyncDirty = true;
-    try { localStorage.setItem(pendingSyncStorageKey(), "1"); } catch (e) {}
+    try { localStorage.setItem(pendingSyncStorageKey(), String(Date.now())); } catch (e) {}
     updateOfflineSyncBadge();
   }
   function clearPendingSyncDirty() {
@@ -3472,8 +3472,27 @@
     try { localStorage.removeItem(pendingSyncStorageKey()); } catch (e) {}
     updateOfflineSyncBadge();
   }
+  // A pending-sync flag from days ago is more likely an abandoned device
+  // whose cached data has since fallen behind (an old browser tab, a phone
+  // that sat unused) than a genuine offline edit still worth pushing -
+  // honoring it would silently overwrite the server with that stale
+  // snapshot, wiping out real work done elsewhere in the meantime. Only
+  // trust the flag while it's recent; a stale one is discarded instead of
+  // acted on. This also self-heals any device already carrying the old
+  // (timestamp-less) "1" marker from before this check existed, since that
+  // parses as an ancient timestamp and is treated as stale too.
+  var PENDING_SYNC_STALE_MS = 24 * 60 * 60 * 1000;
   function hasPendingSyncFromPreviousSession() {
-    try { return localStorage.getItem(pendingSyncStorageKey()) === "1"; } catch (e) { return false; }
+    try {
+      var raw = localStorage.getItem(pendingSyncStorageKey());
+      if (!raw) return false;
+      var ts = parseInt(raw, 10);
+      if (!ts || Date.now() - ts > PENDING_SYNC_STALE_MS) {
+        try { localStorage.removeItem(pendingSyncStorageKey()); } catch (e) {}
+        return false;
+      }
+      return true;
+    } catch (e) { return false; }
   }
   function scheduleSyncRetry() {
     updateOfflineSyncBadge();
@@ -9021,10 +9040,12 @@
     }
   });
 
+  // Ended sheets used to drop out of the tab bar entirely once the viewed
+  // date passed their end date, which made an ended project's tab - and the
+  // long-press "reactivate" action on it - permanently unreachable. Ended
+  // projects now just stay visible (tinted) like any other tab.
   function visibleSheets() {
-    return allSheets().filter(function (s) {
-      return !s.ended || state.viewDate <= s.endedDate;
-    });
+    return allSheets();
   }
 
   function renderSheetsBar() {
@@ -9708,7 +9729,16 @@
       data = instantLocal;
       privateDataSettled = true;
       usedInstantLocal = true;
-      if (applyDailyRollover(data)) saveData();
+      // Only persist this locally for now, never straight to the network:
+      // this instant snapshot is whatever THIS device's cache happened to
+      // hold, which on a rarely-used device can already be behind the
+      // server (e.g. a site log added from another device since this one
+      // was last opened). Pushing it here, before the remote fetch below
+      // even gets a chance to reconcile, would silently overwrite that
+      // newer server data with this stale copy. The reconciliation below
+      // (and its existing editedSinceLastLoad/pending-sync checks) remains
+      // the only path that actually writes to the server.
+      if (applyDailyRollover(data)) saveLocalData();
       applyTaskLinkFromURL();
       render();
     }
