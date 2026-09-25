@@ -4057,6 +4057,12 @@
   var chatInput = document.getElementById("chatInput");
   var activeChatSheetId = null;
   var chatPollTimer = null;
+  // Set right before the render triggered by actually opening the chat, so
+  // that render forces a scroll to the latest message regardless of
+  // whatever stale scrollTop this element was left at from the last time
+  // this same chat was open - consumed (read once, then cleared) by the
+  // very next renderChatMessages() call.
+  var chatForceScrollNext = false;
 
   var CHAT_READ_KEY_PREFIX = "itask-chat-read:";
   var chatReadState = {};
@@ -4160,7 +4166,14 @@
   function renderChatMessages() {
     var sheet = sharedSheets.find(function (s) { return s.id === activeChatSheetId; });
     var messages = (sheet && sheet.messages) || [];
-    var wasNearBottom = !chatMessages.children.length || isChatScrolledNearBottom();
+    // Always jump to the bottom right after actually opening the chat (or
+    // on a genuinely empty container), rather than trusting whatever
+    // scrollTop this element was left at from the last time this chat was
+    // open. Once the chat is actually open, fall back to the real current
+    // scroll position so a background poll refresh doesn't yank someone
+    // reading history.
+    var wasNearBottom = chatForceScrollNext || !chatMessages.children.length || isChatScrolledNearBottom();
+    chatForceScrollNext = false;
     chatMessages.innerHTML = "";
     if (!messages.length) {
       var empty = document.createElement("div");
@@ -4378,8 +4391,13 @@
     if (!sheet || !sheet.shared) return;
     activeChatSheetId = sheet.id;
     chatHeadTitle.textContent = sheet.name;
-    renderChatMessages();
+    chatForceScrollNext = true;
+    // Show the view BEFORE rendering into it: #chatMessages has no layout
+    // at all while chatView is still hidden (display:none), so forcing
+    // scrollTop to the bottom during that render would be a silent no-op -
+    // it only takes effect once the element is actually visible.
     chatView.hidden = false;
+    renderChatMessages();
     markChatRead(sheet);
     markMessagesReadOnServer(sheet.id);
     refreshActiveChat();
@@ -4678,12 +4696,6 @@
   }
   chatReplyCancelBtn.addEventListener("click", cancelChatReply);
 
-  function isChatScrolledNearBottom() {
-    return (chatMessages.scrollHeight - chatMessages.scrollTop - chatMessages.clientHeight) < 120;
-  }
-  function updateChatScrollButton() {
-    chatScrollBottomBtn.hidden = isChatScrolledNearBottom();
-  }
   chatMessages.addEventListener("scroll", updateChatScrollButton);
   chatScrollBottomBtn.addEventListener("click", function () {
     chatMessages.scrollTo({ top: chatMessages.scrollHeight, behavior: "smooth" });
