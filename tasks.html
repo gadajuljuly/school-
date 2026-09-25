@@ -1711,6 +1711,9 @@
     border-bottom-color: var(--paper);
     z-index: 2;
   }
+  .sheet-tab.ended { background: rgba(53, 97, 143, 0.16); }
+  .sheet-tab.ended:hover:not(.active) { background: rgba(53, 97, 143, 0.24); }
+  .sheet-tab.active.ended { background: rgba(53, 97, 143, 0.24); border-bottom-color: rgba(53, 97, 143, 0.24); }
   .sheet-tab input.rename-input {
     border: none;
     background: transparent;
@@ -2409,6 +2412,7 @@
         <button type="button" class="danger-btn" id="sheetActionDeleteBtn" data-i18n="deleteBtn">מחיקה</button>
         <button type="button" id="sheetActionShareBtn" data-i18n="shareBtn">שיתוף</button>
         <button type="button" id="sheetActionEndBtn" data-i18n="sheetActionEndBtn">הפרויקט הסתיים</button>
+        <button type="button" id="sheetActionReactivateBtn" data-i18n="sheetActionReactivateBtn" hidden>הפעלת הפרויקט</button>
       </div>
       <button type="button" class="convert-to-note-btn" id="sheetActionMembersBtn" data-i18n="sheetActionMembersBtn" hidden>ניהול משתתפים</button>
       <button type="button" class="convert-to-note-btn" id="sheetActionMakeSharedBtn" data-i18n="sheetActionMakeSharedBtn" hidden>הפיכה לפרויקט משותף</button>
@@ -2906,6 +2910,7 @@
     reportTasksNoneToAdd: { he: "אין שורות עם תוכן להוספה", en: "There are no rows with content to add", ar: "لا توجد عناصر تحتوي على محتوى لإضافتها", ru: "Нет строк с содержимым для добавления" },
     reportTaskDueSuffix: { he: "עד", en: "due", ar: "حتى", ru: "до" },
     sheetActionEndBtn: { he: "הפרויקט הסתיים", en: "Project finished", ar: "انتهى المشروع", ru: "Проект завершён" },
+    sheetActionReactivateBtn: { he: "הפעלת הפרויקט", en: "Reactivate project", ar: "إعادة تفعيل المشروع", ru: "Возобновить проект" },
     sheetActionMembersBtn: { he: "ניהול משתתפים", en: "Manage members", ar: "إدارة المشاركين", ru: "Управление участниками" },
     sheetActionMakeSharedBtn: { he: "הפיכה לפרויקט משותף", en: "Make into a shared project", ar: "تحويل إلى مشروع مشترك", ru: "Сделать общим проектом" },
     confirmYesBtn: { he: "כן", en: "Yes", ar: "نعم", ru: "Да" },
@@ -3969,6 +3974,15 @@
     });
   }
 
+  function reactivateSheet(id) {
+    var sheet = allSheets().find(function (s) { return s.id === id; });
+    if (!sheet) return;
+    sheet.ended = false;
+    sheet.endedDate = null;
+    saveData();
+    render();
+  }
+
   function buildSheetShareText(sheet) {
     var byDate = {};
     sheet.tasks.forEach(function (t) {
@@ -4193,6 +4207,7 @@
   var sheetActionDeleteBtn = document.getElementById("sheetActionDeleteBtn");
   var sheetActionShareBtn = document.getElementById("sheetActionShareBtn");
   var sheetActionEndBtn = document.getElementById("sheetActionEndBtn");
+  var sheetActionReactivateBtn = document.getElementById("sheetActionReactivateBtn");
   var sheetActionMembersBtn = document.getElementById("sheetActionMembersBtn");
   var sheetActionMakeSharedBtn = document.getElementById("sheetActionMakeSharedBtn");
   var sheetActionLogoBtn = document.getElementById("sheetActionLogoBtn");
@@ -4201,10 +4216,13 @@
 
   function openSheetActionModal(id) {
     pendingSheetActionId = id;
+    var sheet = allSheets().find(function (s) { return s.id === id; });
     var isShared = !!sharedSheets.find(function (s) { return s.id === id; });
     sheetActionDeleteBtn.hidden = isShared;
     sheetActionMembersBtn.hidden = !isShared;
     sheetActionMakeSharedBtn.hidden = isShared;
+    sheetActionEndBtn.hidden = !!(sheet && sheet.ended);
+    sheetActionReactivateBtn.hidden = !(sheet && sheet.ended);
     sheetActionOverlay.hidden = false;
   }
   function closeSheetActionModal() {
@@ -4225,6 +4243,11 @@
     var id = pendingSheetActionId;
     closeSheetActionModal();
     endSheet(id);
+  });
+  sheetActionReactivateBtn.addEventListener("click", function () {
+    var id = pendingSheetActionId;
+    closeSheetActionModal();
+    reactivateSheet(id);
   });
   sheetActionMembersBtn.addEventListener("click", function () {
     var id = pendingSheetActionId;
@@ -8798,7 +8821,7 @@
     sheetsBar.innerHTML = "";
     visibleSheets().forEach(function (sheet) {
       var tab = document.createElement("div");
-      tab.className = "sheet-tab" + (sheet.id === data.activeSheetId ? " active" : "");
+      tab.className = "sheet-tab" + (sheet.id === data.activeSheetId ? " active" : "") + (sheet.ended ? " ended" : "");
       tab.dataset.sheetId = sheet.id;
 
       if (state.renamingSheetId === sheet.id) {
