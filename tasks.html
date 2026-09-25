@@ -440,17 +440,13 @@
     flex-direction: column;
     gap: 3px;
     background-color: var(--paper);
-    background-image:
-      radial-gradient(var(--rule) 1px, transparent 1px),
-      linear-gradient(160deg, color-mix(in srgb, var(--accent) 6%, transparent), transparent 55%);
-    background-size: 20px 20px, auto;
-    background-position: -8px -8px, 0 0;
+    background-image: linear-gradient(160deg, color-mix(in srgb, var(--accent) 6%, transparent), transparent 55%);
   }
   .chat-day-sep {
     align-self: center;
     background: var(--paper-alt);
     color: var(--ink-muted);
-    font-size: 0.72rem;
+    font-size: 0.78rem;
     font-weight: 600;
     padding: 4px 12px;
     border-radius: 10px;
@@ -460,7 +456,7 @@
   .chat-system-msg {
     align-self: center;
     color: var(--ink-muted);
-    font-size: 0.72rem;
+    font-size: 0.78rem;
     font-style: italic;
     text-align: center;
     padding: 3px 12px;
@@ -469,12 +465,12 @@
   }
   .chat-bubble {
     max-width: 78%;
-    padding: 6px 9px 7px;
+    padding: 7px 10px 8px;
     border-radius: 10px;
     background: var(--paper-alt);
     color: var(--ink);
-    font-size: 0.92rem;
-    line-height: 1.38;
+    font-size: 1rem;
+    line-height: 1.42;
     word-break: break-word;
     position: relative;
     margin: 1px 8px 2px;
@@ -508,7 +504,7 @@
     clip-path: polygon(0 0, 100% 50%, 0 100%);
   }
   .chat-bubble-sender {
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     font-weight: 800;
     color: var(--sender-color, var(--accent));
     margin-bottom: 3px;
@@ -517,7 +513,7 @@
   .chat-bubble-mine .chat-bubble-sender { color: inherit; opacity: 0.85; }
   .chat-bubble-text { white-space: pre-wrap; }
   .chat-bubble-time {
-    font-size: 0.66rem;
+    font-size: 0.7rem;
     opacity: 0.65;
     margin-top: 2px;
     text-align: end;
