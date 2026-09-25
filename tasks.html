@@ -1183,6 +1183,9 @@
     font-size: 0.8rem;
   }
   .pdf-doc-table td.pdf-doc-col-task { text-align: start; }
+  .pdf-doc-table-half { font-size: 0.425rem; }
+  .pdf-doc-table-half th, .pdf-doc-table-half td { padding: 4px 3px; }
+  .pdf-doc-table-half th { font-size: 0.4rem; }
   .pdf-doc-empty { color: #8a8471; padding: 18px; }
   .pdf-doc-periodic-section { margin-top: 30px; border-top: 3px dashed #cfc8b4; }
   .pdf-doc-footer {
@@ -7830,9 +7833,37 @@
     return tr("siteLogCol" + colKey.charAt(0).toUpperCase() + colKey.slice(1));
   }
 
+  // Row/category-level "is this actually filled in" checks, shared by both
+  // the standalone per-category reports and the combined general report -
+  // an empty row (added via "+" but never filled in) or a wholly-untouched
+  // category should never show up in either.
+  function siteLogAttendanceIsEmpty(log) {
+    if (!log) return true;
+    return SITE_LOG_ATTENDANCE_COLUMNS.every(function (col) {
+      return !((log.attendance && log.attendance[col]) || []).some(function (p) { return p && p.name && p.name.trim(); });
+    });
+  }
+  function siteLogToolsIsEmpty(log) {
+    if (!log) return true;
+    return SITE_LOG_TOOLS_COLUMNS.every(function (col) {
+      return !(log.tools && log.tools[col] && log.tools[col].trim());
+    });
+  }
+  function filledContractors(log) {
+    return ((log && log.contractors) || []).filter(function (c) { return c && c.name && c.name.trim(); });
+  }
+  function filledWorks(log) {
+    return ((log && log.works) || []).filter(function (w) { return w && ((w.text && w.text.trim()) || w.attachment); });
+  }
+  function filledProcurement(log) {
+    return ((log && log.procurement) || []).filter(function (r) {
+      return r && ((r.item && r.item.trim()) || (r.quantity && r.quantity.trim()) || (r.supplier && r.supplier.trim()));
+    });
+  }
+
   function buildAttendanceTableElement(log) {
     var colLists = SITE_LOG_ATTENDANCE_COLUMNS.map(function (colKey) {
-      return (log && log.attendance[colKey]) || [];
+      return ((log && log.attendance[colKey]) || []).filter(function (p) { return p && p.name && p.name.trim(); });
     });
     var maxRows = Math.max.apply(null, colLists.map(function (l) { return l.length; }));
 
@@ -7897,9 +7928,9 @@
     return table;
   }
 
-  function buildProcurementTableElement(log) {
+  function buildProcurementTableElement(log, compact) {
     var table = document.createElement("table");
-    table.className = "pdf-doc-table";
+    table.className = compact ? "pdf-doc-table pdf-doc-table-half" : "pdf-doc-table";
     var thead = document.createElement("thead");
     var headRow = document.createElement("tr");
     [tr("siteLogColItem"), tr("siteLogColQuantity"), tr("siteLogColSupplier")].forEach(function (label) {
@@ -7911,7 +7942,7 @@
     table.appendChild(thead);
 
     var tbody = document.createElement("tbody");
-    var rows = (log && log.procurement) || [];
+    var rows = filledProcurement(log);
     if (!rows.length) {
       var emptyRow = document.createElement("tr");
       var emptyTd = document.createElement("td");
@@ -8058,53 +8089,47 @@
     dateEl.textContent = isoToFullDisplay(log.date) + " - " + isoToDayName(log.date);
     doc.appendChild(dateEl);
 
-    var attendanceHeading = document.createElement("div");
-    attendanceHeading.className = "pdf-doc-section-heading";
-    attendanceHeading.textContent = tr("siteLogAttendance");
-    doc.appendChild(attendanceHeading);
-    doc.appendChild(buildAttendanceTableElement(log));
+    if (!siteLogAttendanceIsEmpty(log)) {
+      var attendanceHeading = document.createElement("div");
+      attendanceHeading.className = "pdf-doc-section-heading";
+      attendanceHeading.textContent = tr("siteLogAttendance");
+      doc.appendChild(attendanceHeading);
+      doc.appendChild(buildAttendanceTableElement(log));
+    }
 
-    var toolsHeading = document.createElement("div");
-    toolsHeading.className = "pdf-doc-section-heading";
-    toolsHeading.textContent = tr("siteLogTools");
-    doc.appendChild(toolsHeading);
-    doc.appendChild(buildToolsTableElement(log));
+    if (!siteLogToolsIsEmpty(log)) {
+      var toolsHeading = document.createElement("div");
+      toolsHeading.className = "pdf-doc-section-heading";
+      toolsHeading.textContent = tr("siteLogTools");
+      doc.appendChild(toolsHeading);
+      doc.appendChild(buildToolsTableElement(log));
+    }
 
-    var contractorsHeading = document.createElement("div");
-    contractorsHeading.className = "pdf-doc-section-heading";
-    contractorsHeading.textContent = tr("siteLogContractors");
-    doc.appendChild(contractorsHeading);
-    var contractorsList = document.createElement("div");
-    contractorsList.className = "pdf-doc-contractors-list";
-    var contractors = (log && log.contractors) || [];
-    if (!contractors.length) {
-      var emptyC = document.createElement("div");
-      emptyC.className = "pdf-doc-empty";
-      emptyC.textContent = tr("reportShareNoRows");
-      contractorsList.appendChild(emptyC);
-    } else {
+    var contractors = filledContractors(log);
+    if (contractors.length) {
+      var contractorsHeading = document.createElement("div");
+      contractorsHeading.className = "pdf-doc-section-heading";
+      contractorsHeading.textContent = tr("siteLogContractors");
+      doc.appendChild(contractorsHeading);
+      var contractorsList = document.createElement("div");
+      contractorsList.className = "pdf-doc-contractors-list";
       contractors.forEach(function (c) {
         var line = document.createElement("div");
         line.className = "pdf-doc-contractor-line";
         line.textContent = c.name;
         contractorsList.appendChild(line);
       });
+      doc.appendChild(contractorsList);
     }
-    doc.appendChild(contractorsList);
 
-    var worksFrame = document.createElement("div");
-    worksFrame.className = "pdf-doc-works-frame";
-    var worksTitle = document.createElement("div");
-    worksTitle.className = "pdf-doc-works-frame-title";
-    worksTitle.textContent = tr("siteLogWorksTourTitle");
-    worksFrame.appendChild(worksTitle);
-    var works = (log && log.works) || [];
-    if (!works.length) {
-      var emptyW = document.createElement("div");
-      emptyW.className = "pdf-doc-empty";
-      emptyW.textContent = tr("reportShareNoRows");
-      worksFrame.appendChild(emptyW);
-    } else {
+    var works = filledWorks(log);
+    if (works.length) {
+      var worksFrame = document.createElement("div");
+      worksFrame.className = "pdf-doc-works-frame";
+      var worksTitle = document.createElement("div");
+      worksTitle.className = "pdf-doc-works-frame-title";
+      worksTitle.textContent = tr("siteLogWorksTourTitle");
+      worksFrame.appendChild(worksTitle);
       works.forEach(function (w) {
         var rowEl = document.createElement("div");
         rowEl.className = "pdf-doc-work-row";
@@ -8120,14 +8145,16 @@
         }
         worksFrame.appendChild(rowEl);
       });
+      doc.appendChild(worksFrame);
     }
-    doc.appendChild(worksFrame);
 
-    var procurementHeading = document.createElement("div");
-    procurementHeading.className = "pdf-doc-section-heading";
-    procurementHeading.textContent = tr("siteLogProcurement");
-    doc.appendChild(procurementHeading);
-    doc.appendChild(buildProcurementTableElement(log));
+    if (filledProcurement(log).length) {
+      var procurementHeading = document.createElement("div");
+      procurementHeading.className = "pdf-doc-section-heading";
+      procurementHeading.textContent = tr("siteLogProcurement");
+      doc.appendChild(procurementHeading);
+      doc.appendChild(buildProcurementTableElement(log, true));
+    }
 
     var footerEl = document.createElement("div");
     footerEl.className = "pdf-doc-footer";
