@@ -1186,6 +1186,9 @@
   .pdf-doc-table-half { font-size: 0.425rem; }
   .pdf-doc-table-half th, .pdf-doc-table-half td { padding: 4px 3px; }
   .pdf-doc-table-half th { font-size: 0.4rem; }
+  .pdf-doc-table-procurement-general { font-size: 0.32rem; }
+  .pdf-doc-table-procurement-general th, .pdf-doc-table-procurement-general td { padding: 3px 2px; }
+  .pdf-doc-table-procurement-general th { font-size: 0.3rem; }
   .pdf-doc-empty { color: #8a8471; padding: 18px; }
   .pdf-doc-periodic-section { margin-top: 30px; border-top: 3px dashed #cfc8b4; }
   .pdf-doc-footer {
@@ -7954,7 +7957,7 @@
 
   function buildProcurementTableElement(log, compact) {
     var table = document.createElement("table");
-    table.className = compact ? "pdf-doc-table pdf-doc-table-half" : "pdf-doc-table";
+    table.className = compact ? "pdf-doc-table pdf-doc-table-procurement-general" : "pdf-doc-table";
     var thead = document.createElement("thead");
     var headRow = document.createElement("tr");
     [tr("siteLogColItem"), tr("siteLogColQuantity"), tr("siteLogColSupplier")].forEach(function (label) {
