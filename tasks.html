@@ -3134,6 +3134,7 @@
     taskDoneTransferToLogMsg: { he: "להעביר את המשימה ליומן העבודה?", en: "Transfer the task to the work log?", ar: "هل تريد نقل المهمة إلى سجل العمل؟", ru: "Перенести задачу в рабочий журнал?" },
     taskDoneLogPrefix: { he: "בוצע", en: "Done", ar: "تم", ru: "Выполнено" },
     taskTransferredToLogMsg: { he: "המשימה נוספה ליומן העבודה", en: "The task was added to the work log", ar: "تمت إضافة المهمة إلى سجل العمل", ru: "Задача добавлена в рабочий журнал" },
+    taskRemovedFromLogMsg: { he: "המשימה הוסרה מיומן העבודה", en: "The task was removed from the work log", ar: "تمت إزالة المهمة من سجل العمل", ru: "Задача удалена из рабочего журнала" },
     reportCloseBtn: { he: "סגירת הדוח", en: "Close report", ar: "إغلاق التقرير", ru: "Закрыть отчёт" }
   };
 
@@ -3289,6 +3290,7 @@
         if (typeof t.urgent !== "boolean") {
           t.urgent = t.priority === "high";
         }
+        if (!t.logEntry || typeof t.logEntry !== "object") t.logEntry = null;
         delete t.done;
         delete t.priority;
       });
@@ -9048,15 +9050,33 @@
         askConfirm(tr("taskDoneTransferToLogMsg"), function () {
           transferTaskToSiteLogWorks(sheet, t);
         });
+      } else if (wasDone && t.status !== 2 && t.type === "task" && t.logEntry) {
+        removeTaskFromSiteLogWorks(sheet, t);
       }
     }
   }
 
   function transferTaskToSiteLogWorks(sheet, task) {
     var log = findOrCreateSiteLog(sheet, task.date);
-    log.works.push({ id: uid(), text: tr("taskDoneLogPrefix") + " " + task.text, attachment: null });
+    var entry = { id: uid(), text: tr("taskDoneLogPrefix") + " " + task.text, attachment: null };
+    log.works.push(entry);
+    task.logEntry = { date: task.date, entryId: entry.id };
     saveData();
     showToast(tr("taskTransferredToLogMsg"));
+  }
+
+  // Undoes transferTaskToSiteLogWorks() above - marking the task not-done
+  // again after it was auto-copied into the day's work log removes that
+  // same log entry, rather than leaving a stale "בוצע ..." row behind for
+  // work that (per the task itself) never actually got done.
+  function removeTaskFromSiteLogWorks(sheet, task) {
+    var log = findSiteLog(sheet, task.logEntry.date);
+    if (log) {
+      log.works = log.works.filter(function (w) { return w.id !== task.logEntry.entryId; });
+    }
+    task.logEntry = null;
+    saveData();
+    showToast(tr("taskRemovedFromLogMsg"));
   }
 
   function removeTask(id) {
