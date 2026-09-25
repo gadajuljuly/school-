@@ -7861,7 +7861,7 @@
     });
   }
 
-  function buildAttendanceTableElement(log) {
+  function buildAttendanceTableElement(log, compact) {
     // A column (e.g. "מנהל עבודה") that nobody was assigned to for this log
     // is dropped entirely, not shown as a blank column - same rule as an
     // empty row elsewhere: nothing filled in means nothing shown.
@@ -7875,7 +7875,7 @@
     var maxRows = colLists.length ? Math.max.apply(null, colLists.map(function (l) { return l.length; })) : 0;
 
     var table = document.createElement("table");
-    table.className = "pdf-doc-table";
+    table.className = compact ? "pdf-doc-table pdf-doc-table-half" : "pdf-doc-table";
     var thead = document.createElement("thead");
     var headRow = document.createElement("tr");
     headerColumns.forEach(function (colKey) {
@@ -7910,7 +7910,7 @@
     return table;
   }
 
-  function buildToolsTableElement(log) {
+  function buildToolsTableElement(log, compact) {
     // Same rule as attendance: a tool column (e.g. "משאית") left blank for
     // this log is dropped entirely rather than shown as an empty column.
     var activeColumns = SITE_LOG_TOOLS_COLUMNS.filter(function (colKey) {
@@ -7919,7 +7919,7 @@
     var headerColumns = activeColumns.length ? activeColumns : SITE_LOG_TOOLS_COLUMNS;
 
     var table = document.createElement("table");
-    table.className = "pdf-doc-table";
+    table.className = compact ? "pdf-doc-table pdf-doc-table-half" : "pdf-doc-table";
     var thead = document.createElement("thead");
     var headRow = document.createElement("tr");
     headerColumns.forEach(function (colKey) {
@@ -8118,7 +8118,7 @@
       attendanceHeading.className = "pdf-doc-section-heading";
       attendanceHeading.textContent = tr("siteLogAttendance");
       doc.appendChild(attendanceHeading);
-      doc.appendChild(buildAttendanceTableElement(log));
+      doc.appendChild(buildAttendanceTableElement(log, true));
     }
 
     if (!siteLogToolsIsEmpty(log)) {
@@ -8126,7 +8126,7 @@
       toolsHeading.className = "pdf-doc-section-heading";
       toolsHeading.textContent = tr("siteLogTools");
       doc.appendChild(toolsHeading);
-      doc.appendChild(buildToolsTableElement(log));
+      doc.appendChild(buildToolsTableElement(log, true));
     }
 
     var contractors = filledContractors(log);
