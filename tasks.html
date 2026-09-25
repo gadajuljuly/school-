@@ -624,6 +624,49 @@
     font-size: 0.85rem;
     margin-top: 20px;
   }
+  .logo-picker-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+    gap: 10px;
+    max-height: 260px;
+    overflow-y: auto;
+    margin: 14px 0;
+  }
+  .logo-picker-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 10px;
+    border: 2px solid transparent;
+  }
+  .logo-picker-item.selected { border-color: var(--accent); background: var(--paper-alt); }
+  .logo-picker-thumb {
+    width: 56px;
+    height: 56px;
+    border-radius: 8px;
+    background: var(--paper-alt);
+    border: 1px solid var(--rule);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    font-size: 1.3rem;
+    color: var(--ink-muted);
+  }
+  .logo-picker-thumb img { width: 100%; height: 100%; object-fit: contain; }
+  .logo-picker-name {
+    font-size: 0.62rem;
+    color: var(--ink);
+    text-align: center;
+    max-width: 68px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .logo-picker-empty { color: var(--ink-muted); font-size: 0.85rem; text-align: center; padding: 16px 0 6px; }
   #chatForm {
     height: auto;
     padding: 8px 10px;
@@ -937,6 +980,7 @@
     word-break: break-word;
   }
   .site-log-preview-wrap .pdf-doc-title { font-size: 1.2rem; }
+  .site-log-preview-wrap .pdf-doc-logo { width: 40px; height: 40px; }
   .site-log-preview-wrap .pdf-doc-work-row-image { width: 44px; height: 44px; }
   .site-log-copy-prev-btn {
     margin: 10px 14px 14px;
@@ -1165,6 +1209,16 @@
     padding-bottom: 14px;
     border-bottom: 3px solid #35618f;
   }
+  .pdf-doc-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 0 0 22px;
+    padding-bottom: 14px;
+    border-bottom: 3px solid #35618f;
+  }
+  .pdf-doc-header .pdf-doc-title { flex: 1; margin: 0; padding: 0; border: none; }
+  .pdf-doc-logo { width: 56px; height: 56px; object-fit: contain; flex-shrink: 0; }
   .pdf-doc-info-title { font-weight: 700; font-size: 1.05rem; text-align: center; margin-bottom: 4px; }
   .pdf-doc-info-date { color: #6b6558; font-size: 0.95rem; text-align: center; margin-bottom: 8px; }
   .pdf-doc-participants { font-size: 0.95rem; margin-bottom: 22px; color: #4a463c; }
@@ -1736,6 +1790,20 @@
     opacity: 0.55;
   }
 
+  .sheet-title-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    direction: ltr;
+  }
+  .sheet-title-logo {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
   .sheet-title {
     text-align: center;
     font-weight: 700;
@@ -2262,6 +2330,7 @@
           <div class="menu-section">
             <div class="menu-label" data-i18n="menuLabelApp">האפליקציה</div>
             <button id="shareAppBtn" data-i18n="shareAppBtn">שיתוף קישור להתקנה</button>
+            <button id="addLogoBtn" data-i18n="addLogoBtn">הוספת לוגו</button>
           </div>
           <div class="menu-section">
             <div class="menu-label" data-i18n="menuLabelLanguage">שפה</div>
@@ -2289,7 +2358,10 @@
     </div>
 
     <div class="ruled-body">
-      <div class="sheet-title" id="sheetTitle"></div>
+      <div class="sheet-title-wrap" id="sheetTitleWrap">
+        <img class="sheet-title-logo" id="sheetTitleLogo" alt="" hidden>
+        <div class="sheet-title" id="sheetTitle"></div>
+      </div>
       <ol class="task-list" id="taskList"></ol>
       <div class="empty-state" id="emptyState" data-i18n="emptyStateToday" style="display:none;">אין שורות בפרויקט הזה עדיין</div>
       <form class="add-row" id="addForm">
@@ -2731,6 +2803,17 @@
 
   <input type="file" accept="image/*" capture="environment" id="reportImageCameraInput" style="display:none">
   <input type="file" accept="image/*" id="reportImageGalleryInput" style="display:none">
+  <input type="file" accept="image/*" id="logoFileInput" style="display:none">
+
+  <div class="modal-overlay" id="logoPickerOverlay" hidden>
+    <div class="modal-box" role="alertdialog" aria-modal="true">
+      <p class="modal-message" data-i18n="chooseLogoTitle">בחר לוגו</p>
+      <div class="logo-picker-grid" id="logoPickerGrid"></div>
+      <div class="modal-actions">
+        <button type="button" class="modal-btn modal-btn-no" id="logoPickerCancelBtn" data-i18n="cancelBtn">ביטול</button>
+      </div>
+    </div>
+  </div>
 
   <button type="button" class="install-fab" id="installBtn" data-i18n="installFab" hidden>&#128241; התקן אפליקציה</button>
 
@@ -2792,6 +2875,12 @@
     reminderEvery4Hours: { he: "כל 4 שעות", en: "Every 4 hours", ar: "كل 4 ساعات", ru: "Каждые 4 часа" },
     menuLabelApp: { he: "האפליקציה", en: "App", ar: "التطبيق", ru: "Приложение" },
     shareAppBtn: { he: "שיתוף קישור להתקנה", en: "Share install link", ar: "مشاركة رابط التثبيت", ru: "Поделиться ссылкой на установку" },
+    addLogoBtn: { he: "הוספת לוגו", en: "Add logo", ar: "إضافة شعار", ru: "Добавить логотип" },
+    chooseLogoTitle: { he: "בחר לוגו", en: "Choose logo", ar: "اختر شعارًا", ru: "Выберите логотип" },
+    logoNoneOption: { he: "ללא לוגו", en: "No logo", ar: "بدون شعار", ru: "Без логотипа" },
+    logoPickerEmptyMsg: { he: "אין לוגואים שמורים עדיין - ניתן להוסיף דרך התפריט העליון", en: "No saved logos yet - add one from the top menu", ar: "لا توجد شعارات محفوظة بعد - يمكن إضافة واحد من القائمة العلوية", ru: "Пока нет сохранённых логотипов - добавьте через верхнее меню" },
+    logoAddedToast: { he: "הלוגו נוסף בהצלחה", en: "Logo added successfully", ar: "تمت إضافة الشعار بنجاح", ru: "Логотип успешно добавлен" },
+    logoInvalidFileMsg: { he: "יש לבחור קובץ תמונה תקין", en: "Please choose a valid image file", ar: "الرجاء اختيار ملف صورة صالح", ru: "Пожалуйста, выберите корректный файл изображения" },
     menuLabelLanguage: { he: "שפה", en: "Language", ar: "اللغة", ru: "Язык" },
     searchBtnTitle: { he: "חיפוש משימות", en: "Search tasks", ar: "البحث عن المهام", ru: "Поиск задач" },
     searchInputPlaceholder: { he: "חיפוש משימות בכל הפרויקטים...", en: "Search tasks across all projects...", ar: "ابحث عن المهام في جميع المشاريع...", ru: "Поиск задач по всем проектам..." },
@@ -3151,8 +3240,9 @@
   function defaultData() {
     var sheetId = uid();
     return {
-      sheets: [{ id: sheetId, name: tr("projectWord") + " 1", tasks: [], reports: [], files: [], siteLogs: [] }],
-      activeSheetId: sheetId
+      sheets: [{ id: sheetId, name: tr("projectWord") + " 1", tasks: [], reports: [], files: [], siteLogs: [], logoId: null }],
+      activeSheetId: sheetId,
+      logos: []
     };
   }
 
@@ -3199,6 +3289,7 @@
       if (!Array.isArray(sheet.reports)) sheet.reports = [];
       if (!Array.isArray(sheet.files)) sheet.files = [];
       if (!Array.isArray(sheet.siteLogs)) sheet.siteLogs = [];
+      if (typeof sheet.logoId !== "string") sheet.logoId = null;
       sheet.siteLogs.forEach(normalizeSiteLog);
       sheet.reports.forEach(function (report) {
         if (!Array.isArray(report.rows)) report.rows = [];
@@ -3210,6 +3301,11 @@
           if (typeof row.image !== "string") row.image = null;
         });
       });
+    });
+    if (!Array.isArray(parsed.logos)) parsed.logos = [];
+    parsed.logos.forEach(function (logo) {
+      if (typeof logo.name !== "string") logo.name = "";
+      if (typeof logo.dataUrl !== "string") logo.dataUrl = "";
     });
     delete parsed.reports;
     return parsed;
@@ -3307,7 +3403,7 @@
         .upsert({
           id: sheet.id,
           name: sheet.name,
-          data: { tasks: sheet.tasks, reports: sheet.reports, files: [], folders: sheet.folders || null, siteLogs: sheet.siteLogs || [], ended: sheet.ended || false, endedDate: sheet.endedDate || null },
+          data: { tasks: sheet.tasks, reports: sheet.reports, files: [], folders: sheet.folders || null, siteLogs: sheet.siteLogs || [], ended: sheet.ended || false, endedDate: sheet.endedDate || null, logoId: sheet.logoId || null },
           members: sheet.members,
           member_names: sheet.memberNames || {},
           updated_at: new Date().toISOString()
@@ -4056,6 +4152,7 @@
           folders: privateSheet.folders || null,
           ended: privateSheet.ended || false,
           endedDate: privateSheet.endedDate || null,
+          logoId: privateSheet.logoId || null,
           members: members,
           memberNames: pickedNames,
           messages: []
@@ -4074,6 +4171,7 @@
         files: [],
         ended: false,
         endedDate: null,
+        logoId: null,
         members: members,
         memberNames: pickedNames,
         messages: []
@@ -6077,6 +6175,173 @@
     }
   });
 
+  var addLogoBtn = document.getElementById("addLogoBtn");
+  var logoFileInput = document.getElementById("logoFileInput");
+  var sheetTitleWrap = document.getElementById("sheetTitleWrap");
+  var sheetTitleLogo = document.getElementById("sheetTitleLogo");
+  var logoPickerOverlay = document.getElementById("logoPickerOverlay");
+  var logoPickerGrid = document.getElementById("logoPickerGrid");
+  var logoPickerCancelBtn = document.getElementById("logoPickerCancelBtn");
+
+  addLogoBtn.addEventListener("click", function () {
+    state.menuOpen = false;
+    render();
+    logoFileInput.value = "";
+    logoFileInput.click();
+  });
+
+  // Company logos can be large source images (a marketing PNG straight off
+  // someone's phone) - they're stored inline as data URLs in app_state's
+  // JSON (no per-sheet "owning folder" to hang a Storage RLS policy off,
+  // since a logo is shared across all of a user's projects), so downscale
+  // through a canvas first or a handful of logo uploads would bloat that
+  // JSON blob into the megabytes.
+  var LOGO_MAX_DIMENSION = 300;
+  function resizeImageFileToDataUrl(file) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onerror = reject;
+      reader.onload = function () {
+        var img = new Image();
+        img.onerror = reject;
+        img.onload = function () {
+          var scale = Math.min(1, LOGO_MAX_DIMENSION / Math.max(img.width, img.height));
+          var w = Math.max(1, Math.round(img.width * scale));
+          var h = Math.max(1, Math.round(img.height * scale));
+          var canvas = document.createElement("canvas");
+          canvas.width = w;
+          canvas.height = h;
+          canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL("image/png"));
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  logoFileInput.addEventListener("change", function () {
+    var file = logoFileInput.files && logoFileInput.files[0];
+    if (!file) return;
+    if (file.type.indexOf("image/") !== 0) { alert(tr("logoInvalidFileMsg")); return; }
+    resizeImageFileToDataUrl(file).then(function (dataUrl) {
+      data.logos.push({
+        id: uid(),
+        name: file.name.replace(/\.[^.]+$/, "") || tr("chooseLogoTitle"),
+        dataUrl: dataUrl,
+        addedAt: Date.now()
+      });
+      saveData();
+      showToast(tr("logoAddedToast"));
+    }).catch(function () {
+      alert(tr("logoInvalidFileMsg"));
+    });
+  });
+
+  function renderSheetTitleLogo() {
+    var sheet = activeSheet();
+    var logo = sheet ? findLogo(sheet.logoId) : null;
+    if (logo) {
+      sheetTitleLogo.src = logo.dataUrl;
+      sheetTitleLogo.hidden = false;
+    } else {
+      sheetTitleLogo.src = "";
+      sheetTitleLogo.hidden = true;
+    }
+  }
+
+  function openLogoPickerModal() {
+    var sheet = activeSheet();
+    if (!sheet) return;
+    logoPickerGrid.innerHTML = "";
+    var noneItem = document.createElement("div");
+    noneItem.className = "logo-picker-item" + (!sheet.logoId ? " selected" : "");
+    var noneThumb = document.createElement("div");
+    noneThumb.className = "logo-picker-thumb";
+    noneThumb.textContent = "✕";
+    noneItem.appendChild(noneThumb);
+    var noneName = document.createElement("div");
+    noneName.className = "logo-picker-name";
+    noneName.textContent = tr("logoNoneOption");
+    noneItem.appendChild(noneName);
+    noneItem.addEventListener("click", function () {
+      sheet.logoId = null;
+      saveData();
+      renderSheetTitleLogo();
+      closeLogoPickerModal();
+    });
+    logoPickerGrid.appendChild(noneItem);
+
+    (data.logos || []).forEach(function (logo) {
+      var item = document.createElement("div");
+      item.className = "logo-picker-item" + (sheet.logoId === logo.id ? " selected" : "");
+      var thumb = document.createElement("div");
+      thumb.className = "logo-picker-thumb";
+      var img = document.createElement("img");
+      img.src = logo.dataUrl;
+      img.alt = "";
+      thumb.appendChild(img);
+      item.appendChild(thumb);
+      var nameEl = document.createElement("div");
+      nameEl.className = "logo-picker-name";
+      nameEl.textContent = logo.name;
+      item.appendChild(nameEl);
+      item.addEventListener("click", function () {
+        sheet.logoId = logo.id;
+        saveData();
+        renderSheetTitleLogo();
+        closeLogoPickerModal();
+      });
+      logoPickerGrid.appendChild(item);
+    });
+
+    if (!(data.logos || []).length) {
+      var emptyMsg = document.createElement("div");
+      emptyMsg.className = "logo-picker-empty";
+      emptyMsg.textContent = tr("logoPickerEmptyMsg");
+      logoPickerGrid.appendChild(emptyMsg);
+    }
+
+    logoPickerOverlay.hidden = false;
+  }
+  function closeLogoPickerModal() {
+    logoPickerOverlay.hidden = true;
+  }
+  logoPickerCancelBtn.addEventListener("click", closeLogoPickerModal);
+  logoPickerOverlay.addEventListener("click", function (e) {
+    if (e.target === logoPickerOverlay) closeLogoPickerModal();
+  });
+
+  (function () {
+    var sheetTitleLongPressFired = false;
+    var sheetTitlePressStartX = 0, sheetTitlePressStartY = 0;
+    var startSheetTitlePress = function (e) {
+      var point = e.touches ? e.touches[0] : e;
+      sheetTitlePressStartX = point.clientX;
+      sheetTitlePressStartY = point.clientY;
+      sheetTitleLongPressFired = false;
+      clearTimeout(longPressTimer);
+      longPressTimer = setTimeout(function () {
+        sheetTitleLongPressFired = true;
+        openLogoPickerModal();
+      }, 600);
+    };
+    var cancelSheetTitlePress = function () { clearTimeout(longPressTimer); };
+    var moveSheetTitlePress = function (e) {
+      var point = e.touches ? e.touches[0] : e;
+      if (Math.abs(point.clientX - sheetTitlePressStartX) > 10 || Math.abs(point.clientY - sheetTitlePressStartY) > 10) {
+        cancelSheetTitlePress();
+      }
+    };
+    sheetTitleWrap.addEventListener("mousedown", startSheetTitlePress);
+    sheetTitleWrap.addEventListener("mouseup", cancelSheetTitlePress);
+    sheetTitleWrap.addEventListener("mouseleave", cancelSheetTitlePress);
+    sheetTitleWrap.addEventListener("mousemove", moveSheetTitlePress);
+    sheetTitleWrap.addEventListener("touchstart", startSheetTitlePress, { passive: true });
+    sheetTitleWrap.addEventListener("touchend", cancelSheetTitlePress);
+    sheetTitleWrap.addEventListener("touchmove", moveSheetTitlePress, { passive: true });
+  })();
+
   var sheetReportsList = document.getElementById("sheetReportsList");
   var tasksFabBtn = document.getElementById("tasksFabBtn");
 
@@ -6185,6 +6450,35 @@
       if (found) return found;
     }
     return null;
+  }
+
+  function findSheetForReport(report) {
+    var all = allSheets();
+    for (var i = 0; i < all.length; i++) {
+      if ((all[i].reports || []).indexOf(report) !== -1) return all[i];
+    }
+    return null;
+  }
+
+  function findLogo(logoId) {
+    if (!logoId) return null;
+    return (data.logos || []).find(function (l) { return l.id === logoId; }) || null;
+  }
+
+  function buildPdfDocTitleElement(sheet, titleText) {
+    var titleEl = document.createElement("div");
+    titleEl.className = "pdf-doc-title";
+    titleEl.textContent = titleText;
+    var logo = sheet ? findLogo(sheet.logoId) : null;
+    if (!logo) return titleEl;
+    var header = document.createElement("div");
+    header.className = "pdf-doc-header";
+    var img = document.createElement("img");
+    img.className = "pdf-doc-logo";
+    img.src = logo.dataUrl;
+    header.appendChild(img);
+    header.appendChild(titleEl);
+    return header;
   }
 
   function findSiteLog(sheet, dateISO) {
@@ -7729,10 +8023,7 @@
     doc.className = "pdf-doc";
     doc.dir = RTL_LANGS[currentLang] ? "rtl" : "ltr";
 
-    var titleEl = document.createElement("div");
-    titleEl.className = "pdf-doc-title";
-    titleEl.textContent = pdfTitle;
-    doc.appendChild(titleEl);
+    doc.appendChild(buildPdfDocTitleElement(findSheetForReport(report), pdfTitle));
 
     var infoTitle = document.createElement("div");
     infoTitle.className = "pdf-doc-info-title";
@@ -7999,10 +8290,7 @@
     doc.dir = RTL_LANGS[currentLang] ? "rtl" : "ltr";
 
     var sheet = activeSheet();
-    var projectTitle = document.createElement("div");
-    projectTitle.className = "pdf-doc-title";
-    projectTitle.textContent = sheet.name;
-    doc.appendChild(projectTitle);
+    doc.appendChild(buildPdfDocTitleElement(sheet, sheet.name));
 
     var categoryTitle = document.createElement("div");
     categoryTitle.className = "pdf-doc-info-title";
@@ -8031,10 +8319,7 @@
     doc.dir = RTL_LANGS[currentLang] ? "rtl" : "ltr";
 
     var sheet = activeSheet();
-    var projectTitle = document.createElement("div");
-    projectTitle.className = "pdf-doc-title";
-    projectTitle.textContent = sheet.name;
-    doc.appendChild(projectTitle);
+    doc.appendChild(buildPdfDocTitleElement(sheet, sheet.name));
 
     var categoryTitle = document.createElement("div");
     categoryTitle.className = "pdf-doc-info-title";
@@ -8063,10 +8348,7 @@
     doc.dir = RTL_LANGS[currentLang] ? "rtl" : "ltr";
 
     var sheet = activeSheet();
-    var projectTitle = document.createElement("div");
-    projectTitle.className = "pdf-doc-title";
-    projectTitle.textContent = sheet.name;
-    doc.appendChild(projectTitle);
+    doc.appendChild(buildPdfDocTitleElement(sheet, sheet.name));
 
     var categoryTitle = document.createElement("div");
     categoryTitle.className = "pdf-doc-info-title";
@@ -8101,10 +8383,7 @@
     doc.className = "pdf-doc";
     doc.dir = RTL_LANGS[currentLang] ? "rtl" : "ltr";
 
-    var projectTitle = document.createElement("div");
-    projectTitle.className = "pdf-doc-title";
-    projectTitle.textContent = sheet.name;
-    doc.appendChild(projectTitle);
+    doc.appendChild(buildPdfDocTitleElement(sheet, sheet.name));
 
     var logNumberEl = document.createElement("div");
     logNumberEl.className = "pdf-doc-info-title";
@@ -8855,6 +9134,7 @@
     dateInput.value = state.viewDate;
     todayBtn.hidden = isToday;
     sheetTitle.textContent = activeSheet().name;
+    renderSheetTitleLogo();
     chatBtn.hidden = !activeSheet().shared;
     if (activeSheet().shared) {
       var activeUnread = getUnreadCount(activeSheet());
@@ -9063,6 +9343,7 @@
     });
 
     sheetTitle.textContent = activeSheet().name;
+    renderSheetTitleLogo();
 
     emptyState.textContent = isToday
       ? tr("emptyStateToday")
@@ -9283,6 +9564,7 @@
       folders: d.folders || null,
       ended: d.ended || false,
       endedDate: d.endedDate || null,
+      logoId: d.logoId || null,
       members: row.members || [],
       memberNames: row.member_names || {},
       messages: row.messages || []
