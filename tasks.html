@@ -119,6 +119,20 @@
     padding: 24px 16px;
     display: flex;
     flex-direction: column;
+    /* App-wide: a long-press anywhere is used for our own action menus
+       (tasks, chat bubbles, report rows, library items, folders, ...) -
+       the browser's native text-selection/copy toolbar popping up on the
+       same gesture fights with that everywhere it isn't explicitly
+       disabled, so disable it as the default and re-enable selection only
+       where it's actually needed (real text entry below). */
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+  input, textarea, select, [contenteditable="true"] {
+    user-select: text;
+    -webkit-user-select: text;
+    -webkit-touch-callout: default;
   }
   .app {
     max-width: 620px;
@@ -679,6 +693,98 @@
     font-size: 0.9rem;
     padding: 2px 4px;
   }
+  .chat-reply-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+    border-inline-start: 3px solid var(--accent);
+    padding-inline-start: 8px;
+  }
+  .chat-reply-sender { font-weight: 700; color: var(--accent); font-size: 0.78rem; }
+  .chat-reply-text {
+    color: var(--ink-muted);
+    font-weight: 400;
+    font-size: 0.78rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block;
+  }
+  .chat-bubble-quote {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    border-inline-start: 3px solid color-mix(in srgb, currentColor 55%, transparent);
+    padding-inline-start: 7px;
+    margin-bottom: 4px;
+    opacity: 0.8;
+    font-size: 0.82rem;
+    cursor: pointer;
+  }
+  .chat-bubble-quote-sender { font-weight: 700; }
+  .chat-bubble-quote-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block;
+    max-width: 100%;
+  }
+  .chat-mention {
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .chat-bubble-mine .chat-mention { color: inherit; text-decoration: underline; }
+  .chat-bubble-check {
+    margin-inline-start: 4px;
+    letter-spacing: -1px;
+  }
+  .chat-bubble-check-read { color: #7ee0ff; }
+  .chat-scroll-bottom-btn {
+    position: absolute;
+    bottom: 66px;
+    inset-inline-end: 16px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: var(--accent);
+    color: var(--accent-contrast);
+    font-size: 1.1rem;
+    box-shadow: 0 2px 8px var(--shadow);
+    cursor: pointer;
+    z-index: 5;
+  }
+  .chat-scroll-bottom-btn[hidden] { display: none; }
+  .chat-mention-popup {
+    position: absolute;
+    bottom: 56px;
+    inset-inline-start: 10px;
+    inset-inline-end: 10px;
+    max-height: 160px;
+    overflow-y: auto;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    box-shadow: 0 4px 14px var(--shadow);
+    z-index: 6;
+  }
+  .chat-mention-popup[hidden] { display: none; }
+  .chat-mention-item {
+    display: block;
+    width: 100%;
+    text-align: start;
+    padding: 8px 12px;
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--rule);
+    font: inherit;
+    font-size: 0.85rem;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .chat-mention-item:last-child { border-bottom: none; }
+  .chat-mention-item:hover { background: var(--paper-alt); }
   .chat-bubble-image img {
     max-width: 100%;
     width: 190px;
@@ -2304,6 +2410,15 @@
       <div class="report-head-title" id="chatHeadTitle"></div>
     </div>
     <div class="chat-messages" id="chatMessages"></div>
+    <button type="button" class="chat-scroll-bottom-btn" id="chatScrollBottomBtn" data-i18n-title="chatScrollBottomBtnTitle" title="גלילה למטה" hidden>&#8595;</button>
+    <div class="chat-mention-popup" id="chatMentionPopup" hidden></div>
+    <div class="chat-editing-bar" id="chatReplyBar" hidden>
+      <div class="chat-reply-preview">
+        <span class="chat-reply-sender" id="chatReplySender"></span>
+        <span class="chat-reply-text" id="chatReplyText"></span>
+      </div>
+      <button type="button" class="chat-editing-cancel" id="chatReplyCancelBtn" data-i18n-title="chatRecordingCancelTitle" title="ביטול">&#10005;</button>
+    </div>
     <div class="chat-editing-bar" id="chatEditingBar" hidden>
       <span class="chat-editing-label" data-i18n="chatEditingLabel">עריכת הודעה</span>
       <button type="button" class="chat-editing-cancel" id="chatEditingCancelBtn" data-i18n-title="chatRecordingCancelTitle" title="ביטול">&#10005;</button>
@@ -2327,6 +2442,9 @@
     <div class="modal-box" role="alertdialog" aria-modal="true">
       <p class="modal-message" data-i18n="chatMsgActionModalMessage">מה לעשות עם ההודעה?</p>
       <div class="move-task-mode">
+        <button type="button" id="chatMsgQuoteBtn" data-i18n="chatMsgQuoteBtn">ציטוט</button>
+        <button type="button" id="chatMsgCopyBtn" data-i18n="chatMsgCopyBtn">העתקה</button>
+        <button type="button" id="chatMsgToTaskBtn" data-i18n="chatMsgToTaskBtn">הפיכה למשימה</button>
         <button type="button" id="chatMsgEditBtn" data-i18n="chatMsgEditBtn">עריכה</button>
         <button type="button" id="chatMsgDeleteBtn" class="danger-btn" data-i18n="chatMsgDeleteBtn">מחיקה</button>
       </div>
@@ -2753,8 +2871,15 @@
     chatAttachBtnTitle: { he: "צירוף קובץ", en: "Attach file", ar: "إرفاق ملف", ru: "Прикрепить файл" },
     chatFileUploadError: { he: "העלאת הקובץ נכשלה", en: "File upload failed", ar: "فشل تحميل الملف", ru: "Не удалось загрузить файл" },
     chatMsgActionModalMessage: { he: "מה לעשות עם ההודעה?", en: "What would you like to do with this message?", ar: "ماذا تريد أن تفعل بهذه الرسالة؟", ru: "Что сделать с этим сообщением?" },
+    chatMsgQuoteBtn: { he: "ציטוט", en: "Quote", ar: "اقتباس", ru: "Цитировать" },
+    chatMsgCopyBtn: { he: "העתקה", en: "Copy", ar: "نسخ", ru: "Копировать" },
+    chatMsgToTaskBtn: { he: "הפיכה למשימה", en: "Turn into task", ar: "تحويل إلى مهمة", ru: "Сделать задачей" },
+    chatMsgCopiedMsg: { he: "ההודעה הועתקה", en: "Message copied", ar: "تم نسخ الرسالة", ru: "Сообщение скопировано" },
+    chatMsgCopyFailedMsg: { he: "לא ניתן להעתיק כרגע", en: "Couldn't copy right now", ar: "تعذر النسخ الآن", ru: "Не удалось скопировать" },
+    chatMsgAddedAsTaskMsg: { he: "נוספה כמשימה בדף המשימות", en: "Added as a task on the tasks page", ar: "أُضيفت كمهمة في صفحة المهام", ru: "Добавлено как задача на странице задач" },
     chatMsgEditBtn: { he: "עריכה", en: "Edit", ar: "تعديل", ru: "Изменить" },
     chatMsgDeleteBtn: { he: "מחיקה", en: "Delete", ar: "حذف", ru: "Удалить" },
+    chatScrollBottomBtnTitle: { he: "גלילה להודעה האחרונה", en: "Scroll to latest message", ar: "التمرير إلى آخر رسالة", ru: "Прокрутить к последнему сообщению" },
     chatMsgConfirmDelete: { he: "למחוק את ההודעה הזו?", en: "Delete this message?", ar: "هل تريد حذف هذه الرسالة؟", ru: "Удалить это сообщение?" },
     chatEditingLabel: { he: "עריכת הודעה", en: "Editing message", ar: "تعديل الرسالة", ru: "Редактирование сообщения" },
     chatMsgEditedMark: { he: "נערך", en: "edited", ar: "معدّلة", ru: "изменено" },
@@ -3979,9 +4104,55 @@
     return d.toLocaleDateString([], { day: "2-digit", month: "2-digit", year: "numeric" });
   }
 
+  function chatMessagePreviewText(m) {
+    if (!m) return "";
+    if (m.type === "voice") return tr("voiceMessageLabel");
+    if (m.type === "file") return "📎 " + (m.fileName || "");
+    return (m.text || "").slice(0, 80);
+  }
+  function chatMessageSenderLabel(m, sheet) {
+    if (m.phone === myPhoneNumber) return myDisplayNameIn(sheet);
+    return (sheet && sheet.memberNames && sheet.memberNames[m.phone]) || m.phone;
+  }
+  function escapeRegExp(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+  function renderMessageTextWithMentions(container, text, sheet) {
+    var names = ((sheet && sheet.members) || [])
+      .map(function (p) { return (sheet.memberNames && sheet.memberNames[p]) || null; })
+      .filter(function (n) { return n; });
+    names = Array.from(new Set(names)).sort(function (a, b) { return b.length - a.length; });
+    if (!names.length) { container.textContent = text; return; }
+    // No trailing \b: JS regex word-boundaries are ASCII-only, so a
+    // Hebrew/Arabic name followed by a space or punctuation (neither side
+    // being a \w character) would never register as a boundary and the
+    // match would silently fail. Longest-name-first ordering above already
+    // prevents a shorter name that's a prefix of a longer one from
+    // matching too eagerly, so no boundary assertion is needed here.
+    var re = new RegExp("@(" + names.map(escapeRegExp).join("|") + ")", "g");
+    var lastIndex = 0, match, any = false;
+    while ((match = re.exec(text))) {
+      any = true;
+      if (match.index > lastIndex) container.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+      var span = document.createElement("span");
+      span.className = "chat-mention";
+      span.textContent = match[0];
+      container.appendChild(span);
+      lastIndex = re.lastIndex;
+    }
+    if (!any) { container.textContent = text; return; }
+    if (lastIndex < text.length) container.appendChild(document.createTextNode(text.slice(lastIndex)));
+  }
+
+  function isChatScrolledNearBottom() {
+    return (chatMessages.scrollHeight - chatMessages.scrollTop - chatMessages.clientHeight) < 120;
+  }
+  function updateChatScrollButton() {
+    chatScrollBottomBtn.hidden = isChatScrolledNearBottom();
+  }
+
   function renderChatMessages() {
     var sheet = sharedSheets.find(function (s) { return s.id === activeChatSheetId; });
     var messages = (sheet && sheet.messages) || [];
+    var wasNearBottom = !chatMessages.children.length || isChatScrolledNearBottom();
     chatMessages.innerHTML = "";
     if (!messages.length) {
       var empty = document.createElement("div");
@@ -4012,6 +4183,7 @@
       var isStart = day !== (prev ? new Date(prev.ts).toDateString() : null) || !prev || prev.phone !== m.phone;
       var bubble = document.createElement("div");
       bubble.className = "chat-bubble " + (isMine ? "chat-bubble-mine" : "chat-bubble-theirs") + (isStart ? " chat-bubble-start" : "");
+      bubble.dataset.msgId = m.id;
       if (!isMine) {
         var colorIdx = contactColorIndex(m.phone);
         bubble.style.setProperty("--bubble-bg", "var(--contact-bg-" + colorIdx + ")");
@@ -4023,6 +4195,24 @@
         var knownName = sheet && sheet.memberNames && sheet.memberNames[m.phone];
         senderEl.textContent = knownName || m.phone;
         bubble.appendChild(senderEl);
+      }
+      if (m.replyTo) {
+        var quoteEl = document.createElement("div");
+        quoteEl.className = "chat-bubble-quote";
+        var quoteSenderEl = document.createElement("span");
+        quoteSenderEl.className = "chat-bubble-quote-sender";
+        quoteSenderEl.textContent = m.replyTo.senderName;
+        var quoteTextEl = document.createElement("span");
+        quoteTextEl.className = "chat-bubble-quote-text";
+        quoteTextEl.textContent = m.replyTo.text;
+        quoteEl.appendChild(quoteSenderEl);
+        quoteEl.appendChild(quoteTextEl);
+        quoteEl.addEventListener("click", function (e) {
+          e.stopPropagation();
+          var target = m.replyTo && chatMessages.querySelector('[data-msg-id="' + m.replyTo.id + '"]');
+          if (target) target.scrollIntoView({ behavior: "smooth", block: "center" });
+        });
+        bubble.appendChild(quoteEl);
       }
       var textEl = document.createElement("div");
       if (m.type === "voice") {
@@ -4071,7 +4261,7 @@
         textEl.appendChild(downloadBtn);
       } else {
         textEl.className = "chat-bubble-text";
-        textEl.textContent = m.text;
+        renderMessageTextWithMentions(textEl, m.text, sheet);
       }
       bubble.appendChild(textEl);
       var timeEl = document.createElement("div");
@@ -4083,11 +4273,20 @@
         editedEl.textContent = tr("chatMsgEditedMark");
         timeEl.appendChild(editedEl);
       }
+      if (isMine) {
+        var readBy = m.readBy || [m.phone];
+        var readByOthers = readBy.some(function (p) { return p !== myPhoneNumber; });
+        var checkEl = document.createElement("span");
+        checkEl.className = "chat-bubble-check" + (readByOthers ? " chat-bubble-check-read" : "");
+        checkEl.textContent = readByOthers ? "✓✓" : "✓";
+        timeEl.appendChild(checkEl);
+      }
       bubble.appendChild(timeEl);
-      if (isMine) attachChatBubbleLongPress(bubble, m);
+      attachChatBubbleLongPress(bubble, m);
       chatMessages.appendChild(bubble);
     });
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    if (wasNearBottom) chatMessages.scrollTop = chatMessages.scrollHeight;
+    updateChatScrollButton();
   }
 
   function downloadChatFile(url, fileName) {
@@ -4107,7 +4306,40 @@
         if (sheet) sheet.messages = messages;
         renderChatMessages();
         markChatRead(sheet);
+        markMessagesReadOnServer(activeChatSheetId);
       }, function () {});
+  }
+
+  // Marks every incoming message not yet attributed to me in its readBy
+  // list as read (drives the sent/read checkmarks on the SENDER's side).
+  // Only issues a write when something actually needs updating, and
+  // re-reads first since this can race with other members' own sends -
+  // same read-modify-write pattern as the rest of this shared-row data.
+  function markMessagesReadOnServer(sheetId) {
+    if (!supabaseClient || !myPhoneNumber) return;
+    var sheet = sharedSheets.find(function (s) { return s.id === sheetId; });
+    if (!sheet) return;
+    var needsUpdate = (sheet.messages || []).some(function (m) {
+      return m.type !== "system" && m.phone !== myPhoneNumber && (m.readBy || [m.phone]).indexOf(myPhoneNumber) === -1;
+    });
+    if (!needsUpdate) return;
+    supabaseClient.from(SHARED_TABLE).select("messages").eq("id", sheetId).maybeSingle().then(function (result) {
+      var current = (result && result.data && result.data.messages) || [];
+      var changed = false;
+      var updated = current.map(function (m) {
+        if (m.type === "system" || m.phone === myPhoneNumber) return m;
+        var readBy = m.readBy || [m.phone];
+        if (readBy.indexOf(myPhoneNumber) !== -1) return m;
+        changed = true;
+        return Object.assign({}, m, { readBy: readBy.concat([myPhoneNumber]) });
+      });
+      if (!changed) return;
+      return supabaseClient.from(SHARED_TABLE).update({ messages: updated }).eq("id", sheetId).then(function () {
+        var liveSheet = sharedSheets.find(function (s) { return s.id === sheetId; });
+        if (liveSheet) liveSheet.messages = updated;
+        if (activeChatSheetId === sheetId) renderChatMessages();
+      });
+    }, function () {});
   }
 
   function ensureOwnDisplayName(sheet) {
@@ -4136,6 +4368,7 @@
     renderChatMessages();
     chatView.hidden = false;
     markChatRead(sheet);
+    markMessagesReadOnServer(sheet.id);
     refreshActiveChat();
     ensureOwnDisplayName(sheet);
     chatPollTimer = setInterval(refreshActiveChat, 5000);
@@ -4145,6 +4378,8 @@
   function closeChatView() {
     if (activeRecorder) stopVoiceRecording(false);
     if (editingChatMessageId) cancelEditingChatMessage();
+    if (pendingChatReplyTo) cancelChatReply();
+    hideMentionPopup();
     chatView.hidden = true;
     activeChatSheetId = null;
     clearInterval(chatPollTimer);
@@ -4220,13 +4455,14 @@
       });
   }
 
-  function sendChatMessage(sheetId, text) {
+  function sendChatMessage(sheetId, text, replyTo) {
     var trimmed = (text || "").trim();
     if (!trimmed || !supabaseClient) return Promise.resolve();
     return supabaseClient.from(SHARED_TABLE).select("messages").eq("id", sheetId).maybeSingle()
       .then(function (result) {
         var current = (result && result.data && result.data.messages) || [];
-        var msg = { id: uid(), phone: myPhoneNumber, text: trimmed.slice(0, 500), ts: Date.now() };
+        var msg = { id: uid(), phone: myPhoneNumber, text: trimmed.slice(0, 500), ts: Date.now(), readBy: [myPhoneNumber] };
+        if (replyTo) msg.replyTo = replyTo;
         var updated = current.concat([msg]).slice(-200);
         return supabaseClient.from(SHARED_TABLE).update({ messages: updated }).eq("id", sheetId)
           .then(function () {
@@ -4242,12 +4478,15 @@
     var text = chatInput.value;
     if (!text.trim() || !activeChatSheetId) return;
     chatInput.value = "";
+    hideMentionPopup();
     if (editingChatMessageId) {
       var msgId = editingChatMessageId;
       cancelEditingChatMessage();
       updateChatMessageText(activeChatSheetId, msgId, text).then(renderChatMessages);
     } else {
-      sendChatMessage(activeChatSheetId, text).then(renderChatMessages);
+      var replyTo = pendingChatReplyTo;
+      cancelChatReply();
+      sendChatMessage(activeChatSheetId, text, replyTo).then(renderChatMessages);
     }
   });
 
@@ -4256,7 +4495,7 @@
     return supabaseClient.from(SHARED_TABLE).select("messages").eq("id", sheetId).maybeSingle()
       .then(function (result) {
         var current = (result && result.data && result.data.messages) || [];
-        var msg = { id: uid(), phone: myPhoneNumber, type: "voice", audioUrl: audioUrl, duration: durationSec || 0, ts: Date.now() };
+        var msg = { id: uid(), phone: myPhoneNumber, type: "voice", audioUrl: audioUrl, duration: durationSec || 0, ts: Date.now(), readBy: [myPhoneNumber] };
         var updated = current.concat([msg]).slice(-200);
         return supabaseClient.from(SHARED_TABLE).update({ messages: updated }).eq("id", sheetId)
           .then(function () {
@@ -4384,7 +4623,7 @@
     return supabaseClient.from(SHARED_TABLE).select("messages").eq("id", sheetId).maybeSingle()
       .then(function (result) {
         var current = (result && result.data && result.data.messages) || [];
-        var msg = { id: uid(), phone: myPhoneNumber, type: "file", fileUrl: fileUrl, fileName: fileName, fileType: fileType, fileSize: fileSize, ts: Date.now() };
+        var msg = { id: uid(), phone: myPhoneNumber, type: "file", fileUrl: fileUrl, fileName: fileName, fileType: fileType, fileSize: fileSize, ts: Date.now(), readBy: [myPhoneNumber] };
         var updated = current.concat([msg]).slice(-200);
         return supabaseClient.from(SHARED_TABLE).update({ messages: updated }).eq("id", sheetId)
           .then(function () {
@@ -4396,14 +4635,99 @@
   }
 
   var chatMsgActionOverlay = document.getElementById("chatMsgActionOverlay");
+  var chatMsgQuoteBtn = document.getElementById("chatMsgQuoteBtn");
   var chatMsgEditBtn = document.getElementById("chatMsgEditBtn");
   var chatMsgDeleteBtn = document.getElementById("chatMsgDeleteBtn");
   var chatMsgActionCancelBtn = document.getElementById("chatMsgActionCancelBtn");
   var chatEditingBar = document.getElementById("chatEditingBar");
   var chatEditingCancelBtn = document.getElementById("chatEditingCancelBtn");
+  var chatReplyBar = document.getElementById("chatReplyBar");
+  var chatReplySender = document.getElementById("chatReplySender");
+  var chatReplyText = document.getElementById("chatReplyText");
+  var chatReplyCancelBtn = document.getElementById("chatReplyCancelBtn");
+  var chatScrollBottomBtn = document.getElementById("chatScrollBottomBtn");
+  var chatMentionPopup = document.getElementById("chatMentionPopup");
   var pendingChatActionMessage = null;
+  var pendingChatReplyTo = null;
   var editingChatMessageId = null;
   var chatLongPressTimer = null;
+
+  function startChatReply(message) {
+    var sheet = sharedSheets.find(function (s) { return s.id === activeChatSheetId; });
+    pendingChatReplyTo = { id: message.id, senderName: chatMessageSenderLabel(message, sheet), text: chatMessagePreviewText(message) };
+    chatReplySender.textContent = pendingChatReplyTo.senderName;
+    chatReplyText.textContent = pendingChatReplyTo.text;
+    chatReplyBar.hidden = false;
+    chatInput.focus();
+  }
+  function cancelChatReply() {
+    pendingChatReplyTo = null;
+    chatReplyBar.hidden = true;
+  }
+  chatReplyCancelBtn.addEventListener("click", cancelChatReply);
+
+  function isChatScrolledNearBottom() {
+    return (chatMessages.scrollHeight - chatMessages.scrollTop - chatMessages.clientHeight) < 120;
+  }
+  function updateChatScrollButton() {
+    chatScrollBottomBtn.hidden = isChatScrolledNearBottom();
+  }
+  chatMessages.addEventListener("scroll", updateChatScrollButton);
+  chatScrollBottomBtn.addEventListener("click", function () {
+    chatMessages.scrollTo({ top: chatMessages.scrollHeight, behavior: "smooth" });
+  });
+
+  // "@" mention autocomplete: shows the OTHER members of this shared
+  // project (by their known display name) whenever the text typed since
+  // the last "@" (with no space in between) matches the start of one.
+  function activeMentionQuery() {
+    var pos = chatInput.selectionStart || chatInput.value.length;
+    var uptoCursor = chatInput.value.slice(0, pos);
+    var at = uptoCursor.lastIndexOf("@");
+    if (at === -1) return null;
+    var query = uptoCursor.slice(at + 1);
+    if (/\s/.test(query)) return null;
+    return { at: at, query: query };
+  }
+  function hideMentionPopup() {
+    chatMentionPopup.hidden = true;
+    chatMentionPopup.innerHTML = "";
+  }
+  function insertMention(at, query, name) {
+    var before = chatInput.value.slice(0, at);
+    var after = chatInput.value.slice(at + 1 + query.length);
+    chatInput.value = before + "@" + name + " " + after;
+    var cursorPos = (before + "@" + name + " ").length;
+    chatInput.focus();
+    chatInput.setSelectionRange(cursorPos, cursorPos);
+    hideMentionPopup();
+  }
+  function updateMentionPopup() {
+    var sheet = sharedSheets.find(function (s) { return s.id === activeChatSheetId; });
+    var m = activeMentionQuery();
+    if (!m || !sheet) { hideMentionPopup(); return; }
+    var q = m.query.toLowerCase();
+    var candidates = (sheet.members || [])
+      .filter(function (p) { return p !== myPhoneNumber; })
+      .map(function (p) { return (sheet.memberNames && sheet.memberNames[p]) || p; })
+      .filter(function (name, idx, arr) { return arr.indexOf(name) === idx && name.toLowerCase().indexOf(q) !== -1; });
+    if (!candidates.length) { hideMentionPopup(); return; }
+    chatMentionPopup.innerHTML = "";
+    candidates.forEach(function (name) {
+      var item = document.createElement("button");
+      item.type = "button";
+      item.className = "chat-mention-item";
+      item.textContent = name;
+      item.addEventListener("click", function () { insertMention(m.at, m.query, name); });
+      chatMentionPopup.appendChild(item);
+    });
+    chatMentionPopup.hidden = false;
+  }
+  chatInput.addEventListener("input", updateMentionPopup);
+  chatInput.addEventListener("click", updateMentionPopup);
+  chatInput.addEventListener("blur", function () {
+    setTimeout(hideMentionPopup, 150);
+  });
 
   function attachChatBubbleLongPress(bubbleEl, message) {
     var startX = 0, startY = 0, fired = false;
@@ -4432,7 +4756,9 @@
 
   function openChatMessageActionModal(message) {
     pendingChatActionMessage = message;
-    chatMsgEditBtn.hidden = message.type === "voice" || message.type === "file";
+    var isMine = message.phone === myPhoneNumber;
+    chatMsgEditBtn.hidden = !isMine || message.type === "voice" || message.type === "file";
+    chatMsgDeleteBtn.hidden = !isMine;
     chatMsgActionOverlay.hidden = false;
   }
   function closeChatMessageActionModal() {
@@ -4498,6 +4824,48 @@
     var message = pendingChatActionMessage;
     closeChatMessageActionModal();
     if (message) startEditingChatMessage(message);
+  });
+  chatMsgQuoteBtn.addEventListener("click", function () {
+    var message = pendingChatActionMessage;
+    closeChatMessageActionModal();
+    if (message) startChatReply(message);
+  });
+  function copyChatMessageText(message) {
+    var text = chatMessagePreviewText(message);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () {
+        showToast(tr("chatMsgCopiedMsg"));
+      }, function () {
+        showToast(tr("chatMsgCopyFailedMsg"));
+      });
+    } else {
+      showToast(tr("chatMsgCopyFailedMsg"));
+    }
+  }
+  chatMsgCopyBtn.addEventListener("click", function () {
+    var message = pendingChatActionMessage;
+    closeChatMessageActionModal();
+    if (message) copyChatMessageText(message);
+  });
+  function convertChatMessageToTask(message) {
+    var sheet = sharedSheets.find(function (s) { return s.id === activeChatSheetId; });
+    if (!sheet) return;
+    sheet.tasks.push({
+      id: uid(),
+      text: chatMessagePreviewText(message),
+      status: 0,
+      urgent: false,
+      type: "task",
+      date: todayISO(),
+      createdAt: Date.now()
+    });
+    saveData();
+    showToast(tr("chatMsgAddedAsTaskMsg"));
+  }
+  chatMsgToTaskBtn.addEventListener("click", function () {
+    var message = pendingChatActionMessage;
+    closeChatMessageActionModal();
+    if (message) convertChatMessageToTask(message);
   });
 
   var LIBRARY_BUCKET = "project-files";
