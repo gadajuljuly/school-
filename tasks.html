@@ -4082,35 +4082,6 @@
     if (e.target === projectInviteSendOverlay) closeProjectInviteSendModal();
   });
 
-  // Converts a private sheet into a real (but so-far single-member) shared
-  // project the same way openSharedProjectConvertModal's save handler does,
-  // so an invite can be sent from a project that isn't shared yet - the
-  // invited phone is never added directly to members here; that only
-  // happens once they approve (approveProjectInvite / the RPC it calls).
-  function convertPrivateSheetForInvite(id) {
-    var privateSheet = data.sheets.find(function (s) { return s.id === id; });
-    if (!privateSheet) return null;
-    var converted = {
-      id: window.crypto.randomUUID ? window.crypto.randomUUID() : uid(),
-      shared: true,
-      name: privateSheet.name,
-      tasks: privateSheet.tasks || [],
-      reports: privateSheet.reports || [],
-      files: privateSheet.files || [],
-      folders: privateSheet.folders || null,
-      ended: privateSheet.ended || false,
-      endedDate: privateSheet.endedDate || null,
-      logoId: privateSheet.logoId || null,
-      members: [myPhoneNumber],
-      memberNames: {},
-      messages: []
-    };
-    data.sheets = data.sheets.filter(function (s) { return s.id !== id; });
-    sharedSheets.push(converted);
-    if (data.activeSheetId === id) data.activeSheetId = converted.id;
-    return converted;
-  }
-
   function sendProjectInviteNotification(targetPhone, projectName, senderName, inviteId) {
     if (!supabaseClient || !supabaseClient.functions) return;
     try {
@@ -4120,6 +4091,21 @@
         console.error("send-project-invite-notification failed:", err);
       });
     } catch (e) {}
+  }
+
+  // A "share" is a one-time COPY, not a live shared project: the sender's
+  // own project is never touched or converted - each invited phone, once
+  // they approve, gets an independent private project seeded from a
+  // snapshot of the sender's tasks/reports/site logs taken right now.
+  // Files aren't included in the snapshot since they live in the sender's
+  // own storage folder (keyed by this sheet's id) and the recipient has no
+  // access to it.
+  function buildProjectInviteSnapshot(sheet) {
+    return {
+      tasks: sheet.tasks || [],
+      reports: sheet.reports || [],
+      siteLogs: sheet.siteLogs || []
+    };
   }
 
   projectInviteSendBtn.addEventListener("click", function () {
@@ -4138,25 +4124,16 @@
 
     var sheet = allSheets().find(function (s) { return s.id === pendingInviteSheetId; });
     if (!sheet) return;
-    var isAlreadyShared = !!sheet.shared;
-    var targetSheet = isAlreadyShared ? sheet : convertPrivateSheetForInvite(pendingInviteSheetId);
-    if (!targetSheet) return;
-
-    var existingMembers = targetSheet.members || [];
-    var toInvite = invitees.filter(function (inv) { return existingMembers.indexOf(inv.phone) === -1; });
+    var senderName = myDisplayNameIn(sheet) || myPhoneNumber;
+    var snapshot = buildProjectInviteSnapshot(sheet);
 
     closeProjectInviteSendModal();
-    if (!isAlreadyShared) { saveData(); render(); }
 
-    if (!toInvite.length) return;
-
-    var senderName = (targetSheet.memberNames && targetSheet.memberNames[myPhoneNumber]) || myPhoneNumber;
-    var rows = toInvite.map(function (inv) {
+    var rows = invitees.map(function (inv) {
       return {
-        project_id: targetSheet.id,
-        project_name: targetSheet.name,
+        project_name: sheet.name,
+        snapshot: snapshot,
         invited_phone: inv.phone,
-        invited_name: inv.name,
         invited_by_phone: myPhoneNumber,
         invited_by_name: senderName
       };
@@ -4174,10 +4151,11 @@
   });
 
   // --- Receiving side: an invite addressed to my own phone shows an
-  // approve/decline prompt - approving calls a security-definer RPC (a
-  // plain client update can't add me to shared_projects.members myself,
-  // since its RLS only lets EXISTING members touch the row at all) that
-  // atomically adds me as a member and marks the invite resolved.
+  // approve/decline prompt. Approving creates a brand-new PRIVATE project
+  // from the invite's snapshot (never a shared one) and marks the invite
+  // resolved via a plain update - my own phone number is both the row I'm
+  // allowed to see and the one I'm allowed to resolve, so no elevated
+  // privileges are needed here.
   var projectInviteReceivedOverlay = document.getElementById("projectInviteReceivedOverlay");
   var projectInviteReceivedMessage = document.getElementById("projectInviteReceivedMessage");
   var projectInviteApproveBtn = document.getElementById("projectInviteApproveBtn");
@@ -4211,26 +4189,43 @@
     activeProjectInvite = null;
     showNextPendingProjectInvite();
   }
+  function resolveProjectInvite(invite, newStatus) {
+    if (!supabaseClient) return;
+    supabaseClient.from("project_invites")
+      .update({ status: newStatus, resolved_at: new Date().toISOString() })
+      .eq("id", invite.id)
+      .then(function (result) {
+        if (result && result.error) console.error("project_invites update failed:", result.error);
+      }, function (err) {
+        console.error("project_invites update failed:", err);
+      });
+  }
   projectInviteApproveBtn.addEventListener("click", function () {
-    if (!activeProjectInvite || !supabaseClient) return;
+    if (!activeProjectInvite) return;
     var invite = activeProjectInvite;
-    supabaseClient.rpc("approve_project_invite", { invite_id: invite.id }).then(function (result) {
-      if (result && result.error) { console.error("approve_project_invite failed:", result.error); return; }
-      showToast(tr("projectInviteApprovedMsg"));
-      loadSharedSheets();
-    }, function (err) {
-      console.error("approve_project_invite failed:", err);
+    var snap = invite.snapshot || {};
+    data.sheets.push({
+      id: uid(),
+      name: invite.project_name,
+      tasks: snap.tasks || [],
+      reports: snap.reports || [],
+      files: [],
+      folders: null,
+      siteLogs: (snap.siteLogs || []).map(normalizeSiteLog),
+      logoId: null,
+      ended: false,
+      endedDate: null
     });
+    data.activeSheetId = data.sheets[data.sheets.length - 1].id;
+    resolveProjectInvite(invite, "approved");
+    saveData();
+    showToast(tr("projectInviteApprovedMsg"));
     closeProjectInviteReceivedModal();
+    render();
   });
   projectInviteDeclineBtn.addEventListener("click", function () {
-    if (!activeProjectInvite || !supabaseClient) return;
-    var invite = activeProjectInvite;
-    supabaseClient.rpc("decline_project_invite", { invite_id: invite.id }).then(function (result) {
-      if (result && result.error) console.error("decline_project_invite failed:", result.error);
-    }, function (err) {
-      console.error("decline_project_invite failed:", err);
-    });
+    if (!activeProjectInvite) return;
+    resolveProjectInvite(activeProjectInvite, "declined");
     showToast(tr("projectInviteDeclinedMsg"));
     closeProjectInviteReceivedModal();
   });
