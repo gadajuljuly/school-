@@ -2549,6 +2549,29 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="projectInviteSendOverlay" hidden>
+    <div class="modal-box" role="alertdialog" aria-modal="true">
+      <p class="modal-message" id="projectInviteSendMessage">שיתוף פרויקט</p>
+      <p class="modal-submessage" data-i18n="sharedProjectMembersLabel">מספרי טלפון של המשתתפים</p>
+      <button type="button" class="convert-to-note-btn" id="projectInvitePickContactsBtn" data-i18n="sharedProjectPickContactsBtn" hidden>בחירה מאנשי הקשר</button>
+      <div class="report-participants-list" id="projectInviteSendList"></div>
+      <div class="modal-actions">
+        <button type="button" class="modal-btn modal-btn-yes" id="projectInviteSendBtn" data-i18n="projectInviteSendBtn">שליחה</button>
+        <button type="button" class="modal-btn modal-btn-no" id="projectInviteSendCancelBtn" data-i18n="cancelBtn">ביטול</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="projectInviteReceivedOverlay" hidden>
+    <div class="modal-box" role="alertdialog" aria-modal="true">
+      <p class="modal-message" id="projectInviteReceivedMessage"></p>
+      <div class="modal-actions">
+        <button type="button" class="modal-btn modal-btn-yes" id="projectInviteApproveBtn" data-i18n="confirmYesBtn">כן</button>
+        <button type="button" class="modal-btn modal-btn-no" id="projectInviteDeclineBtn" data-i18n="confirmNoBtn">לא</button>
+      </div>
+    </div>
+  </div>
+
   <div class="report-view" id="chatView" hidden>
     <div class="report-head">
       <button type="button" class="report-back-btn" id="chatBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
@@ -2930,14 +2953,11 @@
     confirmDeleteProjectGeneric: { he: "למחוק את הפרויקט?", en: "Delete the project?", ar: "هل تريد حذف المشروع؟", ru: "Удалить проект?" },
     confirmEndProjectNamed: { he: 'לסמן את הפרויקט "{name}" כמסתיים? הוא לא יופיע יותר בימים הבאים (ימשיך להופיע בימים הקודמים).', en: 'Mark the project "{name}" as finished? It will no longer appear on future days (it will still appear on past days).', ar: 'هل تريد وضع علامة "منتهٍ" على المشروع "{name}"؟ لن يظهر بعد الآن في الأيام القادمة (سيستمر بالظهور في الأيام السابقة).', ru: 'Отметить проект «{name}» как завершённый? Он больше не будет отображаться в будущие дни (но останется виден в прошедших днях).' },
     confirmEndProjectGeneric: { he: "לסמן את הפרויקט כמסתיים?", en: "Mark the project as finished?", ar: "هل تريد وضع علامة \"منتهٍ\" على هذا المشروع؟", ru: "Отметить проект как завершённый?" },
-    confirmShareProject: { he: 'לשתף את הפרויקט "{name}"?', en: 'Share the project "{name}"?', ar: 'هل تريد مشاركة المشروع "{name}"؟', ru: 'Поделиться проектом «{name}»?' },
     confirmDeleteReport: { he: 'למחוק את הדוח "{name}"?', en: 'Delete the report "{name}"?', ar: 'هل تريد حذف التقرير "{name}"؟', ru: 'Удалить отчёт «{name}»?' },
     confirmDeleteReportRow: { he: "למחוק את השורה הזו?", en: "Delete this row?", ar: "هل تريد حذف هذا السطر؟", ru: "Удалить эту строку?" },
     reportActionModalMessage: { he: "מה לעשות עם הדוח?", en: "What would you like to do with this report?", ar: "ماذا تريد أن تفعل بهذا التقرير؟", ru: "Что сделать с этим отчётом?" },
     reportRowActionModalMessage: { he: "מה לעשות עם השורה?", en: "What would you like to do with this row?", ar: "ماذا تريد أن تفعل بهذا السطر؟", ru: "Что сделать с этой строкой?" },
     reportRowActionCopyBtn: { he: "העתקה", en: "Duplicate", ar: "نسخ", ru: "Дублировать" },
-    projectContentCopied: { he: "תוכן הפרויקט הועתק ללוח", en: "Project content copied to clipboard", ar: "تم نسخ محتوى المشروع إلى الحافظة", ru: "Содержимое проекта скопировано в буфер обмена" },
-    shareNotSupported: { he: "השיתוף לא נתמך בדפדפן הזה", en: "Sharing isn't supported in this browser", ar: "المشاركة غير مدعومة في هذا المتصفح", ru: "Обмен не поддерживается в этом браузере" },
     remindersActive: { he: "תזכורות פעילות", en: "Reminders active", ar: "التذكيرات نشطة", ru: "Напоминания включены" },
     remindersOffStatus: { he: "התזכורות כבויות", en: "Reminders are off", ar: "التذكيرات متوقفة", ru: "Напоминания выключены" },
     notificationsNotSupported: { he: "התראות לא נתמכות בדפדפן הזה", en: "Notifications aren't supported in this browser", ar: "الإشعارات غير مدعومة في هذا المتصفح", ru: "Уведомления не поддерживаются в этом браузере" },
@@ -3046,6 +3066,13 @@
     sharedProjectDefaultName: { he: "פרויקט משותף", en: "Shared project", ar: "مشروع مشترك", ru: "Общий проект" },
     sharedProjectNeedMember: { he: "יש להוסיף לפחות מספר טלפון אחד של משתתף", en: "Add at least one member's phone number", ar: "أضف رقم هاتف مشارك واحد على الأقل", ru: "Добавьте хотя бы один номер телефона участника" },
     cannotDeleteSharedProject: { he: "אי אפשר למחוק פרויקט משותף כרגע", en: "Shared projects can't be deleted yet", ar: "لا يمكن حذف مشروع مشترك حاليًا", ru: "Общий проект пока нельзя удалить" },
+    projectInviteSendMessagePrefix: { he: "שיתוף הפרויקט", en: "Share the project", ar: "مشاركة المشروع", ru: "Поделиться проектом" },
+    projectInviteSendBtn: { he: "שליחה", en: "Send", ar: "إرسال", ru: "Отправить" },
+    projectInviteNeedPhoneMsg: { he: "יש להוסיף לפחות מספר טלפון אחד", en: "Add at least one phone number", ar: "أضف رقم هاتف واحد على الأقل", ru: "Добавьте хотя бы один номер телефона" },
+    projectInviteSentMsg: { he: "ההזמנה נשלחה", en: "The invite was sent", ar: "تم إرسال الدعوة", ru: "Приглашение отправлено" },
+    projectInviteReceivedMsgTemplate: { he: "קיבלת פרויקט \"{project}\" מ{name} - לאשר?", en: "You received the project \"{project}\" from {name} - approve?", ar: "استلمت المشروع \"{project}\" من {name} - هل توافق؟", ru: "Вы получили проект «{project}» от {name} - подтвердить?" },
+    projectInviteApprovedMsg: { he: "הצטרפת לפרויקט", en: "You joined the project", ar: "لقد انضممت إلى المشروع", ru: "Вы присоединились к проекту" },
+    projectInviteDeclinedMsg: { he: "ההזמנה נדחתה", en: "The invite was declined", ar: "تم رفض الدعوة", ru: "Приглашение отклонено" },
     addSharedProjectHint: { he: "לחיצה ארוכה על + יוצרת פרויקט משותף", en: "Long-press + to create a shared project", ar: "اضغط مطولاً على + لإنشاء مشروع مشترك", ru: "Долгое нажатие на + создаёт общий проект" },
     chatBtnTitle: { he: "צ'אט הפרויקט", en: "Project chat", ar: "دردشة المشروع", ru: "Чат проекта" },
     chatInputPlaceholder: { he: "הודעה...", en: "Message...", ar: "رسالة...", ru: "Сообщение..." },
@@ -3985,42 +4012,228 @@
     render();
   }
 
-  function buildSheetShareText(sheet) {
-    var byDate = {};
-    sheet.tasks.forEach(function (t) {
-      (byDate[t.date] = byDate[t.date] || []).push(t);
-    });
-    var lines = [sheet.name, ""];
-    Object.keys(byDate).sort().forEach(function (date) {
-      lines.push(isoToFullDisplay(date) + ":");
-      byDate[date].forEach(function (t) {
-        var mark = t.type === "note" ? "📝" : (t.status === 2 ? "✔" : t.status === 1 ? "◐" : "○");
-        var extra = t.type === "note" && t.time ? " (" + t.time + ")" : "";
-        lines.push("  " + mark + " " + t.text + extra);
-      });
-      lines.push("");
-    });
-    return lines.join("\n").trim();
-  }
+  // --- Project invites: "שיתוף" on a project's tab sends a real invite to
+  // one or more contacts instead of just dumping a text summary - each
+  // invited phone only gains access after they explicitly approve (see the
+  // receiving side further down), rather than being silently added.
+  var projectInviteSendOverlay = document.getElementById("projectInviteSendOverlay");
+  var projectInviteSendMessage = document.getElementById("projectInviteSendMessage");
+  var projectInviteSendList = document.getElementById("projectInviteSendList");
+  var projectInvitePickContactsBtn = document.getElementById("projectInvitePickContactsBtn");
+  var projectInviteSendBtn = document.getElementById("projectInviteSendBtn");
+  var projectInviteSendCancelBtn = document.getElementById("projectInviteSendCancelBtn");
+  var pendingInviteSheetId = null;
 
-  function shareSheet(id) {
-    var sheet = allSheets().find(function (s) { return s.id === id; });
-    if (!sheet) return;
-    askConfirm(tr("confirmShareProject").replace("{name}", sheet.name), function () {
-      var text = buildSheetShareText(sheet);
-      if (navigator.share) {
-        navigator.share({ title: sheet.name, text: text }).catch(function () {});
-      } else if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(function () {
-          alert(tr("projectContentCopied"));
-        }, function () {
-          alert(tr("shareNotSupported"));
-        });
-      } else {
-        alert(tr("shareNotSupported"));
+  function addInvitePhoneInput(focusIt, presetValue, presetName) {
+    var input = document.createElement("input");
+    input.type = "tel";
+    input.className = "auth-input";
+    input.placeholder = tr("sharedProjectPhonePlaceholder");
+    input.maxLength = 20;
+    if (presetValue) input.value = presetValue;
+    if (presetName) input.dataset.contactName = presetName;
+    input.addEventListener("input", function () {
+      delete input.dataset.contactName;
+      if (input.value.trim() && input === projectInviteSendList.lastElementChild) {
+        addInvitePhoneInput(false);
       }
     });
+    input.addEventListener("keydown", function (e) {
+      e.stopPropagation();
+      if (e.key === "Enter") projectInviteSendBtn.click();
+      if (e.key === "Escape") closeProjectInviteSendModal();
+    });
+    projectInviteSendList.appendChild(input);
+    if (focusIt) input.focus();
   }
+
+  function pickContactsForInvite() {
+    if (!contactPickerSupported) return;
+    navigator.contacts.select(["name", "tel"], { multiple: true }).then(function (contacts) {
+      var lastEmpty = projectInviteSendList.lastElementChild;
+      contacts.forEach(function (c) {
+        var tel = (c.tel && c.tel[0]) || "";
+        var name = (c.name && c.name[0]) || "";
+        if (!tel) return;
+        addInvitePhoneInput(false, tel, name);
+      });
+      if (lastEmpty && !lastEmpty.value.trim() && lastEmpty.parentNode) lastEmpty.parentNode.removeChild(lastEmpty);
+      addInvitePhoneInput(false);
+    }).catch(function () {});
+  }
+  projectInvitePickContactsBtn.hidden = !contactPickerSupported;
+  projectInvitePickContactsBtn.addEventListener("click", pickContactsForInvite);
+
+  function openProjectInviteSendModal(id) {
+    var sheet = allSheets().find(function (s) { return s.id === id; });
+    if (!sheet) return;
+    pendingInviteSheetId = id;
+    projectInviteSendMessage.textContent = tr("projectInviteSendMessagePrefix") + " \"" + sheet.name + "\"";
+    projectInviteSendList.innerHTML = "";
+    addInvitePhoneInput(false);
+    projectInviteSendOverlay.hidden = false;
+  }
+  function closeProjectInviteSendModal() {
+    projectInviteSendOverlay.hidden = true;
+    pendingInviteSheetId = null;
+  }
+  projectInviteSendCancelBtn.addEventListener("click", closeProjectInviteSendModal);
+  projectInviteSendOverlay.addEventListener("click", function (e) {
+    if (e.target === projectInviteSendOverlay) closeProjectInviteSendModal();
+  });
+
+  // Converts a private sheet into a real (but so-far single-member) shared
+  // project the same way openSharedProjectConvertModal's save handler does,
+  // so an invite can be sent from a project that isn't shared yet - the
+  // invited phone is never added directly to members here; that only
+  // happens once they approve (approveProjectInvite / the RPC it calls).
+  function convertPrivateSheetForInvite(id) {
+    var privateSheet = data.sheets.find(function (s) { return s.id === id; });
+    if (!privateSheet) return null;
+    var converted = {
+      id: window.crypto.randomUUID ? window.crypto.randomUUID() : uid(),
+      shared: true,
+      name: privateSheet.name,
+      tasks: privateSheet.tasks || [],
+      reports: privateSheet.reports || [],
+      files: privateSheet.files || [],
+      folders: privateSheet.folders || null,
+      ended: privateSheet.ended || false,
+      endedDate: privateSheet.endedDate || null,
+      logoId: privateSheet.logoId || null,
+      members: [myPhoneNumber],
+      memberNames: {},
+      messages: []
+    };
+    data.sheets = data.sheets.filter(function (s) { return s.id !== id; });
+    sharedSheets.push(converted);
+    if (data.activeSheetId === id) data.activeSheetId = converted.id;
+    return converted;
+  }
+
+  function sendProjectInviteNotification(targetPhone, projectName, senderName, inviteId) {
+    if (!supabaseClient || !supabaseClient.functions) return;
+    try {
+      supabaseClient.functions.invoke("send-project-invite-notification", {
+        body: { targetPhone: targetPhone, projectName: projectName, senderName: senderName, inviteId: inviteId }
+      }).then(function () {}, function (err) {
+        console.error("send-project-invite-notification failed:", err);
+      });
+    } catch (e) {}
+  }
+
+  projectInviteSendBtn.addEventListener("click", function () {
+    if (!pendingInviteSheetId || !supabaseClient) return;
+    var inputs = Array.prototype.slice.call(projectInviteSendList.querySelectorAll("input"));
+    var invitees = [];
+    inputs.forEach(function (i) {
+      var phone = normalizePhoneDigits(i.value);
+      if (!phone || phone === myPhoneNumber) return;
+      invitees.push({ phone: phone, name: i.dataset.contactName || null });
+    });
+    if (!invitees.length) {
+      alert(tr("projectInviteNeedPhoneMsg"));
+      return;
+    }
+
+    var sheet = allSheets().find(function (s) { return s.id === pendingInviteSheetId; });
+    if (!sheet) return;
+    var isAlreadyShared = !!sheet.shared;
+    var targetSheet = isAlreadyShared ? sheet : convertPrivateSheetForInvite(pendingInviteSheetId);
+    if (!targetSheet) return;
+
+    var existingMembers = targetSheet.members || [];
+    var toInvite = invitees.filter(function (inv) { return existingMembers.indexOf(inv.phone) === -1; });
+
+    closeProjectInviteSendModal();
+    if (!isAlreadyShared) { saveData(); render(); }
+
+    if (!toInvite.length) return;
+
+    var senderName = (targetSheet.memberNames && targetSheet.memberNames[myPhoneNumber]) || myPhoneNumber;
+    var rows = toInvite.map(function (inv) {
+      return {
+        project_id: targetSheet.id,
+        project_name: targetSheet.name,
+        invited_phone: inv.phone,
+        invited_name: inv.name,
+        invited_by_phone: myPhoneNumber,
+        invited_by_name: senderName
+      };
+    });
+
+    supabaseClient.from("project_invites").insert(rows).select().then(function (result) {
+      if (result && result.error) { console.error("project_invites insert failed:", result.error); return; }
+      (result.data || []).forEach(function (row) {
+        sendProjectInviteNotification(row.invited_phone, row.project_name, row.invited_by_name, row.id);
+      });
+      showToast(tr("projectInviteSentMsg"));
+    }, function (err) {
+      console.error("project_invites insert failed:", err);
+    });
+  });
+
+  // --- Receiving side: an invite addressed to my own phone shows an
+  // approve/decline prompt - approving calls a security-definer RPC (a
+  // plain client update can't add me to shared_projects.members myself,
+  // since its RLS only lets EXISTING members touch the row at all) that
+  // atomically adds me as a member and marks the invite resolved.
+  var projectInviteReceivedOverlay = document.getElementById("projectInviteReceivedOverlay");
+  var projectInviteReceivedMessage = document.getElementById("projectInviteReceivedMessage");
+  var projectInviteApproveBtn = document.getElementById("projectInviteApproveBtn");
+  var projectInviteDeclineBtn = document.getElementById("projectInviteDeclineBtn");
+  var pendingProjectInvitesQueue = [];
+  var activeProjectInvite = null;
+
+  function checkPendingProjectInvites() {
+    if (!supabaseClient || !myPhoneNumber || activeProjectInvite) return;
+    try {
+      supabaseClient.from("project_invites").select("*")
+        .eq("invited_phone", myPhoneNumber).eq("status", "pending")
+        .then(function (result) {
+          if (!result || result.error || !result.data || !result.data.length) return;
+          pendingProjectInvitesQueue = result.data;
+          showNextPendingProjectInvite();
+        }, function () {});
+    } catch (e) {}
+  }
+  function showNextPendingProjectInvite() {
+    if (activeProjectInvite || !pendingProjectInvitesQueue.length) return;
+    activeProjectInvite = pendingProjectInvitesQueue.shift();
+    var senderLabel = activeProjectInvite.invited_by_name || activeProjectInvite.invited_by_phone;
+    projectInviteReceivedMessage.textContent = tr("projectInviteReceivedMsgTemplate")
+      .replace("{project}", activeProjectInvite.project_name)
+      .replace("{name}", senderLabel);
+    projectInviteReceivedOverlay.hidden = false;
+  }
+  function closeProjectInviteReceivedModal() {
+    projectInviteReceivedOverlay.hidden = true;
+    activeProjectInvite = null;
+    showNextPendingProjectInvite();
+  }
+  projectInviteApproveBtn.addEventListener("click", function () {
+    if (!activeProjectInvite || !supabaseClient) return;
+    var invite = activeProjectInvite;
+    supabaseClient.rpc("approve_project_invite", { invite_id: invite.id }).then(function (result) {
+      if (result && result.error) { console.error("approve_project_invite failed:", result.error); return; }
+      showToast(tr("projectInviteApprovedMsg"));
+      loadSharedSheets();
+    }, function (err) {
+      console.error("approve_project_invite failed:", err);
+    });
+    closeProjectInviteReceivedModal();
+  });
+  projectInviteDeclineBtn.addEventListener("click", function () {
+    if (!activeProjectInvite || !supabaseClient) return;
+    var invite = activeProjectInvite;
+    supabaseClient.rpc("decline_project_invite", { invite_id: invite.id }).then(function (result) {
+      if (result && result.error) console.error("decline_project_invite failed:", result.error);
+    }, function (err) {
+      console.error("decline_project_invite failed:", err);
+    });
+    showToast(tr("projectInviteDeclinedMsg"));
+    closeProjectInviteReceivedModal();
+  });
 
   function normalizePhoneDigits(raw) {
     var digits = (raw || "").replace(/\D/g, "");
@@ -4239,7 +4452,7 @@
   sheetActionShareBtn.addEventListener("click", function () {
     var id = pendingSheetActionId;
     closeSheetActionModal();
-    shareSheet(id);
+    openProjectInviteSendModal(id);
   });
   sheetActionEndBtn.addEventListener("click", function () {
     var id = pendingSheetActionId;
@@ -9422,6 +9635,8 @@
     var date = params.get("date");
     var taskId = params.get("task");
     var chat = params.get("chat") === "1";
+    var invite = params.get("invite") === "1";
+    if (invite) checkPendingProjectInvites();
     if (!sheetId && !date && !taskId && !chat) return;
     showNavDebugToast("URL", sheetId, date, taskId);
     navigateToTaskLink(sheetId, date, taskId, chat);
@@ -9433,6 +9648,7 @@
       var msg = event.data || {};
       if (msg.type !== "navigate-task") return;
       showNavDebugToast("message", msg.sheetId, msg.date, msg.taskId);
+      if (msg.projectInvite) checkPendingProjectInvites();
       navigateToTaskLink(msg.sheetId, msg.date, msg.taskId, msg.chat);
       render();
     });
@@ -9568,6 +9784,7 @@
       if (!usedInstantLocal) startLocalOnly();
     }
     loadSharedSheets();
+    checkPendingProjectInvites();
   }
 
   function sharedRowToSheet(row) {
@@ -9748,6 +9965,7 @@
   function refreshSharedSheetsIfIdle() {
     if (isEditingActively()) return;
     loadSharedSheets();
+    checkPendingProjectInvites();
   }
 
   function startSharedSheetsWatcher() {

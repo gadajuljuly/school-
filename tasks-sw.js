@@ -1,6 +1,6 @@
 // ITASK
 // © 2026 Ahmad Juljoly. All rights reserved.
-var CACHE_NAME = "tasks-app-v53";
+var CACHE_NAME = "tasks-app-v54";
 var CORE_ASSETS = [
   "./tasks.html",
   "./tasks-manifest.json",
@@ -109,12 +109,13 @@ self.addEventListener("notificationclick", function (event) {
   event.notification.close();
   var taskData = event.notification.data || {};
   var url = "./tasks.html";
-  if (taskData.sheetId || taskData.date || taskData.taskId || taskData.chat) {
+  if (taskData.sheetId || taskData.date || taskData.taskId || taskData.chat || taskData.projectInvite) {
     var params = new URLSearchParams();
     if (taskData.sheetId) params.set("sheet", taskData.sheetId);
     if (taskData.date) params.set("date", taskData.date);
     if (taskData.taskId) params.set("task", taskData.taskId);
     if (taskData.chat) params.set("chat", "1");
+    if (taskData.projectInvite) params.set("invite", "1");
     url = "./tasks.html?" + params.toString();
   }
   var targetUrl = new URL(url, self.location.href).href;
@@ -128,7 +129,8 @@ self.addEventListener("notificationclick", function (event) {
             sheetId: taskData.sheetId,
             date: taskData.date,
             taskId: taskData.taskId,
-            chat: taskData.chat
+            chat: taskData.chat,
+            projectInvite: taskData.projectInvite
           });
           return client.focus();
         }
