@@ -23,7 +23,10 @@
 -- signed URLs before this file is applied.
 update storage.buckets set public = false where id = 'project-files';
 
-alter table storage.objects enable row level security;
+-- storage.objects is owned by Supabase itself (not this project's postgres
+-- role), and RLS is already enabled on it by default in every Supabase
+-- project - attempting to ALTER TABLE ... ENABLE ROW LEVEL SECURITY on it
+-- here fails with "must be owner of table objects" and isn't needed anyway.
 
 drop policy if exists "manage own or shared project files" on storage.objects;
 create policy "manage own or shared project files"
