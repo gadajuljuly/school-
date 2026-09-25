@@ -1,4 +1,4 @@
-var CACHE_NAME = "tasks-app-v36";
+var CACHE_NAME = "tasks-app-v37";
 var CORE_ASSETS = [
   "./tasks.html",
   "./tasks-manifest.json",

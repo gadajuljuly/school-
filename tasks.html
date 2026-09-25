@@ -489,6 +489,16 @@
     position: relative;
     margin: 1px 8px 2px;
     box-shadow: 0 1px 1.5px var(--shadow);
+    touch-action: pan-y;
+  }
+  .chat-bubble-reply-icon {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.2rem;
+    color: var(--ink-muted);
+    opacity: 0;
+    pointer-events: none;
   }
   .chat-bubble.chat-bubble-start { margin-top: 6px; }
   .chat-bubble-theirs { margin-right: auto; background: var(--bubble-bg, var(--paper-alt)); }
@@ -2442,7 +2452,6 @@
     <div class="modal-box" role="alertdialog" aria-modal="true">
       <p class="modal-message" data-i18n="chatMsgActionModalMessage">מה לעשות עם ההודעה?</p>
       <div class="move-task-mode">
-        <button type="button" id="chatMsgQuoteBtn" data-i18n="chatMsgQuoteBtn">ציטוט</button>
         <button type="button" id="chatMsgCopyBtn" data-i18n="chatMsgCopyBtn">העתקה</button>
         <button type="button" id="chatMsgToTaskBtn" data-i18n="chatMsgToTaskBtn">הפיכה למשימה</button>
         <button type="button" id="chatMsgEditBtn" data-i18n="chatMsgEditBtn">עריכה</button>
@@ -2871,7 +2880,6 @@
     chatAttachBtnTitle: { he: "צירוף קובץ", en: "Attach file", ar: "إرفاق ملف", ru: "Прикрепить файл" },
     chatFileUploadError: { he: "העלאת הקובץ נכשלה", en: "File upload failed", ar: "فشل تحميل الملف", ru: "Не удалось загрузить файл" },
     chatMsgActionModalMessage: { he: "מה לעשות עם ההודעה?", en: "What would you like to do with this message?", ar: "ماذا تريد أن تفعل بهذه الرسالة؟", ru: "Что сделать с этим сообщением?" },
-    chatMsgQuoteBtn: { he: "ציטוט", en: "Quote", ar: "اقتباس", ru: "Цитировать" },
     chatMsgCopyBtn: { he: "העתקה", en: "Copy", ar: "نسخ", ru: "Копировать" },
     chatMsgToTaskBtn: { he: "הפיכה למשימה", en: "Turn into task", ar: "تحويل إلى مهمة", ru: "Сделать задачей" },
     chatMsgCopiedMsg: { he: "ההודעה הועתקה", en: "Message copied", ar: "تم نسخ الرسالة", ru: "Сообщение скопировано" },
@@ -4184,6 +4192,10 @@
       var bubble = document.createElement("div");
       bubble.className = "chat-bubble " + (isMine ? "chat-bubble-mine" : "chat-bubble-theirs") + (isStart ? " chat-bubble-start" : "");
       bubble.dataset.msgId = m.id;
+      var replyIcon = document.createElement("span");
+      replyIcon.className = "chat-bubble-reply-icon";
+      replyIcon.textContent = "↩";
+      bubble.appendChild(replyIcon);
       if (!isMine) {
         var colorIdx = contactColorIndex(m.phone);
         bubble.style.setProperty("--bubble-bg", "var(--contact-bg-" + colorIdx + ")");
@@ -4283,6 +4295,7 @@
       }
       bubble.appendChild(timeEl);
       attachChatBubbleLongPress(bubble, m);
+      attachChatBubbleSwipeReply(bubble, m, replyIcon);
       chatMessages.appendChild(bubble);
     });
     if (wasNearBottom) chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -4635,7 +4648,6 @@
   }
 
   var chatMsgActionOverlay = document.getElementById("chatMsgActionOverlay");
-  var chatMsgQuoteBtn = document.getElementById("chatMsgQuoteBtn");
   var chatMsgEditBtn = document.getElementById("chatMsgEditBtn");
   var chatMsgDeleteBtn = document.getElementById("chatMsgDeleteBtn");
   var chatMsgActionCancelBtn = document.getElementById("chatMsgActionCancelBtn");
@@ -4754,6 +4766,55 @@
     bubbleEl.addEventListener("touchmove", move, { passive: true });
   }
 
+  // Swipe-to-quote: dragging a bubble sideways past a threshold starts a
+  // reply/quote of it (replacing the earlier long-press "quote" action, per
+  // feedback that it should be a drag gesture instead). touch-action: pan-y
+  // on .chat-bubble (see CSS) lets the browser keep handling vertical list
+  // scrolling natively while this handles the horizontal axis itself.
+  var CHAT_SWIPE_THRESHOLD = 50;
+  var CHAT_SWIPE_MAX = 70;
+  function attachChatBubbleSwipeReply(bubbleEl, message, replyIcon) {
+    var startX = 0, startY = 0, dragging = false;
+    var start = function (e) {
+      var pt = e.touches ? e.touches[0] : e;
+      startX = pt.clientX; startY = pt.clientY;
+      dragging = false;
+    };
+    var move = function (e) {
+      var pt = e.touches ? e.touches[0] : e;
+      var dx = pt.clientX - startX;
+      var dy = pt.clientY - startY;
+      if (!dragging) {
+        if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.5) dragging = true;
+        else return;
+      }
+      var capped = Math.max(-CHAT_SWIPE_MAX, Math.min(CHAT_SWIPE_MAX, dx));
+      bubbleEl.style.transition = "none";
+      bubbleEl.style.transform = "translateX(" + capped + "px)";
+      replyIcon.style.opacity = String(Math.min(1, Math.abs(dx) / CHAT_SWIPE_THRESHOLD));
+      replyIcon.style.left = capped > 0 ? "-26px" : "";
+      replyIcon.style.right = capped < 0 ? "-26px" : "";
+    };
+    var end = function (e) {
+      if (dragging) {
+        var pt = (e.changedTouches && e.changedTouches[0]) || e;
+        var dx = Math.max(-CHAT_SWIPE_MAX, Math.min(CHAT_SWIPE_MAX, pt.clientX - startX));
+        bubbleEl.style.transition = "transform 0.2s ease";
+        bubbleEl.style.transform = "translateX(0)";
+        replyIcon.style.opacity = "0";
+        if (Math.abs(dx) >= CHAT_SWIPE_THRESHOLD) startChatReply(message);
+      }
+      dragging = false;
+    };
+    bubbleEl.addEventListener("mousedown", start);
+    bubbleEl.addEventListener("mousemove", move);
+    bubbleEl.addEventListener("mouseup", end);
+    bubbleEl.addEventListener("mouseleave", function (e) { if (dragging) end(e); });
+    bubbleEl.addEventListener("touchstart", start, { passive: true });
+    bubbleEl.addEventListener("touchmove", move, { passive: true });
+    bubbleEl.addEventListener("touchend", end);
+  }
+
   function openChatMessageActionModal(message) {
     pendingChatActionMessage = message;
     var isMine = message.phone === myPhoneNumber;
@@ -4824,11 +4885,6 @@
     var message = pendingChatActionMessage;
     closeChatMessageActionModal();
     if (message) startEditingChatMessage(message);
-  });
-  chatMsgQuoteBtn.addEventListener("click", function () {
-    var message = pendingChatActionMessage;
-    closeChatMessageActionModal();
-    if (message) startChatReply(message);
   });
   function copyChatMessageText(message) {
     var text = chatMessagePreviewText(message);
