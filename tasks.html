@@ -1023,6 +1023,46 @@
     padding: 0;
   }
   .site-log-add-btn img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .site-log-procurement-wrap { flex: 1; overflow: auto; padding: 14px; }
+  .site-log-procurement-header {
+    display: flex;
+    gap: 6px;
+    padding: 0 34px 6px 0;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--ink-muted);
+  }
+  .site-log-procurement-header span:nth-child(1) { flex: 2; }
+  .site-log-procurement-header span:nth-child(2) { flex: 1; }
+  .site-log-procurement-header span:nth-child(3) { flex: 2; }
+  .site-log-procurement-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .site-log-procurement-row input {
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 7px 8px;
+    font-size: 0.85rem;
+    font-family: inherit;
+    background: var(--paper);
+    color: var(--ink);
+    min-width: 0;
+  }
+  .site-log-procurement-item { flex: 2; }
+  .site-log-procurement-quantity { flex: 1; }
+  .site-log-procurement-supplier { flex: 2; }
+  .site-log-procurement-row-remove {
+    border: none;
+    background: transparent;
+    color: var(--ink-muted);
+    cursor: pointer;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+    width: 22px;
+  }
   .site-log-list-wrap { flex: 1; overflow: auto; padding: 14px; }
   .site-log-list { display: flex; flex-direction: column; gap: 8px; max-width: 320px; margin: 0 auto; }
   .site-log-list .site-log-add-btn { align-self: center; margin-top: 2px; }
@@ -2558,6 +2598,10 @@
         <div class="library-item-thumb"><img src="tasks-works-icon.webp" alt=""></div>
         <div class="library-item-name" data-i18n="siteLogWorks">עבודות</div>
       </div>
+      <div class="library-item" id="siteLogProcurementBtn">
+        <div class="library-item-thumb"><img src="tasks-procurement-icon.webp" alt=""></div>
+        <div class="library-item-name" data-i18n="siteLogProcurement">רכש</div>
+      </div>
     </div>
     <button type="button" class="site-log-preview-btn" id="siteLogPreviewBtn" data-i18n="siteLogPreviewBtn">הצגת יומן</button>
     <div class="site-log-close-share-row">
@@ -2646,6 +2690,26 @@
     </div>
     <button type="button" class="site-log-copy-prev-btn" id="siteLogWorksCopyPrevBtn" data-i18n="siteLogCopyPrevBtn">העתקת יומן קודם</button>
     <input type="file" id="siteLogWorksFileInput" hidden>
+  </div>
+
+  <div class="report-view" id="siteLogProcurementView" hidden>
+    <div class="report-head">
+      <button type="button" class="report-back-btn" id="siteLogProcurementBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
+      <div class="report-head-title">
+        <div class="site-log-header-project" id="siteLogProcurementProjectName"></div>
+        <div data-i18n="siteLogProcurement">רכש</div>
+      </div>
+    </div>
+    <div class="site-log-procurement-wrap">
+      <div class="site-log-procurement-header">
+        <span data-i18n="siteLogColItem">פריט</span>
+        <span data-i18n="siteLogColQuantity">כמות</span>
+        <span data-i18n="siteLogColSupplier">ספק</span>
+        <span></span>
+      </div>
+      <div id="siteLogProcurementRows"></div>
+    </div>
+    <button type="button" class="site-log-copy-prev-btn" id="siteLogProcurementCopyPrevBtn" data-i18n="siteLogCopyPrevBtn">העתקת יומן קודם</button>
   </div>
 
   <div class="report-view" id="companyDashboardView" hidden>
@@ -2818,6 +2882,10 @@
     siteLogTools: { he: "כלים", en: "Tools", ar: "المعدات", ru: "Оборудование" },
     siteLogContractors: { he: "קבלנים", en: "Contractors", ar: "المقاولون", ru: "Подрядчики" },
     siteLogWorks: { he: "עבודות", en: "Works", ar: "الأعمال", ru: "Работы" },
+    siteLogProcurement: { he: "רכש", en: "Procurement", ar: "المشتريات", ru: "Закупки" },
+    siteLogColItem: { he: "פריט", en: "Item", ar: "الصنف", ru: "Позиция" },
+    siteLogColQuantity: { he: "כמות", en: "Quantity", ar: "الكمية", ru: "Количество" },
+    siteLogColSupplier: { he: "ספק", en: "Supplier", ar: "المورد", ru: "Поставщик" },
     siteLogColForeman: { he: "מנהל עבודה", en: "Foreman", ar: "مدير الأعمال", ru: "Прораб" },
     siteLogColEngineer: { he: "מהנדס", en: "Engineer", ar: "مهندس", ru: "Инженер" },
     siteLogColWorkers: { he: "פועלים", en: "Workers", ar: "عمال", ru: "Рабочие" },
@@ -3094,6 +3162,12 @@
     });
     if (!Array.isArray(log.contractors)) log.contractors = [];
     if (!Array.isArray(log.works)) log.works = [];
+    if (!Array.isArray(log.procurement)) log.procurement = [];
+    log.procurement.forEach(function (row) {
+      if (typeof row.item !== "string") row.item = "";
+      if (typeof row.quantity !== "string") row.quantity = "";
+      if (typeof row.supplier !== "string") row.supplier = "";
+    });
     if (typeof log.closed !== "boolean") log.closed = false;
     if (typeof log.number !== "number") log.number = null;
     if (typeof log.closedAt !== "number") log.closedAt = null;
@@ -6175,6 +6249,12 @@
   var siteLogWorksCopyPrevBtn = document.getElementById("siteLogWorksCopyPrevBtn");
   var siteLogWorksProjectName = document.getElementById("siteLogWorksProjectName");
   var siteLogWorksPendingEntryId = null;
+  var siteLogProcurementBtn = document.getElementById("siteLogProcurementBtn");
+  var siteLogProcurementView = document.getElementById("siteLogProcurementView");
+  var siteLogProcurementBackBtn = document.getElementById("siteLogProcurementBackBtn");
+  var siteLogProcurementRows = document.getElementById("siteLogProcurementRows");
+  var siteLogProcurementCopyPrevBtn = document.getElementById("siteLogProcurementCopyPrevBtn");
+  var siteLogProcurementProjectName = document.getElementById("siteLogProcurementProjectName");
 
   function updateSiteLogCloseShareButtons() {
     var log = findSiteLog(activeSheet(), activeSiteLogDate);
@@ -6856,6 +6936,99 @@
   siteLogWorksBtn.addEventListener("click", openSiteLogWorksView);
   siteLogWorksBackBtn.addEventListener("click", closeSiteLogWorksView);
 
+  function renderSiteLogProcurementRows() {
+    siteLogProcurementRows.innerHTML = "";
+    var log = findSiteLog(activeSheet(), activeSiteLogDate);
+    var entries = (log && log.procurement) || [];
+
+    entries.forEach(function (entry) {
+      var row = document.createElement("div");
+      row.className = "site-log-procurement-row";
+
+      var itemInput = document.createElement("input");
+      itemInput.type = "text";
+      itemInput.className = "site-log-procurement-item";
+      itemInput.maxLength = 80;
+      itemInput.value = entry.item;
+      itemInput.placeholder = tr("siteLogColItem");
+      itemInput.addEventListener("blur", function () {
+        entry.item = itemInput.value.trim();
+        saveData();
+      });
+      row.appendChild(itemInput);
+
+      var quantityInput = document.createElement("input");
+      quantityInput.type = "text";
+      quantityInput.className = "site-log-procurement-quantity";
+      quantityInput.maxLength = 30;
+      quantityInput.value = entry.quantity;
+      quantityInput.placeholder = tr("siteLogColQuantity");
+      quantityInput.addEventListener("blur", function () {
+        entry.quantity = quantityInput.value.trim();
+        saveData();
+      });
+      row.appendChild(quantityInput);
+
+      var supplierInput = document.createElement("input");
+      supplierInput.type = "text";
+      supplierInput.className = "site-log-procurement-supplier";
+      supplierInput.maxLength = 80;
+      supplierInput.value = entry.supplier;
+      supplierInput.placeholder = tr("siteLogColSupplier");
+      supplierInput.addEventListener("blur", function () {
+        entry.supplier = supplierInput.value.trim();
+        saveData();
+      });
+      row.appendChild(supplierInput);
+
+      var removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "site-log-procurement-row-remove";
+      removeBtn.textContent = "✕";
+      removeBtn.addEventListener("click", function () {
+        var liveLog = findSiteLog(activeSheet(), activeSiteLogDate);
+        if (!liveLog) return;
+        liveLog.procurement = liveLog.procurement.filter(function (e) { return e.id !== entry.id; });
+        saveData();
+        renderSiteLogProcurementRows();
+      });
+      row.appendChild(removeBtn);
+
+      siteLogProcurementRows.appendChild(row);
+    });
+
+    var addBtn = document.createElement("button");
+    addBtn.type = "button";
+    addBtn.className = "site-log-add-btn";
+    var addBtnImg = document.createElement("img");
+    addBtnImg.src = "tasks-plus-icon.webp";
+    addBtnImg.alt = "+";
+    addBtn.appendChild(addBtnImg);
+    addBtn.addEventListener("click", function () {
+      var liveLog = findOrCreateSiteLog(activeSheet(), activeSiteLogDate);
+      liveLog.procurement.push({ id: uid(), item: "", quantity: "", supplier: "" });
+      saveData();
+      renderSiteLogProcurementRows();
+      var lastRow = siteLogProcurementRows.lastElementChild;
+      var firstInput = lastRow && lastRow.querySelector("input");
+      if (firstInput) firstInput.focus();
+    });
+    siteLogProcurementRows.appendChild(addBtn);
+  }
+
+  function openSiteLogProcurementView() {
+    siteLogProcurementProjectName.textContent = activeSheet().name;
+    renderSiteLogProcurementRows();
+    siteLogCategoriesView.hidden = true;
+    siteLogProcurementView.hidden = false;
+  }
+  function closeSiteLogProcurementView() {
+    siteLogProcurementView.hidden = true;
+    siteLogCategoriesView.hidden = false;
+  }
+  siteLogProcurementBtn.addEventListener("click", openSiteLogProcurementView);
+  siteLogProcurementBackBtn.addEventListener("click", closeSiteLogProcurementView);
+
   function copyPreviousSiteLogCategory(applyFn, onDone) {
     var sheet = activeSheet();
     var prevLog = findPreviousSiteLog(sheet, activeSiteLogDate);
@@ -6899,6 +7072,14 @@
     copyPreviousSiteLogCategory(function (liveLog, prevLog) {
       liveLog.works = (prevLog.works || []).map(function (e) { return { id: uid(), text: e.text, attachment: null }; });
     }, renderSiteLogWorksList);
+  });
+
+  siteLogProcurementCopyPrevBtn.addEventListener("click", function () {
+    copyPreviousSiteLogCategory(function (liveLog, prevLog) {
+      liveLog.procurement = (prevLog.procurement || []).map(function (e) {
+        return { id: uid(), item: e.item, quantity: e.quantity, supplier: e.supplier };
+      });
+    }, renderSiteLogProcurementRows);
   });
 
   function renderSheetReportsList() {
@@ -7868,6 +8049,42 @@
       });
     }
     doc.appendChild(worksFrame);
+
+    var procurementHeading = document.createElement("div");
+    procurementHeading.className = "pdf-doc-section-heading";
+    procurementHeading.textContent = tr("siteLogProcurement");
+    doc.appendChild(procurementHeading);
+    var procurement = (log && log.procurement) || [];
+    if (!procurement.length) {
+      var emptyP = document.createElement("div");
+      emptyP.className = "pdf-doc-empty";
+      emptyP.textContent = tr("reportShareNoRows");
+      doc.appendChild(emptyP);
+    } else {
+      var procTable = document.createElement("table");
+      procTable.className = "pdf-doc-table";
+      var procThead = document.createElement("thead");
+      var procHeadRow = document.createElement("tr");
+      [tr("siteLogColItem"), tr("siteLogColQuantity"), tr("siteLogColSupplier")].forEach(function (label) {
+        var th = document.createElement("th");
+        th.textContent = label;
+        procHeadRow.appendChild(th);
+      });
+      procThead.appendChild(procHeadRow);
+      procTable.appendChild(procThead);
+      var procTbody = document.createElement("tbody");
+      procurement.forEach(function (row) {
+        var tr2 = document.createElement("tr");
+        [row.item, row.quantity, row.supplier].forEach(function (val) {
+          var td = document.createElement("td");
+          td.textContent = val || "";
+          tr2.appendChild(td);
+        });
+        procTbody.appendChild(tr2);
+      });
+      procTable.appendChild(procTbody);
+      doc.appendChild(procTable);
+    }
 
     var footerEl = document.createElement("div");
     footerEl.className = "pdf-doc-footer";
