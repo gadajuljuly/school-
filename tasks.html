@@ -2699,6 +2699,7 @@
         <div class="site-log-header-project" id="siteLogProcurementProjectName"></div>
         <div data-i18n="siteLogProcurement">רכש</div>
       </div>
+      <button type="button" class="report-share-btn" id="siteLogProcurementShareBtn" data-i18n-title="shareBtn" title="שיתוף">&#128228;</button>
     </div>
     <div class="site-log-procurement-wrap">
       <div class="site-log-procurement-header">
@@ -2912,6 +2913,7 @@
     siteLogNoPreviousLog: { he: "אין יומן קודם להעתיק ממנו", en: "No previous log to copy from", ar: "لا يوجد سجل سابق للنسخ منه", ru: "Нет предыдущего журнала для копирования" },
     siteLogAttendanceReportFileNamePrefix: { he: "דוח נוכחות פרויקט", en: "Attendance report project", ar: "تقرير حضور مشروع", ru: "Отчёт о посещаемости проекта" },
     siteLogToolsReportFileNamePrefix: { he: "דוח כלים פרויקט", en: "Tools report project", ar: "تقرير معدات مشروع", ru: "Отчёт об оборудовании проекта" },
+    siteLogProcurementReportFileNamePrefix: { he: "דוח רכש פרויקט", en: "Procurement report project", ar: "تقرير مشتريات مشروع", ru: "Отчёт о закупках проекта" },
     siteLogColExcavator: { he: "מחפרון", en: "Excavator", ar: "حفارة", ru: "Экскаватор-погрузчик" },
     siteLogColLoader: { he: "שופל", en: "Loader", ar: "شيول", ru: "Погрузчик" },
     siteLogColBagger: { he: "באגר", en: "Bagger", ar: "بيجر", ru: "Экскаватор" },
@@ -6252,6 +6254,7 @@
   var siteLogProcurementBtn = document.getElementById("siteLogProcurementBtn");
   var siteLogProcurementView = document.getElementById("siteLogProcurementView");
   var siteLogProcurementBackBtn = document.getElementById("siteLogProcurementBackBtn");
+  var siteLogProcurementShareBtn = document.getElementById("siteLogProcurementShareBtn");
   var siteLogProcurementRows = document.getElementById("siteLogProcurementRows");
   var siteLogProcurementCopyPrevBtn = document.getElementById("siteLogProcurementCopyPrevBtn");
   var siteLogProcurementProjectName = document.getElementById("siteLogProcurementProjectName");
@@ -7894,6 +7897,44 @@
     return table;
   }
 
+  function buildProcurementTableElement(log) {
+    var table = document.createElement("table");
+    table.className = "pdf-doc-table";
+    var thead = document.createElement("thead");
+    var headRow = document.createElement("tr");
+    [tr("siteLogColItem"), tr("siteLogColQuantity"), tr("siteLogColSupplier")].forEach(function (label) {
+      var th = document.createElement("th");
+      th.textContent = label;
+      headRow.appendChild(th);
+    });
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+
+    var tbody = document.createElement("tbody");
+    var rows = (log && log.procurement) || [];
+    if (!rows.length) {
+      var emptyRow = document.createElement("tr");
+      var emptyTd = document.createElement("td");
+      emptyTd.className = "pdf-doc-empty";
+      emptyTd.colSpan = 3;
+      emptyTd.textContent = tr("reportShareNoRows");
+      emptyRow.appendChild(emptyTd);
+      tbody.appendChild(emptyRow);
+    } else {
+      rows.forEach(function (row) {
+        var rowEl = document.createElement("tr");
+        [row.item, row.quantity, row.supplier].forEach(function (val) {
+          var td = document.createElement("td");
+          td.textContent = val || "";
+          rowEl.appendChild(td);
+        });
+        tbody.appendChild(rowEl);
+      });
+    }
+    table.appendChild(tbody);
+    return table;
+  }
+
   function buildSiteLogAttendancePdfElement(dateISO) {
     var doc = document.createElement("div");
     doc.className = "pdf-doc";
@@ -7949,6 +7990,38 @@
 
     var log = findSiteLog(sheet, dateISO);
     doc.appendChild(buildToolsTableElement(log));
+
+    var footerEl = document.createElement("div");
+    footerEl.className = "pdf-doc-footer";
+    footerEl.textContent = tr("reportPdfFooter");
+    doc.appendChild(footerEl);
+
+    return doc;
+  }
+
+  function buildSiteLogProcurementPdfElement(dateISO) {
+    var doc = document.createElement("div");
+    doc.className = "pdf-doc";
+    doc.dir = RTL_LANGS[currentLang] ? "rtl" : "ltr";
+
+    var sheet = activeSheet();
+    var projectTitle = document.createElement("div");
+    projectTitle.className = "pdf-doc-title";
+    projectTitle.textContent = sheet.name;
+    doc.appendChild(projectTitle);
+
+    var categoryTitle = document.createElement("div");
+    categoryTitle.className = "pdf-doc-info-title";
+    categoryTitle.textContent = tr("siteLogProcurement");
+    doc.appendChild(categoryTitle);
+
+    var infoDate = document.createElement("div");
+    infoDate.className = "pdf-doc-info-date";
+    infoDate.textContent = isoToFullDisplay(dateISO);
+    doc.appendChild(infoDate);
+
+    var log = findSiteLog(sheet, dateISO);
+    doc.appendChild(buildProcurementTableElement(log));
 
     var footerEl = document.createElement("div");
     footerEl.className = "pdf-doc-footer";
@@ -8054,37 +8127,7 @@
     procurementHeading.className = "pdf-doc-section-heading";
     procurementHeading.textContent = tr("siteLogProcurement");
     doc.appendChild(procurementHeading);
-    var procurement = (log && log.procurement) || [];
-    if (!procurement.length) {
-      var emptyP = document.createElement("div");
-      emptyP.className = "pdf-doc-empty";
-      emptyP.textContent = tr("reportShareNoRows");
-      doc.appendChild(emptyP);
-    } else {
-      var procTable = document.createElement("table");
-      procTable.className = "pdf-doc-table";
-      var procThead = document.createElement("thead");
-      var procHeadRow = document.createElement("tr");
-      [tr("siteLogColItem"), tr("siteLogColQuantity"), tr("siteLogColSupplier")].forEach(function (label) {
-        var th = document.createElement("th");
-        th.textContent = label;
-        procHeadRow.appendChild(th);
-      });
-      procThead.appendChild(procHeadRow);
-      procTable.appendChild(procThead);
-      var procTbody = document.createElement("tbody");
-      procurement.forEach(function (row) {
-        var tr2 = document.createElement("tr");
-        [row.item, row.quantity, row.supplier].forEach(function (val) {
-          var td = document.createElement("td");
-          td.textContent = val || "";
-          tr2.appendChild(td);
-        });
-        procTbody.appendChild(tr2);
-      });
-      procTable.appendChild(procTbody);
-      doc.appendChild(procTable);
-    }
+    doc.appendChild(buildProcurementTableElement(log));
 
     var footerEl = document.createElement("div");
     footerEl.className = "pdf-doc-footer";
@@ -8120,6 +8163,12 @@
     if (!activeSiteLogDate) return;
     shareSiteLogPdf(siteLogToolsShareBtn, buildSiteLogToolsPdfElement, function (dateISO) {
       return tr("siteLogToolsReportFileNamePrefix") + " " + activeSheet().name + " " + isoToFileNameDate(dateISO) + ".pdf";
+    }, activeSiteLogDate);
+  });
+  siteLogProcurementShareBtn.addEventListener("click", function () {
+    if (!activeSiteLogDate) return;
+    shareSiteLogPdf(siteLogProcurementShareBtn, buildSiteLogProcurementPdfElement, function (dateISO) {
+      return tr("siteLogProcurementReportFileNamePrefix") + " " + activeSheet().name + " " + isoToFileNameDate(dateISO) + ".pdf";
     }, activeSiteLogDate);
   });
 
