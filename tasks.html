@@ -2412,6 +2412,7 @@
       </div>
       <button type="button" class="convert-to-note-btn" id="sheetActionMembersBtn" data-i18n="sheetActionMembersBtn" hidden>ניהול משתתפים</button>
       <button type="button" class="convert-to-note-btn" id="sheetActionMakeSharedBtn" data-i18n="sheetActionMakeSharedBtn" hidden>הפיכה לפרויקט משותף</button>
+      <button type="button" class="convert-to-note-btn" id="sheetActionLogoBtn" data-i18n="chooseLogoTitle">בחר לוגו</button>
       <div class="modal-actions">
         <button type="button" class="modal-btn modal-btn-no" id="sheetActionCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
@@ -4194,6 +4195,7 @@
   var sheetActionEndBtn = document.getElementById("sheetActionEndBtn");
   var sheetActionMembersBtn = document.getElementById("sheetActionMembersBtn");
   var sheetActionMakeSharedBtn = document.getElementById("sheetActionMakeSharedBtn");
+  var sheetActionLogoBtn = document.getElementById("sheetActionLogoBtn");
   var sheetActionCancelBtn = document.getElementById("sheetActionCancelBtn");
   var pendingSheetActionId = null;
 
@@ -4233,6 +4235,11 @@
     var id = pendingSheetActionId;
     closeSheetActionModal();
     openSharedProjectConvertModal(id);
+  });
+  sheetActionLogoBtn.addEventListener("click", function () {
+    var id = pendingSheetActionId;
+    closeSheetActionModal();
+    openLogoPickerModal(id);
   });
   sheetActionCancelBtn.addEventListener("click", closeSheetActionModal);
   sheetActionOverlay.addEventListener("click", function (e) {
@@ -6177,7 +6184,6 @@
 
   var addLogoBtn = document.getElementById("addLogoBtn");
   var logoFileInput = document.getElementById("logoFileInput");
-  var sheetTitleWrap = document.getElementById("sheetTitleWrap");
   var sheetTitleLogo = document.getElementById("sheetTitleLogo");
   var logoPickerOverlay = document.getElementById("logoPickerOverlay");
   var logoPickerGrid = document.getElementById("logoPickerGrid");
@@ -6250,8 +6256,8 @@
     }
   }
 
-  function openLogoPickerModal() {
-    var sheet = activeSheet();
+  function openLogoPickerModal(sheetId) {
+    var sheet = sheetId ? allSheets().find(function (s) { return s.id === sheetId; }) : activeSheet();
     if (!sheet) return;
     logoPickerGrid.innerHTML = "";
     var noneItem = document.createElement("div");
@@ -6311,36 +6317,6 @@
   logoPickerOverlay.addEventListener("click", function (e) {
     if (e.target === logoPickerOverlay) closeLogoPickerModal();
   });
-
-  (function () {
-    var sheetTitleLongPressFired = false;
-    var sheetTitlePressStartX = 0, sheetTitlePressStartY = 0;
-    var startSheetTitlePress = function (e) {
-      var point = e.touches ? e.touches[0] : e;
-      sheetTitlePressStartX = point.clientX;
-      sheetTitlePressStartY = point.clientY;
-      sheetTitleLongPressFired = false;
-      clearTimeout(longPressTimer);
-      longPressTimer = setTimeout(function () {
-        sheetTitleLongPressFired = true;
-        openLogoPickerModal();
-      }, 600);
-    };
-    var cancelSheetTitlePress = function () { clearTimeout(longPressTimer); };
-    var moveSheetTitlePress = function (e) {
-      var point = e.touches ? e.touches[0] : e;
-      if (Math.abs(point.clientX - sheetTitlePressStartX) > 10 || Math.abs(point.clientY - sheetTitlePressStartY) > 10) {
-        cancelSheetTitlePress();
-      }
-    };
-    sheetTitleWrap.addEventListener("mousedown", startSheetTitlePress);
-    sheetTitleWrap.addEventListener("mouseup", cancelSheetTitlePress);
-    sheetTitleWrap.addEventListener("mouseleave", cancelSheetTitlePress);
-    sheetTitleWrap.addEventListener("mousemove", moveSheetTitlePress);
-    sheetTitleWrap.addEventListener("touchstart", startSheetTitlePress, { passive: true });
-    sheetTitleWrap.addEventListener("touchend", cancelSheetTitlePress);
-    sheetTitleWrap.addEventListener("touchmove", moveSheetTitlePress, { passive: true });
-  })();
 
   var sheetReportsList = document.getElementById("sheetReportsList");
   var tasksFabBtn = document.getElementById("tasksFabBtn");
