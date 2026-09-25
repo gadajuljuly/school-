@@ -4595,7 +4595,9 @@
     supabaseClient.storage.from(LIBRARY_BUCKET).upload(path, blob, { contentType: blob.type || "audio/webm" })
       .then(function (result) {
         if (result.error) throw result.error;
-        var url = libraryPublicUrl(path);
+        return resolveFileUrl(path);
+      })
+      .then(function (url) {
         return sendChatVoiceMessage(activeChatSheetId, url, durationSec);
       })
       .then(function () { renderChatMessages(); }, function (err) {
@@ -4643,7 +4645,9 @@
     supabaseClient.storage.from(LIBRARY_BUCKET).upload(path, file)
       .then(function (result) {
         if (result.error) throw result.error;
-        var url = libraryPublicUrl(path);
+        return resolveFileUrl(path);
+      })
+      .then(function (url) {
         return sendChatFileMessage(activeChatSheetId, url, file.name, file.type || "", file.size || 0);
       })
       .then(function () { renderChatMessages(); }, function () { alert(tr("chatFileUploadError")); });
@@ -4994,9 +4998,103 @@
     return folder.name || "";
   }
 
-  function libraryPublicUrl(path) {
-    var result = supabaseClient.storage.from(LIBRARY_BUCKET).getPublicUrl(path);
-    return result && result.data && result.data.publicUrl;
+  // The bucket is private (see supabase/sql/enable_storage_rls.sql), so a
+  // plain getPublicUrl() no longer serves real content - every file needs a
+  // signed URL instead. Minting one requires the same storage.objects RLS
+  // check as any other access (only the owning user or a shared project's
+  // members can succeed), so an expiry this long is safe: it's not a
+  // standing grant to anyone who merely has the link, it's simply how long
+  // a link that already required a legitimate access check keeps working
+  // afterward (matching how this app never re-checks membership on
+  // already-loaded chat history either).
+  var SIGNED_URL_EXPIRY_SECONDS = 60 * 60 * 24 * 365 * 10;
+  function resolveFileUrl(path) {
+    return supabaseClient.storage.from(LIBRARY_BUCKET).createSignedUrl(path, SIGNED_URL_EXPIRY_SECONDS).then(function (result) {
+      if (result.error) throw result.error;
+      return result.data.signedUrl;
+    });
+  }
+
+  // One-time migration (safe to re-run every load - it's a no-op scan once
+  // nothing matches): the bucket used to be public, so every stored
+  // fileUrl/audioUrl/attachment.url was a "…/object/public/project-files/…"
+  // link. Those stop resolving once the bucket goes private (see
+  // enable_storage_rls.sql), so any still found get reissued as signed URLs
+  // and written back - otherwise old chat attachments and site-log photos
+  // would simply stop loading the moment that SQL is applied.
+  function needsUrlMigration(url) {
+    return typeof url === "string" && url.indexOf("/object/public/" + LIBRARY_BUCKET + "/") !== -1;
+  }
+  function pathFromPublicUrl(url) {
+    var marker = "/object/public/" + LIBRARY_BUCKET + "/";
+    var idx = url.indexOf(marker);
+    return idx === -1 ? null : url.slice(idx + marker.length);
+  }
+  function migrateSiteLogAttachmentUrls(siteLogs) {
+    var tasks = [];
+    (siteLogs || []).forEach(function (log) {
+      (log.works || []).forEach(function (w) {
+        if (w.attachment && needsUrlMigration(w.attachment.url)) {
+          var path = pathFromPublicUrl(w.attachment.url);
+          if (path) tasks.push(resolveFileUrl(path).then(function (url) { w.attachment.url = url; }).catch(function () {}));
+        }
+      });
+    });
+    return Promise.all(tasks).then(function () { return tasks.length > 0; });
+  }
+  function migratePrivateSheetsFileUrls() {
+    if (!supabaseClient) return;
+    var perSheet = data.sheets.map(function (sheet) { return migrateSiteLogAttachmentUrls(sheet.siteLogs); });
+    Promise.all(perSheet).then(function (results) {
+      if (results.some(Boolean)) saveData();
+    });
+  }
+  function migrateSharedSheetFileUrls(sheet) {
+    if (!supabaseClient) return;
+    var needsMessages = (sheet.messages || []).some(function (m) {
+      return (m.type === "file" && needsUrlMigration(m.fileUrl)) || (m.type === "voice" && needsUrlMigration(m.audioUrl));
+    });
+    var needsSiteLogs = (sheet.siteLogs || []).some(function (log) {
+      return (log.works || []).some(function (w) { return w.attachment && needsUrlMigration(w.attachment.url); });
+    });
+    if (!needsMessages && !needsSiteLogs) return;
+
+    if (needsMessages) {
+      supabaseClient.from(SHARED_TABLE).select("messages").eq("id", sheet.id).maybeSingle().then(function (result) {
+        var current = (result && result.data && result.data.messages) || [];
+        var tasks = [];
+        current.forEach(function (m) {
+          if (m.type === "file" && needsUrlMigration(m.fileUrl)) {
+            var path = pathFromPublicUrl(m.fileUrl);
+            if (path) tasks.push(resolveFileUrl(path).then(function (url) { m.fileUrl = url; }).catch(function () {}));
+          } else if (m.type === "voice" && needsUrlMigration(m.audioUrl)) {
+            var path2 = pathFromPublicUrl(m.audioUrl);
+            if (path2) tasks.push(resolveFileUrl(path2).then(function (url) { m.audioUrl = url; }).catch(function () {}));
+          }
+        });
+        return Promise.all(tasks).then(function () {
+          return supabaseClient.from(SHARED_TABLE).update({ messages: current }).eq("id", sheet.id);
+        }).then(function () {
+          sheet.messages = current;
+          if (activeChatSheetId === sheet.id) renderChatMessages();
+        });
+      });
+    }
+    if (needsSiteLogs) {
+      supabaseClient.from(SHARED_TABLE).select("data").eq("id", sheet.id).maybeSingle().then(function (result) {
+        var currentData = (result && result.data && result.data.data) || {};
+        var siteLogs = currentData.siteLogs || [];
+        migrateSiteLogAttachmentUrls(siteLogs).then(function () {
+          var updatedData = Object.assign({}, currentData, { siteLogs: siteLogs });
+          return supabaseClient.from(SHARED_TABLE).update({ data: updatedData }).eq("id", sheet.id);
+        }).then(function () {
+          sheet.siteLogs = siteLogs;
+        });
+      });
+    }
+  }
+  function migrateAllSharedSheetsFileUrls() {
+    sharedSheets.forEach(migrateSharedSheetFileUrls);
   }
 
   function isImageFile(entry) {
@@ -5232,8 +5330,8 @@
       thumb.className = "library-item-thumb";
       if (isImageFile(entry)) {
         var img = document.createElement("img");
-        img.src = libraryPublicUrl(entry.path);
         img.alt = "";
+        resolveFileUrl(entry.path).then(function (url) { img.src = url; }).catch(function () {});
         thumb.appendChild(img);
       } else {
         thumb.textContent = "📄";
@@ -5246,7 +5344,9 @@
       item.appendChild(nameEl);
 
       item.addEventListener("click", function () {
-        window.open(libraryPublicUrl(entry.path), "_blank");
+        resolveFileUrl(entry.path).then(function (url) { window.open(url, "_blank"); }).catch(function () {
+          alert(tr("libraryUploadError"));
+        });
       });
 
       var delBtn = document.createElement("button");
@@ -6716,7 +6816,8 @@
     var path = sheet.id + "/site-logs/" + activeSiteLogDate + "/" + uid() + "-" + safeStorageFileName(file.name);
     supabaseClient.storage.from(LIBRARY_BUCKET).upload(path, file).then(function (result) {
       if (result.error) throw result.error;
-      var url = libraryPublicUrl(path);
+      return resolveFileUrl(path);
+    }).then(function (url) {
       var liveLog = findSiteLog(activeSheet(), activeSiteLogDate);
       var entry = liveLog && liveLog.works.find(function (e) { return e.id === entryId; });
       if (entry) {
@@ -8820,6 +8921,7 @@
         // Backups are a nice-to-have safety net, never allowed to disrupt
         // the core load/save flow if the backup table/call misbehaves.
         if (!isFreshDefault) { try { maybeBackupData(); } catch (e) {} }
+        if (!isFreshDefault) { try { migratePrivateSheetsFileUrls(); } catch (e) {} }
         var rolled = applyDailyRollover(data);
         if ((rolled && !isFreshDefault) || confirmedNewUser) saveData();
         applyTaskLinkFromURL();
@@ -8919,6 +9021,7 @@
         sharedSheets = newSheets;
         rollSheetsForward(sharedSheets);
         updateAppBadge();
+        try { migrateAllSharedSheetsFileUrls(); } catch (e) {}
         // Don't paint an interactive frame off the private data's initial
         // (unresolved) default before that load has had a chance to settle -
         // see the privateDataSettled comment above. Once it settles, that
