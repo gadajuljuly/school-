@@ -1,9 +1,10 @@
-var CACHE_NAME = "tasks-app-v37";
+var CACHE_NAME = "tasks-app-v38";
 var CORE_ASSETS = [
   "./tasks.html",
   "./tasks-manifest.json",
   "./tasks-icon-192.png",
   "./tasks-icon-512.png",
+  "./tasks-badge-96.png",
   "./tasks-library-icon.webp",
   "./tasks-chat-icon.webp",
   "./tasks-report-icon.webp",
@@ -88,7 +89,12 @@ self.addEventListener("push", function (event) {
     self.registration.showNotification(payload.title, {
       body: payload.body,
       icon: "./tasks-icon-192.png",
-      badge: "./tasks-icon-192.png",
+      // Android masks this into a plain white silhouette for the status
+      // bar/collapsed view using only its alpha channel - the full-color
+      // square icon has no transparency at all, so it was rendering as an
+      // unrecognizable blank blob there. This is a dedicated, already-
+      // transparent monochrome cutout of the "X" glyph instead.
+      badge: "./tasks-badge-96.png",
       tag: "task-reminder",
       renotify: true,
       data: payload.data || null
