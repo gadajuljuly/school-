@@ -5164,12 +5164,8 @@
     try {
       supabaseClient.functions.invoke("send-chat-notification", {
         body: { sheetId: sheetId, senderPhone: myPhoneNumber, senderName: senderName, text: text }
-      }).then(function (result) {
-        console.error("send-chat-notification result:", JSON.stringify(result));
-        showChatNotifStatus("DEBUG send result: " + JSON.stringify((result && result.data) || result));
-      }, function (err) {
+      }).then(function () {}, function (err) {
         console.error("send-chat-notification failed:", err);
-        showChatNotifStatus("DEBUG send failed: " + ((err && err.message) || err));
       });
     } catch (e) {}
   }
@@ -6684,10 +6680,7 @@
       return;
     }
     getExistingPushMatch().then(function (match) {
-      if (!match) {
-        showChatNotifStatus("DEBUG: no match (not logged in yet?)");
-        return;
-      }
+      if (!match) return;
       // Not .maybeSingle(): earlier app-restarts that lost their locally
       // cached fcm_token each registered a fresh one server-side, so a
       // given account can have several rows here. Any one of them having
@@ -6695,15 +6688,8 @@
       return supabaseClient.from("push_subscriptions").select("frequency_minutes, chat_enabled").eq(match.column, match.value)
         .then(function (result) {
           var rows = result && result.data;
-          var err = result && result.error;
-          if (err) {
-            showChatNotifStatus("DEBUG: lookup error - " + err.message);
-            return;
-          }
-          if (!rows || !rows.length) {
-            showChatNotifStatus("DEBUG: no push_subscriptions row for this account yet");
-            return;
-          }
+          if (result && result.error) return;
+          if (!rows || !rows.length) return;
           var freq = rows.map(function (r) { return r.frequency_minutes; }).find(function (v) { return v; });
           var chatOn = rows.some(function (r) { return r.chat_enabled; });
           if (freq) {
@@ -6712,14 +6698,10 @@
           }
           if (chatOn) {
             chatNotifSelect.value = "on";
-            showChatNotifStatus(tr("chatNotifActive") + " (DEBUG: " + rows.length + " row(s), chat_enabled seen=true)");
-          } else {
-            showChatNotifStatus("DEBUG: " + rows.length + " row(s) found, none with chat_enabled=true");
+            showChatNotifStatus(tr("chatNotifActive"));
           }
         });
-    }).catch(function (e) {
-      showChatNotifStatus("DEBUG: initReminderSettings threw - " + ((e && e.message) || e));
-    });
+    }).catch(function () {});
   }
 
   reminderFrequencySelect.addEventListener("change", function () {
