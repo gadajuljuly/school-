@@ -3758,7 +3758,11 @@
     var deferredPrompt = null;
 
     var isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
-    if (isStandalone) return;
+    // A Capacitor WebView never reports display-mode: standalone (it isn't a
+    // browser-installed PWA), so without this check this "install app"
+    // prompt showed up permanently inside the already-installed native app.
+    var isCapacitorNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+    if (isStandalone || isCapacitorNative) return;
 
     var ua = navigator.userAgent;
     var isIOS = /iphone|ipad|ipod/i.test(ua) && !window.MSStream;
