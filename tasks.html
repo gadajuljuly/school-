@@ -6592,32 +6592,36 @@
     });
   }
 
-  // On the native app, a lost local fcm_token cache (see getExistingPushMatch
-  // above) means this can run again with a genuinely new token even though
-  // a row for this account already exists server-side - upserting on
-  // conflict fcm_token alone would then just create ANOTHER row instead of
-  // updating the existing one, silently piling up duplicates over repeated
-  // background/resume cycles. Converge onto this account's single existing
-  // row instead (deleting any already-accumulated duplicates), falling
-  // back to a plain upsert only when no row exists yet. Web Push endpoints
-  // don't have this problem (they're stable per browser install), so that
-  // path keeps its simpler per-endpoint upsert.
+  // On the native app, this is the single source of truth for the
+  // account's notifications - any other row for the same account (a Web
+  // Push subscription from having opened the site directly in a phone
+  // browser like Chrome/Samsung Internet before or alongside installing
+  // the app, or a stale duplicate fcm_token row from an earlier lost
+  // local-token cache - see getExistingPushMatch above) is redundant and
+  // makes the same message arrive multiple times, each showing that
+  // browser's icon instead of the app's. Delete every other row for this
+  // account and keep/create exactly one, matching the app's own current
+  // token. Only reached in the native app; Web Push endpoints (browser
+  // installs) keep their simpler per-endpoint upsert, since two different
+  // browsers on two different devices are legitimately two subscriptions.
   function upsertPushSubscriptionRow(extraFields, identity) {
     var row = Object.assign({ user_id: SUPABASE_ROW_ID }, extraFields, identity.fields);
     if (!capacitorPushAvailable) {
       return supabaseClient.from("push_subscriptions").upsert(row, { onConflict: identity.conflictColumn });
     }
-    return supabaseClient.from("push_subscriptions").select("id").eq("user_id", SUPABASE_ROW_ID).order("created_at", { ascending: false })
+    return supabaseClient.from("push_subscriptions").select("id, fcm_token").eq("user_id", SUPABASE_ROW_ID)
       .then(function (result) {
         var rows = (result && result.data) || [];
-        if (!rows.length) {
-          return supabaseClient.from("push_subscriptions").upsert(row, { onConflict: identity.conflictColumn });
-        }
-        var keepId = rows[0].id;
-        var staleIds = rows.slice(1).map(function (r) { return r.id; });
-        var cleanup = staleIds.length ? supabaseClient.from("push_subscriptions").delete().in("id", staleIds) : Promise.resolve();
+        var keepId = null;
+        var deleteIds = [];
+        rows.forEach(function (r) {
+          if (r.fcm_token && r.fcm_token === identity.fields.fcm_token) keepId = r.id;
+          else deleteIds.push(r.id);
+        });
+        var cleanup = deleteIds.length ? supabaseClient.from("push_subscriptions").delete().in("id", deleteIds) : Promise.resolve();
         return cleanup.then(function () {
-          return supabaseClient.from("push_subscriptions").update(row).eq("id", keepId);
+          if (keepId) return supabaseClient.from("push_subscriptions").update(row).eq("id", keepId);
+          return supabaseClient.from("push_subscriptions").upsert(row, { onConflict: identity.conflictColumn });
         });
       });
   }
