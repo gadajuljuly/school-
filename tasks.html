@@ -6,7 +6,7 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>ITASK</title>
 <link rel="manifest" href="tasks-manifest.json" id="pwaManifestLink">
 <script>
@@ -276,7 +276,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 20px 18px;
+    padding: 12px 20px calc(18px + env(safe-area-inset-bottom, 0px));
     flex-shrink: 0;
     border-radius: 0 0 10px 10px;
   }
