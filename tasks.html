@@ -6482,19 +6482,26 @@
       return;
     }
 
+    // Temporary diagnostic: step-by-step status so we can see exactly where
+    // this stalls (a hung native promise shows no error and no UI change,
+    // which is indistinguishable from "nothing happens" from the outside).
+    showReminderStatus("DEBUG: change fired, checking permission denied...");
     pushPermissionDenied().then(function (denied) {
+      showReminderStatus("DEBUG: pushPermissionDenied()=" + denied);
       if (denied) {
         showReminderStatus(tr("notificationsBlocked"));
         reminderFrequencySelect.value = "";
         return;
       }
       return requestPushPermissionGranted().then(function (granted) {
+        showReminderStatus("DEBUG: requestPushPermissionGranted()=" + granted);
         if (!granted) {
           showReminderStatus(tr("notificationPermissionDenied"));
           reminderFrequencySelect.value = "";
           return;
         }
         return ensurePushIdentity().then(function (identity) {
+          showReminderStatus("DEBUG: got identity, column=" + identity.conflictColumn);
           var row = Object.assign({ user_id: SUPABASE_ROW_ID, frequency_minutes: Number(value), last_sent_at: null }, identity.fields);
           return supabaseClient.from("push_subscriptions").upsert(row, { onConflict: identity.conflictColumn });
         }).then(function (result) {
