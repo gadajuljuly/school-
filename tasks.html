@@ -9974,18 +9974,42 @@
             // as the actual confirmation instead, and hold off
             // rendering/editing until it comes back - exactly like a
             // normal read failure would.
-            supabaseClient.from("app_state").insert({ id: SUPABASE_ROW_ID, data: data, updated_at: new Date().toISOString() })
-              .then(function (result) {
-                if (result && result.error) {
-                  showDataLoadError("existing row detected on insert: " + result.error.message);
+            //
+            // Two things a plain single attempt got wrong (caught in
+            // review): an unresolving request here must still converge on
+            // the loading screen's own timeout, same as the read above -
+            // otherwise a hang leaves no visible retry option at all; and a
+            // transient network error is not the same signal as a real
+            // conflict, so only an actual unique-constraint violation
+            // should be treated as "this wasn't a new user after all" -
+            // anything else gets one silent retry before falling back to
+            // the same visible retry screen a real read failure would show.
+            var attemptInsert = function (isRetry) {
+              withTimeout(
+                supabaseClient.from("app_state").insert({ id: SUPABASE_ROW_ID, data: data, updated_at: new Date().toISOString() }),
+                15000,
+                "app_state new-user insert"
+              ).then(function (result) {
+                var err = result && result.error;
+                if (err) {
+                  var isConflict = err.code === "23505" || /duplicate key/i.test(err.message || "");
+                  if (isConflict) {
+                    showDataLoadError("existing row detected on insert: " + err.message);
+                    return;
+                  }
+                  if (!isRetry) { attemptInsert(true); return; }
+                  showDataLoadError(err.message);
                   return;
                 }
                 saveLocalData();
                 applyTaskLinkFromURL();
                 render();
-              }, function (err) {
-                showDataLoadError((err && err.message) || String(err));
+              }, function (thrown) {
+                if (!isRetry) { attemptInsert(true); return; }
+                showDataLoadError((thrown && thrown.message) || String(thrown));
               });
+            };
+            attemptInsert(false);
             return;
           }
           applyTaskLinkFromURL();
