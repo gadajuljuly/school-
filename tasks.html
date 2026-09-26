@@ -9963,7 +9963,31 @@
         if (!isFreshDefault) { try { migratePrivateSheetsFileUrls(); } catch (e) {} }
         try {
           var rolled = applyDailyRollover(data);
-          if ((rolled && !isFreshDefault) || confirmedNewUser) saveData();
+          if (rolled && !isFreshDefault) saveData();
+          if (confirmedNewUser) {
+            // "No row returned" alone is NOT proof this id is actually
+            // unused - RLS makes a blocked read look identical to a
+            // genuinely missing row, and saveData()'s blind upsert would
+            // silently overwrite a real row in that case. An insert-only
+            // write fails on a real primary-key conflict regardless of
+            // whether RLS hid that row from the SELECT above, so use that
+            // as the actual confirmation instead, and hold off
+            // rendering/editing until it comes back - exactly like a
+            // normal read failure would.
+            supabaseClient.from("app_state").insert({ id: SUPABASE_ROW_ID, data: data, updated_at: new Date().toISOString() })
+              .then(function (result) {
+                if (result && result.error) {
+                  showDataLoadError("existing row detected on insert: " + result.error.message);
+                  return;
+                }
+                saveLocalData();
+                applyTaskLinkFromURL();
+                render();
+              }, function (err) {
+                showDataLoadError((err && err.message) || String(err));
+              });
+            return;
+          }
           applyTaskLinkFromURL();
           render();
         } catch (renderErr) {
