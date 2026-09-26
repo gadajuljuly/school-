@@ -8,7 +8,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ITASK</title>
-<link rel="manifest" href="tasks-manifest.json">
+<link rel="manifest" href="tasks-manifest.json" id="pwaManifestLink">
+<script>
+  // Running inside the native Android wrapper (android-app/, a Capacitor
+  // shell) - this page is otherwise identical to the plain web/TWA version,
+  // but the manifest link above is exactly what makes the underlying
+  // Android WebView engine think this is ALSO an installable PWA in its
+  // own right, and offer its own "Install app" banner/shortcut on top of
+  // an app that's already installed. Remove it as early as possible
+  // (Capacitor injects window.Capacitor before the page's own scripts run)
+  // so that heuristic never fires here; the manifest still works normally
+  // for everyone else (regular browser, TWA).
+  if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+    document.getElementById("pwaManifestLink").remove();
+  }
+</script>
 <meta name="theme-color" content="#35618f">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -10282,7 +10296,8 @@
     authChangePhoneBtn.addEventListener("click", showPhoneStep);
   }
 
-  if ("serviceWorker" in navigator && location.protocol !== "file:") {
+  var isCapacitorNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  if ("serviceWorker" in navigator && location.protocol !== "file:" && !isCapacitorNative) {
     window.addEventListener("load", function () {
       navigator.serviceWorker.register("tasks-sw.js").then(function (reg) {
         // A new SW version can finish installing and take over (via
