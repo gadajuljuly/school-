@@ -5164,8 +5164,12 @@
     try {
       supabaseClient.functions.invoke("send-chat-notification", {
         body: { sheetId: sheetId, senderPhone: myPhoneNumber, senderName: senderName, text: text }
-      }).then(function () {}, function (err) {
+      }).then(function (result) {
+        console.error("send-chat-notification result:", JSON.stringify(result));
+        showChatNotifStatus("DEBUG send result: " + JSON.stringify((result && result.data) || result));
+      }, function (err) {
         console.error("send-chat-notification failed:", err);
+        showChatNotifStatus("DEBUG send failed: " + ((err && err.message) || err));
       });
     } catch (e) {}
   }
@@ -6645,20 +6649,36 @@
       return;
     }
     getExistingPushMatch().then(function (match) {
-      if (!match) return;
+      if (!match) {
+        showChatNotifStatus("DEBUG: no stored fcm token found on this load");
+        return;
+      }
       return supabaseClient.from("push_subscriptions").select("frequency_minutes, chat_enabled").eq(match.column, match.value).maybeSingle()
         .then(function (result) {
           var row = result && result.data;
-          if (row && row.frequency_minutes) {
+          var err = result && result.error;
+          if (err) {
+            showChatNotifStatus("DEBUG: lookup error - " + err.message);
+            return;
+          }
+          if (!row) {
+            showChatNotifStatus("DEBUG: token found but no matching row in push_subscriptions");
+            return;
+          }
+          if (row.frequency_minutes) {
             reminderFrequencySelect.value = String(row.frequency_minutes);
             showReminderStatus(tr("remindersActive"));
           }
-          if (row && row.chat_enabled) {
+          if (row.chat_enabled) {
             chatNotifSelect.value = "on";
-            showChatNotifStatus(tr("chatNotifActive"));
+            showChatNotifStatus(tr("chatNotifActive") + " (DEBUG: row ok, chat_enabled=" + row.chat_enabled + ")");
+          } else {
+            showChatNotifStatus("DEBUG: row found but chat_enabled=" + row.chat_enabled);
           }
         });
-    }).catch(function () {});
+    }).catch(function (e) {
+      showChatNotifStatus("DEBUG: initReminderSettings threw - " + ((e && e.message) || e));
+    });
   }
 
   reminderFrequencySelect.addEventListener("change", function () {

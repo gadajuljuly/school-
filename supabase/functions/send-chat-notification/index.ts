@@ -149,27 +149,33 @@ Deno.serve(async (req) => {
 
   let sent = 0;
   let removed = 0;
+  const details: any[] = [];
 
   for (const sub of subs || []) {
     try {
       if (sub.fcm_token) {
         const result = await sendFcmMessage(sub.fcm_token, title, body, data);
         if (!result.ok) throw Object.assign(new Error(result.error), { shouldRemove: result.shouldRemove });
+        details.push({ channel: "fcm", ok: true });
       } else {
         await webpush.sendNotification(
           { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
           JSON.stringify({ title, body, data: { sheetId, chat: true } }),
         );
+        details.push({ channel: "webpush", ok: true });
       }
       sent++;
     } catch (err: any) {
       const status = err?.statusCode || err?.status;
-      if (err?.shouldRemove || status === 404 || status === 410) {
-        await supabase.from("push_subscriptions").delete().eq("id", sub.id);
-        removed++;
-      }
+      const shouldRemove = err?.shouldRemove || status === 404 || status === 410;
+      // Temporarily NOT deleting on failure (even when shouldRemove would
+      // normally apply) while diagnosing why native FCM sends fail - a
+      // premature delete here destroys the exact evidence needed to find
+      // the root cause of "notifications don't arrive" and re-registering
+      // afterwards just recreates the same broken row.
+      details.push({ channel: sub.fcm_token ? "fcm" : "webpush", ok: false, wouldRemove: !!shouldRemove, error: err?.message || String(err) });
     }
   }
 
-  return jsonResponse({ recipients: recipients.length, subscriptions: (subs || []).length, sent, removed });
+  return jsonResponse({ recipients: recipients.length, subscriptions: (subs || []).length, sent, removed, details });
 });
