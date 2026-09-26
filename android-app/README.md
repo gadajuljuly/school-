@@ -66,24 +66,36 @@ already used for phone-number login:
    `google-services.json` file it generates.
 2. Place that file at `android-app/android/app/google-services.json` (next
    to `build.gradle (:app)`).
-3. **Generate a service account key** for the server side: Firebase Console
+3. **Apply the Google Services Gradle plugin** - this is the step that's
+   easy to miss (`npx cap sync` does NOT add it automatically, even though
+   it does add the project-level classpath for it): open `build.gradle
+   (:app)` and add this as the very last line of the file:
+   ```
+   apply plugin: 'com.google.gms.google-services'
+   ```
+   Without this line, Firebase never actually initializes and
+   `PushNotifications` silently doesn't show up in
+   `window.Capacitor.Plugins` at all - `npm install`/`npx cap sync` still
+   report the plugin found, and the build still succeeds, so nothing
+   about this failure is visible until you check that at runtime.
+5. **Generate a service account key** for the server side: Firebase Console
    → Project settings → **Service accounts** tab → **Generate new private
    key**. This downloads a second JSON file - keep it private, it's not
    committed anywhere in this repo.
-4. From that service account JSON, set three Supabase secrets (Supabase
+6. From that service account JSON, set three Supabase secrets (Supabase
    Dashboard → Edge Functions → Manage secrets, or `supabase secrets set`):
    - `FCM_PROJECT_ID` = the `project_id` field
    - `FCM_CLIENT_EMAIL` = the `client_email` field
    - `FCM_PRIVATE_KEY` = the `private_key` field (paste it exactly as-is,
      `\n` escapes included)
-5. Run `supabase/sql/fcm_push_column.sql` once in the Supabase SQL Editor
+7. Run `supabase/sql/fcm_push_column.sql` once in the Supabase SQL Editor
    (adds the `fcm_token` column `push_subscriptions` needs alongside the
    existing Web Push columns).
-6. Redeploy the three notification functions so they pick up the FCM
+8. Redeploy the three notification functions so they pick up the FCM
    sending code: `supabase functions deploy send-reminders`,
    `send-chat-notification --no-verify-jwt`, and
    `send-project-invite-notification --no-verify-jwt`.
-7. `npm install` (picks up the new `@capacitor/push-notifications`
+9. `npm install` (picks up the new `@capacitor/push-notifications`
    dependency), then `npx cap sync android`, then rebuild and publish a new
    signed release as above.
 
