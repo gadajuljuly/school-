@@ -49,3 +49,45 @@ app - does not need `READ_CONTACTS` declared for picking a single contact
 this way. If a future version of the plugin does request it, Android will
 show its own native permission dialog the first time it's used; no
 website-side change is needed for that.
+
+## Push notifications (one-time Firebase setup)
+
+The Android WebView this app runs in has no Web Push API support at all, so
+reminders/chat notifications use `@capacitor/push-notifications` (Firebase
+Cloud Messaging) here instead - the website code already detects this and
+switches channels automatically (see `capacitorPushAvailable` in
+`tasks.html`). This needs a one-time setup in the SAME Firebase project
+already used for phone-number login:
+
+1. **Register the Android app in Firebase**: Firebase Console → Project
+   settings (gear icon) → your existing project → **Add app → Android**.
+   Package name must be exactly `com.gadajuljuly.itask` (same as
+   `applicationId` in `android-app/android/app/build.gradle`). Download the
+   `google-services.json` file it generates.
+2. Place that file at `android-app/android/app/google-services.json` (next
+   to `build.gradle (:app)`).
+3. **Generate a service account key** for the server side: Firebase Console
+   → Project settings → **Service accounts** tab → **Generate new private
+   key**. This downloads a second JSON file - keep it private, it's not
+   committed anywhere in this repo.
+4. From that service account JSON, set three Supabase secrets (Supabase
+   Dashboard → Edge Functions → Manage secrets, or `supabase secrets set`):
+   - `FCM_PROJECT_ID` = the `project_id` field
+   - `FCM_CLIENT_EMAIL` = the `client_email` field
+   - `FCM_PRIVATE_KEY` = the `private_key` field (paste it exactly as-is,
+     `\n` escapes included)
+5. Run `supabase/sql/fcm_push_column.sql` once in the Supabase SQL Editor
+   (adds the `fcm_token` column `push_subscriptions` needs alongside the
+   existing Web Push columns).
+6. Redeploy the three notification functions so they pick up the FCM
+   sending code: `supabase functions deploy send-reminders`,
+   `send-chat-notification --no-verify-jwt`, and
+   `send-project-invite-notification --no-verify-jwt`.
+7. `npm install` (picks up the new `@capacitor/push-notifications`
+   dependency), then `npx cap sync android`, then rebuild and publish a new
+   signed release as above.
+
+Notification tap-through (opening the right task/chat/invite from a
+notification while the app was closed) is already wired up in `tasks.html`
+via a `pushNotificationActionPerformed` listener, matching what the service
+worker does for the browser/TWA build.

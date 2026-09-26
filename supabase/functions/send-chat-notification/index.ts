@@ -1,6 +1,7 @@
 // Deploy with: supabase functions deploy send-chat-notification --no-verify-jwt
 // Required secrets (same ones used by send-reminders):
 //   VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT
+//   FCM_PROJECT_ID, FCM_CLIENT_EMAIL, FCM_PRIVATE_KEY - see ../_shared/fcm.ts
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided automatically by Supabase.
 //
 // Called directly by the client (from the browser) right after a chat
@@ -10,6 +11,7 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import webpush from "npm:web-push@3.6.7";
+import { sendFcmMessage } from "../_shared/fcm.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -90,25 +92,28 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: subsError.message }, 500);
   }
 
-  const payload = JSON.stringify({
-    title: sheet.name,
-    body: (senderName || senderPhone) + ": " + text,
-    data: { sheetId, chat: true },
-  });
+  const title = sheet.name;
+  const body = (senderName || senderPhone) + ": " + text;
+  const data = { sheetId, chat: "true" };
 
   let sent = 0;
   let removed = 0;
 
   for (const sub of subs || []) {
     try {
-      await webpush.sendNotification(
-        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-        payload,
-      );
+      if (sub.fcm_token) {
+        const result = await sendFcmMessage(sub.fcm_token, title, body, data);
+        if (!result.ok) throw Object.assign(new Error(result.error), { shouldRemove: result.shouldRemove });
+      } else {
+        await webpush.sendNotification(
+          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+          JSON.stringify({ title, body, data: { sheetId, chat: true } }),
+        );
+      }
       sent++;
     } catch (err: any) {
       const status = err?.statusCode || err?.status;
-      if (status === 404 || status === 410) {
+      if (err?.shouldRemove || status === 404 || status === 410) {
         await supabase.from("push_subscriptions").delete().eq("id", sub.id);
         removed++;
       }

@@ -4071,6 +4071,15 @@
   );
   var contactPickerSupported = !!(navigator.contacts && window.ContactsManager) || capacitorContactsAvailable;
 
+  // The standard Web Push API (navigator.serviceWorker + window.PushManager)
+  // is unsupported by the Android WebView engine the native app runs in -
+  // reminders/chat notifications need Capacitor's own push-notifications
+  // plugin there instead, which talks to Firebase Cloud Messaging natively.
+  var capacitorPushAvailable = !!(
+    window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform() &&
+    window.Capacitor.Plugins && window.Capacitor.Plugins.PushNotifications
+  );
+
   // Native pickContact() only returns ONE contact per call (unlike the web
   // API's multiple:true), so this gets called once per button press;
   // pressing the button again picks another. Resolves to null if the user
@@ -6303,6 +6312,96 @@
     });
   }
 
+  function fcmTokenStorageKey() {
+    return "itask-fcm-token:" + SUPABASE_ROW_ID;
+  }
+
+  function getStoredFcmToken() {
+    try { return localStorage.getItem(fcmTokenStorageKey()); } catch (e) { return null; }
+  }
+
+  // Same one-per-device idea as ensurePushSubscription() above, but for the
+  // native app: Capacitor's register() call answers asynchronously via a
+  // one-shot "registration"/"registrationError" event rather than a promise,
+  // so this wraps that in one and caches the resulting FCM token locally
+  // (it's stable across app restarts) to avoid re-registering on every call.
+  function ensureFcmToken() {
+    var cached = getStoredFcmToken();
+    if (cached) return Promise.resolve(cached);
+    return new Promise(function (resolve, reject) {
+      var PN = window.Capacitor.Plugins.PushNotifications;
+      var regHandle = PN.addListener("registration", function (token) {
+        regHandle.then(function (h) { h.remove(); });
+        errHandle.then(function (h) { h.remove(); });
+        try { localStorage.setItem(fcmTokenStorageKey(), token.value); } catch (e) {}
+        resolve(token.value);
+      });
+      var errHandle = PN.addListener("registrationError", function (err) {
+        regHandle.then(function (h) { h.remove(); });
+        errHandle.then(function (h) { h.remove(); });
+        reject(new Error((err && err.error) || "FCM registration failed"));
+      });
+      PN.register();
+    });
+  }
+
+  // Unified across both push channels (Web Push in a browser/TWA, Capacitor
+  // FCM in the native app) so the reminder/chat-notification UI below never
+  // has to branch on which one it's talking to.
+  function pushSupported() {
+    return (("serviceWorker" in navigator) && ("PushManager" in window)) || capacitorPushAvailable;
+  }
+
+  function pushPermissionDenied() {
+    if (capacitorPushAvailable) {
+      return window.Capacitor.Plugins.PushNotifications.checkPermissions().then(function (s) { return s.receive === "denied"; });
+    }
+    return Promise.resolve(Notification.permission === "denied");
+  }
+
+  function requestPushPermissionGranted() {
+    if (capacitorPushAvailable) {
+      var PN = window.Capacitor.Plugins.PushNotifications;
+      return PN.checkPermissions().then(function (status) {
+        if (status.receive === "granted") return true;
+        return PN.requestPermissions().then(function (r) { return r.receive === "granted"; });
+      });
+    }
+    return Notification.requestPermission().then(function (p) { return p === "granted"; });
+  }
+
+  // Resolves the fields to upsert into push_subscriptions for this device,
+  // creating a subscription/token if one doesn't exist yet - column names
+  // match the table so callers can spread { conflictColumn, fields } directly
+  // into a Supabase upsert.
+  function ensurePushIdentity() {
+    if (capacitorPushAvailable) {
+      return ensureFcmToken().then(function (token) {
+        return { conflictColumn: "fcm_token", fields: { fcm_token: token } };
+      });
+    }
+    return ensurePushSubscription().then(function (sub) {
+      var keys = sub.toJSON().keys;
+      return { conflictColumn: "endpoint", fields: { endpoint: sub.endpoint, p256dh: keys.p256dh, auth: keys.auth } };
+    });
+  }
+
+  // Same idea but read-only - used to find this device's existing row
+  // (to check its current settings, or to turn a flag off) without ever
+  // creating a new subscription/token as a side effect.
+  function getExistingPushMatch() {
+    if (capacitorPushAvailable) {
+      var token = getStoredFcmToken();
+      return Promise.resolve(token ? { column: "fcm_token", value: token } : null);
+    }
+    if (!("serviceWorker" in navigator)) return Promise.resolve(null);
+    return navigator.serviceWorker.ready.then(function (reg) {
+      return reg.pushManager.getSubscription();
+    }).then(function (sub) {
+      return sub ? { column: "endpoint", value: sub.endpoint } : null;
+    });
+  }
+
   function chatNotifDisabledKey() {
     return "itask-chat-notif-disabled:" + SUPABASE_ROW_ID;
   }
@@ -6313,50 +6412,35 @@
   // user explicitly turned them off before via the menu toggle.
   function autoEnableChatNotifications() {
     if (!supabaseClient || !SUPABASE_ROW_ID) return;
-    if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) return;
+    if (!pushSupported() || (!capacitorPushAvailable && !("Notification" in window))) return;
     var userDisabled = false;
     try { userDisabled = localStorage.getItem(chatNotifDisabledKey()) === "1"; } catch (e) {}
-    if (userDisabled || Notification.permission === "denied") return;
-    var proceed = Notification.permission === "granted"
-      ? Promise.resolve("granted")
-      : Notification.requestPermission();
-    proceed.then(function (permission) {
-      if (permission !== "granted") return;
-      return ensurePushSubscription().then(function (sub) {
-        var keys = sub.toJSON().keys;
-        return supabaseClient.from("push_subscriptions").upsert({
-          user_id: SUPABASE_ROW_ID,
-          endpoint: sub.endpoint,
-          p256dh: keys.p256dh,
-          auth: keys.auth,
-          chat_enabled: true
-        }, { onConflict: "endpoint" });
-      }).then(function (result) {
-        if (result && result.error) return;
-        chatNotifSelect.value = "on";
-        showChatNotifStatus(tr("chatNotifActive"));
+    if (userDisabled) return;
+    pushPermissionDenied().then(function (denied) {
+      if (denied) return;
+      return requestPushPermissionGranted().then(function (granted) {
+        if (!granted) return;
+        return ensurePushIdentity().then(function (identity) {
+          var row = Object.assign({ user_id: SUPABASE_ROW_ID, chat_enabled: true }, identity.fields);
+          return supabaseClient.from("push_subscriptions").upsert(row, { onConflict: identity.conflictColumn });
+        }).then(function (result) {
+          if (result && result.error) return;
+          chatNotifSelect.value = "on";
+          showChatNotifStatus(tr("chatNotifActive"));
+        });
       });
     }).catch(function () {});
   }
 
   function initReminderSettings() {
-    if (!supabaseClient || !("serviceWorker" in navigator) || !("PushManager" in window)) {
+    if (!supabaseClient || !pushSupported()) {
       if (reminderFrequencySelect) reminderFrequencySelect.disabled = true;
       if (chatNotifSelect) chatNotifSelect.disabled = true;
-      // Temporary diagnostic: the select being silently disabled gave no
-      // clue which of the three checks failed - surfacing it directly so
-      // we can see exactly why push is unavailable on a given device.
-      var reason = !supabaseClient ? "no supabaseClient"
-        : !("serviceWorker" in navigator) ? "no navigator.serviceWorker"
-        : "no window.PushManager";
-      if (reminderStatus) { reminderStatus.textContent = "DEBUG: " + reason; reminderStatus.hidden = false; }
       return;
     }
-    navigator.serviceWorker.ready.then(function (reg) {
-      return reg.pushManager.getSubscription();
-    }).then(function (sub) {
-      if (!sub) return;
-      return supabaseClient.from("push_subscriptions").select("frequency_minutes, chat_enabled").eq("endpoint", sub.endpoint).maybeSingle()
+    getExistingPushMatch().then(function (match) {
+      if (!match) return;
+      return supabaseClient.from("push_subscriptions").select("frequency_minutes, chat_enabled").eq(match.column, match.value).maybeSingle()
         .then(function (result) {
           var row = result && result.data;
           if (row && row.frequency_minutes) {
@@ -6376,18 +6460,16 @@
     reminderStatus.hidden = true;
     if (!supabaseClient || !SUPABASE_ROW_ID) return;
 
-    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+    if (!pushSupported()) {
       showReminderStatus(tr("notificationsNotSupported"));
       reminderFrequencySelect.value = "";
       return;
     }
 
     if (!value) {
-      navigator.serviceWorker.ready.then(function (reg) {
-        return reg.pushManager.getSubscription();
-      }).then(function (sub) {
-        if (sub) {
-          return supabaseClient.from("push_subscriptions").update({ frequency_minutes: null }).eq("endpoint", sub.endpoint);
+      getExistingPushMatch().then(function (match) {
+        if (match) {
+          return supabaseClient.from("push_subscriptions").update({ frequency_minutes: null }).eq(match.column, match.value);
         }
       }).then(function () {
         showReminderStatus(tr("remindersOffStatus"));
@@ -6395,36 +6477,30 @@
       return;
     }
 
-    if (Notification.permission === "denied") {
-      showReminderStatus(tr("notificationsBlocked"));
-      reminderFrequencySelect.value = "";
-      return;
-    }
-
-    Notification.requestPermission().then(function (permission) {
-      if (permission !== "granted") {
-        showReminderStatus(tr("notificationPermissionDenied"));
+    pushPermissionDenied().then(function (denied) {
+      if (denied) {
+        showReminderStatus(tr("notificationsBlocked"));
         reminderFrequencySelect.value = "";
         return;
       }
-      return ensurePushSubscription().then(function (sub) {
-        var keys = sub.toJSON().keys;
-        return supabaseClient.from("push_subscriptions").upsert({
-          user_id: SUPABASE_ROW_ID,
-          endpoint: sub.endpoint,
-          p256dh: keys.p256dh,
-          auth: keys.auth,
-          frequency_minutes: Number(value),
-          last_sent_at: null
-        }, { onConflict: "endpoint" });
-      }).then(function (result) {
-        if (result && result.error) {
-          console.error("push_subscriptions upsert failed:", result.error);
-          showReminderStatus(tr("errorSavingSubscription") + result.error.message);
+      return requestPushPermissionGranted().then(function (granted) {
+        if (!granted) {
+          showReminderStatus(tr("notificationPermissionDenied"));
           reminderFrequencySelect.value = "";
           return;
         }
-        showReminderStatus(tr("remindersActive"));
+        return ensurePushIdentity().then(function (identity) {
+          var row = Object.assign({ user_id: SUPABASE_ROW_ID, frequency_minutes: Number(value), last_sent_at: null }, identity.fields);
+          return supabaseClient.from("push_subscriptions").upsert(row, { onConflict: identity.conflictColumn });
+        }).then(function (result) {
+          if (result && result.error) {
+            console.error("push_subscriptions upsert failed:", result.error);
+            showReminderStatus(tr("errorSavingSubscription") + result.error.message);
+            reminderFrequencySelect.value = "";
+            return;
+          }
+          showReminderStatus(tr("remindersActive"));
+        });
       });
     }).catch(function (err) {
       console.error("reminder subscribe failed:", err);
@@ -6438,7 +6514,7 @@
     chatNotifStatus.hidden = true;
     if (!supabaseClient || !SUPABASE_ROW_ID) return;
 
-    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+    if (!pushSupported()) {
       showChatNotifStatus(tr("notificationsNotSupported"));
       chatNotifSelect.value = "";
       return;
@@ -6446,11 +6522,9 @@
 
     if (!value) {
       try { localStorage.setItem(chatNotifDisabledKey(), "1"); } catch (e) {}
-      navigator.serviceWorker.ready.then(function (reg) {
-        return reg.pushManager.getSubscription();
-      }).then(function (sub) {
-        if (sub) {
-          return supabaseClient.from("push_subscriptions").update({ chat_enabled: false }).eq("endpoint", sub.endpoint);
+      getExistingPushMatch().then(function (match) {
+        if (match) {
+          return supabaseClient.from("push_subscriptions").update({ chat_enabled: false }).eq(match.column, match.value);
         }
       }).then(function () {
         showChatNotifStatus(tr("chatNotifOffStatus"));
@@ -6460,35 +6534,30 @@
 
     try { localStorage.removeItem(chatNotifDisabledKey()); } catch (e) {}
 
-    if (Notification.permission === "denied") {
-      showChatNotifStatus(tr("notificationsBlocked"));
-      chatNotifSelect.value = "";
-      return;
-    }
-
-    Notification.requestPermission().then(function (permission) {
-      if (permission !== "granted") {
-        showChatNotifStatus(tr("notificationPermissionDenied"));
+    pushPermissionDenied().then(function (denied) {
+      if (denied) {
+        showChatNotifStatus(tr("notificationsBlocked"));
         chatNotifSelect.value = "";
         return;
       }
-      return ensurePushSubscription().then(function (sub) {
-        var keys = sub.toJSON().keys;
-        return supabaseClient.from("push_subscriptions").upsert({
-          user_id: SUPABASE_ROW_ID,
-          endpoint: sub.endpoint,
-          p256dh: keys.p256dh,
-          auth: keys.auth,
-          chat_enabled: true
-        }, { onConflict: "endpoint" });
-      }).then(function (result) {
-        if (result && result.error) {
-          console.error("push_subscriptions upsert failed:", result.error);
-          showChatNotifStatus(tr("errorSavingSubscription") + result.error.message);
+      return requestPushPermissionGranted().then(function (granted) {
+        if (!granted) {
+          showChatNotifStatus(tr("notificationPermissionDenied"));
           chatNotifSelect.value = "";
           return;
         }
-        showChatNotifStatus(tr("chatNotifActive"));
+        return ensurePushIdentity().then(function (identity) {
+          var row = Object.assign({ user_id: SUPABASE_ROW_ID, chat_enabled: true }, identity.fields);
+          return supabaseClient.from("push_subscriptions").upsert(row, { onConflict: identity.conflictColumn });
+        }).then(function (result) {
+          if (result && result.error) {
+            console.error("push_subscriptions upsert failed:", result.error);
+            showChatNotifStatus(tr("errorSavingSubscription") + result.error.message);
+            chatNotifSelect.value = "";
+            return;
+          }
+          showChatNotifStatus(tr("chatNotifActive"));
+        });
       });
     }).catch(function (err) {
       console.error("chat notification subscribe failed:", err);
@@ -9748,6 +9817,19 @@
       showNavDebugToast("message", msg.sheetId, msg.date, msg.taskId);
       if (msg.projectInvite) checkPendingProjectInvites();
       navigateToTaskLink(msg.sheetId, msg.date, msg.taskId, msg.chat);
+      render();
+    });
+  }
+
+  // Native-app equivalent of the service-worker "navigate-task" message
+  // above: tapping an FCM notification (app backgrounded/closed) fires this
+  // instead of the SW message event, with the same custom fields under
+  // notification.data (all values arrive as strings, same as the SW path).
+  if (capacitorPushAvailable) {
+    window.Capacitor.Plugins.PushNotifications.addListener("pushNotificationActionPerformed", function (event) {
+      var data = (event.notification && event.notification.data) || {};
+      if (data.projectInvite === "true" || data.projectInvite === true) checkPendingProjectInvites();
+      navigateToTaskLink(data.sheetId, data.date, data.taskId, data.chat === "true" || data.chat === true);
       render();
     });
   }

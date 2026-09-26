@@ -1,6 +1,7 @@
 // Deploy with: supabase functions deploy send-reminders
 // Required secrets (set with: supabase secrets set NAME=value):
 //   VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT (e.g. "mailto:you@example.com")
+//   FCM_PROJECT_ID, FCM_CLIENT_EMAIL, FCM_PRIVATE_KEY - see ../_shared/fcm.ts
 //   SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided automatically by Supabase.
 //
 // Meant to be invoked on a schedule (e.g. every minute) via pg_cron + pg_net.
@@ -8,6 +9,7 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import webpush from "npm:web-push@3.6.7";
+import { sendFcmMessage } from "../_shared/fcm.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -71,25 +73,26 @@ Deno.serve(async () => {
       continue;
     }
 
-    const payload = JSON.stringify({
-      title: pick.sheetName,
-      body: pick.taskText,
-      data: { taskId: pick.taskId, sheetId: pick.sheetId, date: pick.date },
-    });
+    const title = pick.sheetName;
+    const body = pick.taskText;
+    const data = { taskId: pick.taskId, sheetId: pick.sheetId, date: pick.date };
 
     try {
-      await webpush.sendNotification(
-        {
-          endpoint: sub.endpoint,
-          keys: { p256dh: sub.p256dh, auth: sub.auth },
-        },
-        payload,
-      );
+      if (sub.fcm_token) {
+        const result = await sendFcmMessage(sub.fcm_token, title, body, data);
+        if (!result.ok) throw Object.assign(new Error(result.error), { shouldRemove: result.shouldRemove });
+      } else {
+        await webpush.sendNotification(
+          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+          JSON.stringify({ title, body, data }),
+        );
+      }
       sent++;
       await supabase.from("push_subscriptions").update({ last_sent_at: now.toISOString() }).eq("id", sub.id);
     } catch (err: any) {
       const status = err?.statusCode || err?.status;
-      if (status === 404 || status === 410) {
+      const shouldRemove = err?.shouldRemove || status === 404 || status === 410;
+      if (shouldRemove) {
         await supabase.from("push_subscriptions").delete().eq("id", sub.id);
         removed++;
       } else {
