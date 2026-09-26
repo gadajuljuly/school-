@@ -6596,13 +6596,49 @@
     });
   }
 
+  // On the native app, a lost local fcm_token cache (see getExistingPushMatch
+  // above) means this can run again with a genuinely new token even though
+  // a row for this account already exists server-side - upserting on
+  // conflict fcm_token alone would then just create ANOTHER row instead of
+  // updating the existing one, silently piling up duplicates over repeated
+  // background/resume cycles. Converge onto this account's single existing
+  // row instead (deleting any already-accumulated duplicates), falling
+  // back to a plain upsert only when no row exists yet. Web Push endpoints
+  // don't have this problem (they're stable per browser install), so that
+  // path keeps its simpler per-endpoint upsert.
+  function upsertPushSubscriptionRow(extraFields, identity) {
+    var row = Object.assign({ user_id: SUPABASE_ROW_ID }, extraFields, identity.fields);
+    if (!capacitorPushAvailable) {
+      return supabaseClient.from("push_subscriptions").upsert(row, { onConflict: identity.conflictColumn });
+    }
+    return supabaseClient.from("push_subscriptions").select("id").eq("user_id", SUPABASE_ROW_ID).order("created_at", { ascending: false })
+      .then(function (result) {
+        var rows = (result && result.data) || [];
+        if (!rows.length) {
+          return supabaseClient.from("push_subscriptions").upsert(row, { onConflict: identity.conflictColumn });
+        }
+        var keepId = rows[0].id;
+        var staleIds = rows.slice(1).map(function (r) { return r.id; });
+        var cleanup = staleIds.length ? supabaseClient.from("push_subscriptions").delete().in("id", staleIds) : Promise.resolve();
+        return cleanup.then(function () {
+          return supabaseClient.from("push_subscriptions").update(row).eq("id", keepId);
+        });
+      });
+  }
+
   // Same idea but read-only - used to find this device's existing row
   // (to check its current settings, or to turn a flag off) without ever
   // creating a new subscription/token as a side effect.
   function getExistingPushMatch() {
     if (capacitorPushAvailable) {
-      var token = getStoredFcmToken();
-      return Promise.resolve(token ? { column: "fcm_token", value: token } : null);
+      // Matching by user_id (not by the locally-cached fcm_token) so this
+      // restore never depends on that local write having survived - on
+      // Android, backgrounding the app moments after the token was first
+      // written can lose that localStorage write before it's flushed to
+      // disk, even though older, already-settled keys (like the login
+      // session) survive fine. The server-side row is the reliable source
+      // of truth for "is push already set up for this account."
+      return SUPABASE_ROW_ID ? Promise.resolve({ column: "user_id", value: SUPABASE_ROW_ID }) : Promise.resolve(null);
     }
     if (!("serviceWorker" in navigator)) return Promise.resolve(null);
     return navigator.serviceWorker.ready.then(function (reg) {
@@ -6631,8 +6667,7 @@
       return requestPushPermissionGranted().then(function (granted) {
         if (!granted) return;
         return ensurePushIdentity().then(function (identity) {
-          var row = Object.assign({ user_id: SUPABASE_ROW_ID, chat_enabled: true }, identity.fields);
-          return supabaseClient.from("push_subscriptions").upsert(row, { onConflict: identity.conflictColumn });
+          return upsertPushSubscriptionRow({ chat_enabled: true }, identity);
         }).then(function (result) {
           if (result && result.error) return;
           chatNotifSelect.value = "on";
@@ -6650,30 +6685,36 @@
     }
     getExistingPushMatch().then(function (match) {
       if (!match) {
-        showChatNotifStatus("DEBUG: no stored fcm token found on this load");
+        showChatNotifStatus("DEBUG: no match (not logged in yet?)");
         return;
       }
-      return supabaseClient.from("push_subscriptions").select("frequency_minutes, chat_enabled").eq(match.column, match.value).maybeSingle()
+      // Not .maybeSingle(): earlier app-restarts that lost their locally
+      // cached fcm_token each registered a fresh one server-side, so a
+      // given account can have several rows here. Any one of them having
+      // the flag set counts as "on" for that flag.
+      return supabaseClient.from("push_subscriptions").select("frequency_minutes, chat_enabled").eq(match.column, match.value)
         .then(function (result) {
-          var row = result && result.data;
+          var rows = result && result.data;
           var err = result && result.error;
           if (err) {
             showChatNotifStatus("DEBUG: lookup error - " + err.message);
             return;
           }
-          if (!row) {
-            showChatNotifStatus("DEBUG: token found but no matching row in push_subscriptions");
+          if (!rows || !rows.length) {
+            showChatNotifStatus("DEBUG: no push_subscriptions row for this account yet");
             return;
           }
-          if (row.frequency_minutes) {
-            reminderFrequencySelect.value = String(row.frequency_minutes);
+          var freq = rows.map(function (r) { return r.frequency_minutes; }).find(function (v) { return v; });
+          var chatOn = rows.some(function (r) { return r.chat_enabled; });
+          if (freq) {
+            reminderFrequencySelect.value = String(freq);
             showReminderStatus(tr("remindersActive"));
           }
-          if (row.chat_enabled) {
+          if (chatOn) {
             chatNotifSelect.value = "on";
-            showChatNotifStatus(tr("chatNotifActive") + " (DEBUG: row ok, chat_enabled=" + row.chat_enabled + ")");
+            showChatNotifStatus(tr("chatNotifActive") + " (DEBUG: " + rows.length + " row(s), chat_enabled seen=true)");
           } else {
-            showChatNotifStatus("DEBUG: row found but chat_enabled=" + row.chat_enabled);
+            showChatNotifStatus("DEBUG: " + rows.length + " row(s) found, none with chat_enabled=true");
           }
         });
     }).catch(function (e) {
@@ -6716,8 +6757,7 @@
           return;
         }
         return ensurePushIdentity().then(function (identity) {
-          var row = Object.assign({ user_id: SUPABASE_ROW_ID, frequency_minutes: Number(value), last_sent_at: null }, identity.fields);
-          return supabaseClient.from("push_subscriptions").upsert(row, { onConflict: identity.conflictColumn });
+          return upsertPushSubscriptionRow({ frequency_minutes: Number(value), last_sent_at: null }, identity);
         }).then(function (result) {
           if (result && result.error) {
             console.error("push_subscriptions upsert failed:", result.error);
@@ -6773,8 +6813,7 @@
           return;
         }
         return ensurePushIdentity().then(function (identity) {
-          var row = Object.assign({ user_id: SUPABASE_ROW_ID, chat_enabled: true }, identity.fields);
-          return supabaseClient.from("push_subscriptions").upsert(row, { onConflict: identity.conflictColumn });
+          return upsertPushSubscriptionRow({ chat_enabled: true }, identity);
         }).then(function (result) {
           if (result && result.error) {
             console.error("push_subscriptions upsert failed:", result.error);
