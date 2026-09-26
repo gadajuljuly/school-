@@ -6436,6 +6436,11 @@
     if (!supabaseClient || !pushSupported()) {
       if (reminderFrequencySelect) reminderFrequencySelect.disabled = true;
       if (chatNotifSelect) chatNotifSelect.disabled = true;
+      // Temporary diagnostic.
+      var reason = !supabaseClient ? "no supabaseClient"
+        : "pushSupported()=false; isNativePlatform=" + !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())
+          + "; Plugins keys=" + (window.Capacitor && window.Capacitor.Plugins ? Object.keys(window.Capacitor.Plugins).join(",") : "(no Plugins)");
+      if (reminderStatus) { reminderStatus.textContent = "DEBUG: " + reason; reminderStatus.hidden = false; }
       return;
     }
     getExistingPushMatch().then(function (match) {
