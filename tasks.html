@@ -2273,6 +2273,7 @@
   <div class="data-error-overlay" id="dataErrorOverlay" hidden>
     <div class="data-error-text" data-i18n="dataErrorText">לא הצלחנו לטעון את הנתונים שלך מהשרת. כדי להגן על המידע שלך, העריכה חסומה עד שהחיבור יחזור.</div>
     <button type="button" class="data-error-retry-btn" id="dataErrorRetryBtn" data-i18n="dataErrorRetryBtn">נסה שוב</button>
+    <div id="dataErrorDebug" style="font-size:11px;opacity:0.6;margin-top:10px;word-break:break-all;direction:ltr;text-align:center;"></div>
   </div>
   <div class="notebook">
     <div class="notebook-head">
@@ -9730,11 +9731,13 @@
   // in-memory placeholder over real data still sitting in the row. Instead
   // we block all editing behind a visible retry screen until a load
   // actually confirms either real data or a genuinely brand-new user.
-  function showDataLoadError() {
+  function showDataLoadError(debugDetail) {
     dataLoadBlocked = true;
     privateDataSettled = true;
     appLoadingOverlay.hidden = true;
     dataErrorOverlay.hidden = false;
+    var debugEl = document.getElementById("dataErrorDebug");
+    if (debugEl) debugEl.textContent = debugDetail || "";
   }
   function hideDataLoadError() {
     dataLoadBlocked = false;
@@ -9844,10 +9847,19 @@
         // the core load/save flow if the backup table/call misbehaves.
         if (!isFreshDefault) { try { maybeBackupData(); } catch (e) {} }
         if (!isFreshDefault) { try { migratePrivateSheetsFileUrls(); } catch (e) {} }
-        var rolled = applyDailyRollover(data);
-        if ((rolled && !isFreshDefault) || confirmedNewUser) saveData();
-        applyTaskLinkFromURL();
-        render();
+        try {
+          var rolled = applyDailyRollover(data);
+          if ((rolled && !isFreshDefault) || confirmedNewUser) saveData();
+          applyTaskLinkFromURL();
+          render();
+        } catch (renderErr) {
+          // Temporary diagnostic: a real fetch succeeded but something in
+          // the render/rollover path threw on this account's actual data -
+          // surface the real error instead of the generic message so this
+          // can be root-caused without device-level debugging tools.
+          console.error("startWithSupabase render error:", renderErr);
+          showDataLoadError((renderErr && renderErr.message) || String(renderErr));
+        }
       }, function () {
         if (!usedInstantLocal) startLocalOnly();
       }).catch(function () {
