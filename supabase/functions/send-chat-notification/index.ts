@@ -144,7 +144,7 @@ Deno.serve(async (req) => {
   }
 
   const title = sheet.name;
-  const body = (senderName || senderPhone) + ": " + text;
+  const messageBody = (senderName || senderPhone) + ": " + text;
   const data = { sheetId, chat: "true" };
 
   let sent = 0;
@@ -154,13 +154,13 @@ Deno.serve(async (req) => {
   for (const sub of subs || []) {
     try {
       if (sub.fcm_token) {
-        const result = await sendFcmMessage(sub.fcm_token, title, body, data);
+        const result = await sendFcmMessage(sub.fcm_token, title, messageBody, data);
         if (!result.ok) throw Object.assign(new Error(result.error), { shouldRemove: result.shouldRemove });
         details.push({ channel: "fcm", ok: true });
       } else {
         await webpush.sendNotification(
           { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-          JSON.stringify({ title, body, data: { sheetId, chat: true } }),
+          JSON.stringify({ title, body: messageBody, data: { sheetId, chat: true } }),
         );
         details.push({ channel: "webpush", ok: true });
       }

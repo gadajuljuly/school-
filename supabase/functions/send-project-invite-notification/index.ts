@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
   }
 
   const title = "הזמנה לפרויקט";
-  const body = 'קיבלת פרויקט "' + projectName + '" מ' + senderName;
+  const messageBody = 'קיבלת פרויקט "' + projectName + '" מ' + senderName;
   const data = { projectInvite: "true", inviteId };
 
   let sent = 0;
@@ -136,12 +136,12 @@ Deno.serve(async (req) => {
   for (const sub of subs) {
     try {
       if (sub.fcm_token) {
-        const result = await sendFcmMessage(sub.fcm_token, title, body, data);
+        const result = await sendFcmMessage(sub.fcm_token, title, messageBody, data);
         if (!result.ok) throw Object.assign(new Error(result.error), { shouldRemove: result.shouldRemove });
       } else {
         await webpush.sendNotification(
           { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-          JSON.stringify({ title, body, data: { projectInvite: true, inviteId } }),
+          JSON.stringify({ title, body: messageBody, data: { projectInvite: true, inviteId } }),
         );
       }
       sent++;
