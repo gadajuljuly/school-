@@ -10307,8 +10307,15 @@
     authChangePhoneBtn.addEventListener("click", showPhoneStep);
   }
 
-  var isCapacitorNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
-  if ("serviceWorker" in navigator && location.protocol !== "file:" && !isCapacitorNative) {
+  // Registering the service worker here (even inside the native Capacitor
+  // app) is what makes push notifications/reminders work there at all -
+  // pushManager.subscribe() and the "push" event both need an active SW
+  // registration. This used to be skipped for Capacitor to stop a
+  // redundant "install app" banner, but that banner turned out to come
+  // from this app's own install-fab button (guarded separately below),
+  // not from having a registered SW - so skipping registration here was
+  // only ever breaking push notifications in the native app for no reason.
+  if ("serviceWorker" in navigator && location.protocol !== "file:") {
     window.addEventListener("load", function () {
       navigator.serviceWorker.register("tasks-sw.js").then(function (reg) {
         // A new SW version can finish installing and take over (via
