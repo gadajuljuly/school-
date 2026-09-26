@@ -4297,22 +4297,32 @@
   projectInviteApproveBtn.addEventListener("click", function () {
     if (!activeProjectInvite) return;
     var invite = activeProjectInvite;
-    var snap = invite.snapshot || {};
-    data.sheets.push({
-      id: uid(),
-      name: invite.project_name,
-      tasks: snap.tasks || [],
-      reports: snap.reports || [],
-      files: [],
-      folders: null,
-      siteLogs: (snap.siteLogs || []).map(normalizeSiteLog),
-      logoId: null,
-      ended: false,
-      endedDate: null
-    });
-    data.activeSheetId = data.sheets[data.sheets.length - 1].id;
+    // resolveProjectInvite()'s server update is fire-and-forget - if it
+    // fails (a brief network blip), the invite row stays "pending" and
+    // checkPendingProjectInvites() will surface this exact same invite
+    // again later, and approving it a second time would otherwise push a
+    // full duplicate of the project. Tag the imported sheet with the
+    // invite's id so re-approving the same invite is a safe no-op instead.
+    var alreadyImported = data.sheets.some(function (s) { return s.importedInviteId === invite.id; });
+    if (!alreadyImported) {
+      var snap = invite.snapshot || {};
+      data.sheets.push({
+        id: uid(),
+        name: invite.project_name,
+        tasks: snap.tasks || [],
+        reports: snap.reports || [],
+        files: [],
+        folders: null,
+        siteLogs: (snap.siteLogs || []).map(normalizeSiteLog),
+        logoId: null,
+        ended: false,
+        endedDate: null,
+        importedInviteId: invite.id
+      });
+      data.activeSheetId = data.sheets[data.sheets.length - 1].id;
+      saveData();
+    }
     resolveProjectInvite(invite, "approved");
-    saveData();
     showToast(tr("projectInviteApprovedMsg"));
     closeProjectInviteReceivedModal();
     render();
@@ -5661,7 +5671,8 @@
         folders: updateFoldersFn(currentData.folders || buildDefaultLibraryFolders(currentData.files)),
         siteLogs: currentData.siteLogs || [],
         ended: currentData.ended || false,
-        endedDate: currentData.endedDate || null
+        endedDate: currentData.endedDate || null,
+        logoId: currentData.logoId || null
       };
       return supabaseClient.from(SHARED_TABLE).update({ data: updatedData, updated_at: new Date().toISOString() }).eq("id", sheetId)
         .then(function (updateResult) {
@@ -5707,7 +5718,8 @@
         folders: folders,
         siteLogs: currentData.siteLogs || [],
         ended: currentData.ended || false,
-        endedDate: currentData.endedDate || null
+        endedDate: currentData.endedDate || null,
+        logoId: currentData.logoId || null
       };
       supabaseClient.from(SHARED_TABLE).update({ data: updatedData, updated_at: new Date().toISOString() }).eq("id", sheet.id).then(function () {
         var liveSheet = sharedSheets.find(function (s) { return s.id === sheet.id; });
@@ -10464,10 +10476,23 @@
         // pushed fix can silently activate in the background while the
         // visible page keeps showing the stale version indefinitely.
         var reloadedForUpdate = false;
+        // None of this app's inline-edit fields (task text, report cells,
+        // chat input, site-log names...) autosave keystroke-by-keystroke -
+        // they only commit on blur/Enter. Force-reloading out from under an
+        // in-progress edit with no warning would silently discard whatever
+        // hadn't been committed yet, so defer the reload until the
+        // currently-focused field (if any) loses focus, which is exactly
+        // when its edit, if any, has already committed.
         function reloadOnce() {
           if (reloadedForUpdate) return;
           reloadedForUpdate = true;
-          window.location.reload();
+          var active = document.activeElement;
+          var isEditing = active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.isContentEditable);
+          if (!isEditing) { window.location.reload(); return; }
+          document.addEventListener("focusout", function onBlur() {
+            document.removeEventListener("focusout", onBlur, true);
+            window.location.reload();
+          }, true);
         }
         navigator.serviceWorker.addEventListener("controllerchange", reloadOnce);
         if (reg.waiting) reloadOnce();
