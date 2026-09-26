@@ -4031,7 +4031,35 @@
     render();
   }
 
-  var contactPickerSupported = !!(navigator.contacts && window.ContactsManager);
+  // The web Contact Picker API (navigator.contacts) is unavailable inside
+  // the TWA build (Play Store wraps the site with no browser chrome, and
+  // that API is gated behind a visible omnibox permission prompt Chrome
+  // simply won't show there). The native Android build (built separately
+  // via android-app/, wrapping this same site in a Capacitor shell instead
+  // of a bare TWA) exposes a real native contact picker through
+  // @capacitor-community/contacts, with no such restriction - detect and
+  // prefer that one when present.
+  var capacitorContactsAvailable = !!(
+    window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform() &&
+    window.Capacitor.Plugins && window.Capacitor.Plugins.Contacts
+  );
+  var contactPickerSupported = !!(navigator.contacts && window.ContactsManager) || capacitorContactsAvailable;
+
+  // Native pickContact() only returns ONE contact per call (unlike the web
+  // API's multiple:true), so this gets called once per button press;
+  // pressing the button again picks another. Resolves to null if the user
+  // cancels the native picker or it has no usable phone number.
+  function pickOneNativeContact() {
+    return window.Capacitor.Plugins.Contacts.pickContact({ projection: { name: true, phones: true } })
+      .then(function (result) {
+        var contact = result && result.contact;
+        var phones = (contact && contact.phoneNumbers) || [];
+        var tel = phones.length ? phones[0].number : "";
+        if (!tel) return null;
+        return { tel: tel, name: (contact && contact.displayName) || "" };
+      })
+      .catch(function () { return null; });
+  }
 
   // --- Project invites: "שיתוף" on a project's tab sends a real invite to
   // one or more contacts instead of just dumping a text summary - each
@@ -4070,6 +4098,16 @@
 
   function pickContactsForInvite() {
     if (!contactPickerSupported) return;
+    if (capacitorContactsAvailable) {
+      pickOneNativeContact().then(function (picked) {
+        if (!picked) return;
+        var lastEmpty = projectInviteSendList.lastElementChild;
+        if (lastEmpty && !lastEmpty.value.trim() && lastEmpty.parentNode) lastEmpty.parentNode.removeChild(lastEmpty);
+        addInvitePhoneInput(false, picked.tel, picked.name);
+        addInvitePhoneInput(false);
+      });
+      return;
+    }
     navigator.contacts.select(["name", "tel"], { multiple: true }).then(function (contacts) {
       var lastEmpty = projectInviteSendList.lastElementChild;
       contacts.forEach(function (c) {
@@ -4291,6 +4329,16 @@
 
   function pickContactsForSharedProject() {
     if (!contactPickerSupported) return;
+    if (capacitorContactsAvailable) {
+      pickOneNativeContact().then(function (picked) {
+        if (!picked) return;
+        var lastEmpty = sharedProjectMembersList.lastElementChild;
+        if (lastEmpty && !lastEmpty.value.trim() && lastEmpty.parentNode) lastEmpty.parentNode.removeChild(lastEmpty);
+        addSharedMemberInput(false, picked.tel, picked.name);
+        addSharedMemberInput(false);
+      });
+      return;
+    }
     navigator.contacts.select(["name", "tel"], { multiple: true }).then(function (contacts) {
       var lastEmpty = sharedProjectMembersList.lastElementChild;
       contacts.forEach(function (c) {
