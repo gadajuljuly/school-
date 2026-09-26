@@ -6343,6 +6343,13 @@
     if (!supabaseClient || !("serviceWorker" in navigator) || !("PushManager" in window)) {
       if (reminderFrequencySelect) reminderFrequencySelect.disabled = true;
       if (chatNotifSelect) chatNotifSelect.disabled = true;
+      // Temporary diagnostic: the select being silently disabled gave no
+      // clue which of the three checks failed - surfacing it directly so
+      // we can see exactly why push is unavailable on a given device.
+      var reason = !supabaseClient ? "no supabaseClient"
+        : !("serviceWorker" in navigator) ? "no navigator.serviceWorker"
+        : "no window.PushManager";
+      if (reminderStatus) { reminderStatus.textContent = "DEBUG: " + reason; reminderStatus.hidden = false; }
       return;
     }
     navigator.serviceWorker.ready.then(function (reg) {
