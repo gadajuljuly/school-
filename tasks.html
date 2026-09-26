@@ -3453,22 +3453,167 @@
     saveSharedSheets();
   }
 
+  // Merges a fresh-from-server array of {id,...} items with this device's
+  // in-memory copy, using the last-confirmed-synced copy to tell "we
+  // changed/added/removed this one locally" apart from "we just haven't
+  // touched this since it loaded" - so an item neither side touched always
+  // comes from the fresh server copy (never silently reverted), an item
+  // only WE touched (added, edited, or deleted) keeps our version, and an
+  // item added or removed by someone else meanwhile is preserved as such
+  // even though our local copy doesn't reflect it yet.
+  function mergeSharedArrayByLocalChanges(freshArr, localArr, syncedArr) {
+    freshArr = freshArr || []; localArr = localArr || []; syncedArr = syncedArr || [];
+    var syncedIds = {}; var syncedById = {};
+    syncedArr.forEach(function (i) { syncedIds[i.id] = true; syncedById[i.id] = i; });
+    var localById = {}; localArr.forEach(function (i) { localById[i.id] = i; });
+    var result = [];
+    var seen = {};
+    freshArr.forEach(function (freshItem) {
+      seen[freshItem.id] = true;
+      var localItem = localById[freshItem.id];
+      if (!localItem) {
+        if (syncedIds[freshItem.id]) return; // we deleted it locally - keep it deleted
+        result.push(freshItem); // someone else added it remotely - keep it
+        return;
+      }
+      var weChangedIt = JSON.stringify(syncedById[freshItem.id]) !== JSON.stringify(localItem);
+      result.push(weChangedIt ? localItem : freshItem);
+    });
+    localArr.forEach(function (localItem) {
+      if (seen[localItem.id]) return;
+      if (!syncedIds[localItem.id]) result.push(localItem); // a genuinely new local addition
+      // else: known at last sync but fresh no longer has it - someone else
+      // deleted it remotely; don't resurrect it just because our local
+      // copy (loaded before that deletion) still has it.
+    });
+    return result;
+  }
+
+  function mergeSharedScalarByLocalChange(freshVal, localVal, syncedVal) {
+    return JSON.stringify(localVal) !== JSON.stringify(syncedVal) ? localVal : freshVal;
+  }
+
+  // Only ever pushes a sheet whose tasks/reports/siteLogs/ended/logoId
+  // actually differ from what we last confirmed the server holds - a save
+  // triggered by editing sheet A no longer re-uploads every OTHER shared
+  // sheet's possibly-stale local cache over whatever a concurrent member
+  // just wrote to it. For the sheet(s) that did change, the write is
+  // version-gated (updateSharedSheetDataSafely) and merged per-item
+  // against fresh data on every retry, instead of blindly overwriting the
+  // whole row - so two members editing the SAME shared project around the
+  // same time no longer silently drop each other's changes.
   function saveSharedSheets() {
     if (!supabaseClient) return;
     sharedSheets.forEach(function (sheet) {
-      supabaseClient.from(SHARED_TABLE)
-        .upsert({
+      if (!sheet._syncedData) {
+        // Never confirmed to exist on the server (freshly created this
+        // session, via "new shared project" or converting a private one) -
+        // a plain insert, not the version-gated update path below, which
+        // can only ever modify a row that's already there.
+        supabaseClient.from(SHARED_TABLE).insert({
           id: sheet.id,
           name: sheet.name,
-          data: { tasks: sheet.tasks, reports: sheet.reports, files: [], folders: sheet.folders || null, siteLogs: sheet.siteLogs || [], ended: sheet.ended || false, endedDate: sheet.endedDate || null, logoId: sheet.logoId || null },
-          members: sheet.members,
+          data: {
+            tasks: sheet.tasks || [], reports: sheet.reports || [], files: [], folders: sheet.folders || null,
+            siteLogs: sheet.siteLogs || [], ended: sheet.ended || false, endedDate: sheet.endedDate || null, logoId: sheet.logoId || null
+          },
+          data_version: 1,
+          members: sheet.members || [],
           member_names: sheet.memberNames || {},
+          messages: sheet.messages || [],
+          messages_version: 1,
           updated_at: new Date().toISOString()
-        })
-        .then(function (result) {
-          if (result && result.error) scheduleSyncRetry();
+        }).then(function (result) {
+          var err = result && result.error;
+          if (err) {
+            // A duplicate-key error here means our own earlier insert
+            // attempt actually landed but we never saw the response (a
+            // dropped ack, not a real failure) - treat it as confirmed
+            // rather than retrying an insert that will only conflict again.
+            if (err.code !== "23505" && !/duplicate key/i.test(err.message || "")) { scheduleSyncRetry(); return; }
+          }
+          // Deep-cloned - see the comment on sharedRowToSheet's _syncedData
+          // for why this must never alias the live sheet's own arrays.
+          sheet._syncedData = JSON.parse(JSON.stringify({
+            tasks: sheet.tasks || [], reports: sheet.reports || [], siteLogs: sheet.siteLogs || [],
+            ended: !!sheet.ended, endedDate: sheet.endedDate || null, logoId: sheet.logoId || null
+          }));
         }, function () { scheduleSyncRetry(); });
+        return;
+      }
+      var synced = sheet._syncedData || {};
+      var local = {
+        tasks: sheet.tasks || [], reports: sheet.reports || [], siteLogs: sheet.siteLogs || [],
+        ended: !!sheet.ended, endedDate: sheet.endedDate || null, logoId: sheet.logoId || null
+      };
+      var syncedComparable = {
+        tasks: synced.tasks || [], reports: synced.reports || [], siteLogs: synced.siteLogs || [],
+        ended: !!synced.ended, endedDate: synced.endedDate || null, logoId: synced.logoId || null
+      };
+      if (JSON.stringify(local) === JSON.stringify(syncedComparable)) return;
+
+      updateSharedSheetDataSafely(sheet.id, function (freshData) {
+        return {
+          tasks: mergeSharedArrayByLocalChanges(freshData.tasks, local.tasks, syncedComparable.tasks),
+          reports: mergeSharedArrayByLocalChanges(freshData.reports, local.reports, syncedComparable.reports),
+          files: [],
+          folders: freshData.folders || null,
+          siteLogs: mergeSharedArrayByLocalChanges(freshData.siteLogs, local.siteLogs, syncedComparable.siteLogs),
+          ended: mergeSharedScalarByLocalChange(freshData.ended || false, local.ended, syncedComparable.ended),
+          endedDate: mergeSharedScalarByLocalChange(freshData.endedDate || null, local.endedDate, syncedComparable.endedDate),
+          logoId: mergeSharedScalarByLocalChange(freshData.logoId || null, local.logoId, syncedComparable.logoId)
+        };
+      }).then(function (mergedData) {
+        var liveSheet = sharedSheets.find(function (s) { return s.id === sheet.id; });
+        if (liveSheet) {
+          liveSheet.tasks = mergedData.tasks;
+          liveSheet.reports = mergedData.reports;
+          liveSheet.siteLogs = mergedData.siteLogs;
+          liveSheet.ended = mergedData.ended;
+          liveSheet.endedDate = mergedData.endedDate;
+          liveSheet.logoId = mergedData.logoId;
+          liveSheet.folders = mergedData.folders;
+          // Deep-cloned - liveSheet.tasks/reports/siteLogs above are the
+          // SAME array objects as mergedData's; _syncedData must not alias
+          // them (see the comment on sharedRowToSheet's _syncedData).
+          liveSheet._syncedData = JSON.parse(JSON.stringify({
+            tasks: mergedData.tasks, reports: mergedData.reports, siteLogs: mergedData.siteLogs,
+            ended: mergedData.ended, endedDate: mergedData.endedDate, logoId: mergedData.logoId
+          }));
+          render();
+        }
+      }, function () { scheduleSyncRetry(); });
     });
+  }
+
+  // Renaming a shared project, or editing its member list/names via the
+  // shared-project settings modal, is rare and user-initiated (unlike
+  // task/report edits, which fire on every keystroke's worth of activity) -
+  // a plain fresh-read-immediately-before-write is enough here, the same
+  // safe pattern chat messages already use, without needing its own
+  // version column.
+  function updateSharedProjectSettings(sheetId, mutateFn) {
+    if (!supabaseClient) return Promise.resolve();
+    return supabaseClient.from(SHARED_TABLE).select("name, members, member_names").eq("id", sheetId).maybeSingle()
+      .then(function (result) {
+        if (result && result.error) throw result.error;
+        var row = result && result.data;
+        var current = { name: row && row.name, members: (row && row.members) || [], memberNames: (row && row.member_names) || {} };
+        var updated = mutateFn(current);
+        return supabaseClient.from(SHARED_TABLE)
+          .update({ name: updated.name, members: updated.members, member_names: updated.memberNames, updated_at: new Date().toISOString() })
+          .eq("id", sheetId)
+          .then(function (updateResult) {
+            if (updateResult && updateResult.error) throw updateResult.error;
+            var liveSheet = sharedSheets.find(function (s) { return s.id === sheetId; });
+            if (liveSheet) {
+              liveSheet.name = updated.name;
+              liveSheet.members = updated.members;
+              liveSheet.memberNames = updated.memberNames;
+            }
+            return updated;
+          });
+      });
   }
 
   // Offline resilience: saveLocalData() above always succeeds (it's just
@@ -4001,6 +4146,14 @@
     var trimmed = value.trim();
     if (sheet && trimmed) {
       sheet.name = trimmed.slice(0, 40);
+      if (sheet.shared) {
+        // name isn't part of the shared row's `data` column saveSharedSheets()
+        // manages - it has its own safe update, same as the member-list edit
+        // flow, so a rename never rides along on saveData()'s blind path.
+        updateSharedProjectSettings(sheet.id, function (current) {
+          return { name: sheet.name, members: current.members, memberNames: current.memberNames };
+        }).catch(function () { scheduleSyncRetry(); });
+      }
     }
     state.renamingSheetId = null;
     saveData();
@@ -4475,6 +4628,13 @@
         existing.name = name;
         existing.members = members;
         existing.memberNames = Object.assign({}, existing.memberNames || {}, pickedNames);
+        // An existing shared row - editing it safely means merging against
+        // whatever's actually on the server right now (e.g. another member
+        // may have set their own display name since this loaded), not
+        // blindly overwriting it with this device's possibly-stale copy.
+        updateSharedProjectSettings(existing.id, function (current) {
+          return { name: name, members: members, memberNames: Object.assign({}, current.memberNames || {}, pickedNames) };
+        }).catch(function () { scheduleSyncRetry(); });
       }
     } else if (pendingConvertSheetId) {
       var privateSheet = data.sheets.find(function (s) { return s.id === pendingConvertSheetId; });
@@ -4881,11 +5041,41 @@
       }, function () {});
   }
 
+  // Generic safe read-modify-write for a shared project's `messages` column,
+  // version-gated the same way updateSharedSheetDataSafely guards `data` -
+  // a write only lands if messages_version still matches what was just
+  // read, otherwise mutateFn is retried against a fresh read instead of
+  // blindly overwriting whatever another member's send/edit/delete just
+  // landed in between. mutateFn may return null to mean "nothing to write"
+  // (e.g. a read-receipt update that finds there's nothing new to mark).
+  function updateSharedMessagesSafely(sheetId, mutateFn, triesLeft) {
+    if (triesLeft == null) triesLeft = 4;
+    return supabaseClient.from(SHARED_TABLE).select("messages, messages_version").eq("id", sheetId).maybeSingle().then(function (result) {
+      if (result && result.error) throw result.error;
+      var row = result && result.data;
+      var currentMessages = (row && row.messages) || [];
+      var currentVersion = (row && row.messages_version) || 1;
+      var updated = mutateFn(currentMessages);
+      if (updated === null) return null;
+      return supabaseClient.from(SHARED_TABLE)
+        .update({ messages: updated, messages_version: currentVersion + 1 })
+        .eq("id", sheetId).eq("messages_version", currentVersion)
+        .select("id")
+        .then(function (updateResult) {
+          if (updateResult && updateResult.error) throw updateResult.error;
+          var affected = (updateResult && updateResult.data) || [];
+          if (!affected.length) {
+            if (triesLeft > 0) return updateSharedMessagesSafely(sheetId, mutateFn, triesLeft - 1);
+            throw new Error("shared messages update conflict: too many retries");
+          }
+          return updated;
+        });
+    });
+  }
+
   // Marks every incoming message not yet attributed to me in its readBy
   // list as read (drives the sent/read checkmarks on the SENDER's side).
-  // Only issues a write when something actually needs updating, and
-  // re-reads first since this can race with other members' own sends -
-  // same read-modify-write pattern as the rest of this shared-row data.
+  // Only issues a write when something actually needs updating.
   function markMessagesReadOnServer(sheetId) {
     if (!supabaseClient || !myPhoneNumber) return;
     var sheet = sharedSheets.find(function (s) { return s.id === sheetId; });
@@ -4894,8 +5084,7 @@
       return m.type !== "system" && m.phone !== myPhoneNumber && (m.readBy || [m.phone]).indexOf(myPhoneNumber) === -1;
     });
     if (!needsUpdate) return;
-    supabaseClient.from(SHARED_TABLE).select("messages").eq("id", sheetId).maybeSingle().then(function (result) {
-      var current = (result && result.data && result.data.messages) || [];
+    updateSharedMessagesSafely(sheetId, function (current) {
       var changed = false;
       var updated = current.map(function (m) {
         if (m.type === "system" || m.phone === myPhoneNumber) return m;
@@ -4904,12 +5093,12 @@
         changed = true;
         return Object.assign({}, m, { readBy: readBy.concat([myPhoneNumber]) });
       });
-      if (!changed) return;
-      return supabaseClient.from(SHARED_TABLE).update({ messages: updated }).eq("id", sheetId).then(function () {
-        var liveSheet = sharedSheets.find(function (s) { return s.id === sheetId; });
-        if (liveSheet) liveSheet.messages = updated;
-        if (activeChatSheetId === sheetId) renderChatMessages();
-      });
+      return changed ? updated : null;
+    }).then(function (updated) {
+      if (!updated) return;
+      var liveSheet = sharedSheets.find(function (s) { return s.id === sheetId; });
+      if (liveSheet) liveSheet.messages = updated;
+      if (activeChatSheetId === sheetId) renderChatMessages();
     }, function () {});
   }
 
@@ -5006,47 +5195,31 @@
   // whatever language the sender's app happened to be set to.
   function sendChatSystemMessage(sheetId, sysAction, taskName, actorName) {
     if (!supabaseClient || !sheetId) return;
-    supabaseClient.from(SHARED_TABLE).select("messages").eq("id", sheetId).maybeSingle()
-      .then(function (result) {
-        if (result && result.error) {
-          console.error("sendChatSystemMessage select failed:", result.error);
-          return;
-        }
-        var current = (result && result.data && result.data.messages) || [];
-        var msg = { id: uid(), type: "system", sysAction: sysAction, taskName: taskName, actorName: actorName, ts: Date.now() };
-        var updated = current.concat([msg]).slice(-200);
-        return supabaseClient.from(SHARED_TABLE).update({ messages: updated }).eq("id", sheetId)
-          .then(function (updateResult) {
-            if (updateResult && updateResult.error) {
-              console.error("sendChatSystemMessage update failed:", updateResult.error);
-              return;
-            }
-            var sheet = sharedSheets.find(function (s) { return s.id === sheetId; });
-            if (sheet) sheet.messages = updated;
-            if (activeChatSheetId === sheetId) renderChatMessages();
-            triggerChatPushNotification(sheetId, systemMessageText(msg));
-          });
-      }, function (err) {
-        console.error("sendChatSystemMessage select rejected:", err);
-      });
+    var msg = { id: uid(), type: "system", sysAction: sysAction, taskName: taskName, actorName: actorName, ts: Date.now() };
+    updateSharedMessagesSafely(sheetId, function (current) {
+      return current.concat([msg]).slice(-200);
+    }).then(function (updated) {
+      var sheet = sharedSheets.find(function (s) { return s.id === sheetId; });
+      if (sheet) sheet.messages = updated;
+      if (activeChatSheetId === sheetId) renderChatMessages();
+      triggerChatPushNotification(sheetId, systemMessageText(msg));
+    }, function (err) {
+      console.error("sendChatSystemMessage failed:", err);
+    });
   }
 
   function sendChatMessage(sheetId, text, replyTo) {
     var trimmed = (text || "").trim();
     if (!trimmed || !supabaseClient) return Promise.resolve();
-    return supabaseClient.from(SHARED_TABLE).select("messages").eq("id", sheetId).maybeSingle()
-      .then(function (result) {
-        var current = (result && result.data && result.data.messages) || [];
-        var msg = { id: uid(), phone: myPhoneNumber, text: trimmed.slice(0, 500), ts: Date.now(), readBy: [myPhoneNumber] };
-        if (replyTo) msg.replyTo = replyTo;
-        var updated = current.concat([msg]).slice(-200);
-        return supabaseClient.from(SHARED_TABLE).update({ messages: updated }).eq("id", sheetId)
-          .then(function () {
-            var sheet = sharedSheets.find(function (s) { return s.id === sheetId; });
-            if (sheet) sheet.messages = updated;
-            triggerChatPushNotification(sheetId, trimmed.slice(0, 500));
-          });
-      });
+    var msg = { id: uid(), phone: myPhoneNumber, text: trimmed.slice(0, 500), ts: Date.now(), readBy: [myPhoneNumber] };
+    if (replyTo) msg.replyTo = replyTo;
+    return updateSharedMessagesSafely(sheetId, function (current) {
+      return current.concat([msg]).slice(-200);
+    }).then(function (updated) {
+      var sheet = sharedSheets.find(function (s) { return s.id === sheetId; });
+      if (sheet) sheet.messages = updated;
+      triggerChatPushNotification(sheetId, trimmed.slice(0, 500));
+    });
   }
 
   chatForm.addEventListener("submit", function (e) {
@@ -5068,18 +5241,14 @@
 
   function sendChatVoiceMessage(sheetId, audioUrl, durationSec) {
     if (!audioUrl || !supabaseClient) return Promise.resolve();
-    return supabaseClient.from(SHARED_TABLE).select("messages").eq("id", sheetId).maybeSingle()
-      .then(function (result) {
-        var current = (result && result.data && result.data.messages) || [];
-        var msg = { id: uid(), phone: myPhoneNumber, type: "voice", audioUrl: audioUrl, duration: durationSec || 0, ts: Date.now(), readBy: [myPhoneNumber] };
-        var updated = current.concat([msg]).slice(-200);
-        return supabaseClient.from(SHARED_TABLE).update({ messages: updated }).eq("id", sheetId)
-          .then(function () {
-            var sheet = sharedSheets.find(function (s) { return s.id === sheetId; });
-            if (sheet) sheet.messages = updated;
-            triggerChatPushNotification(sheetId, tr("voiceMessageLabel"));
-          });
-      });
+    var msg = { id: uid(), phone: myPhoneNumber, type: "voice", audioUrl: audioUrl, duration: durationSec || 0, ts: Date.now(), readBy: [myPhoneNumber] };
+    return updateSharedMessagesSafely(sheetId, function (current) {
+      return current.concat([msg]).slice(-200);
+    }).then(function (updated) {
+      var sheet = sharedSheets.find(function (s) { return s.id === sheetId; });
+      if (sheet) sheet.messages = updated;
+      triggerChatPushNotification(sheetId, tr("voiceMessageLabel"));
+    });
   }
 
   var chatMicBtn = document.getElementById("chatMicBtn");
@@ -5394,29 +5563,25 @@
 
   function deleteChatMessage(sheetId, msgId) {
     if (!supabaseClient) return;
-    supabaseClient.from(SHARED_TABLE).select("messages").eq("id", sheetId).maybeSingle().then(function (result) {
-      var current = (result && result.data && result.data.messages) || [];
-      var updated = current.filter(function (m) { return m.id !== msgId; });
-      return supabaseClient.from(SHARED_TABLE).update({ messages: updated }).eq("id", sheetId).then(function () {
-        var sheet = sharedSheets.find(function (s) { return s.id === sheetId; });
-        if (sheet) sheet.messages = updated;
-        renderChatMessages();
-      });
+    updateSharedMessagesSafely(sheetId, function (current) {
+      return current.filter(function (m) { return m.id !== msgId; });
+    }).then(function (updated) {
+      var sheet = sharedSheets.find(function (s) { return s.id === sheetId; });
+      if (sheet) sheet.messages = updated;
+      renderChatMessages();
     });
   }
 
   function updateChatMessageText(sheetId, msgId, newText) {
     if (!supabaseClient) return Promise.resolve();
-    return supabaseClient.from(SHARED_TABLE).select("messages").eq("id", sheetId).maybeSingle().then(function (result) {
-      var current = (result && result.data && result.data.messages) || [];
-      var updated = current.map(function (m) {
+    return updateSharedMessagesSafely(sheetId, function (current) {
+      return current.map(function (m) {
         if (m.id === msgId) return Object.assign({}, m, { text: newText.trim().slice(0, 500), edited: true });
         return m;
       });
-      return supabaseClient.from(SHARED_TABLE).update({ messages: updated }).eq("id", sheetId).then(function () {
-        var sheet = sharedSheets.find(function (s) { return s.id === sheetId; });
-        if (sheet) sheet.messages = updated;
-      });
+    }).then(function (updated) {
+      var sheet = sharedSheets.find(function (s) { return s.id === sheetId; });
+      if (sheet) sheet.messages = updated;
     });
   }
 
@@ -5653,18 +5818,46 @@
     return (bytes / (1024 * 1024)).toFixed(1) + " MB";
   }
 
-  // Shared-sheet library changes must never be written from a local `sheet`
-  // object captured before an async storage/server call - the background
-  // shared-sheets poll (every 20s, or on tab focus) replaces the whole
-  // sharedSheets array while that call is in flight, orphaning the
-  // reference so both the save and the re-render silently miss the change.
-  // Instead, re-fetch the current server-side data, merge just the folders
-  // field, and write that back - the same safe pattern chat messages use.
-  function applySharedLibraryFolders(sheetId, updateFoldersFn) {
-    return supabaseClient.from(SHARED_TABLE).select("data").eq("id", sheetId).maybeSingle().then(function (result) {
+  // Generic safe read-modify-write for a shared project's `data` column
+  // (tasks/reports/folders/siteLogs/ended/logoId), used by everything below
+  // that touches shared-project data instead of any bespoke read-then-write.
+  // mutateFn(freshData) must derive the new data purely from the FRESH copy
+  // just read - never from a `sheet` object captured earlier - because:
+  // (1) the background shared-sheets poll (every 20s, or on tab focus)
+  //     replaces the whole sharedSheets array while a write can be in
+  //     flight, orphaning any earlier reference, and
+  // (2) data_version is checked-and-incremented on write (WHERE
+  //     data_version = <version just read>): if another member's write
+  //     landed in between, this update matches zero rows and mutateFn is
+  //     called again against a fresh read, so a retry always reflects the
+  //     latest server truth instead of blindly overwriting it.
+  function updateSharedSheetDataSafely(sheetId, mutateFn, triesLeft) {
+    if (triesLeft == null) triesLeft = 4;
+    return supabaseClient.from(SHARED_TABLE).select("data, data_version").eq("id", sheetId).maybeSingle().then(function (result) {
       if (result && result.error) throw result.error;
-      var currentData = (result && result.data && result.data.data) || {};
-      var updatedData = {
+      var row = result && result.data;
+      var currentData = (row && row.data) || {};
+      var currentVersion = (row && row.data_version) || 1;
+      var newData = mutateFn(currentData);
+      return supabaseClient.from(SHARED_TABLE)
+        .update({ data: newData, data_version: currentVersion + 1, updated_at: new Date().toISOString() })
+        .eq("id", sheetId).eq("data_version", currentVersion)
+        .select("id")
+        .then(function (updateResult) {
+          if (updateResult && updateResult.error) throw updateResult.error;
+          var affected = (updateResult && updateResult.data) || [];
+          if (!affected.length) {
+            if (triesLeft > 0) return updateSharedSheetDataSafely(sheetId, mutateFn, triesLeft - 1);
+            throw new Error("shared sheet data update conflict: too many retries");
+          }
+          return newData;
+        });
+    });
+  }
+
+  function applySharedLibraryFolders(sheetId, updateFoldersFn) {
+    return updateSharedSheetDataSafely(sheetId, function (currentData) {
+      return {
         tasks: currentData.tasks || [],
         reports: currentData.reports || [],
         files: [],
@@ -5674,13 +5867,10 @@
         endedDate: currentData.endedDate || null,
         logoId: currentData.logoId || null
       };
-      return supabaseClient.from(SHARED_TABLE).update({ data: updatedData, updated_at: new Date().toISOString() }).eq("id", sheetId)
-        .then(function (updateResult) {
-          if (updateResult && updateResult.error) throw updateResult.error;
-          var liveSheet = sharedSheets.find(function (s) { return s.id === sheetId; });
-          if (liveSheet) liveSheet.folders = updatedData.folders;
-          return updatedData.folders;
-        });
+    }).then(function (updatedData) {
+      var liveSheet = sharedSheets.find(function (s) { return s.id === sheetId; });
+      if (liveSheet) liveSheet.folders = updatedData.folders;
+      return updatedData.folders;
     });
   }
 
@@ -5710,22 +5900,26 @@
         callback(currentData.folders);
         return;
       }
-      var folders = buildDefaultLibraryFolders(currentData.files);
-      var updatedData = {
-        tasks: currentData.tasks || [],
-        reports: currentData.reports || [],
-        files: [],
-        folders: folders,
-        siteLogs: currentData.siteLogs || [],
-        ended: currentData.ended || false,
-        endedDate: currentData.endedDate || null,
-        logoId: currentData.logoId || null
-      };
-      supabaseClient.from(SHARED_TABLE).update({ data: updatedData, updated_at: new Date().toISOString() }).eq("id", sheet.id).then(function () {
+      // Only reaches the versioned write path when folders genuinely don't
+      // exist yet - the fast path above never writes, so opening a library
+      // that's already bootstrapped never bumps data_version or risks a
+      // spurious conflict with a real concurrent edit.
+      updateSharedSheetDataSafely(sheet.id, function (freshData) {
+        return {
+          tasks: freshData.tasks || [],
+          reports: freshData.reports || [],
+          files: [],
+          folders: freshData.folders || buildDefaultLibraryFolders(freshData.files),
+          siteLogs: freshData.siteLogs || [],
+          ended: freshData.ended || false,
+          endedDate: freshData.endedDate || null,
+          logoId: freshData.logoId || null
+        };
+      }).then(function (updatedData) {
         var liveSheet = sharedSheets.find(function (s) { return s.id === sheet.id; });
-        if (liveSheet) liveSheet.folders = folders;
-        callback(folders);
-      }, function () { callback(folders); });
+        if (liveSheet) liveSheet.folders = updatedData.folders;
+        callback(updatedData.folders);
+      }, function () { callback(buildDefaultLibraryFolders(currentData.files)); });
     }, function () { callback([]); });
   }
 
@@ -10049,21 +10243,41 @@
 
   function sharedRowToSheet(row) {
     var d = row.data || {};
+    var tasks = d.tasks || [];
+    var reports = d.reports || [];
+    var siteLogs = (d.siteLogs || []).map(normalizeSiteLog);
+    var ended = d.ended || false;
+    var endedDate = d.endedDate || null;
+    var logoId = d.logoId || null;
     return {
       id: row.id,
       shared: true,
       name: row.name,
-      tasks: d.tasks || [],
-      reports: d.reports || [],
+      tasks: tasks,
+      reports: reports,
       files: d.files || [],
-      siteLogs: (d.siteLogs || []).map(normalizeSiteLog),
+      siteLogs: siteLogs,
       folders: d.folders || null,
-      ended: d.ended || false,
-      endedDate: d.endedDate || null,
-      logoId: d.logoId || null,
+      ended: ended,
+      endedDate: endedDate,
+      logoId: logoId,
       members: row.members || [],
       memberNames: row.member_names || {},
-      messages: row.messages || []
+      messages: row.messages || [],
+      // The last state of this sheet we've actually confirmed the server
+      // holds - refreshed both by this load and by our own successful
+      // saves. saveSharedSheets() diffs against this (not against the
+      // previous in-memory sheet) to tell "we changed this locally" apart
+      // from "this just came from the server as-is", which is what lets it
+      // skip sheets nothing local touched and merge per-item on the ones
+      // that did, instead of blindly overwriting the whole row.
+      // Deep-cloned (JSON round-trip): tasks/reports/siteLogs here must
+      // never be the SAME array objects as the sheet's own live tasks/
+      // reports/siteLogs above - otherwise pushing/editing an item in
+      // place would silently mutate this "last synced" baseline too
+      // (same array reference), making every future diff check in
+      // saveSharedSheets() see "nothing changed" and skip saving entirely.
+      _syncedData: JSON.parse(JSON.stringify({ tasks: tasks, reports: reports, siteLogs: siteLogs, ended: ended, endedDate: endedDate, logoId: logoId }))
     };
   }
 
