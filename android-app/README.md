@@ -53,11 +53,18 @@ website-side change is needed for that.
 ## Push notifications (one-time Firebase setup)
 
 The Android WebView this app runs in has no Web Push API support at all, so
-reminders/chat notifications use `@capacitor/push-notifications` (Firebase
+reminders/chat notifications use `@capacitor-firebase/messaging` (Firebase
 Cloud Messaging) here instead - the website code already detects this and
 switches channels automatically (see `capacitorPushAvailable` in
-`tasks.html`). This needs a one-time setup in the SAME Firebase project
-already used for phone-number login:
+`tasks.html`). Not `@capacitor/push-notifications`: that plugin's
+`register()` call is a documented, widely-reported source of silent hangs
+on Android (its `registration`/`registrationError` events sometimes never
+fire at all, with no native error) - reproduced here even with a correctly
+configured Firebase project, verified `google-services.json`, and the
+required Cloud APIs enabled. `@capacitor-firebase/messaging`'s `getToken()`
+is a real Promise instead of an unreliable one-shot event pair. This needs
+a one-time setup in the SAME Firebase project already used for phone-number
+login:
 
 1. **Register the Android app in Firebase**: Firebase Console → Project
    settings (gear icon) → your existing project → **Add app → Android**.
@@ -74,7 +81,7 @@ already used for phone-number login:
    apply plugin: 'com.google.gms.google-services'
    ```
    Without this line, Firebase never actually initializes and
-   `PushNotifications` silently doesn't show up in
+   `FirebaseMessaging` silently doesn't show up in
    `window.Capacitor.Plugins` at all - `npm install`/`npx cap sync` still
    report the plugin found, and the build still succeeds, so nothing
    about this failure is visible until you check that at runtime.
@@ -95,11 +102,11 @@ already used for phone-number login:
    sending code: `supabase functions deploy send-reminders`,
    `send-chat-notification --no-verify-jwt`, and
    `send-project-invite-notification --no-verify-jwt`.
-9. `npm install` (picks up the new `@capacitor/push-notifications`
-   dependency), then `npx cap sync android`, then rebuild and publish a new
-   signed release as above.
+9. `npm install` (picks up the `@capacitor-firebase/messaging` dependency),
+   then `npx cap sync android`, then rebuild and publish a new signed
+   release as above.
 
 Notification tap-through (opening the right task/chat/invite from a
 notification while the app was closed) is already wired up in `tasks.html`
-via a `pushNotificationActionPerformed` listener, matching what the service
+via a `notificationActionPerformed` listener, matching what the service
 worker does for the browser/TWA build.

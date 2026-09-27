@@ -4226,11 +4226,18 @@
 
   // The standard Web Push API (navigator.serviceWorker + window.PushManager)
   // is unsupported by the Android WebView engine the native app runs in -
-  // reminders/chat notifications need Capacitor's own push-notifications
-  // plugin there instead, which talks to Firebase Cloud Messaging natively.
+  // reminders/chat notifications need a native Firebase Cloud Messaging
+  // plugin there instead. Uses @capacitor-firebase/messaging rather than
+  // @capacitor/push-notifications: the latter's register() call is a
+  // documented, widely-reported source of silent hangs (its
+  // "registration"/"registrationError" events sometimes never fire at all,
+  // with no native error) - confirmed against public bug reports and
+  // reproduced here even with a correctly configured Firebase project.
+  // @capacitor-firebase/messaging's getToken() is a real Promise instead of
+  // an unreliable one-shot event pair.
   var capacitorPushAvailable = !!(
     window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform() &&
-    window.Capacitor.Plugins && window.Capacitor.Plugins.PushNotifications
+    window.Capacitor.Plugins && window.Capacitor.Plugins.FirebaseMessaging
   );
 
   // Native pickContact() only returns ONE contact per call (unlike the web
@@ -6527,66 +6534,20 @@
   }
 
   // Same one-per-device idea as ensurePushSubscription() above, but for the
-  // native app: Capacitor's register() call answers asynchronously via a
-  // one-shot "registration"/"registrationError" event rather than a promise,
-  // so this wraps that in one and caches the resulting FCM token locally
-  // (it's stable across app restarts) to avoid re-registering on every call.
-  // Known Capacitor push-notifications flakiness (confirmed against public
-  // bug reports): register()'s "registration"/"registrationError" events
-  // sometimes never fire at all on a real device, with no native error -
-  // the whole call just goes silent forever. Calling register() again
-  // reportedly recovers it, so this retries a few times on a timer before
-  // giving up, instead of hanging (or failing) after a single attempt.
+  // native app: getToken() is a real Promise (unlike @capacitor/push-
+  // notifications' event-based register(), which was a documented,
+  // widely-reported source of silent hangs), so this just wraps it with a
+  // timeout and caches the resulting FCM token locally (it's stable across
+  // app restarts) to avoid re-registering on every call.
   function ensureFcmToken() {
     var cached = getStoredFcmToken();
     if (cached) return Promise.resolve(cached);
-    return new Promise(function (resolve, reject) {
-      var PN = window.Capacitor.Plugins.PushNotifications;
-      var settled = false;
-      var attempt = 0;
-      var maxAttempts = 4;
-      var perAttemptMs = 8000;
-      function finish(fn) {
-        if (settled) return;
-        settled = true;
-        regHandle.then(function (h) { h.remove(); });
-        errHandle.then(function (h) { h.remove(); });
-        fn();
-      }
-      var regHandle = PN.addListener("registration", function (token) {
-        finish(function () {
-          try { localStorage.setItem(fcmTokenStorageKey(), token.value); } catch (e) {}
-          resolve(token.value);
-        });
-      });
-      var errHandle = PN.addListener("registrationError", function (err) {
-        finish(function () { reject(new Error((err && err.error) || "FCM registration failed")); });
-      });
-      function tryRegister() {
-        attempt++;
-        try {
-          showChatNotifStatus("DEBUG step 4/5: FCM register attempt " + attempt + "/" + maxAttempts);
-          PN.register();
-        } catch (syncErr) {
-          // A throw here (especially on a retry, called from inside the
-          // setTimeout below rather than this function's own synchronous
-          // caller) would otherwise never reach the Promise's reject/resolve
-          // at all, leaving it hung forever with no error - this is exactly
-          // the silent-hang shape observed on real devices, so every
-          // attempt is wrapped defensively.
-          finish(function () { reject(syncErr); });
-          return;
-        }
-        setTimeout(function () {
-          if (settled) return;
-          if (attempt < maxAttempts) {
-            tryRegister();
-            return;
-          }
-          finish(function () { reject(new Error("FCM registration (PN.register) never fired after " + maxAttempts + " attempts")); });
-        }, perAttemptMs);
-      }
-      tryRegister();
+    var FM = window.Capacitor.Plugins.FirebaseMessaging;
+    return withTimeout(FM.getToken(), 15000, "FCM getToken").then(function (result) {
+      var token = result && result.token;
+      if (!token) throw new Error("FCM getToken returned no token");
+      try { localStorage.setItem(fcmTokenStorageKey(), token); } catch (e) {}
+      return token;
     });
   }
 
@@ -6599,17 +6560,17 @@
 
   function pushPermissionDenied() {
     if (capacitorPushAvailable) {
-      return window.Capacitor.Plugins.PushNotifications.checkPermissions().then(function (s) { return s.receive === "denied"; });
+      return window.Capacitor.Plugins.FirebaseMessaging.checkPermissions().then(function (s) { return s.receive === "denied"; });
     }
     return Promise.resolve(Notification.permission === "denied");
   }
 
   function requestPushPermissionGranted() {
     if (capacitorPushAvailable) {
-      var PN = window.Capacitor.Plugins.PushNotifications;
-      return PN.checkPermissions().then(function (status) {
+      var FM = window.Capacitor.Plugins.FirebaseMessaging;
+      return FM.checkPermissions().then(function (status) {
         if (status.receive === "granted") return true;
-        return PN.requestPermissions().then(function (r) { return r.receive === "granted"; });
+        return FM.requestPermissions().then(function (r) { return r.receive === "granted"; });
       });
     }
     return Notification.requestPermission().then(function (p) { return p === "granted"; });
@@ -10133,7 +10094,7 @@
   // instead of the SW message event, with the same custom fields under
   // notification.data (all values arrive as strings, same as the SW path).
   if (capacitorPushAvailable) {
-    window.Capacitor.Plugins.PushNotifications.addListener("pushNotificationActionPerformed", function (event) {
+    window.Capacitor.Plugins.FirebaseMessaging.addListener("notificationActionPerformed", function (event) {
       var data = (event.notification && event.notification.data) || {};
       if (data.projectInvite === "true" || data.projectInvite === true) checkPendingProjectInvites();
       navigateToTaskLink(data.sheetId, data.date, data.taskId, data.chat === "true" || data.chat === true);
