@@ -9,5 +9,12 @@
   },
   "android": {
     "allowMixedContent": false
+  },
+  "plugins": {
+    "EdgeToEdge": {
+      "backgroundColor": "#35618f",
+      "statusBarColor": "#35618f",
+      "navigationBarColor": "#35618f"
+    }
   }
 }

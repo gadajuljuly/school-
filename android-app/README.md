@@ -110,3 +110,19 @@ Notification tap-through (opening the right task/chat/invite from a
 notification while the app was closed) is already wired up in `tasks.html`
 via a `notificationActionPerformed` listener, matching what the service
 worker does for the browser/TWA build.
+
+## Status bar / navigation bar color
+
+Android 15+ enforces edge-to-edge display and ignores the classic
+`android:statusBarColor`/`android:navigationBarColor` theme attributes and
+`Window.setStatusBarColor()`/`setNavigationBarColor()` calls entirely, even
+with `android:windowOptOutEdgeToEdgeEnforcement="true"` set (tried first;
+didn't work) - this isn't a bug in this project, it's a real platform
+change with no way to opt back into the old behavior. The fix is
+`@capawesome/capacitor-android-edge-to-edge-support`, configured in
+`capacitor.config.json` under `plugins.EdgeToEdge` (`backgroundColor`,
+`statusBarColor`, `navigationBarColor`, currently all `#35618f` to match
+`tasks.html`'s `theme-color` meta tag). No native code needed -
+`MainActivity.java` stays the default `BridgeActivity` subclass with no
+overrides. After changing the color here, `npm install` + `npx cap sync
+android` + rebuild.
