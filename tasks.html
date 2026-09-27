@@ -6531,30 +6531,53 @@
   // one-shot "registration"/"registrationError" event rather than a promise,
   // so this wraps that in one and caches the resulting FCM token locally
   // (it's stable across app restarts) to avoid re-registering on every call.
+  // Known Capacitor push-notifications flakiness (confirmed against public
+  // bug reports): register()'s "registration"/"registrationError" events
+  // sometimes never fire at all on a real device, with no native error -
+  // the whole call just goes silent forever. Calling register() again
+  // reportedly recovers it, so this retries a few times on a timer before
+  // giving up, instead of hanging (or failing) after a single attempt.
   function ensureFcmToken() {
     var cached = getStoredFcmToken();
     if (cached) return Promise.resolve(cached);
-    var registerPromise = new Promise(function (resolve, reject) {
+    return new Promise(function (resolve, reject) {
       var PN = window.Capacitor.Plugins.PushNotifications;
+      var settled = false;
+      var attempt = 0;
+      var maxAttempts = 4;
+      var perAttemptMs = 8000;
       var regHandle = PN.addListener("registration", function (token) {
+        if (settled) return;
+        settled = true;
         regHandle.then(function (h) { h.remove(); });
         errHandle.then(function (h) { h.remove(); });
         try { localStorage.setItem(fcmTokenStorageKey(), token.value); } catch (e) {}
         resolve(token.value);
       });
       var errHandle = PN.addListener("registrationError", function (err) {
+        if (settled) return;
+        settled = true;
         regHandle.then(function (h) { h.remove(); });
         errHandle.then(function (h) { h.remove(); });
         reject(new Error((err && err.error) || "FCM registration failed"));
       });
-      PN.register();
+      function tryRegister() {
+        attempt++;
+        PN.register();
+        setTimeout(function () {
+          if (settled) return;
+          if (attempt < maxAttempts) {
+            tryRegister();
+            return;
+          }
+          settled = true;
+          regHandle.then(function (h) { h.remove(); });
+          errHandle.then(function (h) { h.remove(); });
+          reject(new Error("FCM registration (PN.register) never fired after " + maxAttempts + " attempts"));
+        }, perAttemptMs);
+      }
+      tryRegister();
     });
-    // DEBUG: neither "registration" nor "registrationError" ever fired in
-    // production so far (the toggle-on flow just went silent forever) - a
-    // real Firebase/FCM setup issue makes PN.register() hang exactly like
-    // this, with no native error surfaced at all. Timing this out turns
-    // that silent hang into a visible, reportable message instead.
-    return withTimeout(registerPromise, 12000, "FCM registration (PN.register)");
   }
 
   // Unified across both push channels (Web Push in a browser/TWA, Capacitor
