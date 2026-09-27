@@ -6786,50 +6786,33 @@
 
     try { localStorage.removeItem(chatNotifDisabledKey()); } catch (e) {}
 
-    // DEBUG: temporary raw runtime check - every push_subscriptions row in
-    // production so far turned out to be Web Push (endpoint), never native
-    // FCM (fcm_token), even on devices where the native app is installed -
-    // this shows exactly what the native bridge looks like on THIS device
-    // at the moment of toggling on, to find out why.
-    var dbg = "cap=" + !!window.Capacitor +
-      " native=" + !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) +
-      " plugins=" + (window.Capacitor && window.Capacitor.Plugins ? Object.keys(window.Capacitor.Plugins).join(",") : "-") +
-      " capacitorPushAvailable=" + capacitorPushAvailable;
-    console.error("DEBUG push bridge check:", dbg);
-    showChatNotifStatus("DEBUG step 1/5: handler fired | " + dbg);
-
     pushPermissionDenied().then(function (denied) {
-      showChatNotifStatus("DEBUG step 2/5: permission check done, denied=" + denied);
       if (denied) {
-        showChatNotifStatus(tr("notificationsBlocked") + " | " + dbg);
+        showChatNotifStatus(tr("notificationsBlocked"));
         chatNotifSelect.value = "";
         return;
       }
       return requestPushPermissionGranted().then(function (granted) {
-        showChatNotifStatus("DEBUG step 3/5: permission request done, granted=" + granted);
         if (!granted) {
-          showChatNotifStatus(tr("notificationPermissionDenied") + " | " + dbg);
+          showChatNotifStatus(tr("notificationPermissionDenied"));
           chatNotifSelect.value = "";
           return;
         }
         return ensurePushIdentity().then(function (identity) {
-          showChatNotifStatus("DEBUG step 4/5: FCM token obtained, channel=" + identity.conflictColumn);
-          return upsertPushSubscriptionRow({ chat_enabled: true }, identity).then(function (result) { return { result: result, identity: identity }; });
-        }).then(function (wrapped) {
-          showChatNotifStatus("DEBUG step 5/5: row saved");
-          var result = wrapped.result;
+          return upsertPushSubscriptionRow({ chat_enabled: true }, identity);
+        }).then(function (result) {
           if (result && result.error) {
             console.error("push_subscriptions upsert failed:", result.error);
-            showChatNotifStatus(tr("errorSavingSubscription") + result.error.message + " | " + dbg);
+            showChatNotifStatus(tr("errorSavingSubscription") + result.error.message);
             chatNotifSelect.value = "";
             return;
           }
-          showChatNotifStatus(tr("chatNotifActive") + " | " + dbg + " channel=" + wrapped.identity.conflictColumn);
+          showChatNotifStatus(tr("chatNotifActive"));
         });
       });
     }).catch(function (err) {
       console.error("chat notification subscribe failed:", err);
-      showChatNotifStatus("DEBUG failed at some step: " + tr("errorEnablingReminders") + (err && err.message ? err.message : err) + " | " + dbg);
+      showChatNotifStatus(tr("errorEnablingReminders") + (err && err.message ? err.message : err));
       chatNotifSelect.value = "";
     });
   });
