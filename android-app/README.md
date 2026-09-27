@@ -44,11 +44,19 @@ same Internal testing track already set up.
 ## Contacts permission
 
 `@capacitor-community/contacts`'s native contact picker (`pickContact()`)
-uses Android's own system contact-picker intent, which - like a native
-app - does not need `READ_CONTACTS` declared for picking a single contact
-this way. If a future version of the plugin does request it, Android will
-show its own native permission dialog the first time it's used; no
-website-side change is needed for that.
+does need `READ_CONTACTS` and `WRITE_CONTACTS` declared in
+`AndroidManifest.xml` - without them, `pickContact()` rejects immediately
+with "Missing the following permissions..." (confirmed at runtime; an
+earlier version of this doc assumed the system picker intent didn't need
+them, which turned out to be wrong). Add both as `<uses-permission>`
+elements directly under the opening `<manifest ...>` tag, before
+`<application>`:
+```xml
+<uses-permission android:name="android.permission.READ_CONTACTS" />
+<uses-permission android:name="android.permission.WRITE_CONTACTS" />
+```
+Android still shows its own native runtime permission dialog the first
+time the picker is used; no website-side change is needed for that part.
 
 ## Push notifications (one-time Firebase setup)
 
