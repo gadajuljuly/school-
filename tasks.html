@@ -140,7 +140,7 @@
     background: var(--desk);
     color: var(--ink);
     min-height: 100vh;
-    padding: 28px 16px 35px;
+    padding: 28px 16px 8px; /* bottom = 2mm gap between the footer bar and the system nav bar */
     display: flex;
     flex-direction: column;
     overscroll-behavior-y: none;
@@ -276,8 +276,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 20px 18px;
-    margin-top: 15px; /* 4mm - shifts the bar down without changing its own height */
+    padding: 4px 20px 7px; /* thickness reduced by 5mm (19px) from the original 12px/18px */
     flex-shrink: 0;
     border-radius: 0 0 10px 10px;
   }
