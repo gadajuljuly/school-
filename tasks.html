@@ -276,7 +276,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 4px 20px 7px; /* thickness reduced by 5mm (19px) from the original 12px/18px */
+    padding: 6px 20px 9px; /* thickness reduced 5mm then increased back 1mm from the original 12px/18px */
     flex-shrink: 0;
     border-radius: 0 0 10px 10px;
   }
@@ -1600,12 +1600,18 @@
     align-items: flex-end;
     gap: 6px;
   }
+  .sheets-bars-stack {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    gap: 4px;
+  }
   .sheets-bar {
     display: flex;
     align-items: flex-end;
     gap: 2px;
     overflow-x: auto;
-    flex: 1;
     scrollbar-width: none;
   }
   .sheets-bar::-webkit-scrollbar { display: none; }
@@ -2372,7 +2378,10 @@
     </div>
 
     <div class="sheets-row">
-      <div class="sheets-bar" id="sheetsBar"></div>
+      <div class="sheets-bars-stack" id="sheetsBarsStack">
+        <div class="sheets-bar" id="sheetsBarPrivate"></div>
+        <div class="sheets-bar" id="sheetsBarShared"></div>
+      </div>
       <div class="sheets-search">
         <button class="menu-btn" id="searchBtn" data-i18n-title="searchBtnTitle" title="חיפוש משימות" aria-haspopup="true" aria-expanded="false">&#128269;</button>
         <div class="search-panel" id="searchPanel" hidden>
@@ -2992,6 +3001,7 @@
     installLink: { he: "הקישור להתקנה: ", en: "Install link: ", ar: "رابط التثبيت: ", ru: "Ссылка для установки: " },
     clickToRename: { he: "לחצו לשינוי שם", en: "Click to rename", ar: "اضغط لتغيير الاسم", ru: "Нажмите, чтобы переименовать" },
     addProjectTitle: { he: "הוספת פרויקט", en: "Add project", ar: "إضافة مشروع", ru: "Добавить проект" },
+    addSharedProjectTitle: { he: "הוספת פרויקט משותף", en: "Add shared project", ar: "إضافة مشروع مشترك", ru: "Добавить общий проект" },
     statusPartial: { he: "לחצו כדי לסמן טיפול חלקי", en: "Click to mark as partially done", ar: "اضغط للتعليم كمنفذ جزئيًا", ru: "Нажмите, чтобы отметить как частично выполненное" },
     statusDone: { he: "לחצו כדי לסמן כהושלם", en: "Click to mark as done", ar: "اضغط للتعليم كمكتمل", ru: "Нажмите, чтобы отметить как выполненное" },
     statusReset: { he: "לחצו כדי לאפס", en: "Click to reset", ar: "اضغط لإعادة التعيين", ru: "Нажмите, чтобы сбросить" },
@@ -3095,7 +3105,6 @@
     projectInviteReceivedMsgTemplate: { he: "קיבלת פרויקט \"{project}\" מ{name} - לאשר?", en: "You received the project \"{project}\" from {name} - approve?", ar: "استلمت المشروع \"{project}\" من {name} - هل توافق؟", ru: "Вы получили проект «{project}» от {name} - подтвердить?" },
     projectInviteApprovedMsg: { he: "הצטרפת לפרויקט", en: "You joined the project", ar: "لقد انضممت إلى المشروع", ru: "Вы присоединились к проекту" },
     projectInviteDeclinedMsg: { he: "ההזמנה נדחתה", en: "The invite was declined", ar: "تم رفض الدعوة", ru: "Приглашение отклонено" },
-    addSharedProjectHint: { he: "לחיצה ארוכה על + יוצרת פרויקט משותף", en: "Long-press + to create a shared project", ar: "اضغط مطولاً على + لإنشاء مشروع مشترك", ru: "Долгое нажатие на + создаёт общий проект" },
     chatBtnTitle: { he: "צ'אט הפרויקט", en: "Project chat", ar: "دردشة المشروع", ru: "Чат проекта" },
     chatInputPlaceholder: { he: "הודעה...", en: "Message...", ar: "رسالة...", ru: "Сообщение..." },
     chatSendBtnTitle: { he: "שליחה", en: "Send", ar: "إرسال", ru: "Отправить" },
@@ -3752,7 +3761,8 @@
   var activeSiteLogDate = null;
 
   var dateLabel = document.getElementById("dateLabel");
-  var sheetsBar = document.getElementById("sheetsBar");
+  var sheetsBarPrivate = document.getElementById("sheetsBarPrivate");
+  var sheetsBarShared = document.getElementById("sheetsBarShared");
   var taskInput = document.getElementById("taskInput");
   var addForm = document.getElementById("addForm");
   var taskList = document.getElementById("taskList");
@@ -9449,152 +9459,163 @@
     return allSheets();
   }
 
-  function renderSheetsBar() {
-    clearTimeout(longPressTimer);
-    sheetsBar.innerHTML = "";
-    visibleSheets().forEach(function (sheet) {
-      var tab = document.createElement("div");
-      tab.className = "sheet-tab" + (sheet.id === data.activeSheetId ? " active" : "") + (sheet.ended ? " ended" : "");
-      tab.dataset.sheetId = sheet.id;
+  // Builds one sheet's tab element into the given bar - shared by both the
+  // private and shared rows below, so a tab behaves identically (rename,
+  // long-press action menu, marquee overflow scroll) regardless of which
+  // row it's rendered into.
+  function appendSheetTab(bar, sheet) {
+    var tab = document.createElement("div");
+    tab.className = "sheet-tab" + (sheet.id === data.activeSheetId ? " active" : "") + (sheet.ended ? " ended" : "");
+    tab.dataset.sheetId = sheet.id;
 
-      if (state.renamingSheetId === sheet.id) {
-        var input = document.createElement("input");
-        input.className = "rename-input";
-        input.value = sheet.name;
-        input.maxLength = 40;
-        input.addEventListener("click", function (e) { e.stopPropagation(); });
-        input.addEventListener("keydown", function (e) {
-          if (e.key === "Enter") { commitRename(sheet.id, input.value); }
-          if (e.key === "Escape") { state.renamingSheetId = null; render(); }
-        });
-        input.addEventListener("blur", function () { commitRename(sheet.id, input.value); });
-        tab.appendChild(input);
-        sheetsBar.appendChild(tab);
-        input.focus();
-        input.select();
-        return;
-      }
-
-      var label = document.createElement("span");
-      label.className = "sheet-tab-label";
-      label.textContent = (sheet.shared ? "👥 " : "") + sheet.name;
-      tab.appendChild(label);
-      tab.title = sheet.id === data.activeSheetId ? tr("clickToRename") : sheet.name;
-
-      if (sheet.shared) {
-        var unreadCount = getUnreadCount(sheet);
-        if (unreadCount > 0) {
-          var unreadBadge = document.createElement("span");
-          unreadBadge.className = "sheet-tab-unread-badge";
-          unreadBadge.textContent = unreadCount > 99 ? "99+" : String(unreadCount);
-          tab.appendChild(unreadBadge);
-        }
-      }
-
-      var tabLongPressFired = false;
-      tab.addEventListener("click", function () {
-        if (tabLongPressFired) { tabLongPressFired = false; return; }
-        if (sheet.id === data.activeSheetId) {
-          state.renamingSheetId = sheet.id;
-          render();
-        } else {
-          selectSheet(sheet.id);
-        }
+    if (state.renamingSheetId === sheet.id) {
+      var input = document.createElement("input");
+      input.className = "rename-input";
+      input.value = sheet.name;
+      input.maxLength = 40;
+      input.addEventListener("click", function (e) { e.stopPropagation(); });
+      input.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") { commitRename(sheet.id, input.value); }
+        if (e.key === "Escape") { state.renamingSheetId = null; render(); }
       });
-      tab.addEventListener("dblclick", function (e) {
-        e.stopPropagation();
-        data.activeSheetId = sheet.id;
+      input.addEventListener("blur", function () { commitRename(sheet.id, input.value); });
+      tab.appendChild(input);
+      bar.appendChild(tab);
+      input.focus();
+      input.select();
+      return;
+    }
+
+    var label = document.createElement("span");
+    label.className = "sheet-tab-label";
+    label.textContent = (sheet.shared ? "👥 " : "") + sheet.name;
+    tab.appendChild(label);
+    tab.title = sheet.id === data.activeSheetId ? tr("clickToRename") : sheet.name;
+
+    if (sheet.shared) {
+      var unreadCount = getUnreadCount(sheet);
+      if (unreadCount > 0) {
+        var unreadBadge = document.createElement("span");
+        unreadBadge.className = "sheet-tab-unread-badge";
+        unreadBadge.textContent = unreadCount > 99 ? "99+" : String(unreadCount);
+        tab.appendChild(unreadBadge);
+      }
+    }
+
+    var tabLongPressFired = false;
+    tab.addEventListener("click", function () {
+      if (tabLongPressFired) { tabLongPressFired = false; return; }
+      if (sheet.id === data.activeSheetId) {
         state.renamingSheetId = sheet.id;
         render();
-      });
-
-      var tabPressStartX = 0, tabPressStartY = 0;
-      var startTabPress = function (e) {
-        var point = e.touches ? e.touches[0] : e;
-        tabPressStartX = point.clientX;
-        tabPressStartY = point.clientY;
-        tabLongPressFired = false;
-        clearTimeout(longPressTimer);
-        longPressTimer = setTimeout(function () {
-          tabLongPressFired = true;
-          openSheetActionModal(sheet.id);
-        }, 1000);
-      };
-      var cancelTabPress = function () {
-        clearTimeout(longPressTimer);
-      };
-      var moveTabPress = function (e) {
-        var point = e.touches ? e.touches[0] : e;
-        if (Math.abs(point.clientX - tabPressStartX) > 10 || Math.abs(point.clientY - tabPressStartY) > 10) {
-          cancelTabPress();
-        }
-      };
-      tab.addEventListener("mousedown", startTabPress);
-      tab.addEventListener("mouseup", cancelTabPress);
-      tab.addEventListener("mouseleave", cancelTabPress);
-      tab.addEventListener("mousemove", moveTabPress);
-      tab.addEventListener("touchstart", startTabPress, { passive: true });
-      tab.addEventListener("touchend", cancelTabPress);
-      tab.addEventListener("touchmove", moveTabPress, { passive: true });
-
-      sheetsBar.appendChild(tab);
-
-      var tabStyle = getComputedStyle(tab);
-      var availableWidth = tab.clientWidth - parseFloat(tabStyle.paddingLeft) - parseFloat(tabStyle.paddingRight);
-      var overflowPx = label.scrollWidth - availableWidth;
-      if (overflowPx > 2) {
-        var gapPx = 24;
-        var track = document.createElement("span");
-        track.className = "marquee-track";
-        tab.insertBefore(track, label);
-        track.appendChild(label);
-        var clone = label.cloneNode(true);
-        clone.classList.add("sheet-tab-label-clone");
-        clone.setAttribute("aria-hidden", "true");
-        track.appendChild(clone);
-
-        var segment = label.scrollWidth + gapPx;
-        track.style.setProperty("--marquee-segment", segment + "px");
-        track.style.animationDuration = Math.max(4, segment / 40) + "s";
+      } else {
+        selectSheet(sheet.id);
       }
     });
+    tab.addEventListener("dblclick", function (e) {
+      e.stopPropagation();
+      data.activeSheetId = sheet.id;
+      state.renamingSheetId = sheet.id;
+      render();
+    });
 
+    var tabPressStartX = 0, tabPressStartY = 0;
+    var startTabPress = function (e) {
+      var point = e.touches ? e.touches[0] : e;
+      tabPressStartX = point.clientX;
+      tabPressStartY = point.clientY;
+      tabLongPressFired = false;
+      clearTimeout(longPressTimer);
+      longPressTimer = setTimeout(function () {
+        tabLongPressFired = true;
+        openSheetActionModal(sheet.id);
+      }, 1000);
+    };
+    var cancelTabPress = function () {
+      clearTimeout(longPressTimer);
+    };
+    var moveTabPress = function (e) {
+      var point = e.touches ? e.touches[0] : e;
+      if (Math.abs(point.clientX - tabPressStartX) > 10 || Math.abs(point.clientY - tabPressStartY) > 10) {
+        cancelTabPress();
+      }
+    };
+    tab.addEventListener("mousedown", startTabPress);
+    tab.addEventListener("mouseup", cancelTabPress);
+    tab.addEventListener("mouseleave", cancelTabPress);
+    tab.addEventListener("mousemove", moveTabPress);
+    tab.addEventListener("touchstart", startTabPress, { passive: true });
+    tab.addEventListener("touchend", cancelTabPress);
+    tab.addEventListener("touchmove", moveTabPress, { passive: true });
+
+    bar.appendChild(tab);
+
+    var tabStyle = getComputedStyle(tab);
+    var availableWidth = tab.clientWidth - parseFloat(tabStyle.paddingLeft) - parseFloat(tabStyle.paddingRight);
+    var overflowPx = label.scrollWidth - availableWidth;
+    if (overflowPx > 2) {
+      var gapPx = 24;
+      var track = document.createElement("span");
+      track.className = "marquee-track";
+      tab.insertBefore(track, label);
+      track.appendChild(label);
+      var clone = label.cloneNode(true);
+      clone.classList.add("sheet-tab-label-clone");
+      clone.setAttribute("aria-hidden", "true");
+      track.appendChild(clone);
+
+      var segment = label.scrollWidth + gapPx;
+      track.style.setProperty("--marquee-segment", segment + "px");
+      track.style.animationDuration = Math.max(4, segment / 40) + "s";
+    }
+  }
+
+  function appendAddBtn(bar, titleKey, onClick) {
     var addBtn = document.createElement("button");
     addBtn.className = "sheet-tab add-sheet-tab";
     addBtn.type = "button";
-    addBtn.title = tr("addProjectTitle") + " / " + tr("addSharedProjectHint");
+    addBtn.title = tr(titleKey);
     var addSheetBtnImg = document.createElement("img");
     addSheetBtnImg.src = "tasks-plus-icon.webp";
     addSheetBtnImg.alt = "+";
     addBtn.appendChild(addSheetBtnImg);
-    var addBtnLongPressFired = false;
-    addBtn.addEventListener("click", function () {
-      if (addBtnLongPressFired) { addBtnLongPressFired = false; return; }
-      addSheet();
-    });
-    var startAddBtnPress = function () {
-      addBtnLongPressFired = false;
-      clearTimeout(longPressTimer);
-      longPressTimer = setTimeout(function () {
-        addBtnLongPressFired = true;
-        openSharedProjectModal();
-      }, 1000);
-    };
-    var cancelAddBtnPress = function () { clearTimeout(longPressTimer); };
-    addBtn.addEventListener("mousedown", startAddBtnPress);
-    addBtn.addEventListener("mouseup", cancelAddBtnPress);
-    addBtn.addEventListener("mouseleave", cancelAddBtnPress);
-    addBtn.addEventListener("touchstart", startAddBtnPress, { passive: true });
-    addBtn.addEventListener("touchend", cancelAddBtnPress);
-    sheetsBar.appendChild(addBtn);
+    addBtn.addEventListener("click", onClick);
+    bar.appendChild(addBtn);
+  }
+
+  // The private and shared projects are rendered as two separate rows
+  // (rather than one mixed, category-tagged row) so each stays a short,
+  // easy-to-scan strip on its own - the row holding the currently active
+  // tab is always the one closer to the task list below it (via flex
+  // `order`), so switching between a private and a shared project visibly
+  // swaps which row is "in front."
+  function renderSheetsBar() {
+    clearTimeout(longPressTimer);
+    sheetsBarPrivate.innerHTML = "";
+    sheetsBarShared.innerHTML = "";
+
+    var privateSheets = visibleSheets().filter(function (s) { return !s.shared; });
+    var sharedSheetsVisible = visibleSheets().filter(function (s) { return s.shared; });
+
+    privateSheets.forEach(function (sheet) { appendSheetTab(sheetsBarPrivate, sheet); });
+    appendAddBtn(sheetsBarPrivate, "addProjectTitle", function () { addSheet(); });
+
+    sharedSheetsVisible.forEach(function (sheet) { appendSheetTab(sheetsBarShared, sheet); });
+    appendAddBtn(sheetsBarShared, "addSharedProjectTitle", function () { openSharedProjectModal(); });
+
+    var active = activeSheet();
+    var activeIsShared = !!(active && active.shared);
+    sheetsBarPrivate.style.order = activeIsShared ? "0" : "1";
+    sheetsBarShared.style.order = activeIsShared ? "1" : "0";
 
     if (data.activeSheetId !== lastScrolledSheetId) {
       lastScrolledSheetId = data.activeSheetId;
-      var visible = visibleSheets();
+      var visible = activeIsShared ? sharedSheetsVisible : privateSheets;
+      var activeBar = activeIsShared ? sheetsBarShared : sheetsBarPrivate;
       var activeIndex = visible.findIndex(function (s) { return s.id === data.activeSheetId; });
       var anchorSheet = activeIndex > 0 ? visible[activeIndex - 1] : visible[activeIndex];
       if (anchorSheet) {
-        var anchorTabEl = sheetsBar.querySelector('[data-sheet-id="' + anchorSheet.id + '"]');
+        var anchorTabEl = activeBar.querySelector('[data-sheet-id="' + anchorSheet.id + '"]');
         if (anchorTabEl) {
           anchorTabEl.scrollIntoView({ inline: "start", block: "nearest", behavior: "smooth" });
         }
