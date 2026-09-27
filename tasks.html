@@ -4260,10 +4260,16 @@
         var contact = result && result.contact;
         var phones = (contact && contact.phoneNumbers) || [];
         var tel = phones.length ? phones[0].number : "";
-        if (!tel) return null;
+        if (!tel) {
+          alert("DEBUG: contact picked but no phone number found. Raw result: " + JSON.stringify(result));
+          return null;
+        }
         return { tel: tel, name: (contact && contact.displayName) || "" };
       })
-      .catch(function () { return null; });
+      .catch(function (err) {
+        alert("DEBUG: pickContact failed - " + ((err && err.message) || JSON.stringify(err)));
+        return null;
+      });
   }
 
   // --- Project invites: "שיתוף" on a project's tab sends a real invite to
