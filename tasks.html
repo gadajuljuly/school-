@@ -6534,7 +6534,7 @@
   function ensureFcmToken() {
     var cached = getStoredFcmToken();
     if (cached) return Promise.resolve(cached);
-    return new Promise(function (resolve, reject) {
+    var registerPromise = new Promise(function (resolve, reject) {
       var PN = window.Capacitor.Plugins.PushNotifications;
       var regHandle = PN.addListener("registration", function (token) {
         regHandle.then(function (h) { h.remove(); });
@@ -6549,6 +6549,12 @@
       });
       PN.register();
     });
+    // DEBUG: neither "registration" nor "registrationError" ever fired in
+    // production so far (the toggle-on flow just went silent forever) - a
+    // real Firebase/FCM setup issue makes PN.register() hang exactly like
+    // this, with no native error surfaced at all. Timing this out turns
+    // that silent hang into a visible, reportable message instead.
+    return withTimeout(registerPromise, 12000, "FCM registration (PN.register)");
   }
 
   // Unified across both push channels (Web Push in a browser/TWA, Capacitor
