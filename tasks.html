@@ -6546,34 +6546,44 @@
       var attempt = 0;
       var maxAttempts = 4;
       var perAttemptMs = 8000;
-      var regHandle = PN.addListener("registration", function (token) {
+      function finish(fn) {
         if (settled) return;
         settled = true;
         regHandle.then(function (h) { h.remove(); });
         errHandle.then(function (h) { h.remove(); });
-        try { localStorage.setItem(fcmTokenStorageKey(), token.value); } catch (e) {}
-        resolve(token.value);
+        fn();
+      }
+      var regHandle = PN.addListener("registration", function (token) {
+        finish(function () {
+          try { localStorage.setItem(fcmTokenStorageKey(), token.value); } catch (e) {}
+          resolve(token.value);
+        });
       });
       var errHandle = PN.addListener("registrationError", function (err) {
-        if (settled) return;
-        settled = true;
-        regHandle.then(function (h) { h.remove(); });
-        errHandle.then(function (h) { h.remove(); });
-        reject(new Error((err && err.error) || "FCM registration failed"));
+        finish(function () { reject(new Error((err && err.error) || "FCM registration failed")); });
       });
       function tryRegister() {
         attempt++;
-        PN.register();
+        try {
+          showChatNotifStatus("DEBUG step 4/5: FCM register attempt " + attempt + "/" + maxAttempts);
+          PN.register();
+        } catch (syncErr) {
+          // A throw here (especially on a retry, called from inside the
+          // setTimeout below rather than this function's own synchronous
+          // caller) would otherwise never reach the Promise's reject/resolve
+          // at all, leaving it hung forever with no error - this is exactly
+          // the silent-hang shape observed on real devices, so every
+          // attempt is wrapped defensively.
+          finish(function () { reject(syncErr); });
+          return;
+        }
         setTimeout(function () {
           if (settled) return;
           if (attempt < maxAttempts) {
             tryRegister();
             return;
           }
-          settled = true;
-          regHandle.then(function (h) { h.remove(); });
-          errHandle.then(function (h) { h.remove(); });
-          reject(new Error("FCM registration (PN.register) never fired after " + maxAttempts + " attempts"));
+          finish(function () { reject(new Error("FCM registration (PN.register) never fired after " + maxAttempts + " attempts")); });
         }, perAttemptMs);
       }
       tryRegister();
