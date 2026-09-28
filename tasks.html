@@ -51,6 +51,7 @@
     --medium: #b8811f;
     --low: #d9722a;
     --report-green: #3c8a5c;
+    --tab-inactive: #d7dde3;
     --shadow: rgba(44, 42, 36, 0.18);
     --contact-bg-1: #dde8f5; --contact-name-1: #2c5282;
     --contact-bg-2: #e0f0e0; --contact-name-2: #276749;
@@ -81,6 +82,7 @@
       --accent: #7fb0e0;
       --accent-contrast: #16181c;
       --shadow: rgba(0, 0, 0, 0.5);
+      --tab-inactive: #333a42;
       --contact-bg-1: #24374d; --contact-name-1: #8ab4e8;
       --contact-bg-2: #24402c; --contact-name-2: #8cd9a0;
       --contact-bg-3: #4a3420; --contact-name-3: #e8a868;
@@ -110,6 +112,7 @@
     --accent: #7fb0e0;
     --accent-contrast: #16181c;
     --shadow: rgba(0, 0, 0, 0.5);
+    --tab-inactive: #333a42;
     --contact-bg-1: #24374d; --contact-name-1: #8ab4e8;
     --contact-bg-2: #24402c; --contact-name-2: #8cd9a0;
     --contact-bg-3: #4a3420; --contact-name-3: #e8a868;
@@ -1618,7 +1621,7 @@
   .sheet-tab {
     flex-shrink: 0;
     padding: 7px 16px 7px 22px;
-    background: transparent;
+    background: var(--tab-inactive);
     color: var(--ink-muted);
     font-size: 0.83rem;
     cursor: pointer;
