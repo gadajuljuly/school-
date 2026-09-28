@@ -5810,7 +5810,7 @@
 
   var libraryBtn = document.getElementById("libraryBtn");
   var archiveBtn = document.getElementById("archiveBtn");
-  archiveBtn.addEventListener("click", function () { toggleArchiveView(); });
+  archiveBtn.addEventListener("click", function () { enterArchiveView(); });
   var libraryFoldersView = document.getElementById("libraryFoldersView");
   var libraryFoldersBackBtn = document.getElementById("libraryFoldersBackBtn");
   var libraryFoldersHeadTitle = document.getElementById("libraryFoldersHeadTitle");
@@ -8380,6 +8380,7 @@
     render();
   });
   tasksFabBtn.addEventListener("click", function () {
+    exitArchiveView();
     state.viewMode = "tasks";
     state.menuOpen = false;
     render();
@@ -9783,21 +9784,22 @@
   function visibleSheets() {
     return allSheets().filter(function (s) { return !!s.ended === viewingArchive; });
   }
-  function toggleArchiveView() {
-    if (!viewingArchive) {
-      var endedSheets = allSheets().filter(function (s) { return s.ended; });
-      if (!endedSheets.length) { showToast(tr("noArchivedProjectsMsg")); return; }
-      lastActiveSheetIdBeforeArchive = data.activeSheetId;
-      viewingArchive = true;
-      data.activeSheetId = endedSheets[0].id;
-    } else {
-      viewingArchive = false;
-      var activeSheets = allSheets().filter(function (s) { return !s.ended; });
-      var restored = activeSheets.find(function (s) { return s.id === lastActiveSheetIdBeforeArchive; });
-      data.activeSheetId = (restored || activeSheets[0] || {}).id || data.activeSheetId;
-    }
+  function enterArchiveView() {
+    if (viewingArchive) return;
+    var endedSheets = allSheets().filter(function (s) { return s.ended; });
+    if (!endedSheets.length) { showToast(tr("noArchivedProjectsMsg")); return; }
+    lastActiveSheetIdBeforeArchive = data.activeSheetId;
+    viewingArchive = true;
+    data.activeSheetId = endedSheets[0].id;
     state.viewMode = "tasks";
     render();
+  }
+  function exitArchiveView() {
+    if (!viewingArchive) return;
+    viewingArchive = false;
+    var activeSheets = allSheets().filter(function (s) { return !s.ended; });
+    var restored = activeSheets.find(function (s) { return s.id === lastActiveSheetIdBeforeArchive; });
+    data.activeSheetId = (restored || activeSheets[0] || {}).id || data.activeSheetId;
   }
 
   // Builds one sheet's tab element into the given bar - shared by both the
