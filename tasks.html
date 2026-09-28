@@ -439,6 +439,7 @@
   }
   .report-head-title { font-family: "Rubik", "Assistant", sans-serif; font-weight: 700; font-size: 1.05rem; text-align: center; flex: 1; }
   .site-log-header-project { font-family: "Assistant", sans-serif; font-weight: 400; font-size: 0.68rem; color: var(--ink-muted); margin-bottom: 1px; }
+  .site-log-date-pick { cursor: pointer; text-decoration: underline dotted; text-underline-offset: 2px; }
   #siteLogCategoriesProjectName { font-size: 0.95rem; font-weight: 600; }
   .report-back-btn, .report-share-btn {
     width: 36px;
@@ -2770,7 +2771,7 @@
     <div class="report-head">
       <button type="button" class="report-back-btn" id="siteLogCategoriesBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
       <div class="report-head-title">
-        <div id="siteLogCategoriesHeadTitle"></div>
+        <div id="siteLogCategoriesHeadTitle" class="site-log-date-pick" data-i18n-title="dateInputTitle" title="לחצו לבחירת תאריך"></div>
         <div class="site-log-header-project" id="siteLogCategoriesProjectName"></div>
       </div>
     </div>
@@ -7171,6 +7172,12 @@
 
   var calendarFabBtn = document.getElementById("calendarFabBtn");
   calendarFabBtn.addEventListener("click", function () {
+    // Go straight to today's log (the categories/icons page) instead of
+    // making every entry start with a calendar prompt - picking a
+    // different day is still available from there, via the date itself.
+    openSiteLogCategoriesView(todayISO());
+  });
+  function openSiteLogDatePicker() {
     dateInputPurpose = "siteLog";
     // A native date input only fires "change" when its value actually
     // changes - picking the same date already showing (e.g. today, the
@@ -7186,7 +7193,7 @@
     }
     dateInput.focus();
     dateInput.click();
-  });
+  }
   // If the picker is dismissed without picking a date, put the input's
   // value back so a later normal (non-siteLog) use of it isn't left blank,
   // and always drop the max restriction so it never leaks into the plain
@@ -7405,6 +7412,7 @@
     activeSiteLogDate = null;
   }
   siteLogCategoriesBackBtn.addEventListener("click", closeSiteLogCategoriesView);
+  siteLogCategoriesHeadTitle.addEventListener("click", openSiteLogDatePicker);
 
   function openSiteLogPreviewView() {
     var sheet = activeSheet();
