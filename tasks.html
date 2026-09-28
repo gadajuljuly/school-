@@ -497,12 +497,20 @@
     position: relative;
     box-sizing: border-box;
     background-color: var(--paper);
-    background-image: repeating-linear-gradient(
+    /* A single 36px tile, explicitly repeated via background-size/-repeat,
+       instead of repeating-linear-gradient's own infinite pattern - some
+       mobile WebViews stop painting a repeating-linear-gradient past a
+       certain element height (confirmed: the element itself keeps growing
+       correctly, only the gradient paint stops), while tiling a small
+       background image is a far more basic, reliably-supported mechanism. */
+    background-image: linear-gradient(
       var(--paper) 0,
       var(--paper) 35px,
       var(--rule) 35px,
       var(--rule) 36px
     );
+    background-size: 100% 36px;
+    background-repeat: repeat;
     background-origin: padding-box;
     background-clip: padding-box;
   }
