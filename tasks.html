@@ -2904,7 +2904,7 @@
       </div>
       <div id="siteLogProcurementRows"></div>
     </div>
-    <button type="button" class="site-log-copy-prev-btn" id="siteLogProcurementCopyPrevBtn" data-i18n="siteLogCopyPrevBtn">העתקת יומן קודם</button>
+    <button type="button" class="site-log-copy-prev-btn" id="siteLogProcurementOrderBtn" data-i18n="siteLogProcurementOrderBtn">שגר הזמנת רכש</button>
   </div>
 
   <div class="report-view" id="companyDashboardView" hidden>
@@ -3120,6 +3120,7 @@
     siteLogWorksTourTitle: { he: "תיאור עבודות", en: "Works Description", ar: "وصف الأعمال", ru: "Описание работ" },
     siteLogCloseFirstMsg: { he: "יש לסגור את היומן קודם", en: "Close the log first", ar: "يجب إغلاق السجل أولاً", ru: "Сначала закройте журнал" },
     siteLogCopyPrevBtn: { he: "העתקת יומן קודם", en: "Copy previous log", ar: "نسخ السجل السابق", ru: "Скопировать предыдущий журнал" },
+    siteLogProcurementOrderBtn: { he: "שגר הזמנת רכש", en: "Send procurement order", ar: "إرسال طلب شراء", ru: "Отправить заказ на закупку" },
     siteLogCopyPrevConfirm: { he: "להעתיק את הנתונים מהיומן הקודם? הפעולה תחליף את התוכן הקיים כאן.", en: "Copy the data from the previous log? This will replace the content here.", ar: "هل تريد نسخ البيانات من السجل السابق؟ سيتم استبدال المحتوى الحالي هنا.", ru: "Скопировать данные из предыдущего журнала? Это заменит текущее содержимое." },
     siteLogNoPreviousLog: { he: "אין יומן קודם להעתיק ממנו", en: "No previous log to copy from", ar: "لا يوجد سجل سابق للنسخ منه", ru: "Нет предыдущего журнала для копирования" },
     siteLogAttendanceReportFileNamePrefix: { he: "דוח נוכחות פרויקט", en: "Attendance report project", ar: "تقرير حضور مشروع", ru: "Отчёт о посещаемости проекта" },
@@ -7402,7 +7403,7 @@
   var siteLogProcurementBackBtn = document.getElementById("siteLogProcurementBackBtn");
   var siteLogProcurementShareBtn = document.getElementById("siteLogProcurementShareBtn");
   var siteLogProcurementRows = document.getElementById("siteLogProcurementRows");
-  var siteLogProcurementCopyPrevBtn = document.getElementById("siteLogProcurementCopyPrevBtn");
+  var siteLogProcurementOrderBtn = document.getElementById("siteLogProcurementOrderBtn");
   var siteLogProcurementProjectName = document.getElementById("siteLogProcurementProjectName");
 
   function updateSiteLogCloseShareButtons() {
@@ -8286,13 +8287,9 @@
     }, renderSiteLogWorksList);
   });
 
-  siteLogProcurementCopyPrevBtn.addEventListener("click", function () {
-    copyPreviousSiteLogCategory(function (liveLog, prevLog) {
-      liveLog.procurement = (prevLog.procurement || []).map(function (e) {
-        return { id: uid(), item: e.item, quantity: e.quantity, supplier: e.supplier };
-      });
-    }, renderSiteLogProcurementRows);
-  });
+  // Placeholder for now - wiring up the actual order-sending flow is a
+  // separate task; clicking it intentionally does nothing yet.
+  siteLogProcurementOrderBtn.addEventListener("click", function () {});
 
   function renderSheetReportsList() {
     sheetReportsList.innerHTML = "";
