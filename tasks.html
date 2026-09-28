@@ -3153,7 +3153,6 @@
     libraryFolderActionModalMessage: { he: "מה לעשות עם התיקייה?", en: "What would you like to do with this folder?", ar: "ماذا تريد أن تفعل بهذا المجلد؟", ru: "Что сделать с этой папкой?" },
     libraryTitlePrefix: { he: "ספריית ", en: "Library: ", ar: "مكتبة ", ru: "Библиотека: " },
     libraryFolderCreateBtn: { he: "יצירה", en: "Create", ar: "إنشاء", ru: "Создать" },
-    chatAskNamePrompt: { he: "איך שמך יוצג לשאר המשתתפים בצ'אט הזה?", en: "How should your name appear to others in this chat?", ar: "كيف تريد أن يظهر اسمك لبقية المشاركين في هذه الدردشة؟", ru: "Как ваше имя будет отображаться другим участникам этого чата?" },
     newSharedProjectNotifTitle: { he: "צורפת לפרויקט משותף", en: "You were added to a shared project", ar: "تمت إضافتك إلى مشروع مشترك", ru: "Вас добавили в общий проект" },
     newSharedProjectNotifBody: { he: "{name} - לחצו כדי לפתוח", en: "{name} - tap to open", ar: "{name} - انقر للفتح", ru: "{name} - нажмите, чтобы открыть" },
     newChatMessagesNotifBody: { he: "{count} הודעות חדשות בצ'אט", en: "{count} new chat messages", ar: "{count} رسائل دردشة جديدة", ru: "{count} новых сообщений в чате" },
@@ -4234,6 +4233,51 @@
   );
   var contactPickerSupported = !!(navigator.contacts && window.ContactsManager) || capacitorContactsAvailable;
 
+  // Chat used to ask each member to type their own display name once (a
+  // prompt() the first time they opened a shared project's chat) - a real
+  // name should never need to be typed in twice, since the native app
+  // already has the real answer sitting in the phone's own contacts.
+  // null = not loaded yet (still show the memberNames/phone fallback);
+  // an object (even {}) = load finished, this is the source of truth for
+  // any phone number found in it.
+  var deviceContactsByPhone = null;
+  function loadDeviceContactsIfNeeded() {
+    if (!capacitorContactsAvailable || deviceContactsByPhone) return;
+    var Contacts = window.Capacitor.Plugins.Contacts;
+    Contacts.getPermissions().then(function (status) {
+      if (status && status.contacts === "granted") return status;
+      return Contacts.requestPermissions();
+    }).then(function (status) {
+      if (!status || status.contacts !== "granted") { deviceContactsByPhone = {}; return; }
+      return Contacts.getContacts({ projection: { name: true, phones: true } }).then(function (result) {
+        var map = {};
+        (result && result.contacts || []).forEach(function (c) {
+          var displayName = c.name && (c.name.display || [c.name.given, c.name.family].filter(Boolean).join(" "));
+          if (!displayName) return;
+          (c.phoneNumbers || []).forEach(function (p) {
+            var normalized = normalizePhoneDigits(p.number);
+            if (normalized && !map[normalized]) map[normalized] = displayName;
+          });
+        });
+        deviceContactsByPhone = map;
+        render();
+      });
+    }).catch(function () { deviceContactsByPhone = {}; });
+  }
+  function getDeviceContactName(phone) {
+    if (!deviceContactsByPhone) return null;
+    var normalized = normalizePhoneDigits(phone);
+    return (normalized && deviceContactsByPhone[normalized]) || null;
+  }
+  // The name shown for a member's messages/mentions: this device's own
+  // contacts take priority (so everyone sees names the way they actually
+  // know that person), falling back to whatever name was on record from
+  // before this change, then the bare phone number.
+  function resolveMemberName(sheet, phone) {
+    if (!phone) return phone;
+    return getDeviceContactName(phone) || (sheet && sheet.memberNames && sheet.memberNames[phone]) || phone;
+  }
+
   // The standard Web Push API (navigator.serviceWorker + window.PushManager)
   // is unsupported by the Android WebView engine the native app runs in -
   // reminders/chat notifications need a native Firebase Cloud Messaging
@@ -4595,7 +4639,7 @@
     sharedProjectMembersList.innerHTML = "";
     var otherMembers = (sheet.members || []).filter(function (p) { return p !== myPhoneNumber; });
     otherMembers.forEach(function (phone) {
-      var knownName = (sheet.memberNames || {})[phone] || "";
+      var knownName = getDeviceContactName(phone) || (sheet.memberNames || {})[phone] || "";
       addSharedMemberInput(false, phone.replace("+972", "0"), knownName);
     });
     addSharedMemberInput(false);
@@ -4847,13 +4891,13 @@
     return (m.text || "").slice(0, 80);
   }
   function chatMessageSenderLabel(m, sheet) {
-    if (m.phone === myPhoneNumber) return myDisplayNameIn(sheet);
-    return (sheet && sheet.memberNames && sheet.memberNames[m.phone]) || m.phone;
+    if (m.phone === myPhoneNumber) return tr("chatYou");
+    return resolveMemberName(sheet, m.phone);
   }
   function escapeRegExp(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
   function renderMessageTextWithMentions(container, text, sheet) {
     var names = ((sheet && sheet.members) || [])
-      .map(function (p) { return (sheet.memberNames && sheet.memberNames[p]) || null; })
+      .map(function (p) { return resolveMemberName(sheet, p) !== p ? resolveMemberName(sheet, p) : null; })
       .filter(function (n) { return n; });
     names = Array.from(new Set(names)).sort(function (a, b) { return b.length - a.length; });
     if (!names.length) { container.textContent = text; return; }
@@ -4917,7 +4961,7 @@
       if (m.type === "system") {
         var sysEl = document.createElement("div");
         sysEl.className = "chat-system-msg";
-        sysEl.textContent = systemMessageText(m);
+        sysEl.textContent = systemMessageText(m, sheet, true);
         chatMessages.appendChild(sysEl);
         return;
       }
@@ -4939,8 +4983,7 @@
       if (isStart && !isMine) {
         var senderEl = document.createElement("div");
         senderEl.className = "chat-bubble-sender";
-        var knownName = sheet && sheet.memberNames && sheet.memberNames[m.phone];
-        senderEl.textContent = knownName || m.phone;
+        senderEl.textContent = resolveMemberName(sheet, m.phone);
         bubble.appendChild(senderEl);
       }
       if (m.replyTo) {
@@ -5119,24 +5162,6 @@
     }, function () {});
   }
 
-  function ensureOwnDisplayName(sheet) {
-    if (!sheet || !supabaseClient || (sheet.memberNames && sheet.memberNames[myPhoneNumber])) return;
-    var name = prompt(tr("chatAskNamePrompt"));
-    if (!name || !name.trim()) return;
-    name = name.trim().slice(0, 40);
-    supabaseClient.from(SHARED_TABLE).select("member_names").eq("id", sheet.id).maybeSingle()
-      .then(function (result) {
-        var current = (result && result.data && result.data.member_names) || {};
-        current[myPhoneNumber] = name;
-        return supabaseClient.from(SHARED_TABLE).update({ member_names: current }).eq("id", sheet.id);
-      })
-      .then(function () {
-        sheet.memberNames = Object.assign({}, sheet.memberNames || {});
-        sheet.memberNames[myPhoneNumber] = name;
-        renderChatMessages();
-      });
-  }
-
   function openChatView() {
     var sheet = activeSheet();
     if (!sheet || !sheet.shared) return;
@@ -5152,7 +5177,7 @@
     markChatRead(sheet);
     markMessagesReadOnServer(sheet.id);
     refreshActiveChat();
-    ensureOwnDisplayName(sheet);
+    loadDeviceContactsIfNeeded();
     chatPollTimer = setInterval(refreshActiveChat, 5000);
     chatInput.focus();
     updateActiveFabHighlight();
@@ -5177,7 +5202,7 @@
   function triggerChatPushNotification(sheetId, text) {
     if (!supabaseClient || !supabaseClient.functions) return;
     var sheet = sharedSheets.find(function (s) { return s.id === sheetId; });
-    var senderName = (sheet && sheet.memberNames && sheet.memberNames[myPhoneNumber]) || myPhoneNumber;
+    var senderName = resolveMemberName(sheet, myPhoneNumber);
     try {
       supabaseClient.functions.invoke("send-chat-notification", {
         body: { sheetId: sheetId, senderPhone: myPhoneNumber, senderName: senderName, text: text }
@@ -5187,11 +5212,8 @@
     } catch (e) {}
   }
 
-  // Posts an automatic system notice into a shared project's chat (e.g.
-  // "task X was added/done/deleted"), rendered without a sender bubble.
-  // Silently a no-op for anything that isn't an actually-shared sheet.
   function myDisplayNameIn(sheet) {
-    return (sheet && sheet.memberNames && sheet.memberNames[myPhoneNumber]) || myPhoneNumber;
+    return resolveMemberName(sheet, myPhoneNumber);
   }
 
   var SYSTEM_ACTION_KEYS = {
@@ -5200,26 +5222,33 @@
     done: "chatSysTaskDone",
     undone: "chatSysTaskUndone"
   };
-  function systemMessageText(m) {
+  // forSelf shows "You" for the acting member's own device (the in-app chat
+  // view); push notification text always uses the real resolved name
+  // instead, since it's composed on the ACTOR's device but read by every
+  // OTHER recipient, who should never see "You did X" for someone else's
+  // action.
+  function systemMessageText(m, sheet, forSelf) {
     var key = SYSTEM_ACTION_KEYS[m.sysAction];
     if (!key) return "";
-    return tr(key).replace("{name}", m.taskName || "").replace("{actor}", m.actorName || "");
+    var actorName = (forSelf && m.actorPhone === myPhoneNumber) ? tr("chatYou") : resolveMemberName(sheet, m.actorPhone || m.actorName);
+    return tr(key).replace("{name}", m.taskName || "").replace("{actor}", actorName || "");
   }
 
-  // sysAction/taskName/actorName are stored as structured data rather than
-  // pre-rendered text, so each viewer's own language setting is applied
-  // locally at render time (see systemMessageText) instead of baking in
-  // whatever language the sender's app happened to be set to.
-  function sendChatSystemMessage(sheetId, sysAction, taskName, actorName) {
+  // sysAction/taskName/actorPhone are stored as structured data rather than
+  // pre-rendered text, so each viewer's own language *and contacts* are
+  // applied locally at render time (see systemMessageText) instead of
+  // baking in whatever the acting member's app happened to show for
+  // themselves when the action happened.
+  function sendChatSystemMessage(sheetId, sysAction, taskName, actorPhone) {
     if (!supabaseClient || !sheetId) return;
-    var msg = { id: uid(), type: "system", sysAction: sysAction, taskName: taskName, actorName: actorName, ts: Date.now() };
+    var msg = { id: uid(), type: "system", sysAction: sysAction, taskName: taskName, actorPhone: actorPhone, ts: Date.now() };
     updateSharedMessagesSafely(sheetId, function (current) {
       return current.concat([msg]).slice(-200);
     }).then(function (updated) {
       var sheet = sharedSheets.find(function (s) { return s.id === sheetId; });
       if (sheet) sheet.messages = updated;
       if (activeChatSheetId === sheetId) renderChatMessages();
-      triggerChatPushNotification(sheetId, systemMessageText(msg));
+      triggerChatPushNotification(sheetId, systemMessageText(msg, sheet));
     }, function (err) {
       console.error("sendChatSystemMessage failed:", err);
     });
@@ -5468,7 +5497,7 @@
     var q = m.query.toLowerCase();
     var candidates = (sheet.members || [])
       .filter(function (p) { return p !== myPhoneNumber; })
-      .map(function (p) { return (sheet.memberNames && sheet.memberNames[p]) || p; })
+      .map(function (p) { return resolveMemberName(sheet, p); })
       .filter(function (name, idx, arr) { return arr.indexOf(name) === idx && name.toLowerCase().indexOf(q) !== -1; });
     if (!candidates.length) { hideMentionPopup(); return; }
     chatMentionPopup.innerHTML = "";
@@ -9655,7 +9684,7 @@
     sheet.tasks.push(newTask);
     saveData();
     if (sheet.shared && type === "task") {
-      sendChatSystemMessage(sheet.id, "added", newTask.text, myDisplayNameIn(sheet));
+      sendChatSystemMessage(sheet.id, "added", newTask.text, myPhoneNumber);
     }
     taskInput.value = "";
     closeAddTypeModal();
@@ -9695,7 +9724,7 @@
       t.status = (t.status + 1) % 3;
       saveData();
       if (sheet.shared && t.type === "task" && wasDone !== (t.status === 2)) {
-        sendChatSystemMessage(sheet.id, t.status === 2 ? "done" : "undone", t.text, myDisplayNameIn(sheet));
+        sendChatSystemMessage(sheet.id, t.status === 2 ? "done" : "undone", t.text, myPhoneNumber);
       }
       render();
       if (!wasDone && t.status === 2 && t.type === "task") {
@@ -9737,7 +9766,7 @@
     sheet.tasks = sheet.tasks.filter(function (x) { return x.id !== id; });
     saveData();
     if (sheet.shared && t && t.type === "task") {
-      sendChatSystemMessage(sheet.id, "deleted", t.text, myDisplayNameIn(sheet));
+      sendChatSystemMessage(sheet.id, "deleted", t.text, myPhoneNumber);
     }
     render();
   }
@@ -10379,7 +10408,7 @@
     });
     if (!newMessages.length) return;
     var last = newMessages[newMessages.length - 1];
-    var senderName = (sheet.memberNames && sheet.memberNames[last.phone]) || last.phone;
+    var senderName = resolveMemberName(sheet, last.phone);
     var lastText = last.type === "voice" ? tr("voiceMessageLabel") : last.text;
     var body = newMessages.length > 1
       ? tr("newChatMessagesNotifBody").replace("{count}", newMessages.length)
@@ -10536,6 +10565,7 @@
     startWithSupabase();
     initReminderSettings();
     autoEnableChatNotifications();
+    loadDeviceContactsIfNeeded();
     establishSession().then(startSessionWatcher);
     startSharedSheetsWatcher();
     startPeriodicBackup();
