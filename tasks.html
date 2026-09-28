@@ -613,11 +613,17 @@
   .chat-bubble-mine .chat-bubble-sender { color: inherit; opacity: 0.85; }
   .chat-bubble-text { white-space: pre-wrap; line-height: 36px; }
   .chat-bubble-time {
-    font-size: 0.7rem;
+    position: absolute;
+    bottom: 4px;
+    width: 40px;
+    font-size: 0.62rem;
+    line-height: 1.15;
     opacity: 0.65;
-    margin-top: 2px;
-    text-align: end;
+    text-align: center;
+    white-space: normal;
   }
+  .chat-bubble-theirs .chat-bubble-time { right: 100%; margin-right: 6px; }
+  .chat-bubble-mine .chat-bubble-time { left: 100%; margin-left: 6px; }
   .chat-empty {
     text-align: center;
     color: var(--ink-muted);
