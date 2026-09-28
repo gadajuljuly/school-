@@ -479,11 +479,15 @@
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
+  }
+  .chat-messages-inner {
+    min-height: 100%;
     padding: 14px 44px 6px;
     display: flex;
     flex-direction: column;
     gap: 3px;
     position: relative;
+    box-sizing: border-box;
     background-color: var(--paper);
     background-image: repeating-linear-gradient(
       var(--paper) 0,
@@ -494,7 +498,7 @@
     background-origin: content-box;
     background-clip: content-box;
   }
-  .chat-messages::before, .chat-messages::after {
+  .chat-messages-inner::before, .chat-messages-inner::after {
     content: "";
     position: absolute;
     top: 0;
@@ -503,8 +507,8 @@
     background: var(--margin);
     opacity: 0.55;
   }
-  .chat-messages::before { right: 39px; }
-  .chat-messages::after { left: 39px; }
+  .chat-messages-inner::before { right: 39px; }
+  .chat-messages-inner::after { left: 39px; }
   .chat-day-sep {
     align-self: center;
     background: var(--paper-alt);
@@ -2695,7 +2699,7 @@
       <button type="button" class="report-back-btn" id="chatBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
       <div class="report-head-title" id="chatHeadTitle"></div>
     </div>
-    <div class="chat-messages" id="chatMessages"></div>
+    <div class="chat-messages" id="chatMessages"><div class="chat-messages-inner" id="chatMessagesInner"></div></div>
     <button type="button" class="chat-scroll-bottom-btn" id="chatScrollBottomBtn" data-i18n-title="chatScrollBottomBtnTitle" title="גלילה למטה" hidden>&#8595;</button>
     <div class="chat-mention-popup" id="chatMentionPopup" hidden></div>
     <div class="chat-editing-bar" id="chatReplyBar" hidden>
@@ -4949,6 +4953,7 @@
   var chatBackBtn = document.getElementById("chatBackBtn");
   var chatHeadTitle = document.getElementById("chatHeadTitle");
   var chatMessages = document.getElementById("chatMessages");
+  var chatMessagesInner = document.getElementById("chatMessagesInner");
   var chatForm = document.getElementById("chatForm");
   var chatInput = document.getElementById("chatInput");
   var activeChatSheetId = null;
@@ -5068,14 +5073,14 @@
     // open. Once the chat is actually open, fall back to the real current
     // scroll position so a background poll refresh doesn't yank someone
     // reading history.
-    var wasNearBottom = chatForceScrollNext || !chatMessages.children.length || isChatScrolledNearBottom();
+    var wasNearBottom = chatForceScrollNext || !chatMessagesInner.children.length || isChatScrolledNearBottom();
     chatForceScrollNext = false;
-    chatMessages.innerHTML = "";
+    chatMessagesInner.innerHTML = "";
     if (!messages.length) {
       var empty = document.createElement("div");
       empty.className = "chat-empty";
       empty.textContent = tr("chatEmptyPrompt");
-      chatMessages.appendChild(empty);
+      chatMessagesInner.appendChild(empty);
       return;
     }
     var lastDay = null;
@@ -5085,14 +5090,14 @@
         var sep = document.createElement("div");
         sep.className = "chat-day-sep";
         sep.textContent = chatDayLabel(m.ts);
-        chatMessages.appendChild(sep);
+        chatMessagesInner.appendChild(sep);
         lastDay = day;
       }
       if (m.type === "system") {
         var sysEl = document.createElement("div");
         sysEl.className = "chat-system-msg";
         sysEl.textContent = systemMessageText(m, sheet, true);
-        chatMessages.appendChild(sysEl);
+        chatMessagesInner.appendChild(sysEl);
         return;
       }
       var isMine = m.phone === myPhoneNumber;
@@ -5129,7 +5134,7 @@
         quoteEl.appendChild(quoteTextEl);
         quoteEl.addEventListener("click", function (e) {
           e.stopPropagation();
-          var target = m.replyTo && chatMessages.querySelector('[data-msg-id="' + m.replyTo.id + '"]');
+          var target = m.replyTo && chatMessagesInner.querySelector('[data-msg-id="' + m.replyTo.id + '"]');
           if (target) target.scrollIntoView({ behavior: "smooth", block: "center" });
         });
         bubble.appendChild(quoteEl);
@@ -5204,7 +5209,7 @@
       bubble.appendChild(timeEl);
       attachChatBubbleLongPress(bubble, m);
       attachChatBubbleSwipeReply(bubble, m, replyIcon);
-      chatMessages.appendChild(bubble);
+      chatMessagesInner.appendChild(bubble);
     });
     if (wasNearBottom) chatMessages.scrollTop = chatMessages.scrollHeight;
     updateChatScrollButton();
