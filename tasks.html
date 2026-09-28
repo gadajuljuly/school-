@@ -2464,6 +2464,9 @@
       <button type="button" class="library-fab" id="libraryBtn" data-i18n-title="libraryBtnTitle" title="ספריית קבצים">
         <img src="tasks-library-icon.webp" alt="">
       </button>
+      <button type="button" class="library-fab" id="archiveBtn" data-i18n-title="archiveBtnTitle" title="ארכיון פרויקטים שהסתיימו">
+        <img src="tasks-archive-icon.webp" alt="">
+      </button>
     </div>
   </div>
 
@@ -3203,6 +3206,8 @@
     chatToday: { he: "היום", en: "Today", ar: "اليوم", ru: "Сегодня" },
     chatYesterday: { he: "אתמול", en: "Yesterday", ar: "أمس", ru: "Вчера" },
     libraryBtnTitle: { he: "ספריית קבצים", en: "File library", ar: "مكتبة الملفات", ru: "Библиотека файлов" },
+    archiveBtnTitle: { he: "ארכיון פרויקטים שהסתיימו", en: "Archive of finished projects", ar: "أرشيف المشاريع المنتهية", ru: "Архив завершённых проектов" },
+    noArchivedProjectsMsg: { he: "אין פרויקטים שהסתיימו", en: "No finished projects", ar: "لا توجد مشاريع منتهية", ru: "Нет завершённых проектов" },
     libraryAddBtnTitle: { he: "הוספת קובץ", en: "Add file", ar: "إضافة ملف", ru: "Добавить файл" },
     libraryEmptyPrompt: { he: "אין עדיין קבצים בספרייה הזו", en: "No files in this library yet", ar: "لا توجد ملفات في هذه المكتبة بعد", ru: "В этой библиотеке пока нет файлов" },
     libraryUploadError: { he: "העלאת הקובץ נכשלה", en: "File upload failed", ar: "فشل تحميل الملف", ru: "Не удалось загрузить файл" },
@@ -5804,6 +5809,8 @@
   }
 
   var libraryBtn = document.getElementById("libraryBtn");
+  var archiveBtn = document.getElementById("archiveBtn");
+  archiveBtn.addEventListener("click", function () { toggleArchiveView(); });
   var libraryFoldersView = document.getElementById("libraryFoldersView");
   var libraryFoldersBackBtn = document.getElementById("libraryFoldersBackBtn");
   var libraryFoldersHeadTitle = document.getElementById("libraryFoldersHeadTitle");
@@ -9766,10 +9773,31 @@
 
   // Ended sheets used to drop out of the tab bar entirely once the viewed
   // date passed their end date, which made an ended project's tab - and the
-  // long-press "reactivate" action on it - permanently unreachable. Ended
-  // projects now just stay visible (tinted) like any other tab.
+  // long-press "reactivate" action on it - permanently unreachable. Now the
+  // archive view (toggled by viewingArchive) is a dedicated, always-reachable
+  // way to get to them instead: normal browsing only ever shows active
+  // (non-ended) sheets, and the archive view shows only ended ones, in the
+  // exact same tab bar/task list.
+  var viewingArchive = false;
+  var lastActiveSheetIdBeforeArchive = null;
   function visibleSheets() {
-    return allSheets();
+    return allSheets().filter(function (s) { return !!s.ended === viewingArchive; });
+  }
+  function toggleArchiveView() {
+    if (!viewingArchive) {
+      var endedSheets = allSheets().filter(function (s) { return s.ended; });
+      if (!endedSheets.length) { showToast(tr("noArchivedProjectsMsg")); return; }
+      lastActiveSheetIdBeforeArchive = data.activeSheetId;
+      viewingArchive = true;
+      data.activeSheetId = endedSheets[0].id;
+    } else {
+      viewingArchive = false;
+      var activeSheets = allSheets().filter(function (s) { return !s.ended; });
+      var restored = activeSheets.find(function (s) { return s.id === lastActiveSheetIdBeforeArchive; });
+      data.activeSheetId = (restored || activeSheets[0] || {}).id || data.activeSheetId;
+    }
+    state.viewMode = "tasks";
+    render();
   }
 
   // Builds one sheet's tab element into the given bar - shared by both the
@@ -9911,10 +9939,10 @@
     var sharedSheetsVisible = visibleSheets().filter(function (s) { return s.shared; });
 
     privateSheets.forEach(function (sheet) { appendSheetTab(sheetsBarPrivate, sheet); });
-    appendAddBtn(sheetsBarPrivate, "addProjectTitle", function () { addSheet(); });
+    if (!viewingArchive) appendAddBtn(sheetsBarPrivate, "addProjectTitle", function () { addSheet(); });
 
     sharedSheetsVisible.forEach(function (sheet) { appendSheetTab(sheetsBarShared, sheet); });
-    appendAddBtn(sheetsBarShared, "addSharedProjectTitle", function () { openSharedProjectModal(); });
+    if (!viewingArchive) appendAddBtn(sheetsBarShared, "addSharedProjectTitle", function () { openSharedProjectModal(); });
 
     var active = activeSheet();
     var activeIsShared = !!(active && active.shared);
@@ -10082,12 +10110,13 @@
   // render(), so they call this directly on open/close; the tasks/reports
   // toggle lives inside render() itself.
   function updateActiveFabHighlight() {
-    [tasksFabBtn, reportFabBtn, chatBtn, libraryBtn].forEach(function (btn) {
+    [tasksFabBtn, reportFabBtn, chatBtn, libraryBtn, archiveBtn].forEach(function (btn) {
       btn.classList.remove("fab-active");
     });
     var active;
     if (!chatView.hidden) active = chatBtn;
     else if (!libraryFoldersView.hidden || !libraryView.hidden) active = libraryBtn;
+    else if (viewingArchive) active = archiveBtn;
     else if (state.viewMode === "reports") active = reportFabBtn;
     else active = tasksFabBtn;
     active.classList.add("fab-active");
