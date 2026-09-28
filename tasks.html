@@ -2537,6 +2537,19 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="libraryFileActionOverlay" hidden>
+    <div class="modal-box" role="alertdialog" aria-modal="true">
+      <p class="modal-message" data-i18n="libraryFileActionModalMessage">מה לעשות עם הקובץ?</p>
+      <div class="move-task-mode">
+        <button type="button" class="modal-btn modal-btn-primary" id="libraryFileActionShareBtn" data-i18n="shareBtn">שיתוף</button>
+        <button type="button" class="danger-btn" id="libraryFileActionDeleteBtn" data-i18n="deleteBtn">מחיקה</button>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="modal-btn modal-btn-no" id="libraryFileActionCancelBtn" data-i18n="cancelBtn">ביטול</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="confirmOverlay" hidden>
     <div class="modal-box" role="alertdialog" aria-modal="true">
       <p class="modal-message" id="confirmMessage"></p>
@@ -3202,6 +3215,7 @@
     libraryFolderGeneral: { he: "כללי", en: "General", ar: "عام", ru: "Общее" },
     libraryConfirmDeleteFolder: { he: "למחוק את התיקייה הזו וכל הקבצים שבה?", en: "Delete this folder and all its files?", ar: "هل تريد حذف هذا المجلد وجميع ملفاته؟", ru: "Удалить эту папку со всеми файлами?" },
     libraryFolderActionModalMessage: { he: "מה לעשות עם התיקייה?", en: "What would you like to do with this folder?", ar: "ماذا تريد أن تفعل بهذا المجلد؟", ru: "Что сделать с этой папкой?" },
+    libraryFileActionModalMessage: { he: "מה לעשות עם הקובץ?", en: "What would you like to do with this file?", ar: "ماذا تريد أن تفعل بهذا الملف؟", ru: "Что сделать с этим файлом?" },
     libraryTitlePrefix: { he: "ספריית ", en: "Library: ", ar: "مكتبة ", ru: "Библиотека: " },
     libraryFolderCreateBtn: { he: "יצירה", en: "Create", ar: "إنشاء", ru: "Создать" },
     newSharedProjectNotifTitle: { he: "צורפת לפרויקט משותף", en: "You were added to a shared project", ar: "تمت إضافتك إلى مشروع مشترك", ru: "Вас добавили в общий проект" },
@@ -6196,7 +6210,9 @@
       nameEl.textContent = entry.name;
       item.appendChild(nameEl);
 
+      var fileLongPressFired = false;
       item.addEventListener("click", function () {
+        if (fileLongPressFired) { fileLongPressFired = false; return; }
         resolveFileUrl(entry.path).then(function (url) { window.open(url, "_blank"); }).catch(function () {
           alert(tr("libraryUploadError"));
         });
@@ -6213,6 +6229,37 @@
         });
       });
       item.appendChild(delBtn);
+
+      // Long-press (matching the folder grid's own long-press pattern) pops
+      // up a share/delete action modal, so sharing a file doesn't need its
+      // own always-visible button crowding the thumbnail grid.
+      var filePressStartX = 0, filePressStartY = 0;
+      var startFilePress = function (e) {
+        if (e.target.closest("button")) return;
+        var point = e.touches ? e.touches[0] : e;
+        filePressStartX = point.clientX;
+        filePressStartY = point.clientY;
+        fileLongPressFired = false;
+        clearTimeout(longPressTimer);
+        longPressTimer = setTimeout(function () {
+          fileLongPressFired = true;
+          openLibraryFileActionModal(sheet, folder, entry);
+        }, 1000);
+      };
+      var cancelFilePress = function () { clearTimeout(longPressTimer); };
+      var moveFilePress = function (e) {
+        var point = e.touches ? e.touches[0] : e;
+        if (Math.abs(point.clientX - filePressStartX) > 10 || Math.abs(point.clientY - filePressStartY) > 10) {
+          cancelFilePress();
+        }
+      };
+      item.addEventListener("mousedown", startFilePress);
+      item.addEventListener("mouseup", cancelFilePress);
+      item.addEventListener("mouseleave", cancelFilePress);
+      item.addEventListener("mousemove", moveFilePress);
+      item.addEventListener("touchstart", startFilePress, { passive: true });
+      item.addEventListener("touchend", cancelFilePress);
+      item.addEventListener("touchmove", moveFilePress, { passive: true });
 
       libraryGrid.appendChild(item);
     });
@@ -6243,6 +6290,48 @@
       alert(tr("libraryUploadError"));
     });
   }
+
+  var libraryFileActionOverlay = document.getElementById("libraryFileActionOverlay");
+  var libraryFileActionShareBtn = document.getElementById("libraryFileActionShareBtn");
+  var libraryFileActionDeleteBtn = document.getElementById("libraryFileActionDeleteBtn");
+  var libraryFileActionCancelBtn = document.getElementById("libraryFileActionCancelBtn");
+  var pendingLibraryFileAction = null;
+
+  function openLibraryFileActionModal(sheet, folder, entry) {
+    pendingLibraryFileAction = { sheet: sheet, folder: folder, entry: entry };
+    libraryFileActionOverlay.hidden = false;
+  }
+  function closeLibraryFileActionModal() {
+    libraryFileActionOverlay.hidden = true;
+    pendingLibraryFileAction = null;
+  }
+  function shareLibraryFile(entry) {
+    resolveFileUrl(entry.path).then(function (url) {
+      return fetch(url).then(function (r) { return r.blob(); });
+    }).then(function (blob) {
+      attemptShare(blob, entry.name, entry.type || blob.type);
+    }).catch(function () {
+      alert(tr("libraryUploadError"));
+    });
+  }
+  libraryFileActionShareBtn.addEventListener("click", function () {
+    var pending = pendingLibraryFileAction;
+    closeLibraryFileActionModal();
+    if (!pending) return;
+    shareLibraryFile(pending.entry);
+  });
+  libraryFileActionDeleteBtn.addEventListener("click", function () {
+    var pending = pendingLibraryFileAction;
+    closeLibraryFileActionModal();
+    if (!pending) return;
+    askConfirm(tr("libraryConfirmDelete"), function () {
+      deleteLibraryFile(pending.sheet, pending.folder, pending.entry);
+    });
+  });
+  libraryFileActionCancelBtn.addEventListener("click", closeLibraryFileActionModal);
+  libraryFileActionOverlay.addEventListener("click", function (e) {
+    if (e.target === libraryFileActionOverlay) closeLibraryFileActionModal();
+  });
 
   function uploadLibraryFiles(fileList) {
     var initialSheet = allSheets().find(function (s) { return s.id === activeLibrarySheetId; });
@@ -7217,7 +7306,12 @@
   }
 
   function findSiteLog(sheet, dateISO) {
-    return (sheet.siteLogs || []).find(function (l) { return l.date === dateISO; }) || null;
+    // Logs loaded straight from storage (created before a data-model change,
+    // e.g. the tools qty/note split) never otherwise pass through
+    // normalizeSiteLog - normalizing here, on every read, keeps every log
+    // migrated regardless of how old it is, instead of only new ones.
+    var log = (sheet.siteLogs || []).find(function (l) { return l.date === dateISO; }) || null;
+    return log ? normalizeSiteLog(log) : null;
   }
   function findOrCreateSiteLog(sheet, dateISO) {
     var log = findSiteLog(sheet, dateISO);
@@ -7571,7 +7665,7 @@
     var sheet = activeSheet();
     var logs = (sheet.siteLogs || []).filter(function (l) {
       return l.closed && l.date >= from && l.date <= to;
-    }).sort(function (a, b) { return a.date < b.date ? -1 : 1; });
+    }).sort(function (a, b) { return a.date < b.date ? -1 : 1; }).map(normalizeSiteLog);
     if (!logs.length) { alert(tr("siteLogPeriodicNoLogsMsg")); return; }
     closeSiteLogPeriodicModal();
     var originalContent = siteLogPeriodicBtn.textContent;
@@ -9375,9 +9469,9 @@
     return name.replace(/[\\/:*?"<>|]/g, "-");
   }
 
-  function attemptShare(blob, fileName) {
+  function attemptShare(blob, fileName, mimeType) {
     fileName = sanitizeFileName(fileName);
-    var file = new File([blob], fileName, { type: "application/pdf" });
+    var file = new File([blob], fileName, { type: mimeType || "application/pdf" });
     var shareData = { files: [file], title: fileName };
     // Some Android browsers support sharing files via navigator.share()
     // without exposing (or correctly answering) navigator.canShare, so
