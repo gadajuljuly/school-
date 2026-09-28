@@ -1021,6 +1021,12 @@
   }
   .site-log-attendance-wrap { flex: 1; overflow: auto; padding: 12px; }
   .site-log-attendance-columns { display: flex; gap: 8px; align-items: flex-start; min-width: max-content; }
+  #siteLogAttendanceColumns {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    min-width: 0;
+  }
+  #siteLogAttendanceColumns .site-log-col { width: auto; min-width: 0; }
   .site-log-col { display: flex; flex-direction: column; width: 110px; flex-shrink: 0; }
   .site-log-col-header {
     background: var(--paper-alt);
@@ -3048,6 +3054,7 @@
     siteLogColWorkers: { he: "פועלים", en: "Workers", ar: "عمال", ru: "Рабочие" },
     siteLogColOperators: { he: "מפעילים", en: "Operators", ar: "مشغلون", ru: "Операторы" },
     siteLogColConsultants: { he: "יועצים", en: "Consultants", ar: "مستشارون", ru: "Консультанты" },
+    siteLogColSurveyor: { he: "מודד", en: "Surveyor", ar: "مساح", ru: "Геодезист" },
     siteLogComingSoon: { he: "הקטגוריה הזו עוד בבנייה", en: "This category is still being built", ar: "هذه الفئة لا تزال قيد الإنشاء", ru: "Эта категория ещё в разработке" },
     siteLogCloseBtn: { he: "סגירת יומן", en: "Close log", ar: "إغلاق السجل", ru: "Закрыть журнал" },
     siteLogShareBtn: { he: "שיתוף יומן", en: "Share log", ar: "مشاركة السجل", ru: "Поделиться журналом" },
@@ -3313,7 +3320,7 @@
     };
   }
 
-  var SITE_LOG_ATTENDANCE_COLUMNS = ["foreman", "engineer", "workers", "operators", "consultants"];
+  var SITE_LOG_ATTENDANCE_COLUMNS = ["foreman", "engineer", "workers", "operators", "consultants", "surveyor"];
   var SITE_LOG_TOOLS_COLUMNS = ["excavator", "loader", "bagger", "miniBagger", "bobcat", "roller", "truck"];
 
   function normalizeSiteLog(log) {
