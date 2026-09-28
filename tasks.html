@@ -4076,12 +4076,12 @@
     if (purpose === "siteLog") {
       openSiteLogCategoriesView(dateInput.value);
     } else {
-      state.viewDate = dateInput.value;
+      state.viewDate = clampViewDate(dateInput.value);
       render();
     }
   });
   todayBtn.addEventListener("click", function () {
-    state.viewDate = todayISO();
+    state.viewDate = clampViewDate(todayISO());
     render();
   });
 
@@ -4130,7 +4130,7 @@
       var elapsed = Date.now() - startTime;
       if (elapsed < 800 && Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
         if (zone === "date") {
-          state.viewDate = addDaysToISO(state.viewDate, dx < 0 ? -1 : 1);
+          state.viewDate = clampViewDate(addDaysToISO(state.viewDate, dx < 0 ? -1 : 1));
           render();
         } else if (zone === "sheet") {
           switchSheetBySwipe(dx < 0 ? -1 : 1);
@@ -4232,6 +4232,12 @@
     animatePageTurn(direction, function () {
       data.activeSheetId = id;
       state.filter = "all";
+      var newSheet = allSheets().find(function (s) { return s.id === id; });
+      if (newSheet && newSheet.ended && newSheet.endedDate) {
+        // Each archived project is pinned to its own end date, not whatever
+        // date the previously-viewed project happened to be on.
+        state.viewDate = newSheet.endedDate;
+      }
       saveData();
       render();
     });
@@ -9727,7 +9733,7 @@
       btn.appendChild(metaEl);
       btn.addEventListener("click", function () {
         data.activeSheetId = m.sheetId;
-        state.viewDate = m.task.date;
+        state.viewDate = clampViewDate(m.task.date);
         state.filter = "all";
         closeSearch();
         render();
@@ -9784,6 +9790,18 @@
   function visibleSheets() {
     return allSheets().filter(function (s) { return !!s.ended === viewingArchive; });
   }
+  // An ended project's task view is a record of how things stood the day it
+  // ended - it's pinned to (and can never browse past) sheet.endedDate. Every
+  // place that changes state.viewDate routes through clampViewDate so this
+  // holds no matter how the date got changed (swipe, calendar, today button,
+  // jumping to a task, a notification deep link, switching archived tabs...).
+  function maxViewDateForSheet(sheet) {
+    return (sheet && sheet.ended && sheet.endedDate) ? sheet.endedDate : null;
+  }
+  function clampViewDate(dateISO) {
+    var max = maxViewDateForSheet(activeSheet());
+    return (max && dateISO > max) ? max : dateISO;
+  }
   function enterArchiveView() {
     if (viewingArchive) return;
     var endedSheets = allSheets().filter(function (s) { return s.ended; });
@@ -9791,12 +9809,14 @@
     lastActiveSheetIdBeforeArchive = data.activeSheetId;
     viewingArchive = true;
     data.activeSheetId = endedSheets[0].id;
+    state.viewDate = endedSheets[0].endedDate || todayISO();
     state.viewMode = "tasks";
     render();
   }
   function exitArchiveView() {
     if (!viewingArchive) return;
     viewingArchive = false;
+    state.viewDate = todayISO();
     var activeSheets = allSheets().filter(function (s) { return !s.ended; });
     var restored = activeSheets.find(function (s) { return s.id === lastActiveSheetIdBeforeArchive; });
     data.activeSheetId = (restored || activeSheets[0] || {}).id || data.activeSheetId;
@@ -10131,6 +10151,7 @@
     if (visibleForDate.length && data.activeSheetId !== pendingOpenChatSheetId &&
         !visibleForDate.some(function (s) { return s.id === data.activeSheetId; })) {
       data.activeSheetId = visibleForDate[0].id;
+      if (visibleForDate[0].ended && visibleForDate[0].endedDate) state.viewDate = visibleForDate[0].endedDate;
     }
     renderSheetsBar();
 
@@ -10147,6 +10168,9 @@
     var editable = !isPast;
     dateLabel.textContent = isoToFullDisplay(state.viewDate);
     dateInput.value = state.viewDate;
+    var activeMaxDate = maxViewDateForSheet(activeSheet());
+    if (activeMaxDate) dateInput.max = activeMaxDate;
+    else dateInput.removeAttribute("max");
     todayBtn.hidden = isToday;
     sheetTitle.textContent = activeSheet().name;
     renderSheetTitleLogo();
@@ -10404,7 +10428,7 @@
 
   function navigateToTaskLink(sheetId, date, taskId, chat) {
     if (sheetId) data.activeSheetId = sheetId;
-    if (date) state.viewDate = date;
+    if (date) state.viewDate = clampViewDate(date);
     if (taskId) state.highlightTaskId = taskId;
     if (chat && sheetId) {
       pendingOpenChatSheetId = sheetId;
