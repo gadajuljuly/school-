@@ -9118,7 +9118,7 @@
     if (!entry) return "";
     var qty = (entry.qty || "").toString().trim();
     var note = (entry.note || "").toString().trim();
-    return qty && note ? (note + " (" + qty + ")") : (note || qty);
+    return qty && note ? (qty + " – " + note) : (qty || note);
   }
 
   function buildToolsTableElement(log, compact) {
