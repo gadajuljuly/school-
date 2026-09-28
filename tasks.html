@@ -615,6 +615,11 @@
   .chat-bubble-time {
     position: absolute;
     bottom: 4px;
+    width: 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
     font-size: 0.62rem;
     line-height: 1.15;
     /* Not inherited from the bubble on purpose: "mine" bubbles use a light
@@ -624,8 +629,8 @@
     color: var(--ink-muted);
     opacity: 1;
     text-align: center;
-    white-space: nowrap;
   }
+  .chat-bubble-time-value { white-space: nowrap; }
   .chat-bubble-theirs .chat-bubble-time { right: 100%; margin-right: 6px; }
   .chat-bubble-mine .chat-bubble-time { left: 100%; margin-left: 6px; }
   .chat-empty {
@@ -875,7 +880,6 @@
   }
   .chat-bubble-mine .chat-mention { color: inherit; text-decoration: underline; }
   .chat-bubble-check {
-    margin-inline-start: 4px;
     letter-spacing: -1px;
   }
   .chat-bubble-check-read { color: #22c55e; font-weight: 700; font-size: 0.85rem; }
@@ -5217,7 +5221,10 @@
       bubble.appendChild(textEl);
       var timeEl = document.createElement("div");
       timeEl.className = "chat-bubble-time";
-      timeEl.textContent = new Date(m.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      var timeValueEl = document.createElement("span");
+      timeValueEl.className = "chat-bubble-time-value";
+      timeValueEl.textContent = new Date(m.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      timeEl.appendChild(timeValueEl);
       if (m.edited) {
         var editedEl = document.createElement("span");
         editedEl.className = "chat-bubble-edited-mark";
