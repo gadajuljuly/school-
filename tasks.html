@@ -618,7 +618,12 @@
     width: 40px;
     font-size: 0.62rem;
     line-height: 1.15;
-    opacity: 0.65;
+    /* Not inherited from the bubble on purpose: "mine" bubbles use a light
+       text color meant to contrast against their dark blue background, but
+       this now sits outside the bubble on the plain paper background, where
+       that light color would be nearly invisible. */
+    color: var(--ink-muted);
+    opacity: 1;
     text-align: center;
     white-space: normal;
   }
@@ -874,7 +879,7 @@
     margin-inline-start: 4px;
     letter-spacing: -1px;
   }
-  .chat-bubble-check-read { color: #7ee0ff; }
+  .chat-bubble-check-read { color: var(--accent); }
   .chat-scroll-bottom-btn {
     position: absolute;
     bottom: 66px;
