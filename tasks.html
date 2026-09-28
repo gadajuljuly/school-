@@ -4375,6 +4375,16 @@
     window.Capacitor.Plugins && window.Capacitor.Plugins.FirebaseMessaging
   );
 
+  // The Android WebView this app runs in doesn't implement navigator.share()
+  // at all (unlike Chrome), so every PDF/file share silently fell back to a
+  // plain download there - these two native plugins give a real OS share
+  // sheet instead: Filesystem writes the blob to a real file the OS can
+  // hand off, Share hands that file to the native share sheet.
+  var capacitorShareAvailable = !!(
+    window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform() &&
+    window.Capacitor.Plugins && window.Capacitor.Plugins.Share && window.Capacitor.Plugins.Filesystem
+  );
+
   // Native pickContact() only returns ONE contact per call (unlike the web
   // API's multiple:true), so this gets called once per button press;
   // pressing the button again picks another. Resolves to null if the user
@@ -9477,8 +9487,39 @@
     return name.replace(/[\\/:*?"<>|]/g, "-");
   }
 
+  function blobToBase64(blob) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onloadend = function () {
+        var result = reader.result || "";
+        var commaIdx = result.indexOf(",");
+        resolve(commaIdx === -1 ? result : result.slice(commaIdx + 1));
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  function shareViaCapacitor(blob, fileName) {
+    var Filesystem = window.Capacitor.Plugins.Filesystem;
+    var Share = window.Capacitor.Plugins.Share;
+    return blobToBase64(blob).then(function (base64) {
+      return Filesystem.writeFile({ path: fileName, data: base64, directory: "CACHE" });
+    }).then(function (result) {
+      return Share.share({ title: fileName, files: [result.uri] });
+    });
+  }
+
   function attemptShare(blob, fileName, mimeType) {
     fileName = sanitizeFileName(fileName);
+    if (capacitorShareAvailable) {
+      shareViaCapacitor(blob, fileName).catch(function (err) {
+        if (err && err.message && /share canceled|cancel/i.test(err.message)) return;
+        downloadBlob(blob, fileName);
+        showToast(tr("shareFallbackToSaveMsg"));
+      });
+      return;
+    }
     var file = new File([blob], fileName, { type: mimeType || "application/pdf" });
     var shareData = { files: [file], title: fileName };
     // Some Android browsers support sharing files via navigator.share()

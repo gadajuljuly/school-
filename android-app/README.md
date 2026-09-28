@@ -134,3 +134,18 @@ change with no way to opt back into the old behavior. The fix is
 `MainActivity.java` stays the default `BridgeActivity` subclass with no
 overrides. After changing the color here, `npm install` + `npx cap sync
 android` + rebuild.
+
+## Sharing PDFs/files (reports, site logs, library files)
+
+The Android System WebView this app runs in doesn't implement
+`navigator.share()` at all - every share button (reports, site logs, library
+file long-press) silently fell back to just saving the file locally with a
+"share isn't available here" toast, since that's `tasks.html`'s own web
+fallback for a browser with no Web Share API. Two native plugins fix this
+here - `@capacitor/filesystem` (writes the generated blob to a real file the
+OS can hand off) and `@capacitor/share` (hands that file to Android's native
+share sheet) - the website code already detects them and switches to that
+path automatically (see `capacitorShareAvailable` in `tasks.html`). This is a
+**new native plugin**, so it needs `npm install` (picks up both packages),
+then `npx cap sync android`, then rebuild and reinstall - a plain website
+update alone won't add this.
