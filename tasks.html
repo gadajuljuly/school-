@@ -478,13 +478,33 @@
   .chat-messages {
     flex: 1;
     overflow-y: auto;
-    padding: 14px 12px 6px;
+    overflow-x: hidden;
+    padding: 14px 44px 6px;
     display: flex;
     flex-direction: column;
     gap: 3px;
+    position: relative;
     background-color: var(--paper);
-    background-image: linear-gradient(160deg, color-mix(in srgb, var(--accent) 6%, transparent), transparent 55%);
+    background-image: repeating-linear-gradient(
+      var(--paper) 0,
+      var(--paper) 35px,
+      var(--rule) 35px,
+      var(--rule) 36px
+    );
+    background-origin: content-box;
+    background-clip: content-box;
   }
+  .chat-messages::before, .chat-messages::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--margin);
+    opacity: 0.55;
+  }
+  .chat-messages::before { right: 39px; }
+  .chat-messages::after { left: 39px; }
   .chat-day-sep {
     align-self: center;
     background: var(--paper-alt);
@@ -557,14 +577,21 @@
     clip-path: polygon(0 0, 100% 50%, 0 100%);
   }
   .chat-bubble-sender {
-    font-size: 0.85rem;
+    position: absolute;
+    top: 2px;
+    right: 100%;
+    margin-right: 6px;
+    width: 34px;
+    font-size: 0.62rem;
     font-weight: 800;
+    line-height: 1.15;
+    text-align: center;
+    word-break: break-word;
     color: var(--sender-color, var(--accent));
-    margin-bottom: 3px;
     letter-spacing: 0.01em;
   }
   .chat-bubble-mine .chat-bubble-sender { color: inherit; opacity: 0.85; }
-  .chat-bubble-text { white-space: pre-wrap; }
+  .chat-bubble-text { white-space: pre-wrap; line-height: 36px; }
   .chat-bubble-time {
     font-size: 0.7rem;
     opacity: 0.65;
