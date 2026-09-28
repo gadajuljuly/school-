@@ -479,9 +479,17 @@
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
   }
   .chat-messages-inner {
-    min-height: 100%;
+    /* flex-grow fills the screen for a short chat; the default auto
+       min-height (content-based, not capped at the container's height)
+       is what lets it keep growing past the container for a long one -
+       a percentage min-height here was the previous, less reliable
+       attempt at the same thing and silently stopped growing after a
+       couple of screens' worth of messages. */
+    flex: 1 0 auto;
     padding: 14px 44px 6px;
     display: flex;
     flex-direction: column;
@@ -495,8 +503,8 @@
       var(--rule) 35px,
       var(--rule) 36px
     );
-    background-origin: content-box;
-    background-clip: content-box;
+    background-origin: padding-box;
+    background-clip: padding-box;
   }
   .chat-messages-inner::before, .chat-messages-inner::after {
     content: "";
