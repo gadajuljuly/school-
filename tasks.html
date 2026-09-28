@@ -51,7 +51,7 @@
     --medium: #b8811f;
     --low: #d9722a;
     --report-green: #3c8a5c;
-    --tab-inactive: #d7dde3;
+    --tab-inactive: #e4dcc4;
     --shadow: rgba(44, 42, 36, 0.18);
     --contact-bg-1: #dde8f5; --contact-name-1: #2c5282;
     --contact-bg-2: #e0f0e0; --contact-name-2: #276749;
@@ -82,7 +82,7 @@
       --accent: #7fb0e0;
       --accent-contrast: #16181c;
       --shadow: rgba(0, 0, 0, 0.5);
-      --tab-inactive: #333a42;
+      --tab-inactive: #39352a;
       --contact-bg-1: #24374d; --contact-name-1: #8ab4e8;
       --contact-bg-2: #24402c; --contact-name-2: #8cd9a0;
       --contact-bg-3: #4a3420; --contact-name-3: #e8a868;
@@ -112,7 +112,7 @@
     --accent: #7fb0e0;
     --accent-contrast: #16181c;
     --shadow: rgba(0, 0, 0, 0.5);
-    --tab-inactive: #333a42;
+    --tab-inactive: #39352a;
     --contact-bg-1: #24374d; --contact-name-1: #8ab4e8;
     --contact-bg-2: #24402c; --contact-name-2: #8cd9a0;
     --contact-bg-3: #4a3420; --contact-name-3: #e8a868;
@@ -1667,7 +1667,7 @@
     white-space: nowrap;
     max-width: 130px;
     overflow: hidden;
-    border: 1px solid var(--rule);
+    border: 2px solid var(--rule);
     border-radius: 5px 5px 0 0;
     clip-path: polygon(10px 0, 100% 0, 100% 100%, 0 100%);
     position: relative;
@@ -3374,13 +3374,20 @@
     if (!log.tools || typeof log.tools !== "object" || Array.isArray(log.tools)) log.tools = {};
     SITE_LOG_TOOLS_COLUMNS.forEach(function (col) {
       var val = log.tools[col];
-      if (typeof val === "string") {
-        log.tools[col] = { qty: val, note: "" };
-      } else if (!val || typeof val !== "object") {
-        log.tools[col] = { qty: "", note: "" };
+      if (Array.isArray(val)) {
+        val.forEach(function (entry) {
+          if (!entry.id) entry.id = uid();
+          if (typeof entry.qty !== "string") entry.qty = entry.qty ? String(entry.qty) : "";
+          if (typeof entry.note !== "string") entry.note = "";
+        });
+      } else if (typeof val === "string") {
+        log.tools[col] = val.trim() ? [{ id: uid(), qty: val, note: "" }] : [];
+      } else if (val && typeof val === "object") {
+        var qty = typeof val.qty === "string" ? val.qty : (val.qty ? String(val.qty) : "");
+        var note = typeof val.note === "string" ? val.note : "";
+        log.tools[col] = (qty || note) ? [{ id: uid(), qty: qty, note: note }] : [];
       } else {
-        if (typeof val.qty !== "string") val.qty = val.qty ? String(val.qty) : "";
-        if (typeof val.note !== "string") val.note = "";
+        log.tools[col] = [];
       }
     });
     if (!Array.isArray(log.contractors)) log.contractors = [];
@@ -7707,6 +7714,84 @@
   siteLogAttendanceBtn.addEventListener("click", openSiteLogAttendanceView);
   siteLogAttendanceBackBtn.addEventListener("click", closeSiteLogAttendanceView);
 
+  function siteLogToolEntries(colKey) {
+    var log = findSiteLog(activeSheet(), activeSiteLogDate);
+    return (log && log.tools[colKey]) || [];
+  }
+
+  // A tool column is a growable list of qty+note rows: existing (committed)
+  // entries each get their own row, plus one always-present blank row at the
+  // bottom. The moment a number is typed into that blank row's qty field, a
+  // fresh blank row appears right below it - so there's always an empty row
+  // ready, without a separate "+" button. A row that's never filled in never
+  // becomes a real entry, so it never shows up in the report/log view.
+  function buildToolEntryRow(colKey, entry, body) {
+    var row = document.createElement("div");
+    row.className = "site-log-tool-value-row";
+
+    var qtyInput = document.createElement("input");
+    qtyInput.type = "number";
+    qtyInput.min = "0";
+    qtyInput.inputMode = "numeric";
+    qtyInput.className = "site-log-tool-qty-input";
+
+    var noteInput = document.createElement("input");
+    noteInput.type = "text";
+    noteInput.className = "site-log-tool-note-input";
+
+    row.appendChild(qtyInput);
+    row.appendChild(noteInput);
+
+    if (entry) {
+      qtyInput.value = entry.qty || "";
+      noteInput.value = entry.note || "";
+      function save() {
+        entry.qty = qtyInput.value.trim();
+        entry.note = noteInput.value.trim();
+        saveData();
+      }
+      qtyInput.addEventListener("change", save);
+      noteInput.addEventListener("change", save);
+
+      var removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "site-log-entry-remove";
+      removeBtn.textContent = "✕";
+      removeBtn.addEventListener("click", function () {
+        var list = siteLogToolEntries(colKey);
+        var idx = list.indexOf(entry);
+        if (idx !== -1) list.splice(idx, 1);
+        saveData();
+        row.remove();
+      });
+      row.appendChild(removeBtn);
+    } else {
+      var nextRowShown = false;
+      var committed = false;
+      qtyInput.addEventListener("input", function () {
+        if (nextRowShown || !qtyInput.value.trim()) return;
+        nextRowShown = true;
+        body.appendChild(buildToolEntryRow(colKey, null, body));
+      });
+      row.addEventListener("focusout", function (e) {
+        if (committed || row.contains(e.relatedTarget)) return;
+        var qty = qtyInput.value.trim();
+        var note = noteInput.value.trim();
+        if (!qty && !note) return;
+        committed = true;
+        var liveLog = findOrCreateSiteLog(activeSheet(), activeSiteLogDate);
+        if (!Array.isArray(liveLog.tools[colKey])) liveLog.tools[colKey] = [];
+        var newEntry = { id: uid(), qty: qty, note: note };
+        liveLog.tools[colKey].push(newEntry);
+        saveData();
+        if (!nextRowShown) { nextRowShown = true; body.appendChild(buildToolEntryRow(colKey, null, body)); }
+        body.replaceChild(buildToolEntryRow(colKey, newEntry, body), row);
+      });
+    }
+
+    return row;
+  }
+
   function renderSiteLogToolsColumn(colKey) {
     var col = document.createElement("div");
     col.className = "site-log-col";
@@ -7718,45 +7803,10 @@
 
     var body = document.createElement("div");
     body.className = "site-log-col-body";
-
-    var sheet = activeSheet();
-    var log = findSiteLog(sheet, activeSiteLogDate);
-    var value = (log && log.tools[colKey]) || { qty: "", note: "" };
-
-    var row = document.createElement("div");
-    row.className = "site-log-tool-value-row";
-
-    var qtyInput = document.createElement("input");
-    qtyInput.type = "number";
-    qtyInput.min = "0";
-    qtyInput.inputMode = "numeric";
-    qtyInput.className = "site-log-tool-qty-input";
-    qtyInput.value = value.qty || "";
-
-    var noteInput = document.createElement("input");
-    noteInput.type = "text";
-    noteInput.className = "site-log-tool-note-input";
-    noteInput.value = value.note || "";
-
-    function saveToolValue() {
-      var liveSheet = activeSheet();
-      var qtyVal = qtyInput.value.trim();
-      var noteVal = noteInput.value.trim();
-      if (!qtyVal && !noteVal) {
-        var existing = findSiteLog(liveSheet, activeSiteLogDate);
-        if (existing) { existing.tools[colKey] = { qty: "", note: "" }; saveData(); }
-        return;
-      }
-      var liveLog = findOrCreateSiteLog(liveSheet, activeSiteLogDate);
-      liveLog.tools[colKey] = { qty: qtyVal, note: noteVal };
-      saveData();
-    }
-    qtyInput.addEventListener("change", saveToolValue);
-    noteInput.addEventListener("change", saveToolValue);
-
-    row.appendChild(qtyInput);
-    row.appendChild(noteInput);
-    body.appendChild(row);
+    siteLogToolEntries(colKey).forEach(function (entry) {
+      body.appendChild(buildToolEntryRow(colKey, entry, body));
+    });
+    body.appendChild(buildToolEntryRow(colKey, null, body));
 
     col.appendChild(body);
     return col;
@@ -8103,8 +8153,9 @@
     copyPreviousSiteLogCategory(function (liveLog, prevLog) {
       var copied = {};
       SITE_LOG_TOOLS_COLUMNS.forEach(function (col) {
-        var prevVal = prevLog.tools[col] || {};
-        copied[col] = { qty: prevVal.qty || "", note: prevVal.note || "" };
+        copied[col] = (prevLog.tools[col] || []).map(function (e) {
+          return { id: uid(), qty: e.qty || "", note: e.note || "" };
+        });
       });
       liveLog.tools = copied;
     }, renderSiteLogToolsColumns);
@@ -8888,8 +8939,8 @@
   function siteLogToolsIsEmpty(log) {
     if (!log) return true;
     return SITE_LOG_TOOLS_COLUMNS.every(function (col) {
-      var val = log.tools && log.tools[col];
-      return !(val && ((val.qty && String(val.qty).trim()) || (val.note && val.note.trim())));
+      var list = (log.tools && log.tools[col]) || [];
+      return !list.some(function (e) { return e && ((e.qty && String(e.qty).trim()) || (e.note && e.note.trim())); });
     });
   }
   function filledContractors(log) {
@@ -8953,14 +9004,26 @@
     return table;
   }
 
+  function toolEntryCellText(entry) {
+    if (!entry) return "";
+    var qty = (entry.qty || "").toString().trim();
+    var note = (entry.note || "").toString().trim();
+    return qty && note ? (note + " (" + qty + ")") : (note || qty);
+  }
+
   function buildToolsTableElement(log, compact) {
     // Same rule as attendance: a tool column (e.g. "משאית") left blank for
-    // this log is dropped entirely rather than shown as an empty column.
+    // this log is dropped entirely rather than shown as an empty column, and
+    // a row nobody filled in (the always-present blank typing row) never
+    // becomes a real entry, so it never reaches this table either.
     var activeColumns = SITE_LOG_TOOLS_COLUMNS.filter(function (colKey) {
-      var val = log && log.tools[colKey];
-      return val && ((val.qty && String(val.qty).trim()) || (val.note && val.note.trim()));
+      return ((log && log.tools[colKey]) || []).some(function (e) { return e && (e.qty || e.note); });
     });
     var headerColumns = activeColumns.length ? activeColumns : SITE_LOG_TOOLS_COLUMNS;
+    var colLists = activeColumns.map(function (colKey) {
+      return ((log && log.tools[colKey]) || []).filter(function (e) { return e && (e.qty || e.note); });
+    });
+    var maxRows = colLists.length ? Math.max.apply(null, colLists.map(function (l) { return l.length; })) : 0;
 
     var table = document.createElement("table");
     table.className = compact ? "pdf-doc-table pdf-doc-table-half" : "pdf-doc-table";
@@ -8975,7 +9038,7 @@
     table.appendChild(thead);
 
     var tbody = document.createElement("tbody");
-    if (!activeColumns.length) {
+    if (maxRows === 0) {
       var emptyRow = document.createElement("tr");
       var emptyTd = document.createElement("td");
       emptyTd.className = "pdf-doc-empty";
@@ -8984,16 +9047,15 @@
       emptyRow.appendChild(emptyTd);
       tbody.appendChild(emptyRow);
     } else {
-      var rowEl = document.createElement("tr");
-      activeColumns.forEach(function (colKey) {
-        var td = document.createElement("td");
-        var val = log.tools[colKey];
-        var qty = (val.qty || "").toString().trim();
-        var note = (val.note || "").toString().trim();
-        td.textContent = qty && note ? (note + " (" + qty + ")") : (note || qty);
-        rowEl.appendChild(td);
-      });
-      tbody.appendChild(rowEl);
+      for (var i = 0; i < maxRows; i++) {
+        var rowEl = document.createElement("tr");
+        colLists.forEach(function (list) {
+          var td = document.createElement("td");
+          td.textContent = toolEntryCellText(list[i]);
+          rowEl.appendChild(td);
+        });
+        tbody.appendChild(rowEl);
+      }
     }
     table.appendChild(tbody);
     return table;
