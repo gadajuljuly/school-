@@ -1,0 +1,23 @@
+{
+  "name": "itask-ios",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Native iOS wrapper for ITASK (loads the live site over server.url, adds native Contacts/Share/Push plugins the web app can't use on iOS Safari either)",
+  "scripts": {
+    "sync": "npx cap sync ios",
+    "open": "npx cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/ios": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
+    "@capacitor-community/contacts": "^7.0.0",
+    "@capacitor-firebase/messaging": "^7.0.0",
+    "@capacitor/filesystem": "^7.0.0",
+    "@capacitor/share": "^7.0.0",
+    "firebase": "^11.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.0.0",
+    "@capacitor/assets": "^3.0.0"
+  }
+}

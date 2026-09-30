@@ -1,0 +1,12 @@
+{
+  "appId": "com.gadajuljuly.itask",
+  "appName": "ITASK",
+  "webDir": "www",
+  "server": {
+    "url": "https://gadajuljuly.github.io/school-/tasks.html",
+    "iosScheme": "https"
+  },
+  "ios": {
+    "contentInset": "always"
+  }
+}
