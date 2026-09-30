@@ -4492,8 +4492,8 @@
     input.type = "tel";
     input.className = "auth-input";
     input.placeholder = tr("sharedProjectPhonePlaceholder");
-    input.maxLength = 20;
-    if (presetValue) input.value = presetValue;
+    input.maxLength = 60;
+    if (presetValue) input.value = presetName ? (presetName + " – " + presetValue) : presetValue;
     if (presetName) input.dataset.contactName = presetName;
     input.addEventListener("input", function () {
       delete input.dataset.contactName;
@@ -4733,8 +4733,8 @@
     input.type = "tel";
     input.className = "auth-input";
     input.placeholder = tr("sharedProjectPhonePlaceholder");
-    input.maxLength = 20;
-    if (presetValue) input.value = presetValue;
+    input.maxLength = 60;
+    if (presetValue) input.value = presetName ? (presetName + " – " + presetValue) : presetValue;
     if (presetName) input.dataset.contactName = presetName;
     input.addEventListener("input", function () {
       delete input.dataset.contactName;
