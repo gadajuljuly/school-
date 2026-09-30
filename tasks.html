@@ -4465,13 +4465,17 @@
   function pickOneNativeContact() {
     return window.Capacitor.Plugins.Contacts.pickContact({ projection: { name: true, phones: true } })
       .then(function (result) {
+        try { alert("DEBUG pickContact result: " + JSON.stringify(result)); } catch (e) {}
         var contact = result && result.contact;
         var phones = (contact && contact.phoneNumbers) || [];
         var tel = phones.length ? phones[0].number : "";
         if (!tel) return null;
         return { tel: tel, name: (contact && contact.displayName) || "" };
       })
-      .catch(function () { return null; });
+      .catch(function (err) {
+        try { alert("DEBUG pickContact error: " + (err && (err.message || JSON.stringify(err)))); } catch (e) {}
+        return null;
+      });
   }
 
   // --- Project invites: "שיתוף" on a project's tab sends a real invite to
