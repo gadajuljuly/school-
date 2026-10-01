@@ -2710,16 +2710,23 @@
     </div>
   </div>
 
-  <div class="modal-overlay" id="officeReportTypeOverlay" hidden>
-    <div class="modal-box" role="alertdialog" aria-modal="true">
-      <p class="modal-message" data-i18n="officeReportTypeModalMessage">איזה דוח מרוכז?</p>
-      <div class="move-task-mode">
-        <button type="button" id="officeReportAttendanceBtn" data-i18n="siteLogAttendance">נוכחות</button>
-        <button type="button" id="officeReportProcurementBtn" data-i18n="siteLogProcurement">רכש</button>
-        <button type="button" id="officeReportToolsBtn" data-i18n="siteLogTools">כלים</button>
+  <div class="report-view" id="officeReportTypeView" hidden>
+    <div class="report-head">
+      <button type="button" class="report-back-btn" id="officeReportTypeBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
+      <div class="report-head-title" data-i18n="officeReportsBtnTitle">דוחות מרוכזים</div>
+    </div>
+    <div class="library-grid site-log-categories-grid">
+      <div class="library-item" id="officeReportAttendanceBtn">
+        <div class="library-item-thumb"><img src="tasks-attendance-icon.webp" alt=""></div>
+        <div class="library-item-name" data-i18n="siteLogAttendance">נוכחות</div>
       </div>
-      <div class="modal-actions">
-        <button type="button" class="modal-btn modal-btn-no" id="officeReportTypeCancelBtn" data-i18n="cancelBtn">ביטול</button>
+      <div class="library-item" id="officeReportProcurementBtn">
+        <div class="library-item-thumb"><img src="tasks-procurement-icon.webp" alt=""></div>
+        <div class="library-item-name" data-i18n="siteLogProcurement">רכש</div>
+      </div>
+      <div class="library-item" id="officeReportToolsBtn">
+        <div class="library-item-thumb"><img src="tasks-tools-icon.webp" alt=""></div>
+        <div class="library-item-name" data-i18n="siteLogTools">כלים</div>
       </div>
     </div>
   </div>
@@ -3172,7 +3179,6 @@
     headOfficeToggleOnBtn: { he: "מעבר למצב משרד ראשי", en: "Switch to Head Office mode", ar: "التبديل إلى وضع المكتب الرئيسي", ru: "Перейти в режим главного офиса" },
     headOfficeToggleOffBtn: { he: "יציאה ממצב משרד ראשי", en: "Exit Head Office mode", ar: "الخروج من وضع المكتب الرئيسي", ru: "Выйти из режима главного офиса" },
     officeReportsBtnTitle: { he: "דוחות מרוכזים", en: "Combined reports", ar: "تقارير مجمعة", ru: "Сводные отчёты" },
-    officeReportTypeModalMessage: { he: "איזה דוח מרוכז?", en: "Which combined report?", ar: "أي تقرير مجمّع؟", ru: "Какой сводный отчёт?" },
     officeCombinedReportFileNamePrefix: { he: "דוח מרוכז", en: "Combined report", ar: "تقرير مجمّع", ru: "Сводный отчёт" },
     officeCombinedReportEmptyMsg: { he: "אף פרויקט לא שיגר דוח מסוג זה היום", en: "No project has sent this type of report today", ar: "لم يرسل أي مشروع هذا النوع من التقارير اليوم", ru: "Ни один проект не отправил такой отчёт сегодня" },
     officeReportDailyBtn: { he: "הפקת דוח יומי", en: "Generate daily report", ar: "إصدار تقرير يومي", ru: "Создать дневной отчёт" },
@@ -8939,24 +8945,21 @@
   // exact same per-category table builders and the same multi-section/one-
   // PDF technique as the periodic site-log report (buildSiteLogPeriodicPdfElement
   // above), just looping over projects instead of over one project's dates.
-  var officeReportTypeOverlay = document.getElementById("officeReportTypeOverlay");
+  var officeReportTypeView = document.getElementById("officeReportTypeView");
+  var officeReportTypeBackBtn = document.getElementById("officeReportTypeBackBtn");
   var officeReportAttendanceBtn = document.getElementById("officeReportAttendanceBtn");
   var officeReportProcurementBtn = document.getElementById("officeReportProcurementBtn");
   var officeReportToolsBtn = document.getElementById("officeReportToolsBtn");
-  var officeReportTypeCancelBtn = document.getElementById("officeReportTypeCancelBtn");
 
   officeReportsBtn.addEventListener("click", function () {
     state.menuOpen = false;
-    officeReportTypeOverlay.hidden = false;
+    officeReportTypeView.hidden = false;
     render();
   });
   function closeOfficeReportTypeModal() {
-    officeReportTypeOverlay.hidden = true;
+    officeReportTypeView.hidden = true;
   }
-  officeReportTypeCancelBtn.addEventListener("click", closeOfficeReportTypeModal);
-  officeReportTypeOverlay.addEventListener("click", function (e) {
-    if (e.target === officeReportTypeOverlay) closeOfficeReportTypeModal();
-  });
+  officeReportTypeBackBtn.addEventListener("click", closeOfficeReportTypeModal);
 
   // findMatches/matchColumns/rowToCells are only used by the name-based
   // monthly/custom reports (attendance and tools) - procurement has no such
