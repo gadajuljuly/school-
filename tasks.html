@@ -9077,6 +9077,7 @@
   function closeOfficeReportOptionsView() {
     officeReportOptionsView.hidden = true;
     pendingOfficeReportKind = null;
+    officeReportTypeView.hidden = false;
   }
   officeReportAttendanceBtn.addEventListener("click", function () { openOfficeReportOptionsView("attendance"); });
   officeReportToolsBtn.addEventListener("click", function () { openOfficeReportOptionsView("tools"); });
@@ -9332,6 +9333,7 @@
   }
   function closeOfficeProcurementView() {
     officeProcurementView.hidden = true;
+    officeReportTypeView.hidden = false;
   }
   officeReportProcurementBtn.addEventListener("click", openOfficeProcurementView);
   officeProcurementBackBtn.addEventListener("click", closeOfficeProcurementView);
