@@ -2020,6 +2020,7 @@
     color: var(--ink-muted);
   }
   li.task.done .row-mark { opacity: 0.5; }
+  li.task.head-office-task .task-text { color: var(--danger, #b5482f); }
   .note-time {
     flex-shrink: 0;
     min-width: 55px;
@@ -2506,6 +2507,10 @@
             <button type="button" id="procurementWhatsappBtn" data-i18n="procurementWhatsappPlaceholder">בחירת איש קשר</button>
           </div>
           <div class="menu-section">
+            <div class="menu-label" data-i18n="menuLabelHeadOfficeNumber">מספר משרד ראשי</div>
+            <input type="tel" id="headOfficeNumberInput" class="reminder-select" data-i18n-ph="headOfficeNumberPlaceholder" placeholder="05XXXXXXXX">
+          </div>
+          <div class="menu-section">
             <div class="menu-label" data-i18n="menuLabelLanguage">שפה</div>
             <select id="langSelect" class="reminder-select">
               <option value="he">עברית</option>
@@ -2554,6 +2559,9 @@
       </button>
       <button type="button" class="tasks-fab calendar-fab" id="calendarFabBtn" data-i18n-title="calendarBtnTitle" title="בחירת תאריך">
         <img src="tasks-calendar-icon.webp" alt="">
+      </button>
+      <button type="button" class="tasks-fab calendar-fab" id="officeReportsBtn" data-i18n-title="officeReportsBtnTitle" title="דוחות מרוכזים" hidden>
+        <img src="tasks-office-reports-icon.webp" alt="">
       </button>
       <button type="button" class="report-fab" id="reportFabBtn" data-i18n-title="reportsBtnTitle" title="דוחות פגישות וסיורים">
         <img src="tasks-report-icon.webp" alt="">
@@ -2689,6 +2697,20 @@
       </div>
       <div class="modal-actions">
         <button type="button" class="modal-btn modal-btn-no" id="reportTypeCancelBtn" data-i18n="cancelBtn">ביטול</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="officeReportTypeOverlay" hidden>
+    <div class="modal-box" role="alertdialog" aria-modal="true">
+      <p class="modal-message" data-i18n="officeReportTypeModalMessage">איזה דוח מרוכז?</p>
+      <div class="move-task-mode">
+        <button type="button" id="officeReportAttendanceBtn" data-i18n="siteLogAttendance">נוכחות</button>
+        <button type="button" id="officeReportProcurementBtn" data-i18n="siteLogProcurement">רכש</button>
+        <button type="button" id="officeReportToolsBtn" data-i18n="siteLogTools">כלים</button>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="modal-btn modal-btn-no" id="officeReportTypeCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </div>
   </div>
@@ -3096,6 +3118,11 @@
     reminderEvery4Hours: { he: "כל 4 שעות", en: "Every 4 hours", ar: "كل 4 ساعات", ru: "Каждые 4 часа" },
     menuLabelApp: { he: "האפליקציה", en: "App", ar: "التطبيق", ru: "Приложение" },
     menuLabelProcurementWhatsapp: { he: "מספר להעברת דוחות", en: "Number for sending reports", ar: "رقم لإرسال التقارير", ru: "Номер для отправки отчётов" },
+    menuLabelHeadOfficeNumber: { he: "מספר משרד ראשי", en: "Head office number", ar: "رقم المكتب الرئيسي", ru: "Номер главного офиса" },
+    headOfficeNumberPlaceholder: { he: "05XXXXXXXX", en: "05XXXXXXXX", ar: "05XXXXXXXX", ru: "05XXXXXXXX" },
+    officeReportsBtnTitle: { he: "דוחות מרוכזים", en: "Combined reports", ar: "تقارير مجمعة", ru: "Сводные отчёты" },
+    officeReportTypeModalMessage: { he: "איזה דוח מרוכז?", en: "Which combined report?", ar: "أي تقرير مجمّع؟", ru: "Какой сводный отчёт?" },
+    officeCombinedReportFileNamePrefix: { he: "דוח מרוכז", en: "Combined report", ar: "تقرير مجمّع", ru: "Сводный отчёт" },
     procurementWhatsappPlaceholder: { he: "בחירת איש קשר", en: "Choose a contact", ar: "اختيار جهة اتصال", ru: "Выбрать контакт" },
     shareAppBtn: { he: "שיתוף קישור להתקנה", en: "Share install link", ar: "مشاركة رابط التثبيت", ru: "Поделиться ссылкой на установку" },
     addLogoBtn: { he: "הוספת לוגו", en: "Add logo", ar: "إضافة شعار", ru: "Добавить логотип" },
@@ -7299,6 +7326,33 @@
     if (manual && manual.trim()) setProcurementWhatsappContact(manual.trim(), "");
   });
 
+  // Head Office mode has no server-side roles table to check against - it's
+  // a plain per-device setting: whoever is logged in on THIS device/browser
+  // enters Head Office mode if the phone number they signed in with matches
+  // the number saved here. Firebase's phoneNumber (myPhoneNumber) is always
+  // full E.164 (e.g. "+972525565932"), matching normalizePhoneDigits()'s
+  // own output, so they can be compared directly once both are normalized.
+  var HEAD_OFFICE_NUMBER_KEY = "itask-head-office-number";
+  var headOfficeNumberInput = document.getElementById("headOfficeNumberInput");
+  (function initHeadOfficeNumberInput() {
+    try {
+      var saved = localStorage.getItem(HEAD_OFFICE_NUMBER_KEY);
+      if (saved) headOfficeNumberInput.value = saved;
+    } catch (e) {}
+  })();
+  var isHeadOfficeMode = false;
+  function recomputeHeadOfficeMode() {
+    var saved = null;
+    try { saved = localStorage.getItem(HEAD_OFFICE_NUMBER_KEY); } catch (e) {}
+    var normalizedSaved = saved && normalizePhoneDigits(saved);
+    isHeadOfficeMode = !!(myPhoneNumber && normalizedSaved && myPhoneNumber === normalizedSaved);
+  }
+  headOfficeNumberInput.addEventListener("change", function () {
+    try { localStorage.setItem(HEAD_OFFICE_NUMBER_KEY, headOfficeNumberInput.value.trim()); } catch (e) {}
+    recomputeHeadOfficeMode();
+    render();
+  });
+
   // Company logos can be large source images (a marketing PNG straight off
   // someone's phone) - they're stored inline as data URLs in app_state's
   // JSON (no per-sheet "owning folder" to hang a Storage RLS policy off,
@@ -7425,6 +7479,7 @@
   var tasksFabBtn = document.getElementById("tasksFabBtn");
 
   var calendarFabBtn = document.getElementById("calendarFabBtn");
+  var officeReportsBtn = document.getElementById("officeReportsBtn");
   calendarFabBtn.addEventListener("click", function () {
     // Go straight to today's log (the categories/icons page) instead of
     // making every entry start with a calendar prompt - picking a
@@ -8840,6 +8895,75 @@
     render();
   });
 
+  // Head Office mode's one combined report, covering every active shared
+  // project at once instead of one project's own site log - built from the
+  // exact same per-category table builders and the same multi-section/one-
+  // PDF technique as the periodic site-log report (buildSiteLogPeriodicPdfElement
+  // above), just looping over projects instead of over one project's dates.
+  var officeReportTypeOverlay = document.getElementById("officeReportTypeOverlay");
+  var officeReportAttendanceBtn = document.getElementById("officeReportAttendanceBtn");
+  var officeReportProcurementBtn = document.getElementById("officeReportProcurementBtn");
+  var officeReportToolsBtn = document.getElementById("officeReportToolsBtn");
+  var officeReportTypeCancelBtn = document.getElementById("officeReportTypeCancelBtn");
+
+  officeReportsBtn.addEventListener("click", function () {
+    state.menuOpen = false;
+    officeReportTypeOverlay.hidden = false;
+    render();
+  });
+  function closeOfficeReportTypeModal() {
+    officeReportTypeOverlay.hidden = true;
+  }
+  officeReportTypeCancelBtn.addEventListener("click", closeOfficeReportTypeModal);
+  officeReportTypeOverlay.addEventListener("click", function (e) {
+    if (e.target === officeReportTypeOverlay) closeOfficeReportTypeModal();
+  });
+
+  var OFFICE_REPORT_KINDS = {
+    attendance: { titleKey: "siteLogAttendance", tableFn: buildAttendanceTableElement },
+    procurement: { titleKey: "siteLogProcurement", tableFn: buildProcurementTableElement },
+    tools: { titleKey: "siteLogTools", tableFn: buildToolsTableElement }
+  };
+
+  function buildOfficeCombinedReportElement(kind) {
+    var wrap = document.createElement("div");
+    wrap.dir = RTL_LANGS[currentLang] ? "rtl" : "ltr";
+    var dateISO = todayISO();
+    var projects = sharedSheets.filter(function (s) { return !s.ended; });
+    projects.forEach(function (sheet, index) {
+      var section = document.createElement("div");
+      section.className = "pdf-doc" + (index > 0 ? " pdf-doc-periodic-section" : "");
+      section.appendChild(buildPdfDocTitleElement(sheet, sheet.name));
+      var categoryTitle = document.createElement("div");
+      categoryTitle.className = "pdf-doc-info-title";
+      categoryTitle.textContent = tr(kind.titleKey);
+      section.appendChild(categoryTitle);
+      var infoDate = document.createElement("div");
+      infoDate.className = "pdf-doc-info-date";
+      infoDate.textContent = isoToFullDisplay(dateISO);
+      section.appendChild(infoDate);
+      var log = findSiteLog(sheet, dateISO);
+      section.appendChild(kind.tableFn(log));
+      wrap.appendChild(section);
+    });
+    return wrap;
+  }
+
+  function generateOfficeCombinedReport(kindKey) {
+    var kind = OFFICE_REPORT_KINDS[kindKey];
+    closeOfficeReportTypeModal();
+    var fileName = tr("officeCombinedReportFileNamePrefix") + " " + tr(kind.titleKey) + " " + isoToFileNameDate(todayISO()) + ".pdf";
+    buildPdfBlobFromElement(buildOfficeCombinedReportElement(kind), fileName).then(function (result) {
+      attemptShare(result.blob, result.fileName);
+    }).catch(function (err) {
+      console.error(err);
+      alert(tr("reportPdfError"));
+    });
+  }
+  officeReportAttendanceBtn.addEventListener("click", function () { generateOfficeCombinedReport("attendance"); });
+  officeReportProcurementBtn.addEventListener("click", function () { generateOfficeCombinedReport("procurement"); });
+  officeReportToolsBtn.addEventListener("click", function () { generateOfficeCombinedReport("tools"); });
+
   function closeReportTypeModal() {
     reportTypeOverlay.hidden = true;
     pendingReportDraft = null;
@@ -10236,7 +10360,10 @@
   var viewingArchive = false;
   var lastActiveSheetIdBeforeArchive = null;
   function visibleSheets() {
-    return allSheets().filter(function (s) { return !!s.ended === viewingArchive; });
+    return allSheets().filter(function (s) {
+      if (isHeadOfficeMode && !s.shared) return false;
+      return !!s.ended === viewingArchive;
+    });
   }
   // An ended project's task view is a record of how things stood the day it
   // ended - it's pinned to (and can never browse past) sheet.endedDate. Every
@@ -10409,10 +10536,10 @@
     var sharedSheetsVisible = visibleSheets().filter(function (s) { return s.shared; });
 
     privateSheets.forEach(function (sheet) { appendSheetTab(sheetsBarPrivate, sheet); });
-    if (!viewingArchive) appendAddBtn(sheetsBarPrivate, "addProjectTitle", function () { addSheet(); });
+    if (!viewingArchive && !isHeadOfficeMode) appendAddBtn(sheetsBarPrivate, "addProjectTitle", function () { addSheet(); });
 
     sharedSheetsVisible.forEach(function (sheet) { appendSheetTab(sheetsBarShared, sheet); });
-    if (!viewingArchive) appendAddBtn(sheetsBarShared, "addSharedProjectTitle", function () { openSharedProjectModal(); });
+    if (!viewingArchive && !isHeadOfficeMode) appendAddBtn(sheetsBarShared, "addSharedProjectTitle", function () { openSharedProjectModal(); });
 
     var active = activeSheet();
     var activeIsShared = !!(active && active.shared);
@@ -10462,6 +10589,7 @@
       createdAt: Date.now()
     };
     if (type === "note") newTask.time = currentTimeHHMM();
+    if (isHeadOfficeMode) newTask.isHeadOffice = true;
     var sheet = activeSheet();
     sheet.tasks.push(newTask);
     saveData();
@@ -10601,6 +10729,12 @@
 
     menuPanel.hidden = !state.menuOpen;
     menuBtn.setAttribute("aria-expanded", String(state.menuOpen));
+    // Head Office mode trades the per-project diary/log icon and the
+    // meetings-tours report icon for one icon that produces a report
+    // combining every shared project at once (see officeReportsBtn below).
+    calendarFabBtn.hidden = isHeadOfficeMode;
+    officeReportsBtn.hidden = !isHeadOfficeMode;
+    reportFabBtn.hidden = isHeadOfficeMode;
     filterButtons.forEach(function (b) { b.classList.toggle("active", b.dataset.filter === state.filter); });
 
     var STATUS_LABEL = { 0: tr("statusPartial"), 1: tr("statusDone"), 2: tr("statusReset") };
@@ -10657,7 +10791,7 @@
     visible.forEach(function (t) {
       var isNote = t.type === "note";
       var li = document.createElement("li");
-      li.className = "task" + (t.status === 1 ? " partial" : "") + (t.status === 2 ? " done" : "") + (editable ? "" : " readonly");
+      li.className = "task" + (t.status === 1 ? " partial" : "") + (t.status === 2 ? " done" : "") + (editable ? "" : " readonly") + (t.isHeadOffice ? " head-office-task" : "");
       li.dataset.taskId = t.id;
       var longPressFired = false;
       if (editable && state.editingTaskId !== t.id) {
@@ -11338,6 +11472,7 @@
   function showApp(phoneNumber, rowId) {
     SUPABASE_ROW_ID = rowId;
     myPhoneNumber = phoneNumber;
+    recomputeHeadOfficeMode();
     loadChatReadState();
     menuUsernameLabel.textContent = tr("loggedInAs") + phoneNumber;
     hideSplash();
