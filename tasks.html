@@ -2737,6 +2737,43 @@
     </div>
   </div>
 
+  <div class="report-view" id="officeReportOptionsView" hidden>
+    <div class="report-head">
+      <button type="button" class="report-back-btn" id="officeReportOptionsBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
+      <div class="report-head-title" id="officeReportOptionsTitle"></div>
+    </div>
+    <button type="button" class="site-log-copy-prev-btn" id="officeReportDailyBtn" data-i18n="officeReportDailyBtn">הפקת דוח יומי</button>
+    <button type="button" class="site-log-copy-prev-btn" id="officeReportMonthlyBtn" data-i18n="officeReportMonthlyBtn">הפקת דוח חודשי</button>
+    <button type="button" class="site-log-copy-prev-btn" id="officeReportCustomBtn" data-i18n="officeReportCustomBtn">הפקת דוח מוגדר</button>
+  </div>
+
+  <div class="modal-overlay" id="officeNameReportOverlay" hidden>
+    <div class="modal-box" role="alertdialog" aria-modal="true">
+      <p class="modal-message" id="officeNameReportModalMessage"></p>
+      <div class="modal-submessage" data-i18n="officeNameReportNameLabel">שם</div>
+      <input type="text" id="officeNameReportNameInput" class="auth-input" data-i18n-ph="officeNameReportNamePlaceholder" placeholder="שם" maxlength="60">
+      <div class="modal-submessage" id="officeNameReportMonthRow" data-i18n="officeNameReportMonthLabel">חודש</div>
+      <input type="month" id="officeNameReportMonthInput" class="auth-input">
+      <div class="modal-submessage" id="officeNameReportFromRow" data-i18n="siteLogPeriodicFromLabel">מתאריך</div>
+      <input type="date" id="officeNameReportFromInput" class="auth-input">
+      <div class="modal-submessage" id="officeNameReportToRow" data-i18n="siteLogPeriodicToLabel">עד תאריך</div>
+      <input type="date" id="officeNameReportToInput" class="auth-input">
+      <div class="modal-actions">
+        <button type="button" class="modal-btn modal-btn-primary" id="officeNameReportGenerateBtn" data-i18n="officeNameReportGenerateBtn">הפקה</button>
+        <button type="button" class="modal-btn modal-btn-no" id="officeNameReportCancelBtn" data-i18n="cancelBtn">ביטול</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="report-view" id="officeReportPreviewView" hidden>
+    <div class="report-head">
+      <button type="button" class="report-back-btn" id="officeReportPreviewBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
+      <div class="report-head-title" data-i18n="officeReportsBtnTitle">דוחות מרוכזים</div>
+      <button type="button" class="report-share-btn" id="officeReportPreviewShareBtn" data-i18n-title="shareBtn" title="שיתוף">&#128228;</button>
+    </div>
+    <div class="site-log-preview-wrap" id="officeReportPreviewContent"></div>
+  </div>
+
   <div class="modal-overlay" id="reportTitleOverlay" hidden>
     <div class="modal-box" role="alertdialog" aria-modal="true">
       <p class="modal-message" data-i18n="reportTitleModalMessage">כותרת</p>
@@ -3158,6 +3195,20 @@
     officeReportTypeModalMessage: { he: "איזה דוח מרוכז?", en: "Which combined report?", ar: "أي تقرير مجمّع؟", ru: "Какой сводный отчёт?" },
     officeCombinedReportFileNamePrefix: { he: "דוח מרוכז", en: "Combined report", ar: "تقرير مجمّع", ru: "Сводный отчёт" },
     officeCombinedReportEmptyMsg: { he: "אף פרויקט לא שיגר דוח מסוג זה היום", en: "No project has sent this type of report today", ar: "لم يرسل أي مشروع هذا النوع من التقارير اليوم", ru: "Ни один проект не отправил такой отчёт сегодня" },
+    officeReportDailyBtn: { he: "הפקת דוח יומי", en: "Generate daily report", ar: "إصدار تقرير يومي", ru: "Создать дневной отчёт" },
+    officeReportMonthlyBtn: { he: "הפקת דוח חודשי", en: "Generate monthly report", ar: "إصدار تقرير شهري", ru: "Создать месячный отчёт" },
+    officeReportCustomBtn: { he: "הפקת דוח מוגדר", en: "Generate custom report", ar: "إصدار تقرير مخصص", ru: "Создать произвольный отчёт" },
+    officeNameReportNameLabel: { he: "שם", en: "Name", ar: "الاسم", ru: "Имя" },
+    officeNameReportNamePlaceholder: { he: "הזינו שם", en: "Enter a name", ar: "أدخل اسمًا", ru: "Введите имя" },
+    officeNameReportMonthLabel: { he: "חודש", en: "Month", ar: "الشهر", ru: "Месяц" },
+    officeNameReportGenerateBtn: { he: "הפקה", en: "Generate", ar: "إصدار", ru: "Создать" },
+    officeNameReportModalMessageMonthly: { he: "דוח חודשי לפי שם", en: "Monthly report by name", ar: "تقرير شهري حسب الاسم", ru: "Месячный отчёт по имени" },
+    officeNameReportModalMessageCustom: { he: "דוח מוגדר לפי שם וטווח תאריכים", en: "Custom report by name and date range", ar: "تقرير مخصص حسب الاسم ونطاق التواريخ", ru: "Произвольный отчёт по имени и диапазону дат" },
+    officeNameReportMissingNameMsg: { he: "יש להזין שם", en: "Please enter a name", ar: "الرجاء إدخال اسم", ru: "Пожалуйста, введите имя" },
+    officeNameReportMissingMonthMsg: { he: "יש לבחור חודש", en: "Please choose a month", ar: "الرجاء اختيار شهر", ru: "Пожалуйста, выберите месяц" },
+    officeReportColDate: { he: "תאריך", en: "Date", ar: "التاريخ", ru: "Дата" },
+    officeReportColProject: { he: "פרויקט", en: "Project", ar: "مشروع", ru: "Проект" },
+    officeReportColTool: { he: "כלי", en: "Tool", ar: "المعدة", ru: "Оборудование" },
     shareAppBtn: { he: "שיתוף קישור להתקנה", en: "Share install link", ar: "مشاركة رابط التثبيت", ru: "Поделиться ссылкой на установку" },
     addLogoBtn: { he: "הוספת לוגו", en: "Add logo", ar: "إضافة شعار", ru: "Добавить логотип" },
     chooseLogoTitle: { he: "בחר לוגו", en: "Choose logo", ar: "اختر شعارًا", ru: "Выберите логотип" },
@@ -8941,10 +8992,47 @@
     if (e.target === officeReportTypeOverlay) closeOfficeReportTypeModal();
   });
 
+  // findMatches/matchColumns/rowToCells are only used by the name-based
+  // monthly/custom reports (attendance and tools) - procurement has no such
+  // report, it stays daily-only (its "daily" equivalent is the interactive
+  // purchased-marking list built further below).
   var OFFICE_REPORT_KINDS = {
-    attendance: { titleKey: "siteLogAttendance", tableFn: buildAttendanceTableElement, sentField: "attendanceSentDate" },
+    attendance: {
+      titleKey: "siteLogAttendance",
+      tableFn: buildAttendanceTableElement,
+      sentField: "attendanceSentDate",
+      findMatches: function (log, nameLower) {
+        var matches = [];
+        SITE_LOG_ATTENDANCE_COLUMNS.forEach(function (col) {
+          ((log.attendance && log.attendance[col]) || []).forEach(function (p) {
+            if (p && p.name && p.name.toLowerCase().indexOf(nameLower) !== -1) matches.push({ col: col });
+          });
+        });
+        return matches;
+      },
+      matchColumns: ["officeReportColDate", "officeReportColProject", "officeReportColRole"],
+      rowToCells: function (r) { return [isoToFullDisplay(r.date), r.project, siteLogColLabel(r.col)]; }
+    },
     procurement: { titleKey: "siteLogProcurement", tableFn: buildProcurementTableElement, sentField: "procurementSentDate" },
-    tools: { titleKey: "siteLogTools", tableFn: buildToolsTableElement, sentField: "toolsSentDate" }
+    tools: {
+      titleKey: "siteLogTools",
+      tableFn: buildToolsTableElement,
+      sentField: "toolsSentDate",
+      // The operator's name is written into the tool entry's free-text note
+      // field - there's no dedicated "operator" field, that's just where
+      // this gets recorded in practice.
+      findMatches: function (log, nameLower) {
+        var matches = [];
+        SITE_LOG_TOOLS_COLUMNS.forEach(function (col) {
+          ((log.tools && log.tools[col]) || []).forEach(function (e) {
+            if (e && e.note && e.note.toLowerCase().indexOf(nameLower) !== -1) matches.push({ col: col, qty: e.qty });
+          });
+        });
+        return matches;
+      },
+      matchColumns: ["officeReportColDate", "officeReportColProject", "officeReportColTool", "siteLogColQuantity"],
+      rowToCells: function (r) { return [isoToFullDisplay(r.date), r.project, siteLogColLabel(r.col), r.qty || ""]; }
+    }
   };
 
   // Only a project whose "Send report" button (markSiteLogReportSent above)
@@ -8999,8 +9087,209 @@
       alert(tr("reportPdfError"));
     });
   }
-  officeReportAttendanceBtn.addEventListener("click", function () { generateOfficeCombinedReport("attendance"); });
-  officeReportToolsBtn.addEventListener("click", function () { generateOfficeCombinedReport("tools"); });
+
+  // Attendance/tools go through a preview screen with three ways to produce
+  // the report, instead of straight to a PDF like procurement's share
+  // button above - see showOfficeReportPreview() further down.
+  var officeReportOptionsView = document.getElementById("officeReportOptionsView");
+  var officeReportOptionsBackBtn = document.getElementById("officeReportOptionsBackBtn");
+  var officeReportOptionsTitle = document.getElementById("officeReportOptionsTitle");
+  var officeReportDailyBtn = document.getElementById("officeReportDailyBtn");
+  var officeReportMonthlyBtn = document.getElementById("officeReportMonthlyBtn");
+  var officeReportCustomBtn = document.getElementById("officeReportCustomBtn");
+  var pendingOfficeReportKind = null;
+
+  function openOfficeReportOptionsView(kindKey) {
+    pendingOfficeReportKind = kindKey;
+    officeReportOptionsTitle.textContent = tr(OFFICE_REPORT_KINDS[kindKey].titleKey);
+    closeOfficeReportTypeModal();
+    officeReportOptionsView.hidden = false;
+  }
+  function closeOfficeReportOptionsView() {
+    officeReportOptionsView.hidden = true;
+    pendingOfficeReportKind = null;
+  }
+  officeReportAttendanceBtn.addEventListener("click", function () { openOfficeReportOptionsView("attendance"); });
+  officeReportToolsBtn.addEventListener("click", function () { openOfficeReportOptionsView("tools"); });
+  officeReportOptionsBackBtn.addEventListener("click", closeOfficeReportOptionsView);
+
+  var officeReportPreviewView = document.getElementById("officeReportPreviewView");
+  var officeReportPreviewBackBtn = document.getElementById("officeReportPreviewBackBtn");
+  var officeReportPreviewShareBtn = document.getElementById("officeReportPreviewShareBtn");
+  var officeReportPreviewContent = document.getElementById("officeReportPreviewContent");
+  var lastOfficeReportElement = null;
+  var lastOfficeReportFileName = "";
+
+  function showOfficeReportPreview(element, fileName) {
+    lastOfficeReportElement = element;
+    lastOfficeReportFileName = fileName;
+    officeReportPreviewContent.innerHTML = "";
+    officeReportPreviewContent.appendChild(element);
+    officeReportOptionsView.hidden = true;
+    officeReportPreviewView.hidden = false;
+  }
+  function closeOfficeReportPreviewView() {
+    officeReportPreviewView.hidden = true;
+    officeReportOptionsView.hidden = false;
+  }
+  officeReportPreviewBackBtn.addEventListener("click", closeOfficeReportPreviewView);
+  officeReportPreviewShareBtn.addEventListener("click", function () {
+    if (!lastOfficeReportElement) return;
+    // A clone - buildPdfBlobFromElement() re-parents whatever element it's
+    // given into its own temporary off-screen container, which would yank
+    // the real preview's content off the visible screen if passed directly.
+    buildPdfBlobFromElement(lastOfficeReportElement.cloneNode(true), lastOfficeReportFileName).then(function (result) {
+      attemptShare(result.blob, result.fileName);
+    }).catch(function (err) {
+      console.error(err);
+      alert(tr("reportPdfError"));
+    });
+  });
+
+  officeReportDailyBtn.addEventListener("click", function () {
+    var kind = OFFICE_REPORT_KINDS[pendingOfficeReportKind];
+    var fileName = tr("officeCombinedReportFileNamePrefix") + " " + tr(kind.titleKey) + " " + isoToFileNameDate(todayISO()) + ".pdf";
+    showOfficeReportPreview(buildOfficeCombinedReportElement(kind), fileName);
+  });
+
+  // Builds one flat table of every (date, project) match for a given name,
+  // across every active shared project's logs in [fromISO, toISO] - only a
+  // log actually sent on ITS OWN date counts (log[kind.sentField] === that
+  // log's own date), same "only what was really submitted" rule as the
+  // daily combined report, just checked per-date instead of only for today.
+  function buildOfficeNameReportElement(kind, name, fromISO, toISO) {
+    var wrap = document.createElement("div");
+    wrap.className = "pdf-doc";
+    wrap.dir = RTL_LANGS[currentLang] ? "rtl" : "ltr";
+    var titleEl = document.createElement("div");
+    titleEl.className = "pdf-doc-title";
+    titleEl.textContent = tr(kind.titleKey) + " - " + name;
+    wrap.appendChild(titleEl);
+    var infoDate = document.createElement("div");
+    infoDate.className = "pdf-doc-info-date";
+    infoDate.textContent = isoToFullDisplay(fromISO) + " - " + isoToFullDisplay(toISO);
+    wrap.appendChild(infoDate);
+
+    var nameLower = name.trim().toLowerCase();
+    var rows = [];
+    sharedSheets.filter(function (s) { return !s.ended; }).forEach(function (sheet) {
+      (sheet.siteLogs || []).forEach(function (rawLog) {
+        if (rawLog.date < fromISO || rawLog.date > toISO) return;
+        if (rawLog[kind.sentField] !== rawLog.date) return;
+        var log = normalizeSiteLog(rawLog);
+        kind.findMatches(log, nameLower).forEach(function (m) {
+          rows.push(Object.assign({ date: rawLog.date, project: sheet.name }, m));
+        });
+      });
+    });
+    rows.sort(function (a, b) { return a.date < b.date ? -1 : (a.date > b.date ? 1 : 0); });
+
+    var table = document.createElement("table");
+    table.className = "pdf-doc-table";
+    var thead = document.createElement("thead");
+    var headRow = document.createElement("tr");
+    kind.matchColumns.forEach(function (key) {
+      var th = document.createElement("th");
+      th.textContent = tr(key);
+      headRow.appendChild(th);
+    });
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+    var tbody = document.createElement("tbody");
+    if (!rows.length) {
+      var emptyRow = document.createElement("tr");
+      var emptyTd = document.createElement("td");
+      emptyTd.className = "pdf-doc-empty";
+      emptyTd.colSpan = kind.matchColumns.length;
+      emptyTd.textContent = tr("reportShareNoRows");
+      emptyRow.appendChild(emptyTd);
+      tbody.appendChild(emptyRow);
+    } else {
+      rows.forEach(function (r) {
+        var rowEl = document.createElement("tr");
+        kind.rowToCells(r).forEach(function (val) {
+          var td = document.createElement("td");
+          td.textContent = val;
+          rowEl.appendChild(td);
+        });
+        tbody.appendChild(rowEl);
+      });
+    }
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+    var footerEl = document.createElement("div");
+    footerEl.className = "pdf-doc-footer";
+    footerEl.textContent = tr("reportPdfFooter");
+    wrap.appendChild(footerEl);
+    return wrap;
+  }
+
+  function monthInputToRange(monthValue) {
+    var parts = monthValue.split("-");
+    var year = parseInt(parts[0], 10), month = parseInt(parts[1], 10);
+    var lastDay = new Date(year, month, 0).getDate();
+    return { from: monthValue + "-01", to: monthValue + "-" + String(lastDay).padStart(2, "0") };
+  }
+
+  var officeNameReportOverlay = document.getElementById("officeNameReportOverlay");
+  var officeNameReportModalMessage = document.getElementById("officeNameReportModalMessage");
+  var officeNameReportNameInput = document.getElementById("officeNameReportNameInput");
+  var officeNameReportMonthRow = document.getElementById("officeNameReportMonthRow");
+  var officeNameReportMonthInput = document.getElementById("officeNameReportMonthInput");
+  var officeNameReportFromRow = document.getElementById("officeNameReportFromRow");
+  var officeNameReportFromInput = document.getElementById("officeNameReportFromInput");
+  var officeNameReportToRow = document.getElementById("officeNameReportToRow");
+  var officeNameReportToInput = document.getElementById("officeNameReportToInput");
+  var officeNameReportGenerateBtn = document.getElementById("officeNameReportGenerateBtn");
+  var officeNameReportCancelBtn = document.getElementById("officeNameReportCancelBtn");
+  var pendingOfficeNameReportMode = null;
+
+  function openOfficeNameReportModal(mode) {
+    pendingOfficeNameReportMode = mode;
+    officeNameReportNameInput.value = "";
+    var isMonthly = mode === "monthly";
+    officeNameReportModalMessage.textContent = tr(isMonthly ? "officeNameReportModalMessageMonthly" : "officeNameReportModalMessageCustom");
+    officeNameReportMonthRow.hidden = !isMonthly;
+    officeNameReportMonthInput.hidden = !isMonthly;
+    officeNameReportMonthInput.value = "";
+    officeNameReportMonthInput.max = todayISO().slice(0, 7);
+    officeNameReportFromRow.hidden = isMonthly;
+    officeNameReportFromInput.hidden = isMonthly;
+    officeNameReportToRow.hidden = isMonthly;
+    officeNameReportToInput.hidden = isMonthly;
+    officeNameReportFromInput.value = "";
+    officeNameReportToInput.value = "";
+    officeNameReportFromInput.max = todayISO();
+    officeNameReportToInput.max = todayISO();
+    officeNameReportOverlay.hidden = false;
+  }
+  function closeOfficeNameReportModal() {
+    officeNameReportOverlay.hidden = true;
+  }
+  officeReportMonthlyBtn.addEventListener("click", function () { openOfficeNameReportModal("monthly"); });
+  officeReportCustomBtn.addEventListener("click", function () { openOfficeNameReportModal("custom"); });
+  officeNameReportCancelBtn.addEventListener("click", closeOfficeNameReportModal);
+  officeNameReportOverlay.addEventListener("click", function (e) {
+    if (e.target === officeNameReportOverlay) closeOfficeNameReportModal();
+  });
+  officeNameReportGenerateBtn.addEventListener("click", function () {
+    var name = officeNameReportNameInput.value.trim();
+    if (!name) { alert(tr("officeNameReportMissingNameMsg")); return; }
+    var range;
+    if (pendingOfficeNameReportMode === "monthly") {
+      if (!officeNameReportMonthInput.value) { alert(tr("officeNameReportMissingMonthMsg")); return; }
+      range = monthInputToRange(officeNameReportMonthInput.value);
+    } else {
+      var from = officeNameReportFromInput.value, to = officeNameReportToInput.value;
+      if (!from || !to) { alert(tr("siteLogPeriodicMissingDatesMsg")); return; }
+      if (from > to) { alert(tr("siteLogPeriodicInvalidRangeMsg")); return; }
+      range = { from: from, to: to };
+    }
+    var kind = OFFICE_REPORT_KINDS[pendingOfficeReportKind];
+    closeOfficeNameReportModal();
+    var fileName = tr("officeCombinedReportFileNamePrefix") + " " + tr(kind.titleKey) + " " + name + " " + isoToFileNameDate(range.from) + " - " + isoToFileNameDate(range.to) + ".pdf";
+    showOfficeReportPreview(buildOfficeNameReportElement(kind, name, range.from, range.to), fileName);
+  });
 
   // Procurement's combined report is interactive instead of going straight
   // to a PDF - Head Office marks each row purchased by tapping its circle,
