@@ -686,6 +686,39 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  /* Row layout (used for the Procurement orders folder) instead of the
+     default thumbnail grid - a plain list of text rows, one file per line. */
+  .library-grid-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .library-grid-rows .library-item {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 10px 4px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .library-grid-rows .library-item-thumb {
+    width: 32px;
+    height: 32px;
+    aspect-ratio: auto;
+    flex: 0 0 auto;
+    border-radius: 6px;
+    font-size: 1.1rem;
+  }
+  .library-grid-rows .library-item-name {
+    flex: 1;
+    text-align: start;
+    white-space: normal;
+    font-size: 0.85rem;
+  }
+  .library-grid-rows .library-item-delete {
+    position: static;
+    flex: 0 0 auto;
+  }
   .library-item-delete {
     position: absolute;
     top: -4px;
@@ -2469,6 +2502,10 @@
             <button id="addLogoBtn" data-i18n="addLogoBtn">הוספת לוגו</button>
           </div>
           <div class="menu-section">
+            <div class="menu-label" data-i18n="menuLabelProcurementWhatsapp">מספר WhatsApp להזמנות רכש</div>
+            <input type="tel" id="procurementWhatsappInput" class="reminder-select" data-i18n-ph="procurementWhatsappPlaceholder" placeholder="05XXXXXXXX">
+          </div>
+          <div class="menu-section">
             <div class="menu-label" data-i18n="menuLabelLanguage">שפה</div>
             <select id="langSelect" class="reminder-select">
               <option value="he">עברית</option>
@@ -3056,6 +3093,8 @@
     reminderEvery2Hours: { he: "כל שעתיים", en: "Every 2 hours", ar: "كل ساعتين", ru: "Каждые 2 часа" },
     reminderEvery4Hours: { he: "כל 4 שעות", en: "Every 4 hours", ar: "كل 4 ساعات", ru: "Каждые 4 часа" },
     menuLabelApp: { he: "האפליקציה", en: "App", ar: "التطبيق", ru: "Приложение" },
+    menuLabelProcurementWhatsapp: { he: "מספר WhatsApp להזמנות רכש", en: "WhatsApp number for procurement orders", ar: "رقم WhatsApp لطلبات الشراء", ru: "Номер WhatsApp для заказов на закупку" },
+    procurementWhatsappPlaceholder: { he: "05XXXXXXXX", en: "05XXXXXXXX", ar: "05XXXXXXXX", ru: "05XXXXXXXX" },
     shareAppBtn: { he: "שיתוף קישור להתקנה", en: "Share install link", ar: "مشاركة رابط التثبيت", ru: "Поделиться ссылкой на установку" },
     addLogoBtn: { he: "הוספת לוגו", en: "Add logo", ar: "إضافة شعار", ru: "Добавить логотип" },
     chooseLogoTitle: { he: "בחר לוגו", en: "Choose logo", ar: "اختر شعارًا", ru: "Выберите логотип" },
@@ -5924,7 +5963,7 @@
   var activeLibrarySheetId = null;
   var activeLibraryFolderId = null;
 
-  var DEFAULT_LIBRARY_FOLDER_KEYS = ["plans", "photos", "diaries", "reports"];
+  var DEFAULT_LIBRARY_FOLDER_KEYS = ["plans", "photos", "diaries", "reports", "procurementOrders"];
   var LIBRARY_FOLDER_KEY_LABELS = {
     plans: "libraryFolderPlans",
     photos: "libraryFolderPhotos",
@@ -6296,6 +6335,7 @@
     var sheet = allSheets().find(function (s) { return s.id === activeLibrarySheetId; });
     var folder = sheet && sheet.folders && sheet.folders.find(function (f) { return f.id === activeLibraryFolderId; });
     var files = (folder && folder.files) || [];
+    libraryGrid.classList.toggle("library-grid-rows", !!folder && isProcurementOrdersFolder(folder));
     libraryGrid.innerHTML = "";
     if (!files.length) {
       var empty = document.createElement("div");
@@ -7158,6 +7198,21 @@
     logoFileInput.value = "";
     logoFileInput.click();
   });
+
+  var PROCUREMENT_WHATSAPP_KEY = "itask-procurement-whatsapp";
+  var procurementWhatsappInput = document.getElementById("procurementWhatsappInput");
+  (function initProcurementWhatsappInput() {
+    try {
+      var saved = localStorage.getItem(PROCUREMENT_WHATSAPP_KEY);
+      if (saved) procurementWhatsappInput.value = saved;
+    } catch (e) {}
+  })();
+  procurementWhatsappInput.addEventListener("change", function () {
+    try { localStorage.setItem(PROCUREMENT_WHATSAPP_KEY, procurementWhatsappInput.value.trim()); } catch (e) {}
+  });
+  function getProcurementWhatsappNumber() {
+    try { return localStorage.getItem(PROCUREMENT_WHATSAPP_KEY) || ""; } catch (e) { return ""; }
+  }
 
   // Company logos can be large source images (a marketing PNG straight off
   // someone's phone) - they're stored inline as data URLs in app_state's
@@ -8446,10 +8501,27 @@
     siteLogProcurementOrderBtn.disabled = true;
     siteLogProcurementOrderBtn.textContent = "⏳";
     var fileName = tr("procurementOrderFileNamePrefix") + " " + sheet.name + " " + isoToFileNameDate(activeSiteLogDate) + ".pdf";
+    var pdfResult;
     buildPdfBlobFromElement(buildSiteLogProcurementPdfElement(activeSiteLogDate), fileName).then(function (result) {
+      pdfResult = result;
       return uploadProcurementOrderPdfToLibrary(sheet, result.blob, result.fileName);
     }).then(function () {
       showToast(tr("procurementOrderSentMsg"));
+      // Best-effort: there's no API to silently attach a file to a preset
+      // WhatsApp chat, so this opens the native share sheet (user picks
+      // WhatsApp from it) and, separately, jumps straight to the configured
+      // number's chat - two small taps instead of hunting for the contact.
+      var whatsappNumber = getProcurementWhatsappNumber();
+      if (whatsappNumber) {
+        attemptShare(pdfResult.blob, pdfResult.fileName);
+        var digits = normalizePhoneDigits(whatsappNumber);
+        if (digits) {
+          var waText = tr("procurementOrderFileNamePrefix") + " " + sheet.name + " " + isoToFileNameDate(activeSiteLogDate);
+          setTimeout(function () {
+            window.location.href = "https://wa.me/" + digits.replace("+", "") + "?text=" + encodeURIComponent(waText);
+          }, 600);
+        }
+      }
     }).catch(function (err) {
       console.error(err);
     }).then(function () {
