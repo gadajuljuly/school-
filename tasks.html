@@ -3118,6 +3118,7 @@
     officeReportsBtnTitle: { he: "דוחות מרוכזים", en: "Combined reports", ar: "تقارير مجمعة", ru: "Сводные отчёты" },
     officeReportTypeModalMessage: { he: "איזה דוח מרוכז?", en: "Which combined report?", ar: "أي تقرير مجمّع؟", ru: "Какой сводный отчёт?" },
     officeCombinedReportFileNamePrefix: { he: "דוח מרוכז", en: "Combined report", ar: "تقرير مجمّع", ru: "Сводный отчёт" },
+    officeCombinedReportEmptyMsg: { he: "אף פרויקט לא שיגר דוח מסוג זה היום", en: "No project has sent this type of report today", ar: "لم يرسل أي مشروع هذا النوع من التقارير اليوم", ru: "Ни один проект не отправил такой отчёт сегодня" },
     shareAppBtn: { he: "שיתוף קישור להתקנה", en: "Share install link", ar: "مشاركة رابط التثبيت", ru: "Поделиться ссылкой на установку" },
     addLogoBtn: { he: "הוספת לוגו", en: "Add logo", ar: "إضافة شعار", ru: "Добавить логотип" },
     chooseLogoTitle: { he: "בחר לוגו", en: "Choose logo", ar: "اختر شعارًا", ru: "Выберите логотип" },
@@ -8669,6 +8670,20 @@
   // share button produces, filing a copy in the library's dedicated
   // "Procurement orders" folder, and (best-effort) handing it to WhatsApp -
   // no real dispatch to a supplier's own system.
+  // Marks this date's log as "sent" for one report category, directly on
+  // the siteLogs array entry rather than some new top-level sheet field -
+  // siteLogs already rides the existing shared-sheet sync/merge path
+  // (saveData() -> saveSharedSheets()) with no extra plumbing needed, and
+  // writing the same field again just overwrites it (one log per date, so
+  // there's nowhere for a duplicate to even go). Head Office's combined
+  // report only includes a project if this matches today's date (see
+  // buildOfficeCombinedReportElement below).
+  function markSiteLogReportSent(sheet, dateISO, fieldName) {
+    var log = findOrCreateSiteLog(sheet, dateISO);
+    log[fieldName] = dateISO;
+    saveData();
+  }
+
   siteLogProcurementOrderBtn.addEventListener("click", function () {
     if (!activeSiteLogDate) return;
     var sheet = activeSheet();
@@ -8679,6 +8694,7 @@
     var fileName = tr("procurementOrderFileNamePrefix") + " " + sheet.name + " " + isoToFileNameDate(dateISO) + ".pdf";
     buildPdfBlobFromElement(buildSiteLogProcurementPdfElement(dateISO), fileName).then(function (result) {
       return uploadProcurementOrderPdfToLibrary(sheet, result.blob, result.fileName).then(function () {
+        markSiteLogReportSent(sheet, dateISO, "procurementSentDate");
         showToast(tr("procurementOrderSentMsg"));
       });
     }).catch(function (err) {
@@ -8700,6 +8716,7 @@
     var fileName = tr("siteLogAttendanceReportFileNamePrefix") + " " + sheet.name + " " + isoToFileNameDate(dateISO) + ".pdf";
     buildPdfBlobFromElement(buildSiteLogAttendancePdfElement(dateISO), fileName).then(function (result) {
       return uploadAttendanceReportPdfToLibrary(sheet, result.blob, result.fileName).then(function () {
+        markSiteLogReportSent(sheet, dateISO, "attendanceSentDate");
         showToast(tr("attendanceReportSentMsg"));
       });
     }).catch(function (err) {
@@ -8721,6 +8738,7 @@
     var fileName = tr("siteLogToolsReportFileNamePrefix") + " " + sheet.name + " " + isoToFileNameDate(dateISO) + ".pdf";
     buildPdfBlobFromElement(buildSiteLogToolsPdfElement(dateISO), fileName).then(function (result) {
       return uploadToolsReportPdfToLibrary(sheet, result.blob, result.fileName).then(function () {
+        markSiteLogReportSent(sheet, dateISO, "toolsSentDate");
         showToast(tr("toolsReportSentMsg"));
       });
     }).catch(function (err) {
@@ -8844,19 +8862,27 @@
   });
 
   var OFFICE_REPORT_KINDS = {
-    attendance: { titleKey: "siteLogAttendance", tableFn: buildAttendanceTableElement },
-    procurement: { titleKey: "siteLogProcurement", tableFn: buildProcurementTableElement },
-    tools: { titleKey: "siteLogTools", tableFn: buildToolsTableElement }
+    attendance: { titleKey: "siteLogAttendance", tableFn: buildAttendanceTableElement, sentField: "attendanceSentDate" },
+    procurement: { titleKey: "siteLogProcurement", tableFn: buildProcurementTableElement, sentField: "procurementSentDate" },
+    tools: { titleKey: "siteLogTools", tableFn: buildToolsTableElement, sentField: "toolsSentDate" }
   };
 
+  // Only a project whose "Send report" button (markSiteLogReportSent above)
+  // was clicked for this category TODAY is included - a project that's
+  // never sent (or only sent on an earlier day) is left out entirely
+  // rather than shown with an empty table, so the combined report reflects
+  // what's actually been submitted, not just whatever happens to be sitting
+  // half-filled in some project's draft log.
   function buildOfficeCombinedReportElement(kind) {
     var wrap = document.createElement("div");
     wrap.dir = RTL_LANGS[currentLang] ? "rtl" : "ltr";
     var dateISO = todayISO();
-    var projects = sharedSheets.filter(function (s) { return !s.ended; });
-    projects.forEach(function (sheet, index) {
+    var sectionCount = 0;
+    sharedSheets.filter(function (s) { return !s.ended; }).forEach(function (sheet) {
+      var log = findSiteLog(sheet, dateISO);
+      if (!log || log[kind.sentField] !== dateISO) return;
       var section = document.createElement("div");
-      section.className = "pdf-doc" + (index > 0 ? " pdf-doc-periodic-section" : "");
+      section.className = "pdf-doc" + (sectionCount > 0 ? " pdf-doc-periodic-section" : "");
       section.appendChild(buildPdfDocTitleElement(sheet, sheet.name));
       var categoryTitle = document.createElement("div");
       categoryTitle.className = "pdf-doc-info-title";
@@ -8866,10 +8892,19 @@
       infoDate.className = "pdf-doc-info-date";
       infoDate.textContent = isoToFullDisplay(dateISO);
       section.appendChild(infoDate);
-      var log = findSiteLog(sheet, dateISO);
       section.appendChild(kind.tableFn(log));
       wrap.appendChild(section);
+      sectionCount++;
     });
+    if (!sectionCount) {
+      var empty = document.createElement("div");
+      empty.className = "pdf-doc";
+      var emptyMsg = document.createElement("div");
+      emptyMsg.className = "pdf-doc-info-title";
+      emptyMsg.textContent = tr("officeCombinedReportEmptyMsg");
+      empty.appendChild(emptyMsg);
+      wrap.appendChild(empty);
+    }
     return wrap;
   }
 
