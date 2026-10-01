@@ -9,7 +9,12 @@ const TEST_PHONE_LOCAL = "0500000001";
 const TEST_CODE = "123456";
 
 async function login(page) {
-  await page.goto("/tasks.html");
+  // ?e2e=1 makes tasks.html disable Firebase's reCAPTCHA app-verification
+  // step (see the e2e check next to firebaseAuth's init) - CI runners use
+  // datacenter IPs that Google's invisible reCAPTCHA routinely blocks, which
+  // has nothing to do with the test phone number itself (that only skips
+  // the real SMS).
+  await page.goto("/tasks.html?e2e=1");
   await page.locator("#authPhone").fill(TEST_PHONE_LOCAL);
   await page.locator("#authSendCodeBtn").click();
   await expect(page.locator("#authCodeForm")).toBeVisible({ timeout: 15000 });

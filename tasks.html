@@ -171,6 +171,7 @@
     flex-direction: column;
     position: relative;
   }
+  .app[hidden] { display: none; }
   .app-loading-overlay {
     position: absolute;
     inset: 0;
@@ -332,6 +333,7 @@
     position: relative;
     padding: 0;
   }
+  .chat-fab[hidden], .library-fab[hidden] { display: none; }
   .library-fab img, .chat-fab img { width: 100%; height: 100%; display: block; object-fit: cover; border-radius: 12px; }
   .chat-fab-badge {
     position: absolute;
@@ -3753,6 +3755,17 @@
     : null;
   if (firebaseAuth) {
     firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(function () {});
+    // Opt-in only (?e2e=1), never on for real users: automated test runners
+    // (GitHub Actions, etc.) run from datacenter IPs that Google's invisible
+    // reCAPTCHA routinely blocks regardless of using a Firebase test phone
+    // number - that number only skips the real SMS, not this client-side
+    // challenge. This is Firebase's own documented bypass for exactly that
+    // case, scoped to Firebase's test phone numbers only, which already
+    // require configuring them in the Firebase console - it cannot be used
+    // to skip verification for a real phone number.
+    if (new URLSearchParams(window.location.search).get("e2e") === "1") {
+      firebaseAuth.settings.appVerificationDisabledForTesting = true;
+    }
   }
 
   function phoneToUuid(phone) {
