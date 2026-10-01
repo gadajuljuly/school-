@@ -7880,15 +7880,15 @@
   // no API exists to silently attach a file to a preset WhatsApp chat, so
   // this opens the native share sheet (user picks WhatsApp from it) and,
   // separately, jumps straight to the configured number's chat.
-  function sendPdfToConfiguredWhatsapp(blob, fileName, messageText) {
-    var whatsappNumber = getProcurementWhatsappNumber();
-    if (!whatsappNumber) return;
+  // Jumping to a wa.me chat only ever pre-fills text, never a file - opening
+  // it alongside the share sheet actually fought the share sheet for focus
+  // and left the chat open with just the file name typed in, no attachment.
+  // The share sheet alone is the only mechanism that actually attaches the
+  // real PDF, so that's all this does now; picking WhatsApp from it and the
+  // right chat is one extra tap, but the file itself goes through.
+  function sendPdfToConfiguredWhatsapp(blob, fileName) {
+    if (!getProcurementWhatsappNumber()) return;
     attemptShare(blob, fileName);
-    var digits = normalizePhoneDigits(whatsappNumber);
-    if (!digits) return;
-    setTimeout(function () {
-      window.location.href = "https://wa.me/" + digits.replace("+", "") + "?text=" + encodeURIComponent(messageText);
-    }, 600);
   }
 
   // The "reports" folder (unlike the old "diaries"/site-logs one) is one of
@@ -8660,7 +8660,7 @@
     buildPdfBlobFromElement(buildSiteLogProcurementPdfElement(dateISO), fileName).then(function (result) {
       return uploadProcurementOrderPdfToLibrary(sheet, result.blob, result.fileName).then(function () {
         showToast(tr("procurementOrderSentMsg"));
-        sendPdfToConfiguredWhatsapp(result.blob, result.fileName, tr("procurementOrderFileNamePrefix") + " " + sheet.name + " " + isoToFileNameDate(dateISO));
+        sendPdfToConfiguredWhatsapp(result.blob, result.fileName);
       });
     }).catch(function (err) {
       console.error(err);
@@ -8682,7 +8682,7 @@
     buildPdfBlobFromElement(buildSiteLogAttendancePdfElement(dateISO), fileName).then(function (result) {
       return uploadAttendanceReportPdfToLibrary(sheet, result.blob, result.fileName).then(function () {
         showToast(tr("attendanceReportSentMsg"));
-        sendPdfToConfiguredWhatsapp(result.blob, result.fileName, tr("siteLogAttendanceReportFileNamePrefix") + " " + sheet.name + " " + isoToFileNameDate(dateISO));
+        sendPdfToConfiguredWhatsapp(result.blob, result.fileName);
       });
     }).catch(function (err) {
       console.error(err);
@@ -8704,7 +8704,7 @@
     buildPdfBlobFromElement(buildSiteLogToolsPdfElement(dateISO), fileName).then(function (result) {
       return uploadToolsReportPdfToLibrary(sheet, result.blob, result.fileName).then(function () {
         showToast(tr("toolsReportSentMsg"));
-        sendPdfToConfiguredWhatsapp(result.blob, result.fileName, tr("siteLogToolsReportFileNamePrefix") + " " + sheet.name + " " + isoToFileNameDate(dateISO));
+        sendPdfToConfiguredWhatsapp(result.blob, result.fileName);
       });
     }).catch(function (err) {
       console.error(err);
