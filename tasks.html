@@ -2503,10 +2503,6 @@
             <button id="addLogoBtn" data-i18n="addLogoBtn">הוספת לוגו</button>
           </div>
           <div class="menu-section">
-            <div class="menu-label" data-i18n="menuLabelProcurementWhatsapp">מספר להעברת דוחות</div>
-            <button type="button" id="procurementWhatsappBtn" data-i18n="procurementWhatsappPlaceholder">בחירת איש קשר</button>
-          </div>
-          <div class="menu-section">
             <div class="menu-label" data-i18n="menuLabelHeadOfficeNumber">מספר משרד ראשי</div>
             <input type="tel" id="headOfficeNumberInput" class="reminder-select" data-i18n-ph="headOfficeNumberPlaceholder" placeholder="05XXXXXXXX">
           </div>
@@ -3117,13 +3113,11 @@
     reminderEvery2Hours: { he: "כל שעתיים", en: "Every 2 hours", ar: "كل ساعتين", ru: "Каждые 2 часа" },
     reminderEvery4Hours: { he: "כל 4 שעות", en: "Every 4 hours", ar: "كل 4 ساعات", ru: "Каждые 4 часа" },
     menuLabelApp: { he: "האפליקציה", en: "App", ar: "التطبيق", ru: "Приложение" },
-    menuLabelProcurementWhatsapp: { he: "מספר להעברת דוחות", en: "Number for sending reports", ar: "رقم لإرسال التقارير", ru: "Номер для отправки отчётов" },
     menuLabelHeadOfficeNumber: { he: "מספר משרד ראשי", en: "Head office number", ar: "رقم المكتب الرئيسي", ru: "Номер главного офиса" },
     headOfficeNumberPlaceholder: { he: "05XXXXXXXX", en: "05XXXXXXXX", ar: "05XXXXXXXX", ru: "05XXXXXXXX" },
     officeReportsBtnTitle: { he: "דוחות מרוכזים", en: "Combined reports", ar: "تقارير مجمعة", ru: "Сводные отчёты" },
     officeReportTypeModalMessage: { he: "איזה דוח מרוכז?", en: "Which combined report?", ar: "أي تقرير مجمّع؟", ru: "Какой сводный отчёт?" },
     officeCombinedReportFileNamePrefix: { he: "דוח מרוכז", en: "Combined report", ar: "تقرير مجمّع", ru: "Сводный отчёт" },
-    procurementWhatsappPlaceholder: { he: "בחירת איש קשר", en: "Choose a contact", ar: "اختيار جهة اتصال", ru: "Выбрать контакт" },
     shareAppBtn: { he: "שיתוף קישור להתקנה", en: "Share install link", ar: "مشاركة رابط التثبيت", ru: "Поделиться ссылкой на установку" },
     addLogoBtn: { he: "הוספת לוגו", en: "Add logo", ar: "إضافة شعار", ru: "Добавить логотип" },
     chooseLogoTitle: { he: "בחר לוגו", en: "Choose logo", ar: "اختر شعارًا", ru: "Выберите логотип" },
@@ -7274,58 +7268,6 @@
     logoFileInput.click();
   });
 
-  // Stored as JSON ({tel, name}) so the menu button can show the contact's
-  // name rather than a bare number - readProcurementWhatsappData() also
-  // accepts a plain string for backward compatibility with values saved by
-  // an earlier version of this setting (a free-typed phone number).
-  var PROCUREMENT_WHATSAPP_KEY = "itask-procurement-whatsapp";
-  var procurementWhatsappBtn = document.getElementById("procurementWhatsappBtn");
-  function readProcurementWhatsappData() {
-    try {
-      var raw = localStorage.getItem(PROCUREMENT_WHATSAPP_KEY);
-      if (!raw) return null;
-      try {
-        var parsed = JSON.parse(raw);
-        if (parsed && typeof parsed === "object" && parsed.tel) return parsed;
-      } catch (e) {}
-      return { tel: raw, name: "" };
-    } catch (e) { return null; }
-  }
-  function getProcurementWhatsappNumber() {
-    var data = readProcurementWhatsappData();
-    return (data && data.tel) || "";
-  }
-  function updateProcurementWhatsappBtnLabel() {
-    var data = readProcurementWhatsappData();
-    procurementWhatsappBtn.textContent = (data && (data.name || data.tel)) || tr("procurementWhatsappPlaceholder");
-  }
-  function setProcurementWhatsappContact(tel, name) {
-    try { localStorage.setItem(PROCUREMENT_WHATSAPP_KEY, JSON.stringify({ tel: tel, name: name || "" })); } catch (e) {}
-    updateProcurementWhatsappBtnLabel();
-  }
-  updateProcurementWhatsappBtnLabel();
-  procurementWhatsappBtn.addEventListener("click", function () {
-    if (capacitorContactsAvailable) {
-      pickOneNativeContact().then(function (picked) {
-        if (picked && picked.tel) setProcurementWhatsappContact(picked.tel, picked.name);
-      });
-      return;
-    }
-    if (contactPickerSupported) {
-      navigator.contacts.select(["name", "tel"], { multiple: false }).then(function (contacts) {
-        var c = contacts && contacts[0];
-        var tel = c && c.tel && c.tel[0];
-        var name = c && c.name && c.name[0];
-        if (tel) setProcurementWhatsappContact(tel, name);
-      }).catch(function () {});
-      return;
-    }
-    // No contact-picker API at all here (e.g. a desktop browser) - fall
-    // back to manual entry rather than leaving the button permanently dead.
-    var manual = prompt(tr("procurementWhatsappPlaceholder"));
-    if (manual && manual.trim()) setProcurementWhatsappContact(manual.trim(), "");
-  });
-
   // Head Office mode has no server-side roles table to check against - it's
   // a plain per-device setting: whoever is logged in on THIS device/browser
   // enters Head Office mode if the phone number they signed in with matches
@@ -7967,21 +7909,6 @@
         return addFileToLibraryFolder(sheet, folderId, entry).then(function () { return { entry: entry, folderId: folderId }; });
       });
     });
-  }
-
-  // Shared by both "send procurement order" and "send attendance report" -
-  // no API exists to silently attach a file to a preset WhatsApp chat, so
-  // this opens the native share sheet (user picks WhatsApp from it) and,
-  // separately, jumps straight to the configured number's chat.
-  // Jumping to a wa.me chat only ever pre-fills text, never a file - opening
-  // it alongside the share sheet actually fought the share sheet for focus
-  // and left the chat open with just the file name typed in, no attachment.
-  // The share sheet alone is the only mechanism that actually attaches the
-  // real PDF, so that's all this does now; picking WhatsApp from it and the
-  // right chat is one extra tap, but the file itself goes through.
-  function sendPdfToConfiguredWhatsapp(blob, fileName) {
-    if (!getProcurementWhatsappNumber()) return;
-    attemptShare(blob, fileName);
   }
 
   // The "reports" folder (unlike the old "diaries"/site-logs one) is one of
@@ -8753,7 +8680,6 @@
     buildPdfBlobFromElement(buildSiteLogProcurementPdfElement(dateISO), fileName).then(function (result) {
       return uploadProcurementOrderPdfToLibrary(sheet, result.blob, result.fileName).then(function () {
         showToast(tr("procurementOrderSentMsg"));
-        sendPdfToConfiguredWhatsapp(result.blob, result.fileName);
       });
     }).catch(function (err) {
       console.error(err);
@@ -8775,7 +8701,6 @@
     buildPdfBlobFromElement(buildSiteLogAttendancePdfElement(dateISO), fileName).then(function (result) {
       return uploadAttendanceReportPdfToLibrary(sheet, result.blob, result.fileName).then(function () {
         showToast(tr("attendanceReportSentMsg"));
-        sendPdfToConfiguredWhatsapp(result.blob, result.fileName);
       });
     }).catch(function (err) {
       console.error(err);
@@ -8797,7 +8722,6 @@
     buildPdfBlobFromElement(buildSiteLogToolsPdfElement(dateISO), fileName).then(function (result) {
       return uploadToolsReportPdfToLibrary(sheet, result.blob, result.fileName).then(function () {
         showToast(tr("toolsReportSentMsg"));
-        sendPdfToConfiguredWhatsapp(result.blob, result.fileName);
       });
     }).catch(function (err) {
       console.error(err);
