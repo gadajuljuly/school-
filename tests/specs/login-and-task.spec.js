@@ -9,6 +9,13 @@ const TEST_PHONE_LOCAL = "0500000001";
 const TEST_CODE = "123456";
 
 async function login(page) {
+  // Surfaces the browser's own console/errors in the CI log, and whatever
+  // Firebase actually put in #authError, instead of just a bare "stayed
+  // hidden" timeout - needed to diagnose sign-in failures that only happen
+  // in CI (datacenter IP, no local repro possible for this app).
+  page.on("console", (msg) => console.log(`[browser:${msg.type()}] ${msg.text()}`));
+  page.on("pageerror", (err) => console.log(`[pageerror] ${err}`));
+
   // ?e2e=1 makes tasks.html disable Firebase's reCAPTCHA app-verification
   // step (see the e2e check next to firebaseAuth's init) - CI runners use
   // datacenter IPs that Google's invisible reCAPTCHA routinely blocks, which
@@ -17,10 +24,23 @@ async function login(page) {
   await page.goto("/tasks.html?e2e=1");
   await page.locator("#authPhone").fill(TEST_PHONE_LOCAL);
   await page.locator("#authSendCodeBtn").click();
-  await expect(page.locator("#authCodeForm")).toBeVisible({ timeout: 15000 });
+
+  const codeForm = page.locator("#authCodeForm");
+  const errorBox = page.locator("#authError");
+  await expect(codeForm.or(errorBox)).toBeVisible({ timeout: 20000 });
+  if (await errorBox.isVisible()) {
+    throw new Error("Firebase sign-in failed: " + (await errorBox.textContent()));
+  }
+
   await page.locator("#authCode").fill(TEST_CODE);
   await page.locator("#authVerifyCodeBtn").click();
-  await expect(page.locator("#appRoot")).toBeVisible({ timeout: 15000 });
+
+  const appRoot = page.locator("#appRoot");
+  const codeErrorBox = page.locator("#authCodeError");
+  await expect(appRoot.or(codeErrorBox)).toBeVisible({ timeout: 20000 });
+  if (await codeErrorBox.isVisible()) {
+    throw new Error("Firebase code verification failed: " + (await codeErrorBox.textContent()));
+  }
   await expect(page.locator("#appLoadingOverlay")).toBeHidden({ timeout: 15000 });
 }
 
