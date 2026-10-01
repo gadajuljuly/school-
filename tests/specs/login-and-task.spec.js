@@ -27,7 +27,12 @@ async function login(page) {
 
   const codeForm = page.locator("#authCodeForm");
   const errorBox = page.locator("#authError");
-  await expect(codeForm.or(errorBox)).toBeVisible({ timeout: 20000 });
+  // Not .or() - that locator resolves to both DOM nodes (one hidden, one
+  // not) and toBeVisible() treats 2+ matches as a strict-mode violation
+  // regardless of visibility. Polling each individually sidesteps that.
+  await expect.poll(async () => (await codeForm.isVisible()) || (await errorBox.isVisible()), {
+    timeout: 20000,
+  }).toBe(true);
   if (await errorBox.isVisible()) {
     throw new Error("Firebase sign-in failed: " + (await errorBox.textContent()));
   }
@@ -37,7 +42,9 @@ async function login(page) {
 
   const appRoot = page.locator("#appRoot");
   const codeErrorBox = page.locator("#authCodeError");
-  await expect(appRoot.or(codeErrorBox)).toBeVisible({ timeout: 20000 });
+  await expect.poll(async () => (await appRoot.isVisible()) || (await codeErrorBox.isVisible()), {
+    timeout: 20000,
+  }).toBe(true);
   if (await codeErrorBox.isVisible()) {
     throw new Error("Firebase code verification failed: " + (await codeErrorBox.textContent()));
   }
