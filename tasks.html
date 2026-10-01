@@ -3192,6 +3192,9 @@
     siteLogAttendanceReportFileNamePrefix: { he: "דוח נוכחות פרויקט", en: "Attendance report project", ar: "تقرير حضور مشروع", ru: "Отчёт о посещаемости проекта" },
     siteLogToolsReportFileNamePrefix: { he: "דוח כלים פרויקט", en: "Tools report project", ar: "تقرير معدات مشروع", ru: "Отчёт об оборудовании проекта" },
     siteLogProcurementReportFileNamePrefix: { he: "דוח רכש פרויקט", en: "Procurement report project", ar: "تقرير مشتريات مشروع", ru: "Отчёт о закупках проекта" },
+    procurementOrderFileNamePrefix: { he: "הזמנת רכש", en: "Procurement order", ar: "طلب شراء", ru: "Заказ на закупку" },
+    libraryFolderProcurementOrders: { he: "הזמנות רכש", en: "Procurement orders", ar: "طلبات الشراء", ru: "Заказы на закупку" },
+    procurementOrderSentMsg: { he: "ההזמנה נשמרה בתיקיית \"הזמנות רכש\" בספרייה", en: "The order was saved to the \"Procurement orders\" library folder", ar: "تم حفظ الطلب في مجلد \"طلبات الشراء\" في المكتبة", ru: "Заказ сохранён в папке «Заказы на закупку» в библиотеке" },
     siteLogColExcavator: { he: "מחפרון", en: "Excavator", ar: "حفارة", ru: "Экскаватор-погрузчик" },
     siteLogColLoader: { he: "שופל", en: "Loader", ar: "شيول", ru: "Погрузчик" },
     siteLogColBagger: { he: "באגר", en: "Bagger", ar: "بيجر", ru: "Экскаватор" },
@@ -5927,7 +5930,8 @@
     photos: "libraryFolderPhotos",
     diaries: "libraryFolderDiaries",
     reports: "libraryFolderReports",
-    general: "libraryFolderGeneral"
+    general: "libraryFolderGeneral",
+    procurementOrders: "libraryFolderProcurementOrders"
   };
 
   function buildDefaultLibraryFolders(legacyFiles) {
@@ -7632,6 +7636,52 @@
     });
   }
 
+  // "Send procurement order" writes a PDF copy into a dedicated library
+  // folder instead of actually dispatching anything to a supplier - same
+  // get-or-create-by-key pattern as ensureSiteLogsFolder() above.
+  var PROCUREMENT_ORDERS_FOLDER_KEY = "procurementOrders";
+  function isProcurementOrdersFolder(f) {
+    return f.key === PROCUREMENT_ORDERS_FOLDER_KEY;
+  }
+  function ensureProcurementOrdersFolder(sheet) {
+    return new Promise(function (resolve) {
+      ensureLibraryFolders(sheet, function (folders) {
+        var existing = folders.find(isProcurementOrdersFolder);
+        if (existing) { resolve(existing.id); return; }
+        var newId = uid();
+        if (sheet.shared) {
+          applySharedLibraryFolders(sheet.id, function (liveFolders) {
+            if (liveFolders.some(isProcurementOrdersFolder)) return liveFolders;
+            return liveFolders.concat([{ id: newId, key: PROCUREMENT_ORDERS_FOLDER_KEY, name: null, files: [] }]);
+          }).then(function (updated) {
+            var folder = updated.find(isProcurementOrdersFolder);
+            resolve(folder ? folder.id : newId);
+          });
+        } else {
+          var liveSheet = data.sheets.find(function (s) { return s.id === sheet.id; });
+          if (!liveSheet.folders) liveSheet.folders = folders;
+          var folder = liveSheet.folders.find(isProcurementOrdersFolder);
+          if (!folder) {
+            folder = { id: newId, key: PROCUREMENT_ORDERS_FOLDER_KEY, name: null, files: [] };
+            liveSheet.folders.push(folder);
+            saveData();
+          }
+          resolve(folder.id);
+        }
+      });
+    });
+  }
+  function uploadProcurementOrderPdfToLibrary(sheet, blob, fileName) {
+    return ensureProcurementOrdersFolder(sheet).then(function (folderId) {
+      var path = sheet.id + "/" + folderId + "/" + uid() + "-" + safeStorageFileName(fileName);
+      return supabaseClient.storage.from(LIBRARY_BUCKET).upload(path, blob, { contentType: "application/pdf" }).then(function (result) {
+        if (result.error) throw result.error;
+        var entry = { id: uid(), name: fileName, path: path, type: "application/pdf", size: blob.size || 0, uploadedAt: Date.now() };
+        return addFileToLibraryFolder(sheet, folderId, entry).then(function () { return { entry: entry, folderId: folderId }; });
+      });
+    });
+  }
+
   // The "reports" folder (unlike the old "diaries"/site-logs one) is one of
   // the 4 protected defaults every sheet already gets from
   // buildDefaultLibraryFolders()/ensureLibraryFolders(), and it can never be
@@ -8386,9 +8436,27 @@
     }, renderSiteLogWorksList);
   });
 
-  // Placeholder for now - wiring up the actual order-sending flow is a
-  // separate task; clicking it intentionally does nothing yet.
-  siteLogProcurementOrderBtn.addEventListener("click", function () {});
+  // "Sending" the order means generating the same procurement PDF the
+  // share button produces and filing a copy in the library's dedicated
+  // "Procurement orders" folder - no actual dispatch to a supplier yet.
+  siteLogProcurementOrderBtn.addEventListener("click", function () {
+    if (!activeSiteLogDate) return;
+    var sheet = activeSheet();
+    var originalText = siteLogProcurementOrderBtn.textContent;
+    siteLogProcurementOrderBtn.disabled = true;
+    siteLogProcurementOrderBtn.textContent = "⏳";
+    var fileName = tr("procurementOrderFileNamePrefix") + " " + sheet.name + " " + isoToFileNameDate(activeSiteLogDate) + ".pdf";
+    buildPdfBlobFromElement(buildSiteLogProcurementPdfElement(activeSiteLogDate), fileName).then(function (result) {
+      return uploadProcurementOrderPdfToLibrary(sheet, result.blob, result.fileName);
+    }).then(function () {
+      showToast(tr("procurementOrderSentMsg"));
+    }).catch(function (err) {
+      console.error(err);
+    }).then(function () {
+      siteLogProcurementOrderBtn.disabled = false;
+      siteLogProcurementOrderBtn.textContent = originalText;
+    });
+  });
 
   function renderSheetReportsList() {
     sheetReportsList.innerHTML = "";
