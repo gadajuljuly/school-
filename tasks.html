@@ -1243,7 +1243,7 @@
     align-items: center;
     margin-bottom: 8px;
   }
-  .site-log-procurement-row input {
+  .site-log-procurement-row input, .office-procurement-project .site-log-procurement-row span {
     border: 1px solid var(--rule);
     border-radius: 6px;
     padding: 7px 8px;
@@ -1256,6 +1256,30 @@
   .site-log-procurement-item { flex: 2; }
   .site-log-procurement-quantity { flex: 1; }
   .site-log-procurement-supplier { flex: 2; }
+  .purchased-mark {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid var(--rule);
+    background: transparent;
+    flex-shrink: 0;
+    padding: 0;
+    cursor: default;
+  }
+  .purchased-mark.clickable { cursor: pointer; }
+  .purchased-mark.purchased {
+    background: #22c55e;
+    border-color: #22c55e;
+    box-shadow: 0 0 6px #22c55e;
+  }
+  .office-procurement-project { margin-bottom: 18px; }
+  .office-procurement-project-name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--rule);
+  }
   .site-log-procurement-row-remove {
     border: none;
     background: transparent;
@@ -3028,6 +3052,17 @@
       <div id="siteLogProcurementRows"></div>
     </div>
     <button type="button" class="site-log-copy-prev-btn" id="siteLogProcurementOrderBtn" data-i18n="siteLogProcurementOrderBtn">שגר הזמנת רכש</button>
+  </div>
+
+  <div class="report-view" id="officeProcurementView" hidden>
+    <div class="report-head">
+      <button type="button" class="report-back-btn" id="officeProcurementBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
+      <div class="report-head-title" data-i18n="siteLogProcurement">רכש</div>
+      <button type="button" class="report-share-btn" id="officeProcurementShareBtn" data-i18n-title="shareBtn" title="שיתוף">&#128228;</button>
+    </div>
+    <div class="site-log-procurement-wrap">
+      <div id="officeProcurementList"></div>
+    </div>
   </div>
 
   <div class="report-view" id="companyDashboardView" hidden>
@@ -8533,6 +8568,16 @@
       var row = document.createElement("div");
       row.className = "site-log-procurement-row";
 
+      // Read-only here - only Head Office can mark a row purchased (see
+      // officeProcurementList below); this just reflects that state once
+      // it's set, via the row's own synced data, same as everything else
+      // on this row.
+      if (entry.purchased) {
+        var mark = document.createElement("span");
+        mark.className = "purchased-mark purchased";
+        row.appendChild(mark);
+      }
+
       var itemInput = document.createElement("input");
       itemInput.type = "text";
       itemInput.className = "site-log-procurement-item";
@@ -8920,8 +8965,84 @@
     });
   }
   officeReportAttendanceBtn.addEventListener("click", function () { generateOfficeCombinedReport("attendance"); });
-  officeReportProcurementBtn.addEventListener("click", function () { generateOfficeCombinedReport("procurement"); });
   officeReportToolsBtn.addEventListener("click", function () { generateOfficeCombinedReport("tools"); });
+
+  // Procurement's combined report is interactive instead of going straight
+  // to a PDF - Head Office marks each row purchased by tapping its circle,
+  // written directly onto that project's own procurement entry (same
+  // siteLogs sync path as everything else here), so regular members of that
+  // project see the same green circle appear on their own copy of the row
+  // (see the `entry.purchased` check in renderSiteLogProcurementRows above).
+  var officeProcurementView = document.getElementById("officeProcurementView");
+  var officeProcurementBackBtn = document.getElementById("officeProcurementBackBtn");
+  var officeProcurementShareBtn = document.getElementById("officeProcurementShareBtn");
+  var officeProcurementList = document.getElementById("officeProcurementList");
+
+  function renderOfficeProcurementList() {
+    officeProcurementList.innerHTML = "";
+    var dateISO = todayISO();
+    var sentField = OFFICE_REPORT_KINDS.procurement.sentField;
+    var projects = sharedSheets.filter(function (s) { return !s.ended; }).filter(function (sheet) {
+      var log = findSiteLog(sheet, dateISO);
+      return log && log[sentField] === dateISO;
+    });
+    if (!projects.length) {
+      var empty = document.createElement("div");
+      empty.className = "library-empty";
+      empty.textContent = tr("officeCombinedReportEmptyMsg");
+      officeProcurementList.appendChild(empty);
+      return;
+    }
+    projects.forEach(function (sheet) {
+      var log = findSiteLog(sheet, dateISO);
+      var block = document.createElement("div");
+      block.className = "office-procurement-project";
+      var nameEl = document.createElement("div");
+      nameEl.className = "office-procurement-project-name";
+      nameEl.textContent = sheet.name;
+      block.appendChild(nameEl);
+      filledProcurement(log).forEach(function (entry) {
+        var row = document.createElement("div");
+        row.className = "site-log-procurement-row";
+
+        var mark = document.createElement("button");
+        mark.type = "button";
+        mark.className = "purchased-mark clickable" + (entry.purchased ? " purchased" : "");
+        mark.addEventListener("click", function () {
+          entry.purchased = !entry.purchased;
+          saveData();
+          renderOfficeProcurementList();
+        });
+        row.appendChild(mark);
+
+        [
+          { val: entry.item, cls: "site-log-procurement-item" },
+          { val: entry.quantity, cls: "site-log-procurement-quantity" },
+          { val: entry.supplier, cls: "site-log-procurement-supplier" }
+        ].forEach(function (col) {
+          var span = document.createElement("span");
+          span.className = col.cls;
+          span.textContent = col.val || "";
+          row.appendChild(span);
+        });
+
+        block.appendChild(row);
+      });
+      officeProcurementList.appendChild(block);
+    });
+  }
+
+  function openOfficeProcurementView() {
+    closeOfficeReportTypeModal();
+    renderOfficeProcurementList();
+    officeProcurementView.hidden = false;
+  }
+  function closeOfficeProcurementView() {
+    officeProcurementView.hidden = true;
+  }
+  officeReportProcurementBtn.addEventListener("click", openOfficeProcurementView);
+  officeProcurementBackBtn.addEventListener("click", closeOfficeProcurementView);
+  officeProcurementShareBtn.addEventListener("click", function () { generateOfficeCombinedReport("procurement"); });
 
   function closeReportTypeModal() {
     reportTypeOverlay.hidden = true;
