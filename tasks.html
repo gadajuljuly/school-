@@ -2529,6 +2529,8 @@
           <div class="menu-section">
             <div class="menu-label" data-i18n="menuLabelHeadOfficeNumber">מספר משרד ראשי</div>
             <input type="tel" id="headOfficeNumberInput" class="reminder-select" data-i18n-ph="headOfficeNumberPlaceholder" placeholder="05XXXXXXXX">
+            <button type="button" id="headOfficeToggleOnBtn" data-i18n="headOfficeToggleOnBtn" hidden>מעבר למצב משרד ראשי</button>
+            <button type="button" id="headOfficeToggleOffBtn" data-i18n="headOfficeToggleOffBtn" hidden>יציאה ממצב משרד ראשי</button>
           </div>
           <div class="menu-section">
             <div class="menu-label" data-i18n="menuLabelLanguage">שפה</div>
@@ -3150,6 +3152,8 @@
     menuLabelApp: { he: "האפליקציה", en: "App", ar: "التطبيق", ru: "Приложение" },
     menuLabelHeadOfficeNumber: { he: "מספר משרד ראשי", en: "Head office number", ar: "رقم المكتب الرئيسي", ru: "Номер главного офиса" },
     headOfficeNumberPlaceholder: { he: "05XXXXXXXX", en: "05XXXXXXXX", ar: "05XXXXXXXX", ru: "05XXXXXXXX" },
+    headOfficeToggleOnBtn: { he: "מעבר למצב משרד ראשי", en: "Switch to Head Office mode", ar: "التبديل إلى وضع المكتب الرئيسي", ru: "Перейти в режим главного офиса" },
+    headOfficeToggleOffBtn: { he: "יציאה ממצב משרד ראשי", en: "Exit Head Office mode", ar: "الخروج من وضع المكتب الرئيسي", ru: "Выйти из режима главного офиса" },
     officeReportsBtnTitle: { he: "דוחות מרוכזים", en: "Combined reports", ar: "تقارير مجمعة", ru: "Сводные отчёты" },
     officeReportTypeModalMessage: { he: "איזה דוח מרוכז?", en: "Which combined report?", ar: "أي تقرير مجمّع؟", ru: "Какой сводный отчёт?" },
     officeCombinedReportFileNamePrefix: { he: "דוח מרוכז", en: "Combined report", ar: "تقرير مجمّع", ru: "Сводный отчёт" },
@@ -7318,12 +7322,43 @@
       if (saved) headOfficeNumberInput.value = saved;
     } catch (e) {}
   })();
+
+  // A second, simpler way into Head Office mode for one specific account
+  // only (not a general-purpose setting anyone could type their own number
+  // into) - a one-tap toggle in the menu, visible only when logged in as
+  // this exact phone number. The toggle itself is still just a per-device
+  // localStorage flag, same as the number-matching path above; the two
+  // combine with OR so either one alone is enough to enter the mode.
+  var MY_OWN_PHONE_NUMBER = "+972523255088";
+  var HEAD_OFFICE_MANUAL_TOGGLE_KEY = "itask-head-office-manual-toggle";
+  var headOfficeToggleOnBtn = document.getElementById("headOfficeToggleOnBtn");
+  var headOfficeToggleOffBtn = document.getElementById("headOfficeToggleOffBtn");
+  function getHeadOfficeManualToggle() {
+    try { return localStorage.getItem(HEAD_OFFICE_MANUAL_TOGGLE_KEY) === "1"; } catch (e) { return false; }
+  }
+  function updateHeadOfficeToggleButtons() {
+    var isOwnAccount = myPhoneNumber === MY_OWN_PHONE_NUMBER;
+    var manualOn = getHeadOfficeManualToggle();
+    headOfficeToggleOnBtn.hidden = !isOwnAccount || manualOn;
+    headOfficeToggleOffBtn.hidden = !isOwnAccount || !manualOn;
+  }
+  function setHeadOfficeManualToggle(on) {
+    try { localStorage.setItem(HEAD_OFFICE_MANUAL_TOGGLE_KEY, on ? "1" : "0"); } catch (e) {}
+    recomputeHeadOfficeMode();
+    updateHeadOfficeToggleButtons();
+    render();
+  }
+  headOfficeToggleOnBtn.addEventListener("click", function () { setHeadOfficeManualToggle(true); });
+  headOfficeToggleOffBtn.addEventListener("click", function () { setHeadOfficeManualToggle(false); });
+
   var isHeadOfficeMode = false;
   function recomputeHeadOfficeMode() {
     var saved = null;
     try { saved = localStorage.getItem(HEAD_OFFICE_NUMBER_KEY); } catch (e) {}
     var normalizedSaved = saved && normalizePhoneDigits(saved);
-    isHeadOfficeMode = !!(myPhoneNumber && normalizedSaved && myPhoneNumber === normalizedSaved);
+    var numberMatch = !!(myPhoneNumber && normalizedSaved && myPhoneNumber === normalizedSaved);
+    var manualMatch = myPhoneNumber === MY_OWN_PHONE_NUMBER && getHeadOfficeManualToggle();
+    isHeadOfficeMode = numberMatch || manualMatch;
   }
   headOfficeNumberInput.addEventListener("change", function () {
     try { localStorage.setItem(HEAD_OFFICE_NUMBER_KEY, headOfficeNumberInput.value.trim()); } catch (e) {}
@@ -11553,6 +11588,7 @@
     SUPABASE_ROW_ID = rowId;
     myPhoneNumber = phoneNumber;
     recomputeHeadOfficeMode();
+    updateHeadOfficeToggleButtons();
     loadChatReadState();
     menuUsernameLabel.textContent = tr("loggedInAs") + phoneNumber;
     hideSplash();
