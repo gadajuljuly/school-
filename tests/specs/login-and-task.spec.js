@@ -1,0 +1,66 @@
+const { test, expect } = require("@playwright/test");
+
+// Firebase "phone numbers for testing" (Firebase Console > Authentication >
+// Sign-in method > Phone > Phone numbers for testing). Signing in with this
+// exact number and code never sends a real SMS and never touches a real
+// person's account - that's the whole point of the feature - so these are
+// safe to hardcode and run on every push.
+const TEST_PHONE_LOCAL = "0500000001";
+const TEST_CODE = "123456";
+
+async function login(page) {
+  await page.goto("/tasks.html");
+  await page.locator("#authPhone").fill(TEST_PHONE_LOCAL);
+  await page.locator("#authSendCodeBtn").click();
+  await expect(page.locator("#authCodeForm")).toBeVisible({ timeout: 15000 });
+  await page.locator("#authCode").fill(TEST_CODE);
+  await page.locator("#authVerifyCodeBtn").click();
+  await expect(page.locator("#appRoot")).toBeVisible({ timeout: 15000 });
+  await expect(page.locator("#appLoadingOverlay")).toBeHidden({ timeout: 15000 });
+}
+
+test("login, create a project, add a task, cycle its status, clean up", async ({ page }) => {
+  await login(page);
+
+  const projectName = "E2E " + Date.now();
+
+  // Create a new private project and name it - addSheet() auto-opens the
+  // rename input, matching what a real user sees right after tapping "+".
+  await page.locator("#sheetsBarPrivate .add-sheet-tab").click();
+  const renameInput = page.locator("#sheetsBarPrivate .rename-input");
+  await expect(renameInput).toBeVisible();
+  await renameInput.fill(projectName);
+  await renameInput.press("Enter");
+  await expect(page.locator("#sheetTitle")).toHaveText(projectName);
+
+  // Add a task to it.
+  const taskText = "Playwright test task";
+  await page.locator("#taskInput").fill(taskText);
+  await page.locator("#addForm button[type=submit]").click();
+  const taskRow = page.locator("#taskList li.task", { hasText: taskText });
+  await expect(taskRow).toBeVisible();
+  await expect(taskRow).not.toHaveClass(/done/);
+
+  // Tapping a task cycles it open -> partial -> done.
+  await taskRow.click();
+  await expect(taskRow).toHaveClass(/partial/);
+  await taskRow.click();
+  await expect(taskRow).toHaveClass(/done/);
+
+  // Clean up: there's no per-task delete in this app (by design - it's a
+  // notebook, not a to-do list you erase from), so the whole throwaway
+  // project is deleted instead, via the same long-press-the-tab flow a
+  // real user would use.
+  const tab = page.locator("#sheetsBarPrivate .sheet-tab", { hasText: projectName });
+  const box = await tab.boundingBox();
+  if (!box) throw new Error("project tab not found for cleanup");
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(1200);
+  await page.mouse.up();
+  await expect(page.locator("#sheetActionOverlay")).toBeVisible();
+  await page.locator("#sheetActionDeleteBtn").click();
+  await expect(page.locator("#confirmOverlay")).toBeVisible();
+  await page.locator("#confirmYesBtn").click();
+  await expect(page.locator("#sheetsBarPrivate .sheet-tab", { hasText: projectName })).toHaveCount(0);
+});

@@ -1,0 +1,13 @@
+{
+  "name": "itask-e2e-tests",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Playwright end-to-end tests for tasks.html, run in CI (GitHub Actions) since this app talks to live Firebase Auth/Supabase and can't be tested from a network-restricted sandbox.",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1",
+    "http-server": "^14.1.1"
+  }
+}
