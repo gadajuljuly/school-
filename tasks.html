@@ -2943,6 +2943,7 @@
       <div class="site-log-attendance-columns" id="siteLogAttendanceColumns"></div>
     </div>
     <button type="button" class="site-log-copy-prev-btn" id="siteLogAttendanceCopyPrevBtn" data-i18n="siteLogCopyPrevBtn">העתקת יומן קודם</button>
+    <button type="button" class="site-log-copy-prev-btn" id="siteLogAttendanceOrderBtn" data-i18n="siteLogAttendanceOrderBtn">שגר דוח נוכחות</button>
   </div>
 
   <div class="report-view" id="siteLogToolsView" hidden>
@@ -3234,6 +3235,9 @@
     procurementOrderFileNamePrefix: { he: "הזמנת רכש", en: "Procurement order", ar: "طلب شراء", ru: "Заказ на закупку" },
     libraryFolderProcurementOrders: { he: "הזמנות רכש", en: "Procurement orders", ar: "طلبات الشراء", ru: "Заказы на закупку" },
     procurementOrderSentMsg: { he: "ההזמנה נשמרה בתיקיית \"הזמנות רכש\" בספרייה", en: "The order was saved to the \"Procurement orders\" library folder", ar: "تم حفظ الطلب في مجلد \"طلبات الشراء\" في المكتبة", ru: "Заказ сохранён в папке «Заказы на закупку» в библиотеке" },
+    siteLogAttendanceOrderBtn: { he: "שגר דוח נוכחות", en: "Send attendance report", ar: "إرسال تقرير حضور", ru: "Отправить отчёт о посещаемости" },
+    libraryFolderAttendanceReports: { he: "דוחות נוכחות", en: "Attendance reports", ar: "تقارير الحضور", ru: "Отчёты о посещаемости" },
+    attendanceReportSentMsg: { he: "הדוח נשמר בתיקיית \"דוחות נוכחות\" בספרייה", en: "The report was saved to the \"Attendance reports\" library folder", ar: "تم حفظ التقرير في مجلد \"تقارير الحضور\" في المكتبة", ru: "Отчёт сохранён в папке «Отчёты о посещаемости» в библиотеке" },
     siteLogColExcavator: { he: "מחפרון", en: "Excavator", ar: "حفارة", ru: "Экскаватор-погрузчик" },
     siteLogColLoader: { he: "שופל", en: "Loader", ar: "شيول", ru: "Погрузчик" },
     siteLogColBagger: { he: "באגר", en: "Bagger", ar: "بيجر", ru: "Экскаватор" },
@@ -5963,14 +5967,15 @@
   var activeLibrarySheetId = null;
   var activeLibraryFolderId = null;
 
-  var DEFAULT_LIBRARY_FOLDER_KEYS = ["plans", "photos", "diaries", "reports", "procurementOrders"];
+  var DEFAULT_LIBRARY_FOLDER_KEYS = ["plans", "photos", "diaries", "reports", "procurementOrders", "attendanceReports"];
   var LIBRARY_FOLDER_KEY_LABELS = {
     plans: "libraryFolderPlans",
     photos: "libraryFolderPhotos",
     diaries: "libraryFolderDiaries",
     reports: "libraryFolderReports",
     general: "libraryFolderGeneral",
-    procurementOrders: "libraryFolderProcurementOrders"
+    procurementOrders: "libraryFolderProcurementOrders",
+    attendanceReports: "libraryFolderAttendanceReports"
   };
 
   function buildDefaultLibraryFolders(legacyFiles) {
@@ -6335,7 +6340,7 @@
     var sheet = allSheets().find(function (s) { return s.id === activeLibrarySheetId; });
     var folder = sheet && sheet.folders && sheet.folders.find(function (f) { return f.id === activeLibraryFolderId; });
     var files = (folder && folder.files) || [];
-    libraryGrid.classList.toggle("library-grid-rows", !!folder && isProcurementOrdersFolder(folder));
+    libraryGrid.classList.toggle("library-grid-rows", !!folder && (isProcurementOrdersFolder(folder) || isAttendanceReportsFolder(folder)));
     libraryGrid.innerHTML = "";
     if (!files.length) {
       var empty = document.createElement("div");
@@ -7537,6 +7542,7 @@
   var siteLogAttendanceColumns = document.getElementById("siteLogAttendanceColumns");
   var siteLogAttendanceShareBtn = document.getElementById("siteLogAttendanceShareBtn");
   var siteLogAttendanceCopyPrevBtn = document.getElementById("siteLogAttendanceCopyPrevBtn");
+  var siteLogAttendanceOrderBtn = document.getElementById("siteLogAttendanceOrderBtn");
   var siteLogAttendanceProjectName = document.getElementById("siteLogAttendanceProjectName");
   var siteLogToolsView = document.getElementById("siteLogToolsView");
   var siteLogToolsBackBtn = document.getElementById("siteLogToolsBackBtn");
@@ -7735,6 +7741,66 @@
         return addFileToLibraryFolder(sheet, folderId, entry).then(function () { return { entry: entry, folderId: folderId }; });
       });
     });
+  }
+
+  // "Send attendance report" - same pattern as the procurement order above,
+  // filing into its own dedicated (also permanent) library folder.
+  var ATTENDANCE_REPORTS_FOLDER_KEY = "attendanceReports";
+  function isAttendanceReportsFolder(f) {
+    return f.key === ATTENDANCE_REPORTS_FOLDER_KEY;
+  }
+  function ensureAttendanceReportsFolder(sheet) {
+    return new Promise(function (resolve) {
+      ensureLibraryFolders(sheet, function (folders) {
+        var existing = folders.find(isAttendanceReportsFolder);
+        if (existing) { resolve(existing.id); return; }
+        var newId = uid();
+        if (sheet.shared) {
+          applySharedLibraryFolders(sheet.id, function (liveFolders) {
+            if (liveFolders.some(isAttendanceReportsFolder)) return liveFolders;
+            return liveFolders.concat([{ id: newId, key: ATTENDANCE_REPORTS_FOLDER_KEY, name: null, files: [] }]);
+          }).then(function (updated) {
+            var folder = updated.find(isAttendanceReportsFolder);
+            resolve(folder ? folder.id : newId);
+          });
+        } else {
+          var liveSheet = data.sheets.find(function (s) { return s.id === sheet.id; });
+          if (!liveSheet.folders) liveSheet.folders = folders;
+          var folder = liveSheet.folders.find(isAttendanceReportsFolder);
+          if (!folder) {
+            folder = { id: newId, key: ATTENDANCE_REPORTS_FOLDER_KEY, name: null, files: [] };
+            liveSheet.folders.push(folder);
+            saveData();
+          }
+          resolve(folder.id);
+        }
+      });
+    });
+  }
+  function uploadAttendanceReportPdfToLibrary(sheet, blob, fileName) {
+    return ensureAttendanceReportsFolder(sheet).then(function (folderId) {
+      var path = sheet.id + "/" + folderId + "/" + uid() + "-" + safeStorageFileName(fileName);
+      return supabaseClient.storage.from(LIBRARY_BUCKET).upload(path, blob, { contentType: "application/pdf" }).then(function (result) {
+        if (result.error) throw result.error;
+        var entry = { id: uid(), name: fileName, path: path, type: "application/pdf", size: blob.size || 0, uploadedAt: Date.now() };
+        return addFileToLibraryFolder(sheet, folderId, entry).then(function () { return { entry: entry, folderId: folderId }; });
+      });
+    });
+  }
+
+  // Shared by both "send procurement order" and "send attendance report" -
+  // no API exists to silently attach a file to a preset WhatsApp chat, so
+  // this opens the native share sheet (user picks WhatsApp from it) and,
+  // separately, jumps straight to the configured number's chat.
+  function sendPdfToConfiguredWhatsapp(blob, fileName, messageText) {
+    var whatsappNumber = getProcurementWhatsappNumber();
+    if (!whatsappNumber) return;
+    attemptShare(blob, fileName);
+    var digits = normalizePhoneDigits(whatsappNumber);
+    if (!digits) return;
+    setTimeout(function () {
+      window.location.href = "https://wa.me/" + digits.replace("+", "") + "?text=" + encodeURIComponent(messageText);
+    }, 600);
   }
 
   // The "reports" folder (unlike the old "diaries"/site-logs one) is one of
@@ -8492,41 +8558,49 @@
   });
 
   // "Sending" the order means generating the same procurement PDF the
-  // share button produces and filing a copy in the library's dedicated
-  // "Procurement orders" folder - no actual dispatch to a supplier yet.
+  // share button produces, filing a copy in the library's dedicated
+  // "Procurement orders" folder, and (best-effort) handing it to WhatsApp -
+  // no real dispatch to a supplier's own system.
   siteLogProcurementOrderBtn.addEventListener("click", function () {
     if (!activeSiteLogDate) return;
     var sheet = activeSheet();
+    var dateISO = activeSiteLogDate;
     var originalText = siteLogProcurementOrderBtn.textContent;
     siteLogProcurementOrderBtn.disabled = true;
     siteLogProcurementOrderBtn.textContent = "⏳";
-    var fileName = tr("procurementOrderFileNamePrefix") + " " + sheet.name + " " + isoToFileNameDate(activeSiteLogDate) + ".pdf";
-    var pdfResult;
-    buildPdfBlobFromElement(buildSiteLogProcurementPdfElement(activeSiteLogDate), fileName).then(function (result) {
-      pdfResult = result;
-      return uploadProcurementOrderPdfToLibrary(sheet, result.blob, result.fileName);
-    }).then(function () {
-      showToast(tr("procurementOrderSentMsg"));
-      // Best-effort: there's no API to silently attach a file to a preset
-      // WhatsApp chat, so this opens the native share sheet (user picks
-      // WhatsApp from it) and, separately, jumps straight to the configured
-      // number's chat - two small taps instead of hunting for the contact.
-      var whatsappNumber = getProcurementWhatsappNumber();
-      if (whatsappNumber) {
-        attemptShare(pdfResult.blob, pdfResult.fileName);
-        var digits = normalizePhoneDigits(whatsappNumber);
-        if (digits) {
-          var waText = tr("procurementOrderFileNamePrefix") + " " + sheet.name + " " + isoToFileNameDate(activeSiteLogDate);
-          setTimeout(function () {
-            window.location.href = "https://wa.me/" + digits.replace("+", "") + "?text=" + encodeURIComponent(waText);
-          }, 600);
-        }
-      }
+    var fileName = tr("procurementOrderFileNamePrefix") + " " + sheet.name + " " + isoToFileNameDate(dateISO) + ".pdf";
+    buildPdfBlobFromElement(buildSiteLogProcurementPdfElement(dateISO), fileName).then(function (result) {
+      return uploadProcurementOrderPdfToLibrary(sheet, result.blob, result.fileName).then(function () {
+        showToast(tr("procurementOrderSentMsg"));
+        sendPdfToConfiguredWhatsapp(result.blob, result.fileName, tr("procurementOrderFileNamePrefix") + " " + sheet.name + " " + isoToFileNameDate(dateISO));
+      });
     }).catch(function (err) {
       console.error(err);
     }).then(function () {
       siteLogProcurementOrderBtn.disabled = false;
       siteLogProcurementOrderBtn.textContent = originalText;
+    });
+  });
+
+  // Same pattern as the procurement order button, for the attendance log.
+  siteLogAttendanceOrderBtn.addEventListener("click", function () {
+    if (!activeSiteLogDate) return;
+    var sheet = activeSheet();
+    var dateISO = activeSiteLogDate;
+    var originalText = siteLogAttendanceOrderBtn.textContent;
+    siteLogAttendanceOrderBtn.disabled = true;
+    siteLogAttendanceOrderBtn.textContent = "⏳";
+    var fileName = tr("siteLogAttendanceReportFileNamePrefix") + " " + sheet.name + " " + isoToFileNameDate(dateISO) + ".pdf";
+    buildPdfBlobFromElement(buildSiteLogAttendancePdfElement(dateISO), fileName).then(function (result) {
+      return uploadAttendanceReportPdfToLibrary(sheet, result.blob, result.fileName).then(function () {
+        showToast(tr("attendanceReportSentMsg"));
+        sendPdfToConfiguredWhatsapp(result.blob, result.fileName, tr("siteLogAttendanceReportFileNamePrefix") + " " + sheet.name + " " + isoToFileNameDate(dateISO));
+      });
+    }).catch(function (err) {
+      console.error(err);
+    }).then(function () {
+      siteLogAttendanceOrderBtn.disabled = false;
+      siteLogAttendanceOrderBtn.textContent = originalText;
     });
   });
 
