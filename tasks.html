@@ -6164,13 +6164,44 @@
     });
   }
 
-  // Lazily creates the 4 default folders (and migrates any pre-existing
-  // flat file list into a "General" folder) the first time a sheet's
-  // library is opened. Uses the same safe read-then-write approach for
-  // shared sheets so a concurrent member never gets their real folder
-  // clobbered by another client's bootstrap.
+  // Returns a new folders array with any DEFAULT_LIBRARY_FOLDER_KEYS entry
+  // that's missing appended, or null if nothing's missing - lets a key
+  // added after a sheet's library was already bootstrapped (e.g. the
+  // procurement/attendance/tools report folders, added long after "diaries"
+  // etc.) still show up for projects created before that key existed,
+  // instead of only ever being created lazily the first time its own
+  // "send report" button happens to be used.
+  function addMissingDefaultFolders(folders) {
+    var missingKeys = DEFAULT_LIBRARY_FOLDER_KEYS.filter(function (key) {
+      return !folders.some(function (f) { return f.key === key; });
+    });
+    if (!missingKeys.length) return null;
+    return folders.concat(missingKeys.map(function (key) {
+      return { id: uid(), key: key, name: null, files: [] };
+    }));
+  }
+
+  // Lazily creates the default folders (and migrates any pre-existing flat
+  // file list into a "General" folder) the first time a sheet's library is
+  // opened, then keeps that set topped up on every later open too (see
+  // addMissingDefaultFolders() above). Uses the same safe read-then-write
+  // approach for shared sheets so a concurrent member never gets their real
+  // folder clobbered by another client's bootstrap/migration.
   function ensureLibraryFolders(sheet, callback) {
-    if (sheet.folders) { callback(sheet.folders); return; }
+    if (sheet.folders) {
+      var migrated = addMissingDefaultFolders(sheet.folders);
+      if (!migrated) { callback(sheet.folders); return; }
+      if (sheet.shared) {
+        applySharedLibraryFolders(sheet.id, function (liveFolders) {
+          return addMissingDefaultFolders(liveFolders) || liveFolders;
+        }).then(function (updated) { callback(updated); });
+      } else {
+        var liveSheetFast = data.sheets.find(function (s) { return s.id === sheet.id; });
+        if (liveSheetFast) { liveSheetFast.folders = migrated; saveData(); }
+        callback(migrated);
+      }
+      return;
+    }
     if (!sheet.shared) {
       var liveSheet = data.sheets.find(function (s) { return s.id === sheet.id; });
       if (!liveSheet) { callback([]); return; }
@@ -6185,6 +6216,13 @@
     supabaseClient.from(SHARED_TABLE).select("data").eq("id", sheet.id).maybeSingle().then(function (result) {
       var currentData = (result && result.data && result.data.data) || {};
       if (currentData.folders) {
+        var migratedShared = addMissingDefaultFolders(currentData.folders);
+        if (migratedShared) {
+          applySharedLibraryFolders(sheet.id, function (liveFolders) {
+            return addMissingDefaultFolders(liveFolders) || liveFolders;
+          }).then(function (updated) { callback(updated); });
+          return;
+        }
         var liveSheet = sharedSheets.find(function (s) { return s.id === sheet.id; });
         if (liveSheet) liveSheet.folders = currentData.folders;
         callback(currentData.folders);
@@ -6239,7 +6277,7 @@
           openLibraryFolderView(sheet, folder);
         });
 
-        // Deletable: any folder that isn't one of today's 4 actual default
+        // Deletable: any folder that isn't one of today's actual default
         // folders - covers both custom (keyless) folders and orphaned
         // folders left over from an old key (e.g. a stale "logs" folder
         // from before site logs were pointed at the "diaries" key), which
