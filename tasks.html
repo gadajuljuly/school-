@@ -1114,6 +1114,18 @@
     cursor: pointer;
     flex-shrink: 0;
   }
+  .office-report-options-actions {
+    display: flex;
+    gap: 8px;
+    padding: 0 14px 14px;
+    flex-shrink: 0;
+  }
+  .office-report-options-actions .site-log-copy-prev-btn {
+    flex: 1;
+    margin: 0;
+    padding: 10px 4px;
+    font-size: 0.72rem;
+  }
   .site-log-attendance-wrap { flex: 1; overflow: auto; padding: 12px; }
   .site-log-attendance-columns { display: flex; gap: 8px; align-items: flex-start; min-width: max-content; }
   #siteLogAttendanceColumns {
@@ -2736,9 +2748,12 @@
       <button type="button" class="report-back-btn" id="officeReportOptionsBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
       <div class="report-head-title" id="officeReportOptionsTitle"></div>
     </div>
-    <button type="button" class="site-log-copy-prev-btn" id="officeReportDailyBtn" data-i18n="officeReportDailyBtn">הפקת דוח יומי</button>
-    <button type="button" class="site-log-copy-prev-btn" id="officeReportMonthlyBtn" data-i18n="officeReportMonthlyBtn">הפקת דוח חודשי</button>
-    <button type="button" class="site-log-copy-prev-btn" id="officeReportCustomBtn" data-i18n="officeReportCustomBtn">הפקת דוח מוגדר</button>
+    <div class="site-log-preview-wrap" id="officeReportOptionsPreview"></div>
+    <div class="office-report-options-actions">
+      <button type="button" class="site-log-copy-prev-btn" id="officeReportDailyBtn" data-i18n="officeReportDailyBtn">הפקת דוח יומי</button>
+      <button type="button" class="site-log-copy-prev-btn" id="officeReportMonthlyBtn" data-i18n="officeReportMonthlyBtn">הפקת דוח חודשי</button>
+      <button type="button" class="site-log-copy-prev-btn" id="officeReportCustomBtn" data-i18n="officeReportCustomBtn">הפקת דוח מוגדר</button>
+    </div>
   </div>
 
   <div class="modal-overlay" id="officeNameReportOverlay" hidden>
@@ -9063,6 +9078,7 @@
   var officeReportOptionsView = document.getElementById("officeReportOptionsView");
   var officeReportOptionsBackBtn = document.getElementById("officeReportOptionsBackBtn");
   var officeReportOptionsTitle = document.getElementById("officeReportOptionsTitle");
+  var officeReportOptionsPreview = document.getElementById("officeReportOptionsPreview");
   var officeReportDailyBtn = document.getElementById("officeReportDailyBtn");
   var officeReportMonthlyBtn = document.getElementById("officeReportMonthlyBtn");
   var officeReportCustomBtn = document.getElementById("officeReportCustomBtn");
@@ -9070,7 +9086,10 @@
 
   function openOfficeReportOptionsView(kindKey) {
     pendingOfficeReportKind = kindKey;
-    officeReportOptionsTitle.textContent = tr(OFFICE_REPORT_KINDS[kindKey].titleKey);
+    var kind = OFFICE_REPORT_KINDS[kindKey];
+    officeReportOptionsTitle.textContent = tr(kind.titleKey);
+    officeReportOptionsPreview.innerHTML = "";
+    officeReportOptionsPreview.appendChild(buildOfficeCombinedReportElement(kind));
     closeOfficeReportTypeModal();
     officeReportOptionsView.hidden = false;
   }
