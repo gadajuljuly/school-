@@ -2959,6 +2959,7 @@
       <div class="site-log-attendance-columns" id="siteLogToolsColumns"></div>
     </div>
     <button type="button" class="site-log-copy-prev-btn" id="siteLogToolsCopyPrevBtn" data-i18n="siteLogCopyPrevBtn">העתקת יומן קודם</button>
+    <button type="button" class="site-log-copy-prev-btn" id="siteLogToolsOrderBtn" data-i18n="siteLogToolsOrderBtn">שגר דוח כלים</button>
   </div>
 
   <div class="report-view" id="siteLogContractorsView" hidden>
@@ -3238,6 +3239,9 @@
     siteLogAttendanceOrderBtn: { he: "שגר דוח נוכחות", en: "Send attendance report", ar: "إرسال تقرير حضور", ru: "Отправить отчёт о посещаемости" },
     libraryFolderAttendanceReports: { he: "דוחות נוכחות", en: "Attendance reports", ar: "تقارير الحضور", ru: "Отчёты о посещаемости" },
     attendanceReportSentMsg: { he: "הדוח נשמר בתיקיית \"דוחות נוכחות\" בספרייה", en: "The report was saved to the \"Attendance reports\" library folder", ar: "تم حفظ التقرير في مجلد \"تقارير الحضور\" في المكتبة", ru: "Отчёт сохранён в папке «Отчёты о посещаемости» в библиотеке" },
+    siteLogToolsOrderBtn: { he: "שגר דוח כלים", en: "Send tools report", ar: "إرسال تقرير معدات", ru: "Отправить отчёт об оборудовании" },
+    libraryFolderToolsReports: { he: "דוח כלים", en: "Tools report", ar: "تقرير المعدات", ru: "Отчёт об оборудовании" },
+    toolsReportSentMsg: { he: "הדוח נשמר בתיקיית \"דוח כלים\" בספרייה", en: "The report was saved to the \"Tools report\" library folder", ar: "تم حفظ التقرير في مجلد \"تقرير المعدات\" في المكتبة", ru: "Отчёт сохранён в папке «Отчёт об оборудовании» в библиотеке" },
     siteLogColExcavator: { he: "מחפרון", en: "Excavator", ar: "حفارة", ru: "Экскаватор-погрузчик" },
     siteLogColLoader: { he: "שופל", en: "Loader", ar: "شيول", ru: "Погрузчик" },
     siteLogColBagger: { he: "באגר", en: "Bagger", ar: "بيجر", ru: "Экскаватор" },
@@ -5967,7 +5971,7 @@
   var activeLibrarySheetId = null;
   var activeLibraryFolderId = null;
 
-  var DEFAULT_LIBRARY_FOLDER_KEYS = ["plans", "photos", "diaries", "reports", "procurementOrders", "attendanceReports"];
+  var DEFAULT_LIBRARY_FOLDER_KEYS = ["plans", "photos", "diaries", "reports", "procurementOrders", "attendanceReports", "toolsReports"];
   var LIBRARY_FOLDER_KEY_LABELS = {
     plans: "libraryFolderPlans",
     photos: "libraryFolderPhotos",
@@ -5975,7 +5979,8 @@
     reports: "libraryFolderReports",
     general: "libraryFolderGeneral",
     procurementOrders: "libraryFolderProcurementOrders",
-    attendanceReports: "libraryFolderAttendanceReports"
+    attendanceReports: "libraryFolderAttendanceReports",
+    toolsReports: "libraryFolderToolsReports"
   };
 
   function buildDefaultLibraryFolders(legacyFiles) {
@@ -6340,7 +6345,7 @@
     var sheet = allSheets().find(function (s) { return s.id === activeLibrarySheetId; });
     var folder = sheet && sheet.folders && sheet.folders.find(function (f) { return f.id === activeLibraryFolderId; });
     var files = (folder && folder.files) || [];
-    libraryGrid.classList.toggle("library-grid-rows", !!folder && (isProcurementOrdersFolder(folder) || isAttendanceReportsFolder(folder)));
+    libraryGrid.classList.toggle("library-grid-rows", !!folder && (isProcurementOrdersFolder(folder) || isAttendanceReportsFolder(folder) || isToolsReportsFolder(folder)));
     libraryGrid.innerHTML = "";
     if (!files.length) {
       var empty = document.createElement("div");
@@ -7586,6 +7591,7 @@
   var siteLogToolsColumns = document.getElementById("siteLogToolsColumns");
   var siteLogToolsShareBtn = document.getElementById("siteLogToolsShareBtn");
   var siteLogToolsCopyPrevBtn = document.getElementById("siteLogToolsCopyPrevBtn");
+  var siteLogToolsOrderBtn = document.getElementById("siteLogToolsOrderBtn");
   var siteLogToolsProjectName = document.getElementById("siteLogToolsProjectName");
   var siteLogContractorsView = document.getElementById("siteLogContractorsView");
   var siteLogContractorsBackBtn = document.getElementById("siteLogContractorsBackBtn");
@@ -7816,6 +7822,51 @@
   }
   function uploadAttendanceReportPdfToLibrary(sheet, blob, fileName) {
     return ensureAttendanceReportsFolder(sheet).then(function (folderId) {
+      var path = sheet.id + "/" + folderId + "/" + uid() + "-" + safeStorageFileName(fileName);
+      return supabaseClient.storage.from(LIBRARY_BUCKET).upload(path, blob, { contentType: "application/pdf" }).then(function (result) {
+        if (result.error) throw result.error;
+        var entry = { id: uid(), name: fileName, path: path, type: "application/pdf", size: blob.size || 0, uploadedAt: Date.now() };
+        return addFileToLibraryFolder(sheet, folderId, entry).then(function () { return { entry: entry, folderId: folderId }; });
+      });
+    });
+  }
+
+  // "Send tools report" - same pattern again, for the tools log's own
+  // dedicated (also permanent) library folder.
+  var TOOLS_REPORTS_FOLDER_KEY = "toolsReports";
+  function isToolsReportsFolder(f) {
+    return f.key === TOOLS_REPORTS_FOLDER_KEY;
+  }
+  function ensureToolsReportsFolder(sheet) {
+    return new Promise(function (resolve) {
+      ensureLibraryFolders(sheet, function (folders) {
+        var existing = folders.find(isToolsReportsFolder);
+        if (existing) { resolve(existing.id); return; }
+        var newId = uid();
+        if (sheet.shared) {
+          applySharedLibraryFolders(sheet.id, function (liveFolders) {
+            if (liveFolders.some(isToolsReportsFolder)) return liveFolders;
+            return liveFolders.concat([{ id: newId, key: TOOLS_REPORTS_FOLDER_KEY, name: null, files: [] }]);
+          }).then(function (updated) {
+            var folder = updated.find(isToolsReportsFolder);
+            resolve(folder ? folder.id : newId);
+          });
+        } else {
+          var liveSheet = data.sheets.find(function (s) { return s.id === sheet.id; });
+          if (!liveSheet.folders) liveSheet.folders = folders;
+          var folder = liveSheet.folders.find(isToolsReportsFolder);
+          if (!folder) {
+            folder = { id: newId, key: TOOLS_REPORTS_FOLDER_KEY, name: null, files: [] };
+            liveSheet.folders.push(folder);
+            saveData();
+          }
+          resolve(folder.id);
+        }
+      });
+    });
+  }
+  function uploadToolsReportPdfToLibrary(sheet, blob, fileName) {
+    return ensureToolsReportsFolder(sheet).then(function (folderId) {
       var path = sheet.id + "/" + folderId + "/" + uid() + "-" + safeStorageFileName(fileName);
       return supabaseClient.storage.from(LIBRARY_BUCKET).upload(path, blob, { contentType: "application/pdf" }).then(function (result) {
         if (result.error) throw result.error;
@@ -8638,6 +8689,28 @@
     }).then(function () {
       siteLogAttendanceOrderBtn.disabled = false;
       siteLogAttendanceOrderBtn.textContent = originalText;
+    });
+  });
+
+  // Same pattern again, for the tools log.
+  siteLogToolsOrderBtn.addEventListener("click", function () {
+    if (!activeSiteLogDate) return;
+    var sheet = activeSheet();
+    var dateISO = activeSiteLogDate;
+    var originalText = siteLogToolsOrderBtn.textContent;
+    siteLogToolsOrderBtn.disabled = true;
+    siteLogToolsOrderBtn.textContent = "⏳";
+    var fileName = tr("siteLogToolsReportFileNamePrefix") + " " + sheet.name + " " + isoToFileNameDate(dateISO) + ".pdf";
+    buildPdfBlobFromElement(buildSiteLogToolsPdfElement(dateISO), fileName).then(function (result) {
+      return uploadToolsReportPdfToLibrary(sheet, result.blob, result.fileName).then(function () {
+        showToast(tr("toolsReportSentMsg"));
+        sendPdfToConfiguredWhatsapp(result.blob, result.fileName, tr("siteLogToolsReportFileNamePrefix") + " " + sheet.name + " " + isoToFileNameDate(dateISO));
+      });
+    }).catch(function (err) {
+      console.error(err);
+    }).then(function () {
+      siteLogToolsOrderBtn.disabled = false;
+      siteLogToolsOrderBtn.textContent = originalText;
     });
   });
 
