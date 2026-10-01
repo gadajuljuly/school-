@@ -2479,19 +2479,6 @@
         <span class="notebook-progress" id="progressText"></span>
         <button class="menu-btn" id="menuBtn" data-i18n-title="menuBtnTitle" title="תפריט" aria-haspopup="true" aria-expanded="false"><img src="tasks-menu-icon.webp" alt=""></button>
         <div class="menu-panel" id="menuPanel" hidden>
-          <div class="menu-section">
-            <div class="menu-label" data-i18n="menuLabelView">תצוגה</div>
-            <div class="filters">
-              <button data-filter="all" class="active" data-i18n="filterAll">הכל</button>
-              <button data-filter="active" data-i18n="filterActive">פעילות</button>
-              <button data-filter="done" data-i18n="filterDone">הושלמו</button>
-            </div>
-          </div>
-          <div class="menu-section">
-            <div class="menu-label" data-i18n="menuLabelCurrentProject">הפרויקט הנוכחי</div>
-            <button id="renameSheetBtn" data-i18n="renameSheetBtn">שינוי שם</button>
-            <button id="deleteSheetBtn" class="danger" data-i18n="deleteSheetBtn">מחיקת פרויקט</button>
-          </div>
           <div class="menu-section" id="accountMenuSection">
             <div class="menu-label" id="menuUsernameLabel"></div>
           </div>
@@ -3166,13 +3153,6 @@
     dateInputTitle: { he: "לחצו לבחירת תאריך", en: "Click to pick a date", ar: "اضغط لاختيار التاريخ", ru: "Нажмите, чтобы выбрать дату" },
     todayBtn: { he: "היום", en: "Today", ar: "اليوم", ru: "Сегодня" },
     menuBtnTitle: { he: "תפריט", en: "Menu", ar: "القائمة", ru: "Меню" },
-    menuLabelView: { he: "תצוגה", en: "View", ar: "العرض", ru: "Вид" },
-    filterAll: { he: "הכל", en: "All", ar: "الكل", ru: "Все" },
-    filterActive: { he: "פעילות", en: "Active", ar: "نشطة", ru: "Активные" },
-    filterDone: { he: "הושלמו", en: "Done", ar: "مكتملة", ru: "Готово" },
-    menuLabelCurrentProject: { he: "הפרויקט הנוכחי", en: "Current project", ar: "المشروع الحالي", ru: "Текущий проект" },
-    renameSheetBtn: { he: "שינוי שם", en: "Rename", ar: "تغيير الاسم", ru: "Переименовать" },
-    deleteSheetBtn: { he: "מחיקת פרויקט", en: "Delete project", ar: "حذف المشروع", ru: "Удалить проект" },
     menuLabelReminders: { he: "תזכורות משימות", en: "Task reminders", ar: "تذكيرات المهام", ru: "Напоминания о задачах" },
     reminderOff: { he: "כבוי", en: "Off", ar: "إيقاف", ru: "Выкл" },
     menuLabelChatNotif: { he: "התראות הודעות צ'אט", en: "Chat message notifications", ar: "إشعارات رسائل الدردشة", ru: "Уведомления о сообщениях в чате" },
@@ -4064,7 +4044,7 @@
   // fetch's (now possibly stale-relative-to-that-edit) result must not
   // blindly overwrite `data`, or a fast edit could be silently lost.
   var editedSinceLastLoad = false;
-  var state = { filter: "all", renamingSheetId: null, menuOpen: false, editingTaskId: null, viewDate: todayISO(), searchOpen: false, highlightTaskId: null, viewMode: "tasks" };
+  var state = { renamingSheetId: null, menuOpen: false, editingTaskId: null, viewDate: todayISO(), searchOpen: false, highlightTaskId: null, viewMode: "tasks" };
   // dateInput is shared by two triggers: the top date label (normal day
   // navigation) and the footer calendar button (opens the site log for the
   // chosen date). This flag lets the single "change" handler tell which one
@@ -4087,9 +4067,6 @@
   var searchPanel = document.getElementById("searchPanel");
   var searchInput = document.getElementById("searchInput");
   var searchResults = document.getElementById("searchResults");
-  var filterButtons = document.querySelectorAll(".filters button");
-  var renameSheetBtn = document.getElementById("renameSheetBtn");
-  var deleteSheetBtn = document.getElementById("deleteSheetBtn");
   var confirmOverlay = document.getElementById("confirmOverlay");
   var confirmMessage = document.getElementById("confirmMessage");
   var confirmYesBtn = document.getElementById("confirmYesBtn");
@@ -4474,7 +4451,6 @@
     var direction = newIndex > oldIndex ? 1 : -1;
     animatePageTurn(direction, function () {
       data.activeSheetId = id;
-      state.filter = "all";
       var newSheet = allSheets().find(function (s) { return s.id === id; });
       if (newSheet && newSheet.ended && newSheet.endedDate) {
         // Each archived project is pinned to its own end date, not whatever
@@ -6892,16 +6868,6 @@
   reportActionCancelBtn.addEventListener("click", closeReportActionModal);
   reportActionOverlay.addEventListener("click", function (e) {
     if (e.target === reportActionOverlay) closeReportActionModal();
-  });
-
-  renameSheetBtn.addEventListener("click", function () {
-    state.menuOpen = false;
-    state.renamingSheetId = activeSheet().id;
-    render();
-  });
-  deleteSheetBtn.addEventListener("click", function () {
-    state.menuOpen = false;
-    deleteSheet(activeSheet().id);
   });
 
   var companyDashboardBtn = document.getElementById("companyDashboardBtn");
@@ -10710,7 +10676,6 @@
       btn.addEventListener("click", function () {
         data.activeSheetId = m.sheetId;
         state.viewDate = clampViewDate(m.task.date);
-        state.filter = "all";
         closeSearch();
         render();
       });
@@ -11021,15 +10986,6 @@
     addTypeOverlay.hidden = false;
   });
 
-  filterButtons.forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      filterButtons.forEach(function (b) { b.classList.remove("active"); });
-      btn.classList.add("active");
-      state.filter = btn.dataset.filter;
-      render();
-    });
-  });
-
   function cycleStatus(id) {
     var sheet = activeSheet();
     var t = sheet.tasks.find(function (x) { return x.id === id; });
@@ -11139,7 +11095,6 @@
     calendarFabBtn.hidden = isHeadOfficeMode;
     officeReportsBtn.hidden = !isHeadOfficeMode;
     reportFabBtn.hidden = isHeadOfficeMode;
-    filterButtons.forEach(function (b) { b.classList.toggle("active", b.dataset.filter === state.filter); });
 
     var STATUS_LABEL = { 0: tr("statusPartial"), 1: tr("statusDone"), 2: tr("statusReset") };
 
@@ -11181,14 +11136,8 @@
     addForm.hidden = isPast;
 
     var sheetTasks = activeSheet().tasks.filter(function (t) { return t.date === state.viewDate; });
-    var sorted = sheetTasks.slice().sort(function (a, b) {
+    var visible = sheetTasks.slice().sort(function (a, b) {
       return a.createdAt - b.createdAt;
-    });
-
-    var visible = sorted.filter(function (t) {
-      if (state.filter === "active") return t.status !== 2;
-      if (state.filter === "done") return t.status === 2;
-      return true;
     });
 
     taskList.innerHTML = "";
