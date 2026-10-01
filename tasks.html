@@ -2502,8 +2502,8 @@
             <button id="addLogoBtn" data-i18n="addLogoBtn">הוספת לוגו</button>
           </div>
           <div class="menu-section">
-            <div class="menu-label" data-i18n="menuLabelProcurementWhatsapp">מספר WhatsApp להזמנות רכש</div>
-            <input type="tel" id="procurementWhatsappInput" class="reminder-select" data-i18n-ph="procurementWhatsappPlaceholder" placeholder="05XXXXXXXX">
+            <div class="menu-label" data-i18n="menuLabelProcurementWhatsapp">מספר להעברת דוחות</div>
+            <button type="button" id="procurementWhatsappBtn" data-i18n="procurementWhatsappPlaceholder">בחירת איש קשר</button>
           </div>
           <div class="menu-section">
             <div class="menu-label" data-i18n="menuLabelLanguage">שפה</div>
@@ -3094,8 +3094,8 @@
     reminderEvery2Hours: { he: "כל שעתיים", en: "Every 2 hours", ar: "كل ساعتين", ru: "Каждые 2 часа" },
     reminderEvery4Hours: { he: "כל 4 שעות", en: "Every 4 hours", ar: "كل 4 ساعات", ru: "Каждые 4 часа" },
     menuLabelApp: { he: "האפליקציה", en: "App", ar: "التطبيق", ru: "Приложение" },
-    menuLabelProcurementWhatsapp: { he: "מספר WhatsApp להזמנות רכש", en: "WhatsApp number for procurement orders", ar: "رقم WhatsApp لطلبات الشراء", ru: "Номер WhatsApp для заказов на закупку" },
-    procurementWhatsappPlaceholder: { he: "05XXXXXXXX", en: "05XXXXXXXX", ar: "05XXXXXXXX", ru: "05XXXXXXXX" },
+    menuLabelProcurementWhatsapp: { he: "מספר להעברת דוחות", en: "Number for sending reports", ar: "رقم لإرسال التقارير", ru: "Номер для отправки отчётов" },
+    procurementWhatsappPlaceholder: { he: "בחירת איש קשר", en: "Choose a contact", ar: "اختيار جهة اتصال", ru: "Выбрать контакт" },
     shareAppBtn: { he: "שיתוף קישור להתקנה", en: "Share install link", ar: "مشاركة رابط التثبيت", ru: "Поделиться ссылкой на установку" },
     addLogoBtn: { he: "הוספת לוגו", en: "Add logo", ar: "إضافة شعار", ru: "Добавить логотип" },
     chooseLogoTitle: { he: "בחר לוגו", en: "Choose logo", ar: "اختر شعارًا", ru: "Выберите логотип" },
@@ -7204,20 +7204,57 @@
     logoFileInput.click();
   });
 
+  // Stored as JSON ({tel, name}) so the menu button can show the contact's
+  // name rather than a bare number - readProcurementWhatsappData() also
+  // accepts a plain string for backward compatibility with values saved by
+  // an earlier version of this setting (a free-typed phone number).
   var PROCUREMENT_WHATSAPP_KEY = "itask-procurement-whatsapp";
-  var procurementWhatsappInput = document.getElementById("procurementWhatsappInput");
-  (function initProcurementWhatsappInput() {
+  var procurementWhatsappBtn = document.getElementById("procurementWhatsappBtn");
+  function readProcurementWhatsappData() {
     try {
-      var saved = localStorage.getItem(PROCUREMENT_WHATSAPP_KEY);
-      if (saved) procurementWhatsappInput.value = saved;
-    } catch (e) {}
-  })();
-  procurementWhatsappInput.addEventListener("change", function () {
-    try { localStorage.setItem(PROCUREMENT_WHATSAPP_KEY, procurementWhatsappInput.value.trim()); } catch (e) {}
-  });
-  function getProcurementWhatsappNumber() {
-    try { return localStorage.getItem(PROCUREMENT_WHATSAPP_KEY) || ""; } catch (e) { return ""; }
+      var raw = localStorage.getItem(PROCUREMENT_WHATSAPP_KEY);
+      if (!raw) return null;
+      try {
+        var parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object" && parsed.tel) return parsed;
+      } catch (e) {}
+      return { tel: raw, name: "" };
+    } catch (e) { return null; }
   }
+  function getProcurementWhatsappNumber() {
+    var data = readProcurementWhatsappData();
+    return (data && data.tel) || "";
+  }
+  function updateProcurementWhatsappBtnLabel() {
+    var data = readProcurementWhatsappData();
+    procurementWhatsappBtn.textContent = (data && (data.name || data.tel)) || tr("procurementWhatsappPlaceholder");
+  }
+  function setProcurementWhatsappContact(tel, name) {
+    try { localStorage.setItem(PROCUREMENT_WHATSAPP_KEY, JSON.stringify({ tel: tel, name: name || "" })); } catch (e) {}
+    updateProcurementWhatsappBtnLabel();
+  }
+  updateProcurementWhatsappBtnLabel();
+  procurementWhatsappBtn.addEventListener("click", function () {
+    if (capacitorContactsAvailable) {
+      pickOneNativeContact().then(function (picked) {
+        if (picked && picked.tel) setProcurementWhatsappContact(picked.tel, picked.name);
+      });
+      return;
+    }
+    if (contactPickerSupported) {
+      navigator.contacts.select(["name", "tel"], { multiple: false }).then(function (contacts) {
+        var c = contacts && contacts[0];
+        var tel = c && c.tel && c.tel[0];
+        var name = c && c.name && c.name[0];
+        if (tel) setProcurementWhatsappContact(tel, name);
+      }).catch(function () {});
+      return;
+    }
+    // No contact-picker API at all here (e.g. a desktop browser) - fall
+    // back to manual entry rather than leaving the button permanently dead.
+    var manual = prompt(tr("procurementWhatsappPlaceholder"));
+    if (manual && manual.trim()) setProcurementWhatsappContact(manual.trim(), "");
+  });
 
   // Company logos can be large source images (a marketing PNG straight off
   // someone's phone) - they're stored inline as data URLs in app_state's
