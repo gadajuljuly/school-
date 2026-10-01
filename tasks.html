@@ -2634,6 +2634,8 @@
       </div>
       <button type="button" class="convert-to-note-btn" id="convertToNoteBtn" data-i18n="convertToNoteBtn" hidden>הפוך למזכרת</button>
       <button type="button" class="convert-to-note-btn" id="convertToTaskBtn" data-i18n="convertToTaskBtn" hidden>הפוך למשימה</button>
+      <button type="button" class="convert-to-note-btn" id="transferToLogBtn" data-i18n="taskTransferToLogBtn" hidden>העברה ליומן</button>
+      <button type="button" class="convert-to-note-btn" id="removeFromLogBtn" data-i18n="taskRemoveFromLogBtn" hidden>הסרה מהיומן</button>
       <div class="move-task-projects" id="moveTaskProjects"></div>
       <div class="modal-actions">
         <button type="button" class="modal-btn modal-btn-no" id="moveTaskCancelBtn" data-i18n="cancelBtn">ביטול</button>
@@ -3321,8 +3323,9 @@
     companyDashboardOpenNotClosed: { he: "יומן היום פתוח, לא נסגר", en: "Today's log is open, not closed yet", ar: "سجل اليوم مفتوح ولم يُغلق بعد", ru: "Журнал за сегодня открыт, не закрыт" },
     companyDashboardNoLogToday: { he: "אין יומן היום", en: "No log for today", ar: "لا يوجد سجل لليوم", ru: "Нет журнала за сегодня" },
     companyDashboardLastLog: { he: "יומן סגור אחרון:", en: "Last closed log:", ar: "آخر سجل مغلق:", ru: "Последний закрытый журнал:" },
-    taskDoneTransferToLogMsg: { he: "להעביר את המשימה ליומן העבודה?", en: "Transfer the task to the work log?", ar: "هل تريد نقل المهمة إلى سجل العمل؟", ru: "Перенести задачу в рабочий журнал?" },
     taskDoneLogPrefix: { he: "בוצע", en: "Done", ar: "تم", ru: "Выполнено" },
+    taskTransferToLogBtn: { he: "העברה ליומן", en: "Transfer to log", ar: "نقل إلى السجل", ru: "Перенести в журнал" },
+    taskRemoveFromLogBtn: { he: "הסרה מהיומן", en: "Remove from log", ar: "إزالة من السجل", ru: "Удалить из журнала" },
     taskTransferredToLogMsg: { he: "המשימה נוספה ליומן העבודה", en: "The task was added to the work log", ar: "تمت إضافة المهمة إلى سجل العمل", ru: "Задача добавлена в рабочий журнал" },
     taskRemovedFromLogMsg: { he: "המשימה הוסרה מיומן העבודה", en: "The task was removed from the work log", ar: "تمت إزالة المهمة من سجل العمل", ru: "Задача удалена из рабочего журнала" },
     reportCloseBtn: { he: "סגירת הדוח", en: "Close report", ar: "إغلاق التقرير", ru: "Закрыть отчёт" }
@@ -3956,6 +3959,8 @@
   var moveModeCopyBtn = document.getElementById("moveModeCopyBtn");
   var convertToNoteBtn = document.getElementById("convertToNoteBtn");
   var convertToTaskBtn = document.getElementById("convertToTaskBtn");
+  var transferToLogBtn = document.getElementById("transferToLogBtn");
+  var removeFromLogBtn = document.getElementById("removeFromLogBtn");
   var moveTaskCancelBtn = document.getElementById("moveTaskCancelBtn");
   var pendingMoveTaskId = null;
   var longPressTimer = null;
@@ -4018,6 +4023,9 @@
     var task = activeSheet().tasks.find(function (t) { return t.id === taskId; });
     convertToNoteBtn.hidden = !task || task.type === "note";
     convertToTaskBtn.hidden = !task || task.type !== "note";
+    var logEligible = task && task.type === "task" && task.status === 2;
+    transferToLogBtn.hidden = !logEligible || !!task.logEntry;
+    removeFromLogBtn.hidden = !logEligible || !task.logEntry;
     moveTaskOverlay.hidden = false;
   }
   function closeMoveTask() {
@@ -4053,6 +4061,18 @@
     }
     closeMoveTask();
     render();
+  });
+  transferToLogBtn.addEventListener("click", function () {
+    var sheet = activeSheet();
+    var task = sheet.tasks.find(function (t) { return t.id === pendingMoveTaskId; });
+    if (task) transferTaskToSiteLogWorks(sheet, task);
+    closeMoveTask();
+  });
+  removeFromLogBtn.addEventListener("click", function () {
+    var sheet = activeSheet();
+    var task = sheet.tasks.find(function (t) { return t.id === pendingMoveTaskId; });
+    if (task) removeTaskFromSiteLogWorks(sheet, task);
+    closeMoveTask();
   });
   moveTaskCancelBtn.addEventListener("click", closeMoveTask);
   moveTaskOverlay.addEventListener("click", function (e) {
@@ -10127,11 +10147,7 @@
         sendChatSystemMessage(sheet.id, t.status === 2 ? "done" : "undone", t.text, myPhoneNumber);
       }
       render();
-      if (!wasDone && t.status === 2 && t.type === "task") {
-        askConfirm(tr("taskDoneTransferToLogMsg"), function () {
-          transferTaskToSiteLogWorks(sheet, t);
-        });
-      } else if (wasDone && t.status !== 2 && t.type === "task" && t.logEntry) {
+      if (wasDone && t.status !== 2 && t.type === "task" && t.logEntry) {
         removeTaskFromSiteLogWorks(sheet, t);
       }
     }
