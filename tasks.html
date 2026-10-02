@@ -7000,6 +7000,7 @@
   var langSelect = document.getElementById("langSelect");
   langSelect.value = currentLang;
   langSelect.addEventListener("change", function () {
+    state.menuOpen = false;
     setLang(langSelect.value);
     authLangSelect.value = currentLang;
   });
@@ -7403,6 +7404,7 @@
     try { localStorage.setItem(HEAD_OFFICE_MANUAL_TOGGLE_KEY, on ? "1" : "0"); } catch (e) {}
     recomputeHeadOfficeMode();
     updateHeadOfficeToggleButtons();
+    state.menuOpen = false;
     render();
   }
   headOfficeToggleOnBtn.addEventListener("click", function () { setHeadOfficeManualToggle(true); });
