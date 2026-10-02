@@ -8223,7 +8223,8 @@
   // new entry and putting a fresh + below it once you start typing.
   function renderSiteLogNameList(container, getEntries, addEntry, removeEntry, rerender) {
     container.innerHTML = "";
-    getEntries().forEach(function (entry) {
+
+    function buildRow(entry) {
       var row = document.createElement("div");
       row.className = "site-log-entry";
       var nameSpan = document.createElement("span");
@@ -8239,8 +8240,10 @@
         rerender();
       });
       row.appendChild(removeBtn);
-      container.appendChild(row);
-    });
+      return row;
+    }
+
+    getEntries().forEach(function (entry) { container.appendChild(buildRow(entry)); });
 
     function createAddBtn() {
       var addBtn = document.createElement("button");
@@ -8263,12 +8266,23 @@
       input.focus();
       var committed = false;
       var nextBtnShown = false;
+      // Commits in place (swaps the input for a normal row) instead of
+      // calling the full rerender() - the "next +" shown below the moment
+      // typing starts stays a live sibling element this way, so clicking it
+      // (which blurs this input first, committing it) still lands its own
+      // click right after instead of that click's target having just been
+      // destroyed by a full rebuild of the whole column list.
       function commit() {
         if (committed) return;
         committed = true;
         var name = input.value.trim();
-        if (name) { addEntry(name); saveData(); }
-        rerender();
+        if (!name) {
+          if (input.parentNode) input.parentNode.removeChild(input);
+          return;
+        }
+        var entry = addEntry(name);
+        saveData();
+        if (input.parentNode) input.parentNode.replaceChild(buildRow(entry), input);
       }
       input.addEventListener("blur", commit);
       input.addEventListener("keydown", function (e) {
@@ -8301,7 +8315,11 @@
     renderSiteLogNameList(
       body,
       function () { var log = findSiteLog(activeSheet(), activeSiteLogDate); return (log && log.attendance[colKey]) || []; },
-      function (name) { findOrCreateSiteLog(activeSheet(), activeSiteLogDate).attendance[colKey].push({ id: uid(), name: name }); },
+      function (name) {
+        var entry = { id: uid(), name: name };
+        findOrCreateSiteLog(activeSheet(), activeSiteLogDate).attendance[colKey].push(entry);
+        return entry;
+      },
       function (id) {
         var log = findSiteLog(activeSheet(), activeSiteLogDate);
         if (log) log.attendance[colKey] = log.attendance[colKey].filter(function (e) { return e.id !== id; });
@@ -8455,7 +8473,11 @@
     renderSiteLogNameList(
       siteLogContractorsList,
       function () { var log = findSiteLog(activeSheet(), activeSiteLogDate); return (log && log.contractors) || []; },
-      function (name) { findOrCreateSiteLog(activeSheet(), activeSiteLogDate).contractors.push({ id: uid(), name: name }); },
+      function (name) {
+        var entry = { id: uid(), name: name };
+        findOrCreateSiteLog(activeSheet(), activeSiteLogDate).contractors.push(entry);
+        return entry;
+      },
       function (id) {
         var log = findSiteLog(activeSheet(), activeSiteLogDate);
         if (log) log.contractors = log.contractors.filter(function (e) { return e.id !== id; });
