@@ -2575,6 +2575,7 @@
         <button type="submit" class="add-btn" data-i18n-title="addBtnTitle" title="הוספה"><img src="tasks-plus-icon.webp" alt="+"></button>
       </form>
       <div class="sheet-reports-list" id="sheetReportsList" hidden></div>
+      <button type="button" class="site-log-preview-btn" id="toggleCompletedTasksBtn" data-i18n="showCompletedTasksBtn">משימות שבוצעו</button>
     </div>
     <div class="footer-divider"></div>
     <div class="notebook-footer" id="notebookFooter">
@@ -3250,6 +3251,9 @@
     emptyStateToday: { he: "אין שורות בפרויקט הזה עדיין", en: "No rows in this project yet", ar: "لا توجد عناصر في هذا المشروع بعد", ru: "В этом проекте пока нет записей" },
     emptyStateFuture: { he: "אין עדיין משימות מתוכננות לתאריך הזה", en: "No tasks planned for this date yet", ar: "لا توجد مهام مخططة لهذا التاريخ بعد", ru: "На эту дату пока нет запланированных задач" },
     emptyStatePast: { he: "אין שורות מהתאריך הזה בפרויקט הזה", en: "No rows from this date in this project", ar: "لا توجد عناصر من هذا التاريخ في هذا المشروع", ru: "Нет записей за эту дату в этом проекте" },
+    emptyStateCompleted: { he: "אין עדיין משימות שבוצעו בפרויקט הזה", en: "No completed tasks in this project yet", ar: "لا توجد مهام مكتملة في هذا المشروع بعد", ru: "В этом проекте пока нет выполненных задач" },
+    showCompletedTasksBtn: { he: "משימות שבוצעו", en: "Completed tasks", ar: "المهام المكتملة", ru: "Выполненные задачи" },
+    showActiveTasksBtn: { he: "משימות לא בוצעו", en: "Tasks not done", ar: "المهام غير المنجزة", ru: "Невыполненные задачи" },
     taskInputPlaceholder: { he: "חדש...", en: "New...", ar: "جديد...", ru: "Новое..." },
     addBtnTitle: { he: "הוספה", en: "Add", ar: "إضافة", ru: "Добавить" },
     addTypeModalMessage: { he: "איך להוסיף את השורה?", en: "How would you like to add this row?", ar: "كيف تريد إضافة هذا العنصر؟", ru: "Как добавить эту запись?" },
@@ -4106,7 +4110,7 @@
   // fetch's (now possibly stale-relative-to-that-edit) result must not
   // blindly overwrite `data`, or a fast edit could be silently lost.
   var editedSinceLastLoad = false;
-  var state = { renamingSheetId: null, menuOpen: false, editingTaskId: null, viewDate: todayISO(), searchOpen: false, highlightTaskId: null, viewMode: "tasks" };
+  var state = { renamingSheetId: null, menuOpen: false, editingTaskId: null, viewDate: todayISO(), searchOpen: false, highlightTaskId: null, viewMode: "tasks", showingCompleted: false };
   // dateInput is shared by two triggers: the top date label (normal day
   // navigation) and the footer calendar button (opens the site log for the
   // chosen date). This flag lets the single "change" handler tell which one
@@ -4121,6 +4125,7 @@
   var addForm = document.getElementById("addForm");
   var taskList = document.getElementById("taskList");
   var emptyState = document.getElementById("emptyState");
+  var toggleCompletedTasksBtn = document.getElementById("toggleCompletedTasksBtn");
   var sheetTitle = document.getElementById("sheetTitle");
   var progressText = document.getElementById("progressText");
   var menuBtn = document.getElementById("menuBtn");
@@ -4364,6 +4369,11 @@
   });
   todayBtn.addEventListener("click", function () {
     state.viewDate = clampViewDate(todayISO());
+    render();
+  });
+
+  toggleCompletedTasksBtn.addEventListener("click", function () {
+    state.showingCompleted = !state.showingCompleted;
     render();
   });
 
@@ -11402,6 +11412,7 @@
     var reportsMode = state.viewMode === "reports";
     taskList.hidden = reportsMode;
     emptyState.hidden = reportsMode;
+    toggleCompletedTasksBtn.hidden = reportsMode;
     if (reportsMode) emptyState.style.display = "none";
     sheetReportsList.hidden = !reportsMode;
     if (reportsMode) {
@@ -11410,21 +11421,37 @@
       renderSheetReportsList();
       return;
     }
-    addForm.hidden = isPast;
+    toggleCompletedTasksBtn.textContent = tr(state.showingCompleted ? "showActiveTasksBtn" : "showCompletedTasksBtn");
+    addForm.hidden = isPast || state.showingCompleted;
 
-    var sheetTasks = activeSheet().tasks.filter(function (t) { return t.date === state.viewDate; });
-    var visible = sheetTasks.slice().sort(function (a, b) {
-      return a.createdAt - b.createdAt;
-    });
+    // Browsing completed tasks shows every done task across every date in
+    // this project at once (not just state.viewDate), so each row's own
+    // date matters and nothing here is editable - same readonly treatment
+    // a past date already gets, just reused via rowEditable instead of
+    // editable so the normal per-date view's own editability is untouched.
+    var sheetTasks, visible;
+    if (state.showingCompleted) {
+      sheetTasks = activeSheet().tasks.filter(function (t) { return t.status === 2; });
+      visible = sheetTasks.slice().sort(function (a, b) {
+        if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+        return a.createdAt - b.createdAt;
+      });
+    } else {
+      sheetTasks = activeSheet().tasks.filter(function (t) { return t.date === state.viewDate; });
+      visible = sheetTasks.slice().sort(function (a, b) {
+        return a.createdAt - b.createdAt;
+      });
+    }
+    var rowEditable = editable && !state.showingCompleted;
 
     taskList.innerHTML = "";
     visible.forEach(function (t) {
       var isNote = t.type === "note";
       var li = document.createElement("li");
-      li.className = "task" + (t.status === 1 ? " partial" : "") + (t.status === 2 ? " done" : "") + (editable ? "" : " readonly") + (t.isHeadOffice ? " head-office-task" : "");
+      li.className = "task" + (t.status === 1 ? " partial" : "") + (t.status === 2 ? " done" : "") + (rowEditable ? "" : " readonly") + (t.isHeadOffice ? " head-office-task" : "");
       li.dataset.taskId = t.id;
       var longPressFired = false;
-      if (editable && state.editingTaskId !== t.id) {
+      if (rowEditable && state.editingTaskId !== t.id) {
         li.addEventListener("click", function () {
           if (longPressFired) { longPressFired = false; return; }
           if (isNote) return;
@@ -11478,7 +11505,7 @@
         dot.className = "urgent-toggle" + (t.urgent ? " urgent" : "");
         dot.title = t.urgent ? tr("unmarkUrgent") : tr("markUrgent");
         dot.innerHTML = t.urgent ? "" : URGENT_CIRCLE_SVG;
-        if (editable) {
+        if (rowEditable) {
           dot.addEventListener("click", function (e) {
             e.stopPropagation();
             toggleUrgent(t.id);
@@ -11487,7 +11514,7 @@
       }
 
       var textEl;
-      if (editable && state.editingTaskId === t.id) {
+      if (rowEditable && state.editingTaskId === t.id) {
         textEl = document.createElement("input");
         textEl.type = "text";
         textEl.className = "task-text-input";
@@ -11521,7 +11548,7 @@
         textLabel.className = "task-text-label";
         textLabel.textContent = t.text;
         textEl.appendChild(textLabel);
-        if (editable) {
+        if (rowEditable) {
           textEl.addEventListener("click", function (e) {
             e.stopPropagation();
             state.editingTaskId = t.id;
@@ -11532,7 +11559,7 @@
 
       var actions = document.createElement("span");
       actions.className = "task-actions";
-      if (!editable) actions.hidden = true;
+      if (!rowEditable) actions.hidden = true;
       var delBtn = document.createElement("button");
       delBtn.innerHTML = "&#10005;";
       delBtn.title = tr("deleteBtn");
@@ -11565,7 +11592,7 @@
       li.appendChild(actions);
       taskList.appendChild(li);
 
-      if (!(editable && state.editingTaskId === t.id)) {
+      if (!(rowEditable && state.editingTaskId === t.id)) {
         var textOverflowPx = textLabel.scrollWidth - textEl.clientWidth;
         if (textOverflowPx > 2) {
           var textGapPx = 32;
@@ -11592,16 +11619,20 @@
     sheetTitle.textContent = activeSheet().name;
     renderSheetTitleLogo();
 
-    emptyState.textContent = isToday
-      ? tr("emptyStateToday")
-      : isFuture
-        ? tr("emptyStateFuture")
-        : tr("emptyStatePast");
+    if (state.showingCompleted) {
+      emptyState.textContent = tr("emptyStateCompleted");
+      progressText.textContent = "";
+    } else {
+      emptyState.textContent = isToday
+        ? tr("emptyStateToday")
+        : isFuture
+          ? tr("emptyStateFuture")
+          : tr("emptyStatePast");
+      var total = sheetTasks.length;
+      var doneCount = sheetTasks.filter(function (t) { return t.status === 2; }).length;
+      progressText.textContent = doneCount + "/" + total + tr("completedCount");
+    }
     emptyState.style.display = visible.length ? "none" : "block";
-
-    var total = sheetTasks.length;
-    var doneCount = sheetTasks.filter(function (t) { return t.status === 2; }).length;
-    progressText.textContent = doneCount + "/" + total + tr("completedCount");
 
     if (state.highlightTaskId) {
       var highlightId = state.highlightTaskId;
