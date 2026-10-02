@@ -2532,6 +2532,7 @@
             <input type="tel" id="headOfficeNumberInput" class="reminder-select" data-i18n-ph="headOfficeNumberPlaceholder" placeholder="05XXXXXXXX">
             <button type="button" id="headOfficeToggleOnBtn" data-i18n="headOfficeToggleOnBtn" hidden>מעבר למצב משרד ראשי</button>
             <button type="button" id="headOfficeToggleOffBtn" data-i18n="headOfficeToggleOffBtn" hidden>יציאה ממצב משרד ראשי</button>
+            <button type="button" id="headOfficeMembersBtn" data-i18n="headOfficeMembersBtn" hidden>חברי המשרד</button>
           </div>
           <div class="menu-section">
             <div class="menu-label" data-i18n="menuLabelLanguage">שפה</div>
@@ -3119,6 +3120,17 @@
     </div>
   </div>
 
+  <div class="report-view" id="headOfficeMembersView" hidden>
+    <div class="report-head">
+      <button type="button" class="report-back-btn" id="headOfficeMembersBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
+      <div class="report-head-title" data-i18n="headOfficeMembersBtn">חברי המשרד</div>
+    </div>
+    <p class="report-meta" data-i18n="headOfficeMembersIntro">מספרי הטלפון שהפרויקטים השיתופיים שלהם יופיעו בדוחות המרוכזים</p>
+    <div class="site-log-procurement-wrap">
+      <div id="headOfficeMembersList"></div>
+    </div>
+  </div>
+
   <div class="report-view" id="companyDashboardView" hidden>
     <div class="report-head">
       <button type="button" class="report-back-btn" id="companyDashboardBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
@@ -3199,6 +3211,10 @@
     headOfficeNumberPlaceholder: { he: "05XXXXXXXX", en: "05XXXXXXXX", ar: "05XXXXXXXX", ru: "05XXXXXXXX" },
     headOfficeToggleOnBtn: { he: "מעבר למצב משרד ראשי", en: "Switch to Head Office mode", ar: "التبديل إلى وضع المكتب الرئيسي", ru: "Перейти в режим главного офиса" },
     headOfficeToggleOffBtn: { he: "יציאה ממצב משרד ראשי", en: "Exit Head Office mode", ar: "الخروج من وضع المكتب الرئيسي", ru: "Выйти из режима главного офиса" },
+    headOfficeMembersBtn: { he: "חברי המשרד", en: "Office members", ar: "أعضاء المكتب", ru: "Сотрудники офиса" },
+    headOfficeMembersIntro: { he: "מספרי הטלפון שהפרויקטים השיתופיים שלהם יופיעו בדוחות המרוכזים", en: "Phone numbers whose shared projects appear in the combined reports", ar: "أرقام الهواتف التي ستظهر مشاريعها المشتركة في التقارير المجمّعة", ru: "Номера телефонов, чьи совместные проекты появятся в сводных отчётах" },
+    headOfficeMemberAddPlaceholder: { he: "05XXXXXXXX", en: "05XXXXXXXX", ar: "05XXXXXXXX", ru: "05XXXXXXXX" },
+    headOfficeMemberInvalidMsg: { he: "מספר טלפון לא תקין", en: "Invalid phone number", ar: "رقم هاتف غير صالح", ru: "Неверный номер телефона" },
     officeReportsBtnTitle: { he: "דוחות מרוכזים", en: "Combined reports", ar: "تقارير مجمعة", ru: "Сводные отчёты" },
     officeCombinedReportFileNamePrefix: { he: "דוח מרוכז", en: "Combined report", ar: "تقرير مجمّع", ru: "Сводный отчёт" },
     officeCombinedReportEmptyMsg: { he: "אף פרויקט לא שיגר דוח מסוג זה היום", en: "No project has sent this type of report today", ar: "لم يرسل أي مشروع هذا النوع من التقارير اليوم", ru: "Ни один проект не отправил такой отчёт сегодня" },
@@ -3738,6 +3754,15 @@
   var SUPABASE_ROW_ID = null;
   var myPhoneNumber = null;
   var sharedSheets = [];
+  // Head Office's "watched numbers" mechanism: projects reachable only
+  // through a watched phone number (not real membership) are kept in a
+  // separate array, never merged into sharedSheets - they're read-only
+  // report data (see head_office_watchlist.sql's read-only RLS policy),
+  // deliberately excluded from the regular project-tab list, search, chat,
+  // badges etc. so there's no risk of the app trying to write to a project
+  // this account was never actually invited to.
+  var headOfficeWatchlistNumbers = [];
+  var headOfficeWatchedSheets = [];
   var supabaseClient = (window.supabase && SUPABASE_URL && SUPABASE_KEY)
     ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
     : null;
@@ -7404,6 +7429,7 @@
     try { localStorage.setItem(HEAD_OFFICE_MANUAL_TOGGLE_KEY, on ? "1" : "0"); } catch (e) {}
     recomputeHeadOfficeMode();
     updateHeadOfficeToggleButtons();
+    loadHeadOfficeWatchlist();
     state.menuOpen = false;
     render();
   }
@@ -7422,8 +7448,88 @@
   headOfficeNumberInput.addEventListener("change", function () {
     try { localStorage.setItem(HEAD_OFFICE_NUMBER_KEY, headOfficeNumberInput.value.trim()); } catch (e) {}
     recomputeHeadOfficeMode();
+    loadHeadOfficeWatchlist();
     render();
   });
+
+  // "חברי המשרד" - the phone numbers whose shared projects Head Office can
+  // read (but never write to) for the combined reports, without being a
+  // real member of them. Rows: existing watched numbers with ✕ to remove,
+  // plus one add row at the bottom.
+  var headOfficeMembersBtn = document.getElementById("headOfficeMembersBtn");
+  var headOfficeMembersView = document.getElementById("headOfficeMembersView");
+  var headOfficeMembersBackBtn = document.getElementById("headOfficeMembersBackBtn");
+  var headOfficeMembersList = document.getElementById("headOfficeMembersList");
+
+  function addHeadOfficeWatchedNumber(phone) {
+    if (!supabaseClient || !myPhoneNumber) return;
+    if (headOfficeWatchlistNumbers.indexOf(phone) !== -1) return;
+    supabaseClient.from("head_office_watchlist").insert({ head_office_phone: myPhoneNumber, watched_phone: phone })
+      .then(function () { loadHeadOfficeWatchlist(); }, function () {});
+  }
+  function removeHeadOfficeWatchedNumber(phone) {
+    if (!supabaseClient || !myPhoneNumber) return;
+    supabaseClient.from("head_office_watchlist").delete().eq("head_office_phone", myPhoneNumber).eq("watched_phone", phone)
+      .then(function () { loadHeadOfficeWatchlist(); }, function () {});
+  }
+
+  function renderHeadOfficeMembersList() {
+    headOfficeMembersList.innerHTML = "";
+    headOfficeWatchlistNumbers.forEach(function (phone) {
+      var row = document.createElement("div");
+      row.className = "site-log-entry";
+      var phoneSpan = document.createElement("span");
+      phoneSpan.textContent = phone;
+      phoneSpan.dir = "ltr";
+      row.appendChild(phoneSpan);
+      var removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "site-log-entry-remove";
+      removeBtn.textContent = "✕";
+      removeBtn.addEventListener("click", function () { removeHeadOfficeWatchedNumber(phone); });
+      row.appendChild(removeBtn);
+      headOfficeMembersList.appendChild(row);
+    });
+
+    var addRow = document.createElement("div");
+    addRow.className = "site-log-entry";
+    var addInput = document.createElement("input");
+    addInput.type = "tel";
+    addInput.className = "site-log-add-input";
+    addInput.placeholder = tr("headOfficeMemberAddPlaceholder");
+    addInput.dir = "ltr";
+    addRow.appendChild(addInput);
+    var addBtn = document.createElement("button");
+    addBtn.type = "button";
+    addBtn.className = "site-log-add-btn";
+    var addBtnImg = document.createElement("img");
+    addBtnImg.src = "tasks-plus-icon.webp";
+    addBtnImg.alt = "+";
+    addBtn.appendChild(addBtnImg);
+    function submitAdd() {
+      var phone = normalizePhoneDigits(addInput.value);
+      if (!phone) { alert(tr("headOfficeMemberInvalidMsg")); return; }
+      addHeadOfficeWatchedNumber(phone);
+    }
+    addBtn.addEventListener("click", submitAdd);
+    addInput.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); submitAdd(); } });
+    addRow.appendChild(addBtn);
+    headOfficeMembersList.appendChild(addRow);
+  }
+
+  function openHeadOfficeMembersView() {
+    headOfficeMembersView.hidden = false;
+    renderHeadOfficeMembersList();
+  }
+  function closeHeadOfficeMembersView() {
+    headOfficeMembersView.hidden = true;
+  }
+  headOfficeMembersBtn.addEventListener("click", function () {
+    state.menuOpen = false;
+    render();
+    openHeadOfficeMembersView();
+  });
+  headOfficeMembersBackBtn.addEventListener("click", closeHeadOfficeMembersView);
 
   // Company logos can be large source images (a marketing PNG straight off
   // someone's phone) - they're stored inline as data URLs in app_state's
@@ -9067,6 +9173,19 @@
     }
   };
 
+  // Every active shared project this account can read reports for: its own
+  // real shared projects, plus (read-only) projects of any watched Head
+  // Office number - see headOfficeWatchedSheets above.
+  function officeReportSheets() {
+    return sharedSheets.concat(headOfficeWatchedSheets).filter(function (s) { return !s.ended; });
+  }
+  // A watched-number project is read-only - this tells the procurement
+  // purchase-toggle (the one write this screen can do) whether it's
+  // allowed to write to this particular sheet.
+  function isSheetHeadOfficeMember(sheet) {
+    return !!(sheet.members && sheet.members.indexOf(myPhoneNumber) !== -1);
+  }
+
   // Only a project whose "Send report" button (markSiteLogReportSent above)
   // was clicked for this category TODAY is included - a project that's
   // never sent (or only sent on an earlier day) is left out entirely
@@ -9078,7 +9197,7 @@
     wrap.dir = RTL_LANGS[currentLang] ? "rtl" : "ltr";
     var dateISO = todayISO();
     var sectionCount = 0;
-    sharedSheets.filter(function (s) { return !s.ended; }).forEach(function (sheet) {
+    officeReportSheets().forEach(function (sheet) {
       var log = findSiteLog(sheet, dateISO);
       if (!log || log[kind.sentField] !== dateISO) return;
       var section = document.createElement("div");
@@ -9214,7 +9333,7 @@
 
     var nameLower = name.trim().toLowerCase();
     var rows = [];
-    sharedSheets.filter(function (s) { return !s.ended; }).forEach(function (sheet) {
+    officeReportSheets().forEach(function (sheet) {
       (sheet.siteLogs || []).forEach(function (rawLog) {
         if (rawLog.date < fromISO || rawLog.date > toISO) return;
         if (rawLog[kind.sentField] !== rawLog.date) return;
@@ -9274,7 +9393,7 @@
     var wrap = document.createElement("div");
     wrap.dir = RTL_LANGS[currentLang] ? "rtl" : "ltr";
     var entries = [];
-    sharedSheets.filter(function (s) { return !s.ended; }).forEach(function (sheet) {
+    officeReportSheets().forEach(function (sheet) {
       (sheet.siteLogs || []).forEach(function (rawLog) {
         if (rawLog.date < fromISO || rawLog.date > toISO) return;
         if (rawLog[kind.sentField] !== rawLog.date) return;
@@ -9405,7 +9524,7 @@
     officeProcurementList.innerHTML = "";
     var dateISO = todayISO();
     var sentField = OFFICE_REPORT_KINDS.procurement.sentField;
-    var projects = sharedSheets.filter(function (s) { return !s.ended; }).filter(function (sheet) {
+    var projects = officeReportSheets().filter(function (sheet) {
       var log = findSiteLog(sheet, dateISO);
       return log && log[sentField] === dateISO;
     });
@@ -9424,19 +9543,28 @@
       nameEl.className = "office-procurement-project-name";
       nameEl.textContent = sheet.name;
       block.appendChild(nameEl);
+      var writable = isSheetHeadOfficeMember(sheet);
       filledProcurement(log).forEach(function (entry) {
         var row = document.createElement("div");
         row.className = "site-log-procurement-row";
 
-        var mark = document.createElement("button");
-        mark.type = "button";
-        mark.className = "purchased-mark clickable" + (entry.purchased ? " purchased" : "");
-        mark.addEventListener("click", function () {
-          entry.purchased = !entry.purchased;
-          saveData();
-          renderOfficeProcurementList();
-        });
-        row.appendChild(mark);
+        if (writable) {
+          var mark = document.createElement("button");
+          mark.type = "button";
+          mark.className = "purchased-mark clickable" + (entry.purchased ? " purchased" : "");
+          mark.addEventListener("click", function () {
+            entry.purchased = !entry.purchased;
+            saveData();
+            renderOfficeProcurementList();
+          });
+          row.appendChild(mark);
+        } else if (entry.purchased) {
+          // Watched (not a real member) project - read-only, same as the
+          // regular per-project view's own purchased indicator.
+          var readOnlyMark = document.createElement("span");
+          readOnlyMark.className = "purchased-mark purchased";
+          row.appendChild(readOnlyMark);
+        }
 
         [
           { val: entry.item, cls: "site-log-procurement-item" },
@@ -11237,6 +11365,7 @@
     calendarFabBtn.hidden = isHeadOfficeMode;
     officeReportsBtn.hidden = !isHeadOfficeMode;
     reportFabBtn.hidden = isHeadOfficeMode;
+    headOfficeMembersBtn.hidden = !isHeadOfficeMode;
 
     var STATUS_LABEL = { 0: tr("statusPartial"), 1: tr("statusDone"), 2: tr("statusReset") };
 
@@ -11745,6 +11874,7 @@
       if (!usedInstantLocal) startLocalOnly();
     }
     loadSharedSheets();
+    loadHeadOfficeWatchlist();
     checkPendingProjectInvites();
   }
 
@@ -11863,6 +11993,36 @@
       }, function () {});
   }
 
+  // Head Office's watched-numbers data: a separate, read-only load path -
+  // see the headOfficeWatchedSheets comment above for why it's kept apart
+  // from sharedSheets.
+  function loadHeadOfficeWatchlist() {
+    if (!supabaseClient || !myPhoneNumber || !isHeadOfficeMode) return Promise.resolve();
+    return supabaseClient.from("head_office_watchlist").select("watched_phone").eq("head_office_phone", myPhoneNumber)
+      .then(function (result) {
+        var rows = (result && result.data) || [];
+        headOfficeWatchlistNumbers = rows.map(function (r) { return r.watched_phone; });
+        if (typeof renderHeadOfficeMembersList === "function") renderHeadOfficeMembersList();
+        return loadHeadOfficeWatchedSheets();
+      }, function () {});
+  }
+
+  function loadHeadOfficeWatchedSheets() {
+    if (!supabaseClient || !myPhoneNumber || !isHeadOfficeMode) return Promise.resolve();
+    return supabaseClient.from(SHARED_TABLE).select("*")
+      .then(function (result) {
+        var rows = (result && result.data) || [];
+        // RLS already restricts this to "my own memberships" plus "watched
+        // numbers' projects" - keep only the latter, since the former are
+        // already loaded into sharedSheets by loadSharedSheets() above, to
+        // avoid the same project showing up as two report sections.
+        headOfficeWatchedSheets = rows
+          .filter(function (r) { return (r.members || []).indexOf(myPhoneNumber) === -1; })
+          .map(sharedRowToSheet);
+        if (privateDataSettled) render();
+      }, function () {});
+  }
+
   var authGate = document.getElementById("authGate");
   var appRoot = document.getElementById("appRoot");
   var appLoadingOverlay = document.getElementById("appLoadingOverlay");
@@ -11946,6 +12106,7 @@
   function refreshSharedSheetsIfIdle() {
     if (isEditingActively()) return;
     loadSharedSheets();
+    loadHeadOfficeWatchlist();
     checkPendingProjectInvites();
   }
 
