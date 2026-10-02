@@ -3754,15 +3754,11 @@
   var SUPABASE_ROW_ID = null;
   var myPhoneNumber = null;
   var sharedSheets = [];
-  // Head Office's "watched numbers" mechanism: projects reachable only
-  // through a watched phone number (not real membership) are kept in a
-  // separate array, never merged into sharedSheets - they're read-only
-  // report data (see head_office_watchlist.sql's read-only RLS policy),
-  // deliberately excluded from the regular project-tab list, search, chat,
-  // badges etc. so there's no risk of the app trying to write to a project
-  // this account was never actually invited to.
+  // The phone numbers a Head Office account watches - see
+  // loadHeadOfficeWatchlist()/loadSharedSheets() below. The projects those
+  // numbers unlock land directly in sharedSheets (RLS-gated), not here;
+  // this is only the number list itself, for the "חברי המשרד" menu screen.
   var headOfficeWatchlistNumbers = [];
-  var headOfficeWatchedSheets = [];
   var supabaseClient = (window.supabase && SUPABASE_URL && SUPABASE_KEY)
     ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
     : null;
@@ -7465,12 +7461,12 @@
     if (!supabaseClient || !myPhoneNumber) return;
     if (headOfficeWatchlistNumbers.indexOf(phone) !== -1) return;
     supabaseClient.from("head_office_watchlist").insert({ head_office_phone: myPhoneNumber, watched_phone: phone })
-      .then(function () { loadHeadOfficeWatchlist(); }, function () {});
+      .then(function () { loadHeadOfficeWatchlist(); loadSharedSheets(); }, function () {});
   }
   function removeHeadOfficeWatchedNumber(phone) {
     if (!supabaseClient || !myPhoneNumber) return;
     supabaseClient.from("head_office_watchlist").delete().eq("head_office_phone", myPhoneNumber).eq("watched_phone", phone)
-      .then(function () { loadHeadOfficeWatchlist(); }, function () {});
+      .then(function () { loadHeadOfficeWatchlist(); loadSharedSheets(); }, function () {});
   }
 
   function renderHeadOfficeMembersList() {
@@ -9173,17 +9169,12 @@
     }
   };
 
-  // Every active shared project this account can read reports for: its own
-  // real shared projects, plus (read-only) projects of any watched Head
-  // Office number - see headOfficeWatchedSheets above.
+  // Every active shared project this account can act on - its own real
+  // memberships plus (full read/write, via head_office_watchlist.sql) any
+  // watched Head Office number's projects, already unified in sharedSheets
+  // by loadSharedSheets().
   function officeReportSheets() {
-    return sharedSheets.concat(headOfficeWatchedSheets).filter(function (s) { return !s.ended; });
-  }
-  // A watched-number project is read-only - this tells the procurement
-  // purchase-toggle (the one write this screen can do) whether it's
-  // allowed to write to this particular sheet.
-  function isSheetHeadOfficeMember(sheet) {
-    return !!(sheet.members && sheet.members.indexOf(myPhoneNumber) !== -1);
+    return sharedSheets.filter(function (s) { return !s.ended; });
   }
 
   // Only a project whose "Send report" button (markSiteLogReportSent above)
@@ -9543,28 +9534,19 @@
       nameEl.className = "office-procurement-project-name";
       nameEl.textContent = sheet.name;
       block.appendChild(nameEl);
-      var writable = isSheetHeadOfficeMember(sheet);
       filledProcurement(log).forEach(function (entry) {
         var row = document.createElement("div");
         row.className = "site-log-procurement-row";
 
-        if (writable) {
-          var mark = document.createElement("button");
-          mark.type = "button";
-          mark.className = "purchased-mark clickable" + (entry.purchased ? " purchased" : "");
-          mark.addEventListener("click", function () {
-            entry.purchased = !entry.purchased;
-            saveData();
-            renderOfficeProcurementList();
-          });
-          row.appendChild(mark);
-        } else if (entry.purchased) {
-          // Watched (not a real member) project - read-only, same as the
-          // regular per-project view's own purchased indicator.
-          var readOnlyMark = document.createElement("span");
-          readOnlyMark.className = "purchased-mark purchased";
-          row.appendChild(readOnlyMark);
-        }
+        var mark = document.createElement("button");
+        mark.type = "button";
+        mark.className = "purchased-mark clickable" + (entry.purchased ? " purchased" : "");
+        mark.addEventListener("click", function () {
+          entry.purchased = !entry.purchased;
+          saveData();
+          renderOfficeProcurementList();
+        });
+        row.appendChild(mark);
 
         [
           { val: entry.item, cls: "site-log-procurement-item" },
@@ -11960,9 +11942,18 @@
 
   var sharedSheetsLoadedOnce = false;
 
+  // No .contains("members", [myPhoneNumber]) filter here on purpose - RLS
+  // alone decides what comes back: a project this account is a real member
+  // of, OR (for a Head Office account) a project where it has registered
+  // one of that project's members as a "watched number" (see
+  // head_office_watchlist.sql). Either way the row lands in this same
+  // sharedSheets array with full normal read/write access, so a watched
+  // project behaves exactly like a real membership everywhere in the app -
+  // task writing (shown in red to everyone else via isHeadOffice), chat,
+  // procurement purchase-marking, combined reports, all of it.
   function loadSharedSheets() {
     if (!supabaseClient || !myPhoneNumber) return Promise.resolve();
-    return supabaseClient.from(SHARED_TABLE).select("*").contains("members", [myPhoneNumber])
+    return supabaseClient.from(SHARED_TABLE).select("*")
       .then(function (result) {
         var rows = (result && result.data) || [];
         var previousById = {};
@@ -11993,9 +11984,10 @@
       }, function () {});
   }
 
-  // Head Office's watched-numbers data: a separate, read-only load path -
-  // see the headOfficeWatchedSheets comment above for why it's kept apart
-  // from sharedSheets.
+  // Just the list of watched phone numbers, for the "חברי המשרד" management
+  // screen - the projects themselves come in through loadSharedSheets()
+  // above (RLS grants access once a number is on this list), so adding or
+  // removing a watched number also re-triggers that load.
   function loadHeadOfficeWatchlist() {
     if (!supabaseClient || !myPhoneNumber || !isHeadOfficeMode) return Promise.resolve();
     return supabaseClient.from("head_office_watchlist").select("watched_phone").eq("head_office_phone", myPhoneNumber)
@@ -12003,23 +11995,6 @@
         var rows = (result && result.data) || [];
         headOfficeWatchlistNumbers = rows.map(function (r) { return r.watched_phone; });
         if (typeof renderHeadOfficeMembersList === "function") renderHeadOfficeMembersList();
-        return loadHeadOfficeWatchedSheets();
-      }, function () {});
-  }
-
-  function loadHeadOfficeWatchedSheets() {
-    if (!supabaseClient || !myPhoneNumber || !isHeadOfficeMode) return Promise.resolve();
-    return supabaseClient.from(SHARED_TABLE).select("*")
-      .then(function (result) {
-        var rows = (result && result.data) || [];
-        // RLS already restricts this to "my own memberships" plus "watched
-        // numbers' projects" - keep only the latter, since the former are
-        // already loaded into sharedSheets by loadSharedSheets() above, to
-        // avoid the same project showing up as two report sections.
-        headOfficeWatchedSheets = rows
-          .filter(function (r) { return (r.members || []).indexOf(myPhoneNumber) === -1; })
-          .map(sharedRowToSheet);
-        if (privateDataSettled) render();
       }, function () {});
   }
 
