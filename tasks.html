@@ -1055,6 +1055,33 @@
     font-size: 0.85rem;
     cursor: pointer;
   }
+  /* Pinned to the viewport, not the scrollable task list, so it stays put
+     (centered, a fixed distance above the footer's own height) no matter
+     how many rows are on the current day or how far the page is scrolled -
+     the footer itself isn't fixed either, but since both this button and
+     the footer only ever reach the viewport's bottom edge at max scroll,
+     offsetting by the footer's own height keeps them from overlapping at
+     any scroll position. */
+  .completed-tasks-toggle-btn {
+    position: fixed;
+    left: 50%;
+    bottom: 70px;
+    transform: translateX(-50%);
+    z-index: 8;
+    width: auto;
+    max-width: calc(100% - 40px);
+    padding: 10px 22px;
+    border-radius: 999px;
+    border: 1px solid var(--rule);
+    background: var(--paper-alt);
+    color: var(--ink);
+    font-family: "Rubik", "Assistant", sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    box-shadow: 0 4px 10px var(--shadow);
+  }
+  .completed-tasks-toggle-btn[hidden] { display: none; }
   .site-log-periodic-btn {
     margin: 0 14px 14px;
     padding: 12px 8px;
@@ -2575,7 +2602,8 @@
         <button type="submit" class="add-btn" data-i18n-title="addBtnTitle" title="הוספה"><img src="tasks-plus-icon.webp" alt="+"></button>
       </form>
       <div class="sheet-reports-list" id="sheetReportsList" hidden></div>
-      <button type="button" class="site-log-preview-btn" id="toggleCompletedTasksBtn" data-i18n="showCompletedTasksBtn">משימות שבוצעו</button>
+      <button type="button" class="completed-tasks-toggle-btn" id="showCompletedTasksBtn" data-i18n="showCompletedTasksBtn">משימות שבוצעו</button>
+      <button type="button" class="completed-tasks-toggle-btn" id="showActiveTasksBtn" data-i18n="showActiveTasksBtn" hidden>משימות לא בוצעו</button>
     </div>
     <div class="footer-divider"></div>
     <div class="notebook-footer" id="notebookFooter">
@@ -4125,7 +4153,8 @@
   var addForm = document.getElementById("addForm");
   var taskList = document.getElementById("taskList");
   var emptyState = document.getElementById("emptyState");
-  var toggleCompletedTasksBtn = document.getElementById("toggleCompletedTasksBtn");
+  var showCompletedTasksBtn = document.getElementById("showCompletedTasksBtn");
+  var showActiveTasksBtn = document.getElementById("showActiveTasksBtn");
   var sheetTitle = document.getElementById("sheetTitle");
   var progressText = document.getElementById("progressText");
   var menuBtn = document.getElementById("menuBtn");
@@ -4372,8 +4401,12 @@
     render();
   });
 
-  toggleCompletedTasksBtn.addEventListener("click", function () {
-    state.showingCompleted = !state.showingCompleted;
+  showCompletedTasksBtn.addEventListener("click", function () {
+    state.showingCompleted = true;
+    render();
+  });
+  showActiveTasksBtn.addEventListener("click", function () {
+    state.showingCompleted = false;
     render();
   });
 
@@ -11412,16 +11445,18 @@
     var reportsMode = state.viewMode === "reports";
     taskList.hidden = reportsMode;
     emptyState.hidden = reportsMode;
-    toggleCompletedTasksBtn.hidden = reportsMode;
     if (reportsMode) emptyState.style.display = "none";
     sheetReportsList.hidden = !reportsMode;
     if (reportsMode) {
       addForm.hidden = true;
+      showCompletedTasksBtn.hidden = true;
+      showActiveTasksBtn.hidden = true;
       progressText.textContent = "";
       renderSheetReportsList();
       return;
     }
-    toggleCompletedTasksBtn.textContent = tr(state.showingCompleted ? "showActiveTasksBtn" : "showCompletedTasksBtn");
+    showCompletedTasksBtn.hidden = state.showingCompleted;
+    showActiveTasksBtn.hidden = !state.showingCompleted;
     addForm.hidden = isPast || state.showingCompleted;
 
     // Browsing completed tasks shows every done task across every date in
