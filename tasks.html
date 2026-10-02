@@ -3125,7 +3125,8 @@
       <button type="button" class="report-back-btn" id="headOfficeMembersBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
       <div class="report-head-title" data-i18n="headOfficeMembersBtn">חברי המשרד</div>
     </div>
-    <p class="report-meta" data-i18n="headOfficeMembersIntro">מספרי הטלפון שהפרויקטים השיתופיים שלהם יופיעו בדוחות המרוכזים</p>
+    <p class="report-meta" data-i18n="headOfficeMembersIntro">מספרי הטלפון שהפרויקטים השיתופיים שלהם יהיו נגישים למשרד הראשי</p>
+    <button type="button" class="convert-to-note-btn" id="headOfficeMembersPickContactsBtn" data-i18n="sharedProjectPickContactsBtn" hidden>בחירה מאנשי הקשר</button>
     <div class="site-log-procurement-wrap">
       <div id="headOfficeMembersList"></div>
     </div>
@@ -3212,7 +3213,7 @@
     headOfficeToggleOnBtn: { he: "מעבר למצב משרד ראשי", en: "Switch to Head Office mode", ar: "التبديل إلى وضع المكتب الرئيسي", ru: "Перейти в режим главного офиса" },
     headOfficeToggleOffBtn: { he: "יציאה ממצב משרד ראשי", en: "Exit Head Office mode", ar: "الخروج من وضع المكتب الرئيسي", ru: "Выйти из режима главного офиса" },
     headOfficeMembersBtn: { he: "חברי המשרד", en: "Office members", ar: "أعضاء المكتب", ru: "Сотрудники офиса" },
-    headOfficeMembersIntro: { he: "מספרי הטלפון שהפרויקטים השיתופיים שלהם יופיעו בדוחות המרוכזים", en: "Phone numbers whose shared projects appear in the combined reports", ar: "أرقام الهواتف التي ستظهر مشاريعها المشتركة في التقارير المجمّعة", ru: "Номера телефонов, чьи совместные проекты появятся в сводных отчётах" },
+    headOfficeMembersIntro: { he: "מספרי הטלפון שהפרויקטים השיתופיים שלהם יהיו נגישים למשרד הראשי", en: "Phone numbers whose shared projects are accessible to Head Office", ar: "أرقام الهواتف التي ستكون مشاريعها المشتركة متاحة للمكتب الرئيسي", ru: "Номера телефонов, чьи совместные проекты будут доступны главному офису" },
     headOfficeMemberAddPlaceholder: { he: "05XXXXXXXX", en: "05XXXXXXXX", ar: "05XXXXXXXX", ru: "05XXXXXXXX" },
     headOfficeMemberInvalidMsg: { he: "מספר טלפון לא תקין", en: "Invalid phone number", ar: "رقم هاتف غير صالح", ru: "Неверный номер телефона" },
     officeReportsBtnTitle: { he: "דוחות מרוכזים", en: "Combined reports", ar: "تقارير مجمعة", ru: "Сводные отчёты" },
@@ -7456,6 +7457,8 @@
   var headOfficeMembersView = document.getElementById("headOfficeMembersView");
   var headOfficeMembersBackBtn = document.getElementById("headOfficeMembersBackBtn");
   var headOfficeMembersList = document.getElementById("headOfficeMembersList");
+  var headOfficeMembersPickContactsBtn = document.getElementById("headOfficeMembersPickContactsBtn");
+  headOfficeMembersPickContactsBtn.hidden = !contactPickerSupported;
 
   function addHeadOfficeWatchedNumber(phone) {
     if (!supabaseClient || !myPhoneNumber) return;
@@ -7526,6 +7529,27 @@
     openHeadOfficeMembersView();
   });
   headOfficeMembersBackBtn.addEventListener("click", closeHeadOfficeMembersView);
+
+  function pickContactsForHeadOfficeMembers() {
+    if (!contactPickerSupported) return;
+    if (capacitorContactsAvailable) {
+      pickOneNativeContact().then(function (picked) {
+        if (!picked) return;
+        var phone = normalizePhoneDigits(picked.tel);
+        if (!phone) { alert(tr("headOfficeMemberInvalidMsg")); return; }
+        addHeadOfficeWatchedNumber(phone);
+      });
+      return;
+    }
+    navigator.contacts.select(["tel"], { multiple: true }).then(function (contacts) {
+      contacts.forEach(function (c) {
+        var tel = (c.tel && c.tel[0]) || "";
+        var phone = normalizePhoneDigits(tel);
+        if (phone) addHeadOfficeWatchedNumber(phone);
+      });
+    }).catch(function () {});
+  }
+  headOfficeMembersPickContactsBtn.addEventListener("click", pickContactsForHeadOfficeMembers);
 
   // Company logos can be large source images (a marketing PNG straight off
   // someone's phone) - they're stored inline as data URLs in app_state's
