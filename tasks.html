@@ -689,9 +689,17 @@
     gap: 8px;
     padding: 0 26px 2px 10px;
     margin-top: -12px;
-    justify-content: start;
+    justify-content: center;
   }
-  #diaryView .library-item-name { font-size: 0.7rem; }
+  #diaryView .library-item { gap: 2px; }
+  #diaryView .library-item-name { font-size: 0.78rem; }
+  /* The 5th icon (procurement) is alone on the grid's last row - span
+     both columns and center it there instead of letting grid
+     auto-placement stick it to one side. */
+  #diaryView #siteLogProcurementBtn {
+    grid-column: 1 / -1;
+    justify-self: center;
+  }
   /* Pinned to the viewport like .completed-tasks-toggle-btn, instead of
      flowing right after the icon grid - keeps the 4 buttons together at
      the bottom/center of the screen regardless of how tall the icon grid
