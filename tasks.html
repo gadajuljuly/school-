@@ -688,17 +688,19 @@
     padding: 8px 10px 2px;
   }
   #diaryView .library-item-name { font-size: 0.68rem; }
-  #diaryView .site-log-preview-btn,
-  #diaryView .site-log-periodic-btn {
-    margin: 0 14px 8px;
-    padding: 9px 8px;
-    font-size: 0.78rem;
-  }
+  /* Preview + periodic sit in their own row, same two-up layout as the
+     close/share row right below - both rows reuse .site-log-close-share-row
+     for the shared flex/gap/padding, each button just needs flex:1 to
+     split the row evenly. */
   #diaryView .site-log-close-share-row { padding: 0 14px 8px; }
+  #diaryView .site-log-close-share-row .site-log-preview-btn,
+  #diaryView .site-log-close-share-row .site-log-periodic-btn,
   #diaryView .site-log-close-btn,
   #diaryView .site-log-share-btn {
-    padding: 9px 8px;
-    font-size: 0.78rem;
+    flex: 1;
+    margin: 0;
+    padding: 9px 6px;
+    font-size: 0.75rem;
   }
   .library-item-name {
     font-size: 0.68rem;
@@ -2646,12 +2648,14 @@
             <div class="library-item-name" data-i18n="siteLogProcurement">רכש</div>
           </div>
         </div>
-        <button type="button" class="site-log-preview-btn" id="siteLogPreviewBtn" data-i18n="siteLogPreviewBtn">הצגת יומן</button>
+        <div class="site-log-close-share-row">
+          <button type="button" class="site-log-preview-btn" id="siteLogPreviewBtn" data-i18n="siteLogPreviewBtn">הצגת יומן</button>
+          <button type="button" class="site-log-periodic-btn" id="siteLogPeriodicBtn" data-i18n="siteLogPeriodicBtn">הפקת דו"ח יומנים תקופתי</button>
+        </div>
         <div class="site-log-close-share-row">
           <button type="button" class="site-log-close-btn" id="siteLogCloseBtn" data-i18n="siteLogCloseBtn">סגירת יומן</button>
           <button type="button" class="site-log-share-btn" id="siteLogShareGeneralBtn" data-i18n="siteLogShareBtn" disabled>שיתוף יומן</button>
         </div>
-        <button type="button" class="site-log-periodic-btn" id="siteLogPeriodicBtn" data-i18n="siteLogPeriodicBtn">הפקת דו"ח יומנים תקופתי</button>
       </div>
       <button type="button" class="completed-tasks-toggle-btn" id="showCompletedTasksBtn" data-i18n="showCompletedTasksBtn">משימות שבוצעו</button>
       <button type="button" class="completed-tasks-toggle-btn" id="showActiveTasksBtn" data-i18n="showActiveTasksBtn" hidden>משימות לא בוצעו</button>
