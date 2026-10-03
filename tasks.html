@@ -670,7 +670,7 @@
   }
   .library-item-thumb img { width: 100%; height: 100%; object-fit: cover; }
   .site-log-categories-grid .library-item-thumb {
-    background: var(--paper);
+    background: transparent;
     border: none;
   }
   .site-log-categories-grid .library-item-name {
@@ -688,23 +688,29 @@
     grid-template-columns: repeat(2, minmax(68px, 98px));
     gap: 8px;
     padding: 0 26px 2px 10px;
+    margin-top: -12px;
     justify-content: start;
   }
   #diaryView .library-item-name { font-size: 0.7rem; }
   /* Pinned to the viewport like .completed-tasks-toggle-btn, instead of
      flowing right after the icon grid - keeps the 4 buttons together at
      the bottom/center of the screen regardless of how tall the icon grid
-     ends up, rather than leaving a gap or pushing the page into a scroll. */
+     ends up, rather than leaving a gap or pushing the page into a scroll.
+     Anchored with explicit right/left insets (not centered) because the
+     red margin line sits only near the RIGHT edge in this RTL layout
+     (.ruled-body's own 22px padding + .ruled-body::before's 39px inset,
+     plus the page's 16px body padding = ~55-60px from the viewport's
+     right edge) - a symmetric centered width still crossed it. */
   .diary-actions-fixed {
     position: fixed;
-    left: 50%;
+    right: 60px;
+    left: 16px;
     bottom: 95px;
-    transform: translateX(-50%);
     display: flex;
     flex-direction: column;
     gap: 8px;
-    width: calc(100% - 72px);
     max-width: 380px;
+    margin-inline-start: auto;
     z-index: 8;
   }
   .diary-actions-fixed .site-log-close-share-row { padding: 0; }
