@@ -11104,6 +11104,7 @@
     data.activeSheetId = endedSheets[0].id;
     state.viewDate = endedSheets[0].endedDate || todayISO();
     state.viewMode = "tasks";
+    state.showingCompleted = false;
     render();
   }
   function exitArchiveView() {
@@ -11515,8 +11516,8 @@
       renderLibraryFolders();
       return;
     }
-    showCompletedTasksBtn.hidden = state.showingCompleted;
-    showActiveTasksBtn.hidden = !state.showingCompleted;
+    showCompletedTasksBtn.hidden = viewingArchive || state.showingCompleted;
+    showActiveTasksBtn.hidden = viewingArchive || !state.showingCompleted;
     addForm.hidden = isPast || state.showingCompleted;
 
     // Browsing completed tasks shows every done task across every date in
