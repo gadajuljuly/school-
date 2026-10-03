@@ -691,14 +691,18 @@
     margin-top: -12px;
     justify-content: center;
   }
-  #diaryView .library-item { gap: 2px; }
+  #diaryView .library-item { gap: 0; }
   #diaryView .library-item-name { font-size: 0.78rem; }
   /* The 5th icon (procurement) is alone on the grid's last row - span
      both columns and center it there instead of letting grid
-     auto-placement stick it to one side. */
+     auto-placement stick it to one side. Spanning both columns widens
+     the item's own box to the full row, so its thumb (width:100% of
+     that box) must be capped back to a single column's width - without
+     this it blows up to roughly double size. */
   #diaryView #siteLogProcurementBtn {
     grid-column: 1 / -1;
     justify-self: center;
+    width: 98px;
   }
   /* Pinned to the viewport like .completed-tasks-toggle-btn, instead of
      flowing right after the icon grid - keeps the 4 buttons together at
