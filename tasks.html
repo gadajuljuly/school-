@@ -736,6 +736,28 @@
     font-size: 0.78rem;
     box-shadow: 0 4px 10px var(--shadow);
   }
+  /* The library's folder grid sits inline on the tasks page too (same
+     pattern as #diaryView above) instead of its own full-screen view -
+     the project tabs above and footer icons below stay visible and do
+     the navigating. There can be more folders than the diary's 5 fixed
+     icons (7 defaults plus any custom ones), so this uses 3 columns of
+     smaller tiles instead of 2, to still fit the page without scrolling. */
+  #libraryFoldersView .library-inline-head {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0 26px 4px 10px;
+  }
+  #libraryFoldersView .library-grid {
+    flex: none;
+    overflow: visible;
+    grid-template-columns: repeat(3, minmax(54px, 78px));
+    gap: 10px 6px;
+    padding: 0 26px 2px 10px;
+    justify-content: center;
+  }
+  #libraryFoldersView .library-item { gap: 0; }
+  #libraryFoldersView .library-item-name { font-size: 0.66rem; }
+  #libraryFoldersView .library-item-thumb { font-size: 1.5rem; }
   .library-item-name {
     font-size: 0.68rem;
     color: var(--ink);
@@ -2693,6 +2715,12 @@
           </div>
         </div>
       </div>
+      <div id="libraryFoldersView" hidden>
+        <div class="library-inline-head">
+          <button type="button" class="report-share-btn" id="libraryAddFolderBtn" data-i18n-title="libraryAddFolderBtnTitle" title="הוספת תיקייה">&#10133;</button>
+        </div>
+        <div class="library-grid" id="libraryFoldersGrid"></div>
+      </div>
       <button type="button" class="completed-tasks-toggle-btn" id="showCompletedTasksBtn" data-i18n="showCompletedTasksBtn">משימות שבוצעו</button>
       <button type="button" class="completed-tasks-toggle-btn" id="showActiveTasksBtn" data-i18n="showActiveTasksBtn" hidden>משימות לא בוצעו</button>
     </div>
@@ -3023,15 +3051,6 @@
         <button type="button" class="modal-btn modal-btn-no" id="chatMsgActionCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </div>
-  </div>
-
-  <div class="report-view" id="libraryFoldersView" hidden>
-    <div class="report-head">
-      <button type="button" class="report-back-btn" id="libraryFoldersBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
-      <div class="report-head-title" id="libraryFoldersHeadTitle"></div>
-      <button type="button" class="report-share-btn" id="libraryAddFolderBtn" data-i18n-title="libraryAddFolderBtnTitle" title="הוספת תיקייה">&#10133;</button>
-    </div>
-    <div class="library-grid" id="libraryFoldersGrid"></div>
   </div>
 
   <div class="modal-overlay" id="libraryFolderNameOverlay" hidden>
@@ -6168,8 +6187,6 @@
   var archiveBtn = document.getElementById("archiveBtn");
   archiveBtn.addEventListener("click", function () { enterArchiveView(); });
   var libraryFoldersView = document.getElementById("libraryFoldersView");
-  var libraryFoldersBackBtn = document.getElementById("libraryFoldersBackBtn");
-  var libraryFoldersHeadTitle = document.getElementById("libraryFoldersHeadTitle");
   var libraryFoldersGrid = document.getElementById("libraryFoldersGrid");
   var libraryAddFolderBtn = document.getElementById("libraryAddFolderBtn");
   var libraryFolderNameOverlay = document.getElementById("libraryFolderNameOverlay");
@@ -6793,18 +6810,10 @@
   }
 
   function openLibraryFoldersView() {
-    var sheet = activeSheet();
-    if (!sheet) return;
-    activeLibrarySheetId = sheet.id;
-    libraryFoldersHeadTitle.textContent = tr("libraryTitlePrefix") + sheet.name;
-    libraryFoldersView.hidden = false;
-    renderLibraryFolders();
-    updateActiveFabHighlight();
-  }
-  function closeLibraryFoldersView() {
-    libraryFoldersView.hidden = true;
-    activeLibrarySheetId = null;
-    updateActiveFabHighlight();
+    if (!activeSheet()) return;
+    state.viewMode = "library";
+    state.menuOpen = false;
+    render();
   }
   function openLibraryFolderView(sheet, folder) {
     activeLibraryFolderId = folder.id;
@@ -6822,7 +6831,6 @@
     updateActiveFabHighlight();
   }
   libraryBtn.addEventListener("click", openLibraryFoldersView);
-  libraryFoldersBackBtn.addEventListener("click", closeLibraryFoldersView);
   libraryBackBtn.addEventListener("click", closeLibraryView);
   libraryAddBtn.addEventListener("click", function () { libraryFileInput.click(); });
   libraryFileInput.addEventListener("change", function () {
@@ -11364,16 +11372,17 @@
   var URGENT_CIRCLE_SVG = '<svg viewBox="0 0 11 11" xmlns="http://www.w3.org/2000/svg"><circle cx="5.5" cy="5.5" r="4" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
 
   // Highlights whichever of the 4 footer icons the user is "inside" right
-  // now. Chat/library are full-screen overlays that don't go through
-  // render(), so they call this directly on open/close; the tasks/reports
-  // toggle lives inside render() itself.
+  // now. Chat and the library's folder-detail screen are full-screen
+  // overlays that don't go through render(), so they call this directly
+  // on open/close; the tasks/reports/diary/library toggle lives inside
+  // render() itself.
   function updateActiveFabHighlight() {
     [tasksFabBtn, calendarFabBtn, reportFabBtn, chatBtn, libraryBtn, archiveBtn].forEach(function (btn) {
       btn.classList.remove("fab-active");
     });
     var active;
     if (!chatView.hidden) active = chatBtn;
-    else if (!libraryFoldersView.hidden || !libraryView.hidden) active = libraryBtn;
+    else if (state.viewMode === "library" || !libraryView.hidden) active = libraryBtn;
     else if (viewingArchive) active = archiveBtn;
     else if (state.viewMode === "reports") active = reportFabBtn;
     else if (state.viewMode === "diary") active = calendarFabBtn;
@@ -11430,11 +11439,13 @@
 
     var reportsMode = state.viewMode === "reports";
     var diaryMode = state.viewMode === "diary";
-    taskList.hidden = reportsMode || diaryMode;
-    emptyState.hidden = reportsMode || diaryMode;
-    if (reportsMode || diaryMode) emptyState.style.display = "none";
+    var libraryMode = state.viewMode === "library";
+    taskList.hidden = reportsMode || diaryMode || libraryMode;
+    emptyState.hidden = reportsMode || diaryMode || libraryMode;
+    if (reportsMode || diaryMode || libraryMode) emptyState.style.display = "none";
     sheetReportsList.hidden = !reportsMode;
     diaryView.hidden = !diaryMode;
+    libraryFoldersView.hidden = !libraryMode;
     if (reportsMode) {
       addForm.hidden = true;
       showCompletedTasksBtn.hidden = true;
@@ -11453,6 +11464,18 @@
       // which day's log the icons below point to, same as it always did.
       activeSiteLogDate = state.viewDate;
       updateSiteLogCloseShareButtons();
+      return;
+    }
+    if (libraryMode) {
+      addForm.hidden = true;
+      showCompletedTasksBtn.hidden = true;
+      showActiveTasksBtn.hidden = true;
+      progressText.textContent = "";
+      // Kept in sync here (not just on entry) so switching project tabs
+      // while already in library mode updates whose folders are shown,
+      // same as diary mode does for the date above.
+      activeLibrarySheetId = activeSheet().id;
+      renderLibraryFolders();
       return;
     }
     showCompletedTasksBtn.hidden = state.showingCompleted;
