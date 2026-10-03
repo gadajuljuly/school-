@@ -720,23 +720,30 @@
     bottom: 95px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 0;
     max-width: 380px;
     margin-inline-start: auto;
     z-index: 8;
   }
-  .diary-actions-fixed .site-log-close-share-row { padding: 0; }
+  .diary-actions-fixed .site-log-close-share-row { padding: 0; gap: 0; }
   /* Flat, transparent "keyboard key" look instead of each button's normal
      solid color fill (blue/green/beige) - a thin border and a faint
      keycap-style shadow on the page's own background, not a colored
-     pill, since these four sit directly on the lined paper. */
+     pill, since these four sit directly on the lined paper. All 4 are
+     the same fixed height (tall enough for the longest label, which
+     wraps to 2 lines) and sit flush against each other (no gap), like
+     adjoining keyboard keys. */
   .diary-actions-fixed .site-log-preview-btn,
   .diary-actions-fixed .site-log-periodic-btn,
   .diary-actions-fixed .site-log-close-btn,
   .diary-actions-fixed .site-log-share-btn {
     flex: 1;
     margin: 0;
+    height: 38px;
     padding: 3px 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-size: 0.78rem;
     background: transparent;
     color: var(--ink);
