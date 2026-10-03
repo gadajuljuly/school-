@@ -677,6 +677,29 @@
     font-size: 0.8rem;
     font-weight: 700;
   }
+  /* The diary icons + their buttons sit inline on the tasks page now
+     (below the tabs/header, above the footer), unlike the other places
+     this same grid class is used (library, head office picker) which get
+     a whole screen to themselves - smaller here so the five icons and all
+     three buttons fit without pushing the page into a scroll. */
+  #diaryView .site-log-categories-grid {
+    grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+    gap: 8px;
+    padding: 8px 10px 2px;
+  }
+  #diaryView .library-item-name { font-size: 0.68rem; }
+  #diaryView .site-log-preview-btn,
+  #diaryView .site-log-periodic-btn {
+    margin: 0 14px 8px;
+    padding: 9px 8px;
+    font-size: 0.78rem;
+  }
+  #diaryView .site-log-close-share-row { padding: 0 14px 8px; }
+  #diaryView .site-log-close-btn,
+  #diaryView .site-log-share-btn {
+    padding: 9px 8px;
+    font-size: 0.78rem;
+  }
   .library-item-name {
     font-size: 0.68rem;
     color: var(--ink);
