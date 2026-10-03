@@ -768,10 +768,16 @@
      the navigating. There can be more folders than the diary's 5 fixed
      icons (7 defaults plus any custom ones), so this uses 3 columns of
      smaller tiles instead of 2, to still fit the page without scrolling. */
-  #libraryFoldersView .library-inline-head {
-    display: flex;
-    justify-content: flex-end;
-    padding: 0 26px 4px 10px;
+  /* Positioned on the same line as the project name (.sheet-title-wrap,
+     the row right above) instead of its own row - absolute within
+     .ruled-body (already position:relative), lined up with that row's
+     own top offset (the ruled-body's own 20px padding) and height. */
+  #libraryFoldersView #libraryAddFolderBtn {
+    position: absolute;
+    top: 20px;
+    left: 22px;
+    height: 36px;
+    z-index: 1;
   }
   #libraryFoldersView .library-grid {
     flex: none;
@@ -2742,9 +2748,7 @@
         </div>
       </div>
       <div id="libraryFoldersView" hidden>
-        <div class="library-inline-head">
-          <button type="button" class="report-share-btn" id="libraryAddFolderBtn" data-i18n-title="libraryAddFolderBtnTitle" title="הוספת תיקייה">&#10133;</button>
-        </div>
+        <button type="button" class="report-share-btn" id="libraryAddFolderBtn" data-i18n-title="libraryAddFolderBtnTitle" title="הוספת תיקייה">&#10133;</button>
         <div class="library-grid" id="libraryFoldersGrid"></div>
       </div>
       <button type="button" class="completed-tasks-toggle-btn" id="showCompletedTasksBtn" data-i18n="showCompletedTasksBtn">משימות שבוצעו</button>
