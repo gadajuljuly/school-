@@ -673,6 +673,17 @@
     background: transparent;
     border: none;
   }
+  /* Grows the artwork itself (~1mm taller/wider), not the invisible box
+     that positions it in the grid - overflow:visible lets the enlarged
+     image spill a couple px past its own box instead of being clipped,
+     and the box's flex-centering keeps it growing from its own center. */
+  #diaryView .site-log-categories-grid .library-item-thumb {
+    overflow: visible;
+  }
+  #diaryView .site-log-categories-grid .library-item-thumb img {
+    width: calc(100% + 4px);
+    height: calc(100% + 4px);
+  }
   .site-log-categories-grid .library-item-name {
     font-size: 0.8rem;
     font-weight: 700;
