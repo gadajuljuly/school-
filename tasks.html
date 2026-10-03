@@ -782,14 +782,21 @@
   #libraryFoldersView .library-grid {
     flex: none;
     overflow: visible;
-    grid-template-columns: repeat(3, minmax(54px, 78px));
+    grid-template-columns: repeat(3, minmax(62px, 92px));
     gap: 10px 6px;
     padding: 0 26px 2px 10px;
     justify-content: center;
   }
   #libraryFoldersView .library-item { gap: 0; }
   #libraryFoldersView .library-item-name { font-size: 0.66rem; }
-  #libraryFoldersView .library-item-thumb { font-size: 1.5rem; }
+  /* No visible frame around each folder (matches the diary icons) - with
+     the box no longer needing to look like a bordered card, it can also
+     be a bit bigger (grid tile and emoji both enlarged above/below). */
+  #libraryFoldersView .library-item-thumb {
+    background: transparent;
+    border: none;
+    font-size: 1.9rem;
+  }
   .library-item-name {
     font-size: 0.68rem;
     color: var(--ink);
