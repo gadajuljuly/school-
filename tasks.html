@@ -441,8 +441,6 @@
   }
   .report-head-title { font-family: "Rubik", "Assistant", sans-serif; font-weight: 700; font-size: 1.05rem; text-align: center; flex: 1; }
   .site-log-header-project { font-family: "Assistant", sans-serif; font-weight: 400; font-size: 0.68rem; color: var(--ink-muted); margin-bottom: 1px; }
-  .site-log-date-pick { cursor: pointer; text-decoration: underline dotted; text-underline-offset: 2px; }
-  #siteLogCategoriesProjectName { font-size: 0.95rem; font-weight: 600; }
   .report-back-btn, .report-share-btn {
     width: 36px;
     height: 36px;
@@ -2602,6 +2600,36 @@
         <button type="submit" class="add-btn" data-i18n-title="addBtnTitle" title="הוספה"><img src="tasks-plus-icon.webp" alt="+"></button>
       </form>
       <div class="sheet-reports-list" id="sheetReportsList" hidden></div>
+      <div id="diaryView" hidden>
+        <div class="library-grid site-log-categories-grid">
+          <div class="library-item" id="siteLogAttendanceBtn">
+            <div class="library-item-thumb"><img src="tasks-attendance-icon.webp" alt=""></div>
+            <div class="library-item-name" data-i18n="siteLogAttendance">נוכחות</div>
+          </div>
+          <div class="library-item" id="siteLogToolsBtn">
+            <div class="library-item-thumb"><img src="tasks-tools-icon.webp" alt=""></div>
+            <div class="library-item-name" data-i18n="siteLogTools">כלים</div>
+          </div>
+          <div class="library-item" id="siteLogContractorsBtn">
+            <div class="library-item-thumb"><img src="tasks-contractors-icon.webp" alt=""></div>
+            <div class="library-item-name" data-i18n="siteLogContractors">קבלנים</div>
+          </div>
+          <div class="library-item" id="siteLogWorksBtn">
+            <div class="library-item-thumb"><img src="tasks-works-icon.webp" alt=""></div>
+            <div class="library-item-name" data-i18n="siteLogWorks">עבודות</div>
+          </div>
+          <div class="library-item" id="siteLogProcurementBtn">
+            <div class="library-item-thumb"><img src="tasks-procurement-icon.webp" alt=""></div>
+            <div class="library-item-name" data-i18n="siteLogProcurement">רכש</div>
+          </div>
+        </div>
+        <button type="button" class="site-log-preview-btn" id="siteLogPreviewBtn" data-i18n="siteLogPreviewBtn">הצגת יומן</button>
+        <div class="site-log-close-share-row">
+          <button type="button" class="site-log-close-btn" id="siteLogCloseBtn" data-i18n="siteLogCloseBtn">סגירת יומן</button>
+          <button type="button" class="site-log-share-btn" id="siteLogShareGeneralBtn" data-i18n="siteLogShareBtn" disabled>שיתוף יומן</button>
+        </div>
+        <button type="button" class="site-log-periodic-btn" id="siteLogPeriodicBtn" data-i18n="siteLogPeriodicBtn">הפקת דו"ח יומנים תקופתי</button>
+      </div>
       <button type="button" class="completed-tasks-toggle-btn" id="showCompletedTasksBtn" data-i18n="showCompletedTasksBtn">משימות שבוצעו</button>
       <button type="button" class="completed-tasks-toggle-btn" id="showActiveTasksBtn" data-i18n="showActiveTasksBtn" hidden>משימות לא בוצעו</button>
     </div>
@@ -2992,44 +3020,11 @@
     <button type="button" class="report-close-btn" id="reportCloseBtn" data-i18n="reportCloseBtn">סגירת הדוח</button>
   </div>
 
-  <div class="report-view" id="siteLogCategoriesView" hidden>
-    <div class="report-head">
-      <button type="button" class="report-back-btn" id="siteLogCategoriesBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
-      <div class="report-head-title">
-        <div id="siteLogCategoriesHeadTitle" class="site-log-date-pick" data-i18n-title="dateInputTitle" title="לחצו לבחירת תאריך"></div>
-        <div class="site-log-header-project" id="siteLogCategoriesProjectName"></div>
-      </div>
-    </div>
-    <div class="library-grid site-log-categories-grid">
-      <div class="library-item" id="siteLogAttendanceBtn">
-        <div class="library-item-thumb"><img src="tasks-attendance-icon.webp" alt=""></div>
-        <div class="library-item-name" data-i18n="siteLogAttendance">נוכחות</div>
-      </div>
-      <div class="library-item" id="siteLogToolsBtn">
-        <div class="library-item-thumb"><img src="tasks-tools-icon.webp" alt=""></div>
-        <div class="library-item-name" data-i18n="siteLogTools">כלים</div>
-      </div>
-      <div class="library-item" id="siteLogContractorsBtn">
-        <div class="library-item-thumb"><img src="tasks-contractors-icon.webp" alt=""></div>
-        <div class="library-item-name" data-i18n="siteLogContractors">קבלנים</div>
-      </div>
-      <div class="library-item" id="siteLogWorksBtn">
-        <div class="library-item-thumb"><img src="tasks-works-icon.webp" alt=""></div>
-        <div class="library-item-name" data-i18n="siteLogWorks">עבודות</div>
-      </div>
-      <div class="library-item" id="siteLogProcurementBtn">
-        <div class="library-item-thumb"><img src="tasks-procurement-icon.webp" alt=""></div>
-        <div class="library-item-name" data-i18n="siteLogProcurement">רכש</div>
-      </div>
-    </div>
-    <button type="button" class="site-log-preview-btn" id="siteLogPreviewBtn" data-i18n="siteLogPreviewBtn">הצגת יומן</button>
-    <div class="site-log-close-share-row">
-      <button type="button" class="site-log-close-btn" id="siteLogCloseBtn" data-i18n="siteLogCloseBtn">סגירת יומן</button>
-      <button type="button" class="site-log-share-btn" id="siteLogShareGeneralBtn" data-i18n="siteLogShareBtn" disabled>שיתוף יומן</button>
-    </div>
-    <button type="button" class="site-log-periodic-btn" id="siteLogPeriodicBtn" data-i18n="siteLogPeriodicBtn">הפקת דו"ח יומנים תקופתי</button>
-  </div>
-
+  <!-- Diary (יומן) category icons - moved inline into the main tasks page's
+       ruled-body (see #diaryView there) instead of a separate full-screen
+       view, so it sits on the same lined-paper background and needs no
+       back button of its own - switching away goes through the footer
+       icons like everything else on the main page. -->
   <div class="modal-overlay" id="siteLogPeriodicRangeOverlay" hidden>
     <div class="modal-box" role="alertdialog" aria-modal="true">
       <p class="modal-message" data-i18n="siteLogPeriodicRangeTitle">הפקת דו"ח יומנים תקופתי</p>
@@ -4139,11 +4134,8 @@
   // blindly overwrite `data`, or a fast edit could be silently lost.
   var editedSinceLastLoad = false;
   var state = { renamingSheetId: null, menuOpen: false, editingTaskId: null, viewDate: todayISO(), searchOpen: false, highlightTaskId: null, viewMode: "tasks", showingCompleted: false };
-  // dateInput is shared by two triggers: the top date label (normal day
-  // navigation) and the footer calendar button (opens the site log for the
-  // chosen date). This flag lets the single "change" handler tell which one
-  // opened the native picker, since the event itself doesn't say.
-  var dateInputPurpose = "navigate";
+  // The diary (יומן) always shows state.viewDate's own log - kept in sync
+  // each render() while viewMode is "diary" (see openDiaryView() below).
   var activeSiteLogDate = null;
 
   var dateLabel = document.getElementById("dateLabel");
@@ -4385,16 +4377,9 @@
   var todayBtn = document.getElementById("todayBtn");
 
   dateInput.addEventListener("change", function () {
-    var purpose = dateInputPurpose;
-    dateInputPurpose = "navigate";
-    dateInput.removeAttribute("max");
     if (!dateInput.value) return;
-    if (purpose === "siteLog") {
-      openSiteLogCategoriesView(dateInput.value);
-    } else {
-      state.viewDate = clampViewDate(dateInput.value);
-      render();
-    }
+    state.viewDate = clampViewDate(dateInput.value);
+    render();
   });
   todayBtn.addEventListener("click", function () {
     state.viewDate = clampViewDate(todayISO());
@@ -4455,43 +4440,16 @@
       var elapsed = Date.now() - startTime;
       if (elapsed < 800 && Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
         if (zone === "date") {
-          state.viewDate = clampViewDate(addDaysToISO(state.viewDate, dx < 0 ? -1 : 1));
+          var swipedDate = clampViewDate(addDaysToISO(state.viewDate, dx < 0 ? -1 : 1));
+          // A diary log is a record of a day that already happened - never
+          // let swiping push it into the future (matches the old dedicated
+          // site-log swipe's own guard, now merged into this one handler).
+          if (state.viewMode === "diary" && swipedDate > todayISO()) return;
+          state.viewDate = swipedDate;
           render();
         } else if (zone === "sheet") {
           switchSheetBySwipe(dx < 0 ? -1 : 1);
         }
-      }
-    }, { passive: true });
-  })();
-
-  // Swipe left/right on the site log's date header to move between days,
-  // matching the same gesture/thresholds as the main notebook date swipe.
-  // Left = go back a day (established convention here too); never allows
-  // swiping past today, since a log is a record of a day that happened.
-  (function setupSiteLogSwipeGestures() {
-    var head = document.querySelector("#siteLogCategoriesView .report-head");
-    if (!head) return;
-    var startX = 0, startY = 0, startTime = 0, tracking = false;
-
-    head.addEventListener("touchstart", function (e) {
-      if (e.touches.length !== 1) { tracking = false; return; }
-      tracking = true;
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
-      startTime = Date.now();
-    }, { passive: true });
-
-    head.addEventListener("touchend", function (e) {
-      if (!tracking || !activeSiteLogDate) { tracking = false; return; }
-      tracking = false;
-      var touch = e.changedTouches[0];
-      var dx = touch.clientX - startX;
-      var dy = touch.clientY - startY;
-      var elapsed = Date.now() - startTime;
-      if (elapsed < 800 && Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-        var newDate = addDaysToISO(activeSiteLogDate, dx < 0 ? -1 : 1);
-        if (newDate > todayISO()) return;
-        openSiteLogCategoriesView(newDate);
       }
     }, { passive: true });
   })();
@@ -7034,7 +6992,8 @@
       row.addEventListener("click", function () {
         closeCompanyDashboardView();
         selectSheet(sheet.id);
-        openSiteLogCategoriesView(today);
+        state.viewDate = today;
+        openDiaryView();
       });
       companyDashboardList.appendChild(row);
     });
@@ -7721,38 +7680,18 @@
 
   var calendarFabBtn = document.getElementById("calendarFabBtn");
   var officeReportsBtn = document.getElementById("officeReportsBtn");
-  calendarFabBtn.addEventListener("click", function () {
-    // Go straight to today's log (the categories/icons page) instead of
-    // making every entry start with a calendar prompt - picking a
-    // different day is still available from there, via the date itself.
-    openSiteLogCategoriesView(todayISO());
-  });
-  function openSiteLogDatePicker() {
-    dateInputPurpose = "siteLog";
-    // A native date input only fires "change" when its value actually
-    // changes - picking the same date already showing (e.g. today, the
-    // app's default view) would otherwise silently do nothing. Clearing it
-    // first guarantees any pick, including today's date, is a real change.
-    dateInput.value = "";
-    // Site log entries are a record of a day that already happened - never
-    // let this picker offer a future date. Only this flow is restricted;
-    // the plain top date label (normal task day-navigation) isn't.
-    dateInput.max = todayISO();
-    if (dateInput.showPicker) {
-      try { dateInput.showPicker(); return; } catch (e) {}
-    }
-    dateInput.focus();
-    dateInput.click();
+  // The diary (יומן) category icons live inline on the main tasks page now
+  // (see #diaryView / render()'s diaryMode branch) instead of a separate
+  // screen, so opening it is just another state.viewMode - same pattern as
+  // the reports FAB - sharing the page's own date (never a future one,
+  // since a log is a record of a day that already happened).
+  function openDiaryView() {
+    if (state.viewDate > todayISO()) state.viewDate = todayISO();
+    state.viewMode = "diary";
+    state.menuOpen = false;
+    render();
   }
-  // If the picker is dismissed without picking a date, put the input's
-  // value back so a later normal (non-siteLog) use of it isn't left blank,
-  // and always drop the max restriction so it never leaks into the plain
-  // top date label's own (unrestricted) day navigation.
-  dateInput.addEventListener("blur", function () {
-    dateInputPurpose = "navigate";
-    dateInput.removeAttribute("max");
-    if (!dateInput.value) dateInput.value = state.viewDate;
-  });
+  calendarFabBtn.addEventListener("click", openDiaryView);
 
   var reportTypeOverlay = document.getElementById("reportTypeOverlay");
   var reportTypeMeetingBtn = document.getElementById("reportTypeMeetingBtn");
@@ -7893,10 +7832,7 @@
     return log.number || ((sheet.siteLogs || []).reduce(function (max, l) { return l.number ? Math.max(max, l.number) : max; }, 0) + 1);
   }
 
-  var siteLogCategoriesView = document.getElementById("siteLogCategoriesView");
-  var siteLogCategoriesBackBtn = document.getElementById("siteLogCategoriesBackBtn");
-  var siteLogCategoriesHeadTitle = document.getElementById("siteLogCategoriesHeadTitle");
-  var siteLogCategoriesProjectName = document.getElementById("siteLogCategoriesProjectName");
+  var diaryView = document.getElementById("diaryView");
   var siteLogPreviewBtn = document.getElementById("siteLogPreviewBtn");
   var siteLogPreviewView = document.getElementById("siteLogPreviewView");
   var siteLogPreviewBackBtn = document.getElementById("siteLogPreviewBackBtn");
@@ -7952,32 +7888,18 @@
     siteLogShareGeneralBtn.disabled = !(log && log.closed);
   }
 
-  function openSiteLogCategoriesView(dateISO) {
-    activeSiteLogDate = dateISO;
-    siteLogCategoriesHeadTitle.textContent = isoToFullDisplay(dateISO);
-    siteLogCategoriesProjectName.textContent = activeSheet().name;
-    siteLogCategoriesView.hidden = false;
-    updateSiteLogCloseShareButtons();
-  }
-  function closeSiteLogCategoriesView() {
-    siteLogCategoriesView.hidden = true;
-    activeSiteLogDate = null;
-  }
-  siteLogCategoriesBackBtn.addEventListener("click", closeSiteLogCategoriesView);
-  siteLogCategoriesHeadTitle.addEventListener("click", openSiteLogDatePicker);
-
   function openSiteLogPreviewView() {
     var sheet = activeSheet();
     var log = getSiteLogOrEmpty(sheet, activeSiteLogDate);
     var number = log.number || nextSiteLogNumber(sheet, log);
     siteLogPreviewContent.innerHTML = "";
     siteLogPreviewContent.appendChild(buildSiteLogGeneralPdfElement(sheet, log, number));
-    siteLogCategoriesView.hidden = true;
+    diaryView.hidden = true;
     siteLogPreviewView.hidden = false;
   }
   function closeSiteLogPreviewView() {
     siteLogPreviewView.hidden = true;
-    siteLogCategoriesView.hidden = false;
+    diaryView.hidden = false;
   }
   siteLogPreviewBtn.addEventListener("click", openSiteLogPreviewView);
   siteLogPreviewBackBtn.addEventListener("click", closeSiteLogPreviewView);
@@ -8510,12 +8432,12 @@
   function openSiteLogAttendanceView() {
     siteLogAttendanceProjectName.textContent = activeSheet().name;
     renderSiteLogAttendanceColumns();
-    siteLogCategoriesView.hidden = true;
+    diaryView.hidden = true;
     siteLogAttendanceView.hidden = false;
   }
   function closeSiteLogAttendanceView() {
     siteLogAttendanceView.hidden = true;
-    siteLogCategoriesView.hidden = false;
+    diaryView.hidden = false;
   }
   siteLogAttendanceBtn.addEventListener("click", openSiteLogAttendanceView);
   siteLogAttendanceBackBtn.addEventListener("click", closeSiteLogAttendanceView);
@@ -8628,12 +8550,12 @@
   function openSiteLogToolsView() {
     siteLogToolsProjectName.textContent = activeSheet().name;
     renderSiteLogToolsColumns();
-    siteLogCategoriesView.hidden = true;
+    diaryView.hidden = true;
     siteLogToolsView.hidden = false;
   }
   function closeSiteLogToolsView() {
     siteLogToolsView.hidden = true;
-    siteLogCategoriesView.hidden = false;
+    diaryView.hidden = false;
   }
   siteLogToolsBtn.addEventListener("click", openSiteLogToolsView);
   siteLogToolsBackBtn.addEventListener("click", closeSiteLogToolsView);
@@ -8658,12 +8580,12 @@
   function openSiteLogContractorsView() {
     siteLogContractorsProjectName.textContent = activeSheet().name;
     renderSiteLogContractorsList();
-    siteLogCategoriesView.hidden = true;
+    diaryView.hidden = true;
     siteLogContractorsView.hidden = false;
   }
   function closeSiteLogContractorsView() {
     siteLogContractorsView.hidden = true;
-    siteLogCategoriesView.hidden = false;
+    diaryView.hidden = false;
   }
   siteLogContractorsBtn.addEventListener("click", openSiteLogContractorsView);
   siteLogContractorsBackBtn.addEventListener("click", closeSiteLogContractorsView);
@@ -8834,12 +8756,12 @@
   function openSiteLogWorksView() {
     siteLogWorksProjectName.textContent = activeSheet().name;
     renderSiteLogWorksList();
-    siteLogCategoriesView.hidden = true;
+    diaryView.hidden = true;
     siteLogWorksView.hidden = false;
   }
   function closeSiteLogWorksView() {
     siteLogWorksView.hidden = true;
-    siteLogCategoriesView.hidden = false;
+    diaryView.hidden = false;
   }
   siteLogWorksBtn.addEventListener("click", openSiteLogWorksView);
   siteLogWorksBackBtn.addEventListener("click", closeSiteLogWorksView);
@@ -8937,12 +8859,12 @@
   function openSiteLogProcurementView() {
     siteLogProcurementProjectName.textContent = activeSheet().name;
     renderSiteLogProcurementRows();
-    siteLogCategoriesView.hidden = true;
+    diaryView.hidden = true;
     siteLogProcurementView.hidden = false;
   }
   function closeSiteLogProcurementView() {
     siteLogProcurementView.hidden = true;
-    siteLogCategoriesView.hidden = false;
+    diaryView.hidden = false;
   }
   siteLogProcurementBtn.addEventListener("click", openSiteLogProcurementView);
   siteLogProcurementBackBtn.addEventListener("click", closeSiteLogProcurementView);
@@ -11383,7 +11305,7 @@
   // render(), so they call this directly on open/close; the tasks/reports
   // toggle lives inside render() itself.
   function updateActiveFabHighlight() {
-    [tasksFabBtn, reportFabBtn, chatBtn, libraryBtn, archiveBtn].forEach(function (btn) {
+    [tasksFabBtn, calendarFabBtn, reportFabBtn, chatBtn, libraryBtn, archiveBtn].forEach(function (btn) {
       btn.classList.remove("fab-active");
     });
     var active;
@@ -11391,6 +11313,7 @@
     else if (!libraryFoldersView.hidden || !libraryView.hidden) active = libraryBtn;
     else if (viewingArchive) active = archiveBtn;
     else if (state.viewMode === "reports") active = reportFabBtn;
+    else if (state.viewMode === "diary") active = calendarFabBtn;
     else active = tasksFabBtn;
     active.classList.add("fab-active");
   }
@@ -11443,16 +11366,30 @@
     updateActiveFabHighlight();
 
     var reportsMode = state.viewMode === "reports";
-    taskList.hidden = reportsMode;
-    emptyState.hidden = reportsMode;
-    if (reportsMode) emptyState.style.display = "none";
+    var diaryMode = state.viewMode === "diary";
+    taskList.hidden = reportsMode || diaryMode;
+    emptyState.hidden = reportsMode || diaryMode;
+    if (reportsMode || diaryMode) emptyState.style.display = "none";
     sheetReportsList.hidden = !reportsMode;
+    diaryView.hidden = !diaryMode;
     if (reportsMode) {
       addForm.hidden = true;
       showCompletedTasksBtn.hidden = true;
       showActiveTasksBtn.hidden = true;
       progressText.textContent = "";
       renderSheetReportsList();
+      return;
+    }
+    if (diaryMode) {
+      addForm.hidden = true;
+      showCompletedTasksBtn.hidden = true;
+      showActiveTasksBtn.hidden = true;
+      progressText.textContent = "";
+      // Kept in sync here (not just on entry) so changing the date via the
+      // normal top date controls/swipe while already in diary mode updates
+      // which day's log the icons below point to, same as it always did.
+      activeSiteLogDate = state.viewDate;
+      updateSiteLogCloseShareButtons();
       return;
     }
     showCompletedTasksBtn.hidden = state.showingCompleted;
