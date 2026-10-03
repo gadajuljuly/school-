@@ -494,6 +494,12 @@
     display: flex;
     flex-direction: column;
     background: var(--paper);
+    /* Cancels .ruled-body's own left/right padding (22px/44px) just for
+       chat, so the ruled horizontal lines drawn by .chat-messages-inner's
+       own background (clipped to its padding box) reach the white page's
+       true edges instead of stopping at ruled-body's padding boundary. */
+    margin-right: -22px;
+    margin-left: -44px;
   }
   #chatView[hidden] { display: none; }
   /* Only while chat is open - every other mode keeps .ruled-body's normal
@@ -554,8 +560,8 @@
     background: var(--margin);
     opacity: 0.55;
   }
-  .chat-messages-inner::before { right: 39px; }
-  .chat-messages-inner::after { left: 39px; }
+  .chat-messages-inner::before { right: 24px; }
+  .chat-messages-inner::after { left: 9px; }
   .chat-day-sep {
     align-self: center;
     background: var(--paper-alt);
