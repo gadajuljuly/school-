@@ -12240,6 +12240,34 @@
     document.addEventListener("visibilitychange", function () {
       if (!document.hidden) refreshSharedSheetsIfIdle();
     });
+    subscribeSharedProjectsRealtime();
+  }
+
+  // Pushes shared-project changes (a task, a chat message, a purchase
+  // mark...) to every member's app the moment they happen, instead of
+  // everyone waiting on the periodic poll above - that poll stays in
+  // place as a fallback in case the websocket connection ever drops.
+  // Debounced so a burst of several quick changes (e.g. someone editing
+  // multiple tasks in a row) triggers one refresh, not one per change.
+  var sharedProjectsRealtimeChannel = null;
+  var realtimeRefreshTimer = null;
+  function handleSharedProjectsRealtimeChange(payload) {
+    clearTimeout(realtimeRefreshTimer);
+    realtimeRefreshTimer = setTimeout(function () {
+      // Same guard the polling path uses - don't yank a full task-list
+      // rebuild out from under someone mid-edit; the next poll or
+      // realtime event once they're idle will catch it up.
+      if (!isEditingActively()) loadSharedSheets();
+      var changedId = (payload && payload.new && payload.new.id) || (payload && payload.old && payload.old.id);
+      if (activeChatSheetId && changedId === activeChatSheetId) refreshActiveChat();
+    }, 150);
+  }
+  function subscribeSharedProjectsRealtime() {
+    if (!supabaseClient || !supabaseClient.realtime || sharedProjectsRealtimeChannel) return;
+    sharedProjectsRealtimeChannel = supabaseClient
+      .channel("shared_projects_changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: SHARED_TABLE }, handleSharedProjectsRealtimeChange)
+      .subscribe();
   }
 
   // A fresh backup snapshot is only taken on load, gated by
@@ -12354,6 +12382,11 @@
     supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
       global: { headers: { Authorization: "Bearer " + token } }
     });
+    // Realtime's websocket connection has its own, separate auth from the
+    // REST calls above (which pick up the Authorization header on their
+    // own) - without this, the realtime channel below would connect
+    // anonymously and RLS would silently deliver it nothing.
+    supabaseClient.realtime.setAuth(token);
   }
 
   function mintSupabaseSessionToken(firebaseUser) {
