@@ -2235,8 +2235,9 @@
        a glowing box-shadow, and sits at each row's far left edge - since
        setting overflow-y here also makes overflow-x compute to clipping
        (not visible) per the CSS spec, without this reserved space that
-       bleed gets clipped flat instead of rendering as a full circle. */
-    padding: 0 0 0 10px;
+       bleed gets clipped flat instead of rendering as a full circle.
+       Generous on purpose - 10px still clipped it. */
+    padding: 0 0 0 20px;
   }
   li.task {
     display: flex;
