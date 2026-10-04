@@ -1210,31 +1210,27 @@
     font-size: 0.85rem;
     cursor: pointer;
   }
-  /* Pinned to the viewport, not the scrollable task list, so it stays put
-     (centered, a fixed distance above the footer's own height) no matter
-     how many rows are on the current day or how far the page is scrolled -
-     the footer itself isn't fixed either, but since both this button and
-     the footer only ever reach the viewport's bottom edge at max scroll,
-     offsetting by the footer's own height keeps them from overlapping at
-     any scroll position. */
+  /* Sits at the top-left of the project name/logo row (.sheet-title-wrap,
+     which is position:relative for exactly this) instead of pinned to the
+     viewport - it scrolls away with the rest of the page like everything
+     else here, not floating above it. */
   .completed-tasks-toggle-btn {
-    position: fixed;
-    left: 50%;
-    bottom: 95px;
-    transform: translateX(-50%);
-    z-index: 8;
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
     width: auto;
-    max-width: calc(100% - 40px);
-    padding: 10px 22px;
+    max-width: 120px;
+    padding: 5px 10px;
     border-radius: 999px;
     border: 1px solid var(--rule);
     background: var(--paper-alt);
     color: var(--ink);
     font-family: "Rubik", "Assistant", sans-serif;
     font-weight: 700;
-    font-size: 0.85rem;
+    font-size: 0.68rem;
     cursor: pointer;
-    box-shadow: 0 4px 10px var(--shadow);
+    box-shadow: 0 2px 5px var(--shadow);
   }
   .completed-tasks-toggle-btn[hidden] { display: none; }
   .site-log-periodic-btn {
@@ -2179,6 +2175,7 @@
   }
 
   .sheet-title-wrap {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2746,6 +2743,8 @@
 
     <div class="ruled-body">
       <div class="sheet-title-wrap" id="sheetTitleWrap">
+        <button type="button" class="completed-tasks-toggle-btn" id="showCompletedTasksBtn" data-i18n="showCompletedTasksBtn">משימות שבוצעו</button>
+        <button type="button" class="completed-tasks-toggle-btn" id="showActiveTasksBtn" data-i18n="showActiveTasksBtn" hidden>משימות לא בוצעו</button>
         <img class="sheet-title-logo" id="sheetTitleLogo" alt="" hidden>
         <div class="sheet-title" id="sheetTitle"></div>
       </div>
@@ -2824,8 +2823,6 @@
           <button type="button" class="chat-recording-send" id="chatRecordingSendBtn" data-i18n-title="chatSendBtnTitle" title="שליחה">&#10148;</button>
         </div>
       </div>
-      <button type="button" class="completed-tasks-toggle-btn" id="showCompletedTasksBtn" data-i18n="showCompletedTasksBtn">משימות שבוצעו</button>
-      <button type="button" class="completed-tasks-toggle-btn" id="showActiveTasksBtn" data-i18n="showActiveTasksBtn" hidden>משימות לא בוצעו</button>
     </div>
     <div class="footer-divider"></div>
     <div class="notebook-footer" id="notebookFooter">
