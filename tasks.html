@@ -1512,15 +1512,15 @@
   }
   .site-log-work-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; }
   .site-log-work-text { font-size: 0.82rem; flex: 1; word-break: break-word; }
+  .site-log-work-attach-row { display: flex; gap: 6px; align-self: flex-start; }
   .site-log-work-attach-btn {
     border: 1px dashed var(--rule);
     background: transparent;
     color: var(--ink-muted);
-    font-size: 0.85rem;
+    font-size: 0.78rem;
     padding: 5px 10px;
     border-radius: 6px;
     cursor: pointer;
-    align-self: flex-start;
   }
   .site-log-work-attachment-preview { display: flex; align-items: center; gap: 8px; }
   .site-log-work-attachment-thumb { width: 44px; height: 44px; border-radius: 6px; object-fit: cover; border: 1px solid var(--rule); flex-shrink: 0; }
@@ -3291,6 +3291,7 @@
     </div>
     <button type="button" class="site-log-copy-prev-btn" id="siteLogWorksCopyPrevBtn" data-i18n="siteLogCopyPrevBtn">העתקת יומן קודם</button>
     <input type="file" id="siteLogWorksFileInput" hidden>
+    <input type="file" accept="image/*" capture="environment" id="siteLogWorksCameraInput" hidden>
   </div>
 
   <div class="report-view" id="siteLogProcurementView" hidden>
@@ -8079,6 +8080,7 @@
   var siteLogWorksBackBtn = document.getElementById("siteLogWorksBackBtn");
   var siteLogWorksList = document.getElementById("siteLogWorksList");
   var siteLogWorksFileInput = document.getElementById("siteLogWorksFileInput");
+  var siteLogWorksCameraInput = document.getElementById("siteLogWorksCameraInput");
   var siteLogWorksCopyPrevBtn = document.getElementById("siteLogWorksCopyPrevBtn");
   var siteLogWorksProjectName = document.getElementById("siteLogWorksProjectName");
   var siteLogWorksPendingEntryId = null;
@@ -8873,6 +8875,18 @@
         previewWrap.appendChild(removeAttachBtn);
         wrap.appendChild(previewWrap);
       } else {
+        var attachRow = document.createElement("div");
+        attachRow.className = "site-log-work-attach-row";
+        var cameraBtn = document.createElement("button");
+        cameraBtn.type = "button";
+        cameraBtn.className = "site-log-work-attach-btn";
+        cameraBtn.textContent = "\u{1F4F7} " + tr("imagePopupCamera");
+        cameraBtn.addEventListener("click", function () {
+          siteLogWorksPendingEntryId = entry.id;
+          siteLogWorksCameraInput.value = "";
+          siteLogWorksCameraInput.click();
+        });
+        attachRow.appendChild(cameraBtn);
         var attachBtn = document.createElement("button");
         attachBtn.type = "button";
         attachBtn.className = "site-log-work-attach-btn";
@@ -8880,9 +8894,11 @@
         attachBtn.title = tr("chatAttachBtnTitle");
         attachBtn.addEventListener("click", function () {
           siteLogWorksPendingEntryId = entry.id;
+          siteLogWorksFileInput.value = "";
           siteLogWorksFileInput.click();
         });
-        wrap.appendChild(attachBtn);
+        attachRow.appendChild(attachBtn);
+        wrap.appendChild(attachRow);
       }
 
       siteLogWorksList.appendChild(wrap);
@@ -8935,9 +8951,10 @@
     siteLogWorksList.appendChild(createWorksAddBtn());
   }
 
-  siteLogWorksFileInput.addEventListener("change", function () {
-    var file = siteLogWorksFileInput.files && siteLogWorksFileInput.files[0];
-    siteLogWorksFileInput.value = "";
+  // Shared by both the camera input (a fresh photo, accept="image/*"
+  // capture="environment") and the plain file input (any file, picked
+  // from the gallery/file browser) - same upload/attach logic either way.
+  function uploadWorksAttachment(file) {
     var entryId = siteLogWorksPendingEntryId;
     siteLogWorksPendingEntryId = null;
     if (!file || !entryId || !supabaseClient) return;
@@ -8958,6 +8975,12 @@
       console.error("site log work attachment upload failed:", err);
       alert(tr("libraryUploadError"));
     });
+  }
+  siteLogWorksFileInput.addEventListener("change", function () {
+    uploadWorksAttachment(siteLogWorksFileInput.files && siteLogWorksFileInput.files[0]);
+  });
+  siteLogWorksCameraInput.addEventListener("change", function () {
+    uploadWorksAttachment(siteLogWorksCameraInput.files && siteLogWorksCameraInput.files[0]);
   });
 
   function openSiteLogWorksView() {
