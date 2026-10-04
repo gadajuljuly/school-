@@ -1752,16 +1752,17 @@
     align-items: center;
     gap: 8px;
   }
-  .office-report-head-date {
+  .office-report-head-stack {
     flex: 1;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    min-width: 0;
   }
   .office-report-head-date .today-btn { font-size: 0.62rem; padding: 2px 6px; }
-  #officeReportOptionsView .report-head-title, #officeProcurementView .report-head-title {
-    flex: 0 1 auto;
-    font-size: 0.8rem;
-  }
+  .office-report-head-stack .report-head-title { flex: 0 1 auto; font-size: 0.85rem; }
+  .report-head-spacer { width: 36px; flex-shrink: 0; }
   .date-click-area {
     position: relative;
     display: inline-flex;
@@ -3045,14 +3046,17 @@
   <div class="report-view" id="officeReportOptionsView" hidden>
     <div class="report-head">
       <button type="button" class="report-back-btn" id="officeReportOptionsBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
-      <div class="report-head-title" id="officeReportOptionsTitle"></div>
-      <span class="notebook-date-wrap office-report-head-date">
-        <span class="date-click-area">
-          <span class="notebook-date" id="officeReportOptionsDateLabel"></span>
-          <input type="date" id="officeReportOptionsDateInput" class="date-input-overlay" data-i18n-title="dateInputTitle" title="לחצו לבחירת תאריך">
+      <div class="office-report-head-stack">
+        <span class="notebook-date-wrap office-report-head-date">
+          <span class="date-click-area">
+            <span class="notebook-date" id="officeReportOptionsDateLabel"></span>
+            <input type="date" id="officeReportOptionsDateInput" class="date-input-overlay" data-i18n-title="dateInputTitle" title="לחצו לבחירת תאריך">
+          </span>
+          <button type="button" class="today-btn" id="officeReportOptionsTodayBtn" data-i18n="todayBtn" hidden>היום</button>
         </span>
-        <button type="button" class="today-btn" id="officeReportOptionsTodayBtn" data-i18n="todayBtn" hidden>היום</button>
-      </span>
+        <div class="report-head-title" id="officeReportOptionsTitle"></div>
+      </div>
+      <span class="report-head-spacer"></span>
     </div>
     <div class="site-log-preview-wrap" id="officeReportOptionsPreview"></div>
     <div class="office-report-options-actions">
@@ -3337,14 +3341,17 @@
   <div class="report-view" id="officeProcurementView" hidden>
     <div class="report-head">
       <button type="button" class="report-back-btn" id="officeProcurementBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
-      <div class="report-head-title" data-i18n="siteLogProcurement">רכש</div>
-      <span class="notebook-date-wrap office-report-head-date">
-        <span class="date-click-area">
-          <span class="notebook-date" id="officeProcurementDateLabel"></span>
-          <input type="date" id="officeProcurementDateInput" class="date-input-overlay" data-i18n-title="dateInputTitle" title="לחצו לבחירת תאריך">
+      <div class="office-report-head-stack">
+        <span class="notebook-date-wrap office-report-head-date">
+          <span class="date-click-area">
+            <span class="notebook-date" id="officeProcurementDateLabel"></span>
+            <input type="date" id="officeProcurementDateInput" class="date-input-overlay" data-i18n-title="dateInputTitle" title="לחצו לבחירת תאריך">
+          </span>
+          <button type="button" class="today-btn" id="officeProcurementTodayBtn" data-i18n="todayBtn" hidden>היום</button>
         </span>
-        <button type="button" class="today-btn" id="officeProcurementTodayBtn" data-i18n="todayBtn" hidden>היום</button>
-      </span>
+        <div class="report-head-title" data-i18n="siteLogProcurement">רכש</div>
+      </div>
+      <span class="report-head-spacer"></span>
     </div>
     <div class="site-log-procurement-wrap">
       <div id="officeProcurementList"></div>
