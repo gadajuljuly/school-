@@ -3460,7 +3460,7 @@
     headOfficeMemberAddPlaceholder: { he: "05XXXXXXXX", en: "05XXXXXXXX", ar: "05XXXXXXXX", ru: "05XXXXXXXX" },
     headOfficeMemberInvalidMsg: { he: "מספר טלפון לא תקין", en: "Invalid phone number", ar: "رقم هاتف غير صالح", ru: "Неверный номер телефона" },
     officeReportsBtnTitle: { he: "דוחות מרוכזים", en: "Combined reports", ar: "تقارير مجمعة", ru: "Сводные отчёты" },
-    headOfficeMainProjectName: { he: "משרד ראשי", en: "Head Office", ar: "المكتب الرئيسي", ru: "Главный офис" },
+    headOfficeMainProjectName: { he: "הזמנות רכש", en: "Procurement Orders", ar: "طلبات الشراء", ru: "Заказы на закупку" },
     headOfficeProcurementTaskPrefix: { he: "הזמנת רכש ל", en: "Procurement order for ", ar: "طلب شراء لـ", ru: "Заказ на закупку для " },
     officeCombinedReportFileNamePrefix: { he: "דוח מרוכז", en: "Combined report", ar: "تقرير مجمّع", ru: "Сводный отчёт" },
     officeCombinedReportEmptyMsg: { he: "אף פרויקט לא שיגר דוח מסוג זה היום", en: "No project has sent this type of report today", ar: "لم يرسل أي مشروع هذا النوع من التقارير اليوم", ru: "Ни один проект не отправил такой отчёт сегодня" },
@@ -9451,6 +9451,13 @@
     if (!sheet) {
       sheet = { id: HEAD_OFFICE_SHEET_ID, name: tr("headOfficeMainProjectName"), tasks: [], reports: [], files: [] };
       data.sheets.unshift(sheet);
+      saveData();
+    } else if (sheet.name !== tr("headOfficeMainProjectName")) {
+      // Not user-renamable (see appendSheetTab's isHeadOfficeSheetTab guard)
+      // - its name is always whatever this key currently says, so renaming
+      // it here (or switching language) takes effect on a sheet created
+      // under an older name too, not just a freshly created one.
+      sheet.name = tr("headOfficeMainProjectName");
       saveData();
     }
     return sheet;
