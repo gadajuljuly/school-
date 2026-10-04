@@ -7686,7 +7686,7 @@
   // constant, and whose tasks are entirely system-generated (see
   // syncHeadOfficeVirtualTasks below) rather than user-added.
   var HEAD_OFFICE_SHEET_ID = "head-office-main";
-  var headOfficeDefaultTabApplied = false;
+  var wasHeadOfficeModeLastRender = false;
 
   function recomputeHeadOfficeMode() {
     var saved = null;
@@ -11772,11 +11772,17 @@
     if (isHeadOfficeMode) {
       ensureHeadOfficeSheet();
       syncHeadOfficeVirtualTasks();
-      if (!headOfficeDefaultTabApplied) {
-        headOfficeDefaultTabApplied = true;
+      // Jump straight to the tasks page and the "משרד ראשי" tab every time
+      // Head Office mode is ENTERED - on app launch already in that mode,
+      // and again on every later toggle-on mid-session (not on every
+      // render while already in it, which would keep yanking the user back
+      // off whatever tab/screen they'd since navigated to).
+      if (!wasHeadOfficeModeLastRender) {
         data.activeSheetId = HEAD_OFFICE_SHEET_ID;
+        state.viewMode = "tasks";
       }
     }
+    wasHeadOfficeModeLastRender = isHeadOfficeMode;
     var visibleForDate = visibleSheets();
     if (visibleForDate.length && data.activeSheetId !== pendingOpenChatSheetId &&
         !visibleForDate.some(function (s) { return s.id === data.activeSheetId; })) {
