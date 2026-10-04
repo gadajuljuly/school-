@@ -142,7 +142,17 @@
     font-family: "Assistant", "Segoe UI", Tahoma, Arial, sans-serif;
     background: var(--desk);
     color: var(--ink);
-    min-height: 100vh;
+    /* The app screen always stays capped to exactly the phone's screen
+       size, in every mode - never grows taller and scrolls as a whole
+       page the way a long task list used to. Each mode's own content
+       area (the task list, the reports list, chat's messages...) scrolls
+       internally instead, while the project tabs above and the footer
+       below stay fixed in place around it. min-height:0 on .app/.notebook
+       below lets this bound actually propagate down the flex chain to
+       each mode's own scrollable area, instead of content just
+       overflowing this fixed height. */
+    height: 100vh;
+    overflow: hidden;
     padding: 14px 16px 8px; /* bottom = 2mm gap between the footer bar and the system nav bar */
     display: flex;
     flex-direction: column;
@@ -157,15 +167,6 @@
     -webkit-user-select: none;
     -webkit-touch-callout: none;
   }
-  /* While chat is open, cap the page to exactly the viewport instead of
-     the normal "grow taller than the screen and let the whole page
-     scroll" behavior (how a long task list already works) - chat needs
-     its own internal scroll instead, with the title row/tabs above and
-     the footer below staying fixed in place around it. min-height:0 on
-     .app/.notebook above lets that bound actually propagate down the
-     flex chain to #chatView's own scrollable .chat-messages, instead of
-     content just overflowing this fixed height. */
-  body.chat-open { height: 100vh; overflow: hidden; }
   input, textarea, select, [contenteditable="true"] {
     user-select: text;
     -webkit-user-select: text;
@@ -386,6 +387,9 @@
   }
 
   .sheet-reports-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -483,10 +487,9 @@
      scroll: position:relative so the scroll-to-bottom button/mention
      popup below (both position:absolute) anchor to this box's own edges
      instead of .ruled-body's (whose padding would throw off their
-     inset), flex:1/min-height:0 so it fills exactly the space between
-     the title row above and the footer below (via .ruled-body.chat-mode
-     below, which makes that space determinate instead of growing/
-     scrolling the whole page the way the plain task list does). */
+     inset), flex:1/min-height:0 so it fills exactly .ruled-body's own
+     bounded space (every mode's content area is capped the same way, not
+     just chat's - see .ruled-body's own rule above). */
   #chatView {
     position: relative;
     flex: 1;
@@ -502,16 +505,11 @@
     margin-left: -44px;
   }
   #chatView[hidden] { display: none; }
-  /* Only while chat is open - every other mode keeps .ruled-body's normal
-     block flow, where content taller than the screen just grows the
-     whole page (scrolling it), same as a long task list already does. */
-  .ruled-body.chat-mode {
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    overflow: hidden;
-    padding-bottom: 0;
-  }
+  /* .ruled-body is already a bounded flex column in every mode (see its
+     own rule below) - chat just needs its own bottom padding zeroed out
+     so #chatView's input bar sits flush with the bottom instead of
+     leaving a gap, which no other mode wants. */
+  .ruled-body.chat-mode { padding-bottom: 0; }
   .chat-messages {
     flex: 1;
     overflow-y: auto;
@@ -725,6 +723,15 @@
     font-size: 0.8rem;
     font-weight: 700;
   }
+  /* A safety net, not normally needed - the 5 icons are sized to always
+     fit .ruled-body's bounded space without scrolling, but if they ever
+     don't (a long project name wrapping, an unusual screen size), this
+     scrolls instead of clipping silently. */
+  #diaryView {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
   /* The diary icons sit inline on the tasks page now (below the tabs/
      header, above the footer), unlike the other places this same grid
      class is used (library, head office picker) which get a whole screen
@@ -804,7 +811,14 @@
      the project tabs above and footer icons below stay visible and do
      the navigating. There can be more folders than the diary's 5 fixed
      icons (7 defaults plus any custom ones), so this uses 3 columns of
-     smaller tiles instead of 2, to still fit the page without scrolling. */
+     smaller tiles instead of 2, to still fit the page without scrolling -
+     and scrolls instead of clipping if a lot of custom folders ever do
+     overflow it. */
+  #libraryFoldersView {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
   /* Positioned on the same line as the project name (.sheet-title-wrap,
      the row right above) instead of its own row - absolute within
      .ruled-body (already position:relative), lined up with that row's
@@ -1216,7 +1230,7 @@
      else here, not floating above it. */
   .completed-tasks-toggle-btn {
     position: absolute;
-    left: 0;
+    left: -36px;
     top: 50%;
     transform: translateY(-50%);
     width: auto;
@@ -2127,6 +2141,10 @@
   .ruled-body {
     position: relative;
     flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
     background-image: repeating-linear-gradient(
       var(--paper) 0,
       var(--paper) 35px,
@@ -2198,6 +2216,9 @@
     line-height: 36px;
   }
   ol.task-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
     list-style: none;
     margin: 0;
     padding: 0;
@@ -11554,7 +11575,6 @@
     libraryFoldersView.hidden = !libraryMode;
     chatView.hidden = !chatMode;
     ruledBodyEl.classList.toggle("chat-mode", chatMode);
-    document.body.classList.toggle("chat-open", chatMode);
     if (reportsMode) {
       addForm.hidden = true;
       showCompletedTasksBtn.hidden = true;
