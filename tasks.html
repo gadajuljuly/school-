@@ -1752,6 +1752,11 @@
     align-items: center;
     gap: 8px;
   }
+  .office-report-head-date {
+    flex-shrink: 0;
+  }
+  .office-report-head-date .notebook-date { font-size: 0.85rem; }
+  .office-report-head-date .today-btn { font-size: 0.62rem; padding: 2px 6px; }
   .date-click-area {
     position: relative;
     display: inline-flex;
@@ -2363,6 +2368,7 @@
   }
   .add-row[hidden] { display: none; }
   li.task.readonly { cursor: default; }
+  li.task.readonly.head-office-notification-task { cursor: pointer; }
   .add-row .row-mark { opacity: 0.4; }
   .add-row input[type="text"] {
     flex: 1;
@@ -3035,6 +3041,13 @@
     <div class="report-head">
       <button type="button" class="report-back-btn" id="officeReportOptionsBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
       <div class="report-head-title" id="officeReportOptionsTitle"></div>
+      <span class="notebook-date-wrap office-report-head-date">
+        <span class="date-click-area">
+          <span class="notebook-date" id="officeReportOptionsDateLabel"></span>
+          <input type="date" id="officeReportOptionsDateInput" class="date-input-overlay" data-i18n-title="dateInputTitle" title="לחצו לבחירת תאריך">
+        </span>
+        <button type="button" class="today-btn" id="officeReportOptionsTodayBtn" data-i18n="todayBtn" hidden>היום</button>
+      </span>
     </div>
     <div class="site-log-preview-wrap" id="officeReportOptionsPreview"></div>
     <div class="office-report-options-actions">
@@ -3320,6 +3333,13 @@
     <div class="report-head">
       <button type="button" class="report-back-btn" id="officeProcurementBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
       <div class="report-head-title" data-i18n="siteLogProcurement">רכש</div>
+      <span class="notebook-date-wrap office-report-head-date">
+        <span class="date-click-area">
+          <span class="notebook-date" id="officeProcurementDateLabel"></span>
+          <input type="date" id="officeProcurementDateInput" class="date-input-overlay" data-i18n-title="dateInputTitle" title="לחצו לבחירת תאריך">
+        </span>
+        <button type="button" class="today-btn" id="officeProcurementTodayBtn" data-i18n="todayBtn" hidden>היום</button>
+      </span>
     </div>
     <div class="site-log-procurement-wrap">
       <div id="officeProcurementList"></div>
@@ -3428,6 +3448,8 @@
     headOfficeMemberAddPlaceholder: { he: "05XXXXXXXX", en: "05XXXXXXXX", ar: "05XXXXXXXX", ru: "05XXXXXXXX" },
     headOfficeMemberInvalidMsg: { he: "מספר טלפון לא תקין", en: "Invalid phone number", ar: "رقم هاتف غير صالح", ru: "Неверный номер телефона" },
     officeReportsBtnTitle: { he: "דוחות מרוכזים", en: "Combined reports", ar: "تقارير مجمعة", ru: "Сводные отчёты" },
+    headOfficeMainProjectName: { he: "משרד ראשי", en: "Head Office", ar: "المكتب الرئيسي", ru: "Главный офис" },
+    headOfficeProcurementTaskPrefix: { he: "הזמנת רכש ל", en: "Procurement order for ", ar: "طلب شراء لـ", ru: "Заказ на закупку для " },
     officeCombinedReportFileNamePrefix: { he: "דוח מרוכז", en: "Combined report", ar: "تقرير مجمّع", ru: "Сводный отчёт" },
     officeCombinedReportEmptyMsg: { he: "אף פרויקט לא שיגר דוח מסוג זה היום", en: "No project has sent this type of report today", ar: "لم يرسل أي مشروع هذا النوع من التقارير اليوم", ru: "Ни один проект не отправил такой отчёт сегодня" },
     officeReportDailyBtn: { he: "הפקת דוח יומי", en: "Generate daily report", ar: "إصدار تقرير يومي", ru: "Создать дневной отчёт" },
@@ -7645,6 +7667,15 @@
   headOfficeToggleOffBtn.addEventListener("click", function () { setHeadOfficeManualToggle(false); });
 
   var isHeadOfficeMode = false;
+
+  // The always-present "משרד ראשי" tab in Head Office mode. Not a real
+  // shared/synced project - just one ordinary private sheet (in data.sheets,
+  // persisted via the normal app_state save path) whose id is this fixed
+  // constant, and whose tasks are entirely system-generated (see
+  // syncHeadOfficeVirtualTasks below) rather than user-added.
+  var HEAD_OFFICE_SHEET_ID = "head-office-main";
+  var headOfficeDefaultTabApplied = false;
+
   function recomputeHeadOfficeMode() {
     var saved = null;
     try { saved = localStorage.getItem(HEAD_OFFICE_NUMBER_KEY); } catch (e) {}
@@ -9397,16 +9428,78 @@
     return sharedSheets.filter(function (s) { return !s.ended; });
   }
 
+  // Creates the "משרד ראשי" private sheet on first entry into Head Office
+  // mode (and finds it again on every later call) - a plain entry in
+  // data.sheets like any other private project, so it rides the app's
+  // normal tab/select/save machinery for free; only its tasks are special
+  // (system-generated, read-only - see syncHeadOfficeVirtualTasks below).
+  function ensureHeadOfficeSheet() {
+    if (!isHeadOfficeMode) return null;
+    var sheet = data.sheets.find(function (s) { return s.id === HEAD_OFFICE_SHEET_ID; });
+    if (!sheet) {
+      sheet = { id: HEAD_OFFICE_SHEET_ID, name: tr("headOfficeMainProjectName"), tasks: [], reports: [], files: [] };
+      data.sheets.unshift(sheet);
+      saveData();
+    }
+    return sheet;
+  }
+
+  // Every watched project's "שגר" (send) button on its procurement log
+  // writes procurementSentDate directly onto that log (markSiteLogReportSent,
+  // see siteLogProcurementOrderBtn above) - already readable here through
+  // the normal sharedSheets sync/Realtime path, with no extra plumbing. One
+  // virtual, non-editable task per project+date that's been sent, scanned
+  // and (re)built on every render() while in Head Office mode, so a new one
+  // shows up as soon as sharedSheets itself refreshes.
+  function syncHeadOfficeVirtualTasks() {
+    var sheet = ensureHeadOfficeSheet();
+    if (!sheet) return;
+    var seenIds = {};
+    var changed = false;
+    officeReportSheets().forEach(function (s) {
+      (s.siteLogs || []).forEach(function (log) {
+        if (!log.procurementSentDate) return;
+        var taskId = "ho-proc-" + s.id + "-" + log.date;
+        seenIds[taskId] = true;
+        if (!sheet.tasks.some(function (t) { return t.id === taskId; })) {
+          sheet.tasks.push({
+            id: taskId,
+            text: tr("headOfficeProcurementTaskPrefix") + " " + s.name + " " + isoToFullDisplay(log.date),
+            status: 0,
+            urgent: false,
+            type: "task",
+            date: log.date,
+            createdAt: Date.now(),
+            headOfficeVirtual: true,
+            targetSheetId: s.id,
+            targetDate: log.date
+          });
+          changed = true;
+        }
+      });
+    });
+    var before = sheet.tasks.length;
+    sheet.tasks = sheet.tasks.filter(function (t) { return !t.headOfficeVirtual || seenIds[t.id]; });
+    if (sheet.tasks.length !== before) changed = true;
+    if (changed) saveData();
+  }
+
+  // The date the combined report screens are currently showing - defaults
+  // to today, but browsable to any earlier date via the same date-label/
+  // calendar-input/"today" button pattern as the main tasks page's own
+  // date controls (see renderOfficeReportDateControls below).
+  var officeReportViewDate = todayISO();
+
   // Only a project whose "Send report" button (markSiteLogReportSent above)
-  // was clicked for this category TODAY is included - a project that's
-  // never sent (or only sent on an earlier day) is left out entirely
-  // rather than shown with an empty table, so the combined report reflects
-  // what's actually been submitted, not just whatever happens to be sitting
-  // half-filled in some project's draft log.
-  function buildOfficeCombinedReportElement(kind) {
+  // was clicked for this category on the selected date is included - a
+  // project that's never sent (or only sent on a different day) is left out
+  // entirely rather than shown with an empty table, so the combined report
+  // reflects what was actually submitted that day, not just whatever
+  // happens to be sitting half-filled in some project's draft log.
+  function buildOfficeCombinedReportElement(kind, dateOverride) {
     var wrap = document.createElement("div");
     wrap.dir = RTL_LANGS[currentLang] ? "rtl" : "ltr";
-    var dateISO = todayISO();
+    var dateISO = dateOverride || officeReportViewDate;
     var sectionCount = 0;
     officeReportSheets().forEach(function (sheet) {
       var log = findSiteLog(sheet, dateISO);
@@ -9441,7 +9534,7 @@
   function generateOfficeCombinedReport(kindKey) {
     var kind = OFFICE_REPORT_KINDS[kindKey];
     closeOfficeReportTypeModal();
-    var fileName = tr("officeCombinedReportFileNamePrefix") + " " + tr(kind.titleKey) + " " + isoToFileNameDate(todayISO()) + ".pdf";
+    var fileName = tr("officeCombinedReportFileNamePrefix") + " " + tr(kind.titleKey) + " " + isoToFileNameDate(officeReportViewDate) + ".pdf";
     buildPdfBlobFromElement(buildOfficeCombinedReportElement(kind), fileName).then(function (result) {
       attemptShare(result.blob, result.fileName);
     }).catch(function (err) {
@@ -9457,13 +9550,56 @@
   var officeReportOptionsBackBtn = document.getElementById("officeReportOptionsBackBtn");
   var officeReportOptionsTitle = document.getElementById("officeReportOptionsTitle");
   var officeReportOptionsPreview = document.getElementById("officeReportOptionsPreview");
+  var officeReportOptionsDateLabel = document.getElementById("officeReportOptionsDateLabel");
+  var officeReportOptionsDateInput = document.getElementById("officeReportOptionsDateInput");
+  var officeReportOptionsTodayBtn = document.getElementById("officeReportOptionsTodayBtn");
   var officeReportDailyBtn = document.getElementById("officeReportDailyBtn");
   var officeReportMonthlyBtn = document.getElementById("officeReportMonthlyBtn");
   var officeReportCustomBtn = document.getElementById("officeReportCustomBtn");
   var pendingOfficeReportKind = null;
 
+  // Shared by both combined-report screens (this one and the procurement
+  // list further below) - same date-label/calendar-input/"today" button
+  // pattern as the main tasks page's own date controls, so picking a past
+  // date on either screen keeps it in sync on the other too.
+  var officeProcurementDateLabel = document.getElementById("officeProcurementDateLabel");
+  var officeProcurementDateInput = document.getElementById("officeProcurementDateInput");
+  var officeProcurementTodayBtn = document.getElementById("officeProcurementTodayBtn");
+  var officeProcurementFilterSheetId = null;
+
+  function renderOfficeReportDateControls() {
+    var isToday = officeReportViewDate === todayISO();
+    var displayText = isoToFullDisplay(officeReportViewDate);
+    officeReportOptionsDateLabel.textContent = displayText;
+    officeReportOptionsDateInput.value = officeReportViewDate;
+    officeReportOptionsTodayBtn.hidden = isToday;
+    officeProcurementDateLabel.textContent = displayText;
+    officeProcurementDateInput.value = officeReportViewDate;
+    officeProcurementTodayBtn.hidden = isToday;
+  }
+
+  function setOfficeReportViewDate(dateISO) {
+    officeReportViewDate = dateISO;
+    renderOfficeReportDateControls();
+    if (!officeReportOptionsView.hidden && pendingOfficeReportKind) {
+      officeReportOptionsPreview.innerHTML = "";
+      officeReportOptionsPreview.appendChild(buildOfficeCombinedReportElement(OFFICE_REPORT_KINDS[pendingOfficeReportKind]));
+    }
+    if (!officeProcurementView.hidden) renderOfficeProcurementList(officeProcurementFilterSheetId);
+  }
+  officeReportOptionsDateInput.addEventListener("change", function () {
+    if (officeReportOptionsDateInput.value) setOfficeReportViewDate(officeReportOptionsDateInput.value);
+  });
+  officeReportOptionsTodayBtn.addEventListener("click", function () { setOfficeReportViewDate(todayISO()); });
+  officeProcurementDateInput.addEventListener("change", function () {
+    if (officeProcurementDateInput.value) setOfficeReportViewDate(officeProcurementDateInput.value);
+  });
+  officeProcurementTodayBtn.addEventListener("click", function () { setOfficeReportViewDate(todayISO()); });
+
   function openOfficeReportOptionsView(kindKey) {
     pendingOfficeReportKind = kindKey;
+    officeReportViewDate = todayISO();
+    renderOfficeReportDateControls();
     var kind = OFFICE_REPORT_KINDS[kindKey];
     officeReportOptionsTitle.textContent = tr(kind.titleKey);
     officeReportOptionsPreview.innerHTML = "";
@@ -9520,7 +9656,7 @@
 
   officeReportDailyBtn.addEventListener("click", function () {
     var kind = OFFICE_REPORT_KINDS[pendingOfficeReportKind];
-    var fileName = tr("officeCombinedReportFileNamePrefix") + " " + tr(kind.titleKey) + " " + isoToFileNameDate(todayISO()) + ".pdf";
+    var fileName = tr("officeCombinedReportFileNamePrefix") + " " + tr(kind.titleKey) + " " + isoToFileNameDate(officeReportViewDate) + ".pdf";
     showOfficeReportPreview(buildOfficeCombinedReportElement(kind), fileName);
   });
 
@@ -9731,11 +9867,13 @@
   var officeProcurementMonthlyBtn = document.getElementById("officeProcurementMonthlyBtn");
   var officeProcurementCustomBtn = document.getElementById("officeProcurementCustomBtn");
 
-  function renderOfficeProcurementList() {
+  function renderOfficeProcurementList(filterSheetId) {
+    officeProcurementFilterSheetId = filterSheetId || null;
     officeProcurementList.innerHTML = "";
-    var dateISO = todayISO();
+    var dateISO = officeReportViewDate;
     var sentField = OFFICE_REPORT_KINDS.procurement.sentField;
     var projects = officeReportSheets().filter(function (sheet) {
+      if (filterSheetId && sheet.id !== filterSheetId) return false;
       var log = findSiteLog(sheet, dateISO);
       return log && log[sentField] === dateISO;
     });
@@ -9764,7 +9902,7 @@
         mark.addEventListener("click", function () {
           entry.purchased = !entry.purchased;
           saveData();
-          renderOfficeProcurementList();
+          renderOfficeProcurementList(officeProcurementFilterSheetId);
         });
         row.appendChild(mark);
 
@@ -9785,16 +9923,22 @@
     });
   }
 
-  function openOfficeProcurementView() {
+  // filterSheetId/filterDate let a notification task in the "משרד ראשי"
+  // tab (see syncHeadOfficeVirtualTasks) jump straight to one specific
+  // project's procurement list on the date it was sent, instead of the
+  // normal all-projects/today view this screen otherwise shows.
+  function openOfficeProcurementView(filterSheetId, filterDate) {
     closeOfficeReportTypeModal();
-    renderOfficeProcurementList();
+    officeReportViewDate = filterDate || todayISO();
+    renderOfficeReportDateControls();
+    renderOfficeProcurementList(filterSheetId);
     officeProcurementView.hidden = false;
   }
   function closeOfficeProcurementView() {
     officeProcurementView.hidden = true;
     officeReportTypeView.hidden = false;
   }
-  officeReportProcurementBtn.addEventListener("click", openOfficeProcurementView);
+  officeReportProcurementBtn.addEventListener("click", function () { openOfficeProcurementView(); });
   officeProcurementBackBtn.addEventListener("click", closeOfficeProcurementView);
   officeProcurementDailyBtn.addEventListener("click", function () { generateOfficeCombinedReport("procurement"); });
   officeProcurementMonthlyBtn.addEventListener("click", function () {
@@ -11202,6 +11346,7 @@
   var lastActiveSheetIdBeforeArchive = null;
   function visibleSheets() {
     return allSheets().filter(function (s) {
+      if (s.id === HEAD_OFFICE_SHEET_ID) return isHeadOfficeMode && !viewingArchive;
       if (isHeadOfficeMode && !s.shared) return false;
       return !!s.ended === viewingArchive;
     });
@@ -11282,51 +11427,60 @@
       }
     }
 
+    // The "משרד ראשי" virtual tab has no name to rename and nothing to
+    // move/share/delete via the long-press menu - a plain tap just selects
+    // it, same as any other tab, with no rename or long-press wiring at all.
+    var isHeadOfficeSheetTab = sheet.id === HEAD_OFFICE_SHEET_ID;
+
     var tabLongPressFired = false;
     tab.addEventListener("click", function () {
       if (tabLongPressFired) { tabLongPressFired = false; return; }
-      if (sheet.id === data.activeSheetId) {
+      if (isHeadOfficeSheetTab) {
+        selectSheet(sheet.id);
+      } else if (sheet.id === data.activeSheetId) {
         state.renamingSheetId = sheet.id;
         render();
       } else {
         selectSheet(sheet.id);
       }
     });
-    tab.addEventListener("dblclick", function (e) {
-      e.stopPropagation();
-      data.activeSheetId = sheet.id;
-      state.renamingSheetId = sheet.id;
-      render();
-    });
+    if (!isHeadOfficeSheetTab) {
+      tab.addEventListener("dblclick", function (e) {
+        e.stopPropagation();
+        data.activeSheetId = sheet.id;
+        state.renamingSheetId = sheet.id;
+        render();
+      });
 
-    var tabPressStartX = 0, tabPressStartY = 0;
-    var startTabPress = function (e) {
-      var point = e.touches ? e.touches[0] : e;
-      tabPressStartX = point.clientX;
-      tabPressStartY = point.clientY;
-      tabLongPressFired = false;
-      clearTimeout(longPressTimer);
-      longPressTimer = setTimeout(function () {
-        tabLongPressFired = true;
-        openSheetActionModal(sheet.id);
-      }, 1000);
-    };
-    var cancelTabPress = function () {
-      clearTimeout(longPressTimer);
-    };
-    var moveTabPress = function (e) {
-      var point = e.touches ? e.touches[0] : e;
-      if (Math.abs(point.clientX - tabPressStartX) > 10 || Math.abs(point.clientY - tabPressStartY) > 10) {
-        cancelTabPress();
-      }
-    };
-    tab.addEventListener("mousedown", startTabPress);
-    tab.addEventListener("mouseup", cancelTabPress);
-    tab.addEventListener("mouseleave", cancelTabPress);
-    tab.addEventListener("mousemove", moveTabPress);
-    tab.addEventListener("touchstart", startTabPress, { passive: true });
-    tab.addEventListener("touchend", cancelTabPress);
-    tab.addEventListener("touchmove", moveTabPress, { passive: true });
+      var tabPressStartX = 0, tabPressStartY = 0;
+      var startTabPress = function (e) {
+        var point = e.touches ? e.touches[0] : e;
+        tabPressStartX = point.clientX;
+        tabPressStartY = point.clientY;
+        tabLongPressFired = false;
+        clearTimeout(longPressTimer);
+        longPressTimer = setTimeout(function () {
+          tabLongPressFired = true;
+          openSheetActionModal(sheet.id);
+        }, 1000);
+      };
+      var cancelTabPress = function () {
+        clearTimeout(longPressTimer);
+      };
+      var moveTabPress = function (e) {
+        var point = e.touches ? e.touches[0] : e;
+        if (Math.abs(point.clientX - tabPressStartX) > 10 || Math.abs(point.clientY - tabPressStartY) > 10) {
+          cancelTabPress();
+        }
+      };
+      tab.addEventListener("mousedown", startTabPress);
+      tab.addEventListener("mouseup", cancelTabPress);
+      tab.addEventListener("mouseleave", cancelTabPress);
+      tab.addEventListener("mousemove", moveTabPress);
+      tab.addEventListener("touchstart", startTabPress, { passive: true });
+      tab.addEventListener("touchend", cancelTabPress);
+      tab.addEventListener("touchmove", moveTabPress, { passive: true });
+    }
 
     bar.appendChild(tab);
 
@@ -11558,6 +11712,14 @@
     clearTimeout(longPressTimer);
     if (chatWasActiveLastRender && state.viewMode !== "chat") teardownChatView();
     chatWasActiveLastRender = state.viewMode === "chat";
+    if (isHeadOfficeMode) {
+      ensureHeadOfficeSheet();
+      syncHeadOfficeVirtualTasks();
+      if (!headOfficeDefaultTabApplied) {
+        headOfficeDefaultTabApplied = true;
+        data.activeSheetId = HEAD_OFFICE_SHEET_ID;
+      }
+    }
     var visibleForDate = visibleSheets();
     if (visibleForDate.length && data.activeSheetId !== pendingOpenChatSheetId &&
         !visibleForDate.some(function (s) { return s.id === data.activeSheetId; })) {
@@ -11672,9 +11834,14 @@
       renderChatMessages();
       return;
     }
-    showCompletedTasksBtn.hidden = viewingArchive || state.showingCompleted;
-    showActiveTasksBtn.hidden = viewingArchive || !state.showingCompleted;
-    addForm.hidden = isPast || state.showingCompleted;
+    // The "משרד ראשי" virtual sheet has no completed/active distinction and
+    // nothing addable - its tasks are entirely system-generated notification
+    // entries (see syncHeadOfficeVirtualTasks), never created or completed
+    // by hand.
+    var isHeadOfficeVirtualSheet = activeSheet().id === HEAD_OFFICE_SHEET_ID;
+    showCompletedTasksBtn.hidden = viewingArchive || state.showingCompleted || isHeadOfficeVirtualSheet;
+    showActiveTasksBtn.hidden = viewingArchive || !state.showingCompleted || isHeadOfficeVirtualSheet;
+    addForm.hidden = isPast || state.showingCompleted || isHeadOfficeVirtualSheet;
 
     // Browsing completed tasks shows every done task across every date in
     // this project at once (not just state.viewDate), so each row's own
@@ -11694,13 +11861,13 @@
         return a.createdAt - b.createdAt;
       });
     }
-    var rowEditable = editable && !state.showingCompleted;
+    var rowEditable = editable && !state.showingCompleted && !isHeadOfficeVirtualSheet;
 
     taskList.innerHTML = "";
     visible.forEach(function (t) {
       var isNote = t.type === "note";
       var li = document.createElement("li");
-      li.className = "task" + (t.status === 1 ? " partial" : "") + (t.status === 2 ? " done" : "") + (rowEditable ? "" : " readonly") + (t.isHeadOffice ? " head-office-task" : "");
+      li.className = "task" + (t.status === 1 ? " partial" : "") + (t.status === 2 ? " done" : "") + (rowEditable ? "" : " readonly") + (t.isHeadOffice ? " head-office-task" : "") + (t.headOfficeVirtual ? " head-office-notification-task" : "");
       li.dataset.taskId = t.id;
       var longPressFired = false;
       if (rowEditable && state.editingTaskId !== t.id) {
@@ -11739,6 +11906,15 @@
         li.addEventListener("touchstart", startPress, { passive: true });
         li.addEventListener("touchend", cancelPress);
         li.addEventListener("touchmove", movePress, { passive: true });
+      } else if (t.headOfficeVirtual) {
+        // Not editable (handled above via rowEditable=false for this whole
+        // sheet) - tapping one of these notification rows instead jumps
+        // straight to that specific project's procurement list for that
+        // date, with the same purchased-marking circles as the regular
+        // combined procurement report.
+        li.addEventListener("click", function () {
+          openOfficeProcurementView(t.targetSheetId, t.targetDate);
+        });
       }
 
       var check, dot, timeLabel;
