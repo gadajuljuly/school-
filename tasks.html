@@ -9466,12 +9466,14 @@
   function syncHeadOfficeVirtualTasks() {
     var sheet = ensureHeadOfficeSheet();
     if (!sheet) return;
+    var dismissed = sheet.dismissedHeadOfficeIds || [];
     var seenIds = {};
     var changed = false;
     officeReportSheets().forEach(function (s) {
       (s.siteLogs || []).forEach(function (log) {
         if (!log.procurementSentDate) return;
         var taskId = "ho-proc-" + s.id + "-" + log.date;
+        if (dismissed.indexOf(taskId) !== -1) return;
         seenIds[taskId] = true;
         if (!sheet.tasks.some(function (t) { return t.id === taskId; })) {
           sheet.tasks.push({
@@ -9494,6 +9496,20 @@
     sheet.tasks = sheet.tasks.filter(function (t) { return !t.headOfficeVirtual || seenIds[t.id]; });
     if (sheet.tasks.length !== before) changed = true;
     if (changed) saveData();
+  }
+
+  // Long-pressing a notification's text (see the render() task-row loop)
+  // deletes it - remembered in dismissedHeadOfficeIds so the next sync
+  // pass above doesn't just recreate the exact same notification from the
+  // still-set procurementSentDate it was generated from.
+  function dismissHeadOfficeNotification(taskId) {
+    var sheet = ensureHeadOfficeSheet();
+    if (!sheet) return;
+    sheet.tasks = sheet.tasks.filter(function (t) { return t.id !== taskId; });
+    if (!sheet.dismissedHeadOfficeIds) sheet.dismissedHeadOfficeIds = [];
+    if (sheet.dismissedHeadOfficeIds.indexOf(taskId) === -1) sheet.dismissedHeadOfficeIds.push(taskId);
+    saveData();
+    render();
   }
 
   // The date the combined report screens are currently showing - defaults
@@ -12034,6 +12050,44 @@
             e.stopPropagation();
             state.editingTaskId = t.id;
             render();
+          });
+        } else if (t.headOfficeVirtual) {
+          // Same tap-vs-long-press split as a normal row's long-press (just
+          // scoped to the text, since the icon/dot above already have their
+          // own clicks) - a quick tap still navigates to that project's
+          // procurement list, a sustained press offers to delete this
+          // notification instead.
+          var textLongPressFired = false;
+          var textPressStartX = 0, textPressStartY = 0;
+          var startTextPress = function (e) {
+            var point = e.touches ? e.touches[0] : e;
+            textPressStartX = point.clientX;
+            textPressStartY = point.clientY;
+            textLongPressFired = false;
+            clearTimeout(longPressTimer);
+            longPressTimer = setTimeout(function () {
+              textLongPressFired = true;
+              askConfirm(tr("confirmDeleteTask").replace("{name}", t.text), function () {
+                dismissHeadOfficeNotification(t.id);
+              });
+            }, 1000);
+          };
+          var cancelTextPress = function () { clearTimeout(longPressTimer); };
+          var moveTextPress = function (e) {
+            var point = e.touches ? e.touches[0] : e;
+            if (Math.abs(point.clientX - textPressStartX) > 10 || Math.abs(point.clientY - textPressStartY) > 10) cancelTextPress();
+          };
+          textEl.addEventListener("mousedown", startTextPress);
+          textEl.addEventListener("mouseup", cancelTextPress);
+          textEl.addEventListener("mouseleave", cancelTextPress);
+          textEl.addEventListener("mousemove", moveTextPress);
+          textEl.addEventListener("touchstart", startTextPress, { passive: true });
+          textEl.addEventListener("touchend", cancelTextPress);
+          textEl.addEventListener("touchmove", moveTextPress, { passive: true });
+          textEl.addEventListener("click", function (e) {
+            e.stopPropagation();
+            if (textLongPressFired) { textLongPressFired = false; return; }
+            openOfficeProcurementView(t.targetSheetId, t.targetDate);
           });
         }
       }
