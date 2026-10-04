@@ -387,7 +387,7 @@
   }
 
   .sheet-reports-list {
-    flex: 1;
+    flex: 0 1 auto;
     min-height: 0;
     overflow-y: auto;
     display: flex;
@@ -726,9 +726,11 @@
   /* A safety net, not normally needed - the 5 icons are sized to always
      fit .ruled-body's bounded space without scrolling, but if they ever
      don't (a long project name wrapping, an unusual screen size), this
-     scrolls instead of clipping silently. */
+     scrolls instead of clipping silently. flex: 0 1 auto (not 1) so it
+     sizes to its own content instead of always stretching to fill the
+     full available height. */
   #diaryView {
-    flex: 1;
+    flex: 0 1 auto;
     min-height: 0;
     overflow-y: auto;
   }
@@ -813,9 +815,10 @@
      icons (7 defaults plus any custom ones), so this uses 3 columns of
      smaller tiles instead of 2, to still fit the page without scrolling -
      and scrolls instead of clipping if a lot of custom folders ever do
-     overflow it. */
+     overflow it (flex: 0 1 auto, not 1, so it sizes to its own content
+     rather than always stretching to fill the full available height). */
   #libraryFoldersView {
-    flex: 1;
+    flex: 0 1 auto;
     min-height: 0;
     overflow-y: auto;
   }
@@ -2215,8 +2218,14 @@
     height: 36px;
     line-height: 36px;
   }
+  /* flex: 0 1 auto (not 1) - a new/short list sizes to its own content
+     (the add-row sits right after the last task, near the top, not
+     pinned to the bottom of an empty screen), and only shrinks to fit
+     .ruled-body's bounded space - triggering its own scroll - once there
+     are actually enough tasks to need it, with the add-row then staying
+     put right below it. */
   ol.task-list {
-    flex: 1;
+    flex: 0 1 auto;
     min-height: 0;
     overflow-y: auto;
     list-style: none;
