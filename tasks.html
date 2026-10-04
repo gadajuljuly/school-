@@ -11969,12 +11969,24 @@
         check.setAttribute("aria-hidden", "true");
         check.title = STATUS_LABEL[t.status];
         check.innerHTML = rowMarkSvg(t.status);
+        // A notification row in "משרד ראשי" isn't otherwise editable (no
+        // text edit, no move, no delete - see rowEditable above), but the
+        // status mark and urgent dot still work exactly like a normal task
+        // row, independent of the row's own click (which jumps to that
+        // project's procurement list instead of cycling status) - each
+        // stops its click from bubbling up to the row.
+        if (t.headOfficeVirtual) {
+          check.addEventListener("click", function (e) {
+            e.stopPropagation();
+            cycleStatus(t.id);
+          });
+        }
 
         dot = document.createElement("span");
         dot.className = "urgent-toggle" + (t.urgent ? " urgent" : "");
         dot.title = t.urgent ? tr("unmarkUrgent") : tr("markUrgent");
         dot.innerHTML = t.urgent ? "" : URGENT_CIRCLE_SVG;
-        if (rowEditable) {
+        if (rowEditable || t.headOfficeVirtual) {
           dot.addEventListener("click", function (e) {
             e.stopPropagation();
             toggleUrgent(t.id);
