@@ -1753,10 +1753,15 @@
     gap: 8px;
   }
   .office-report-head-date {
-    flex-shrink: 0;
+    flex: 1;
+    display: flex;
+    justify-content: center;
   }
-  .office-report-head-date .notebook-date { font-size: 0.85rem; }
   .office-report-head-date .today-btn { font-size: 0.62rem; padding: 2px 6px; }
+  #officeReportOptionsView .report-head-title, #officeProcurementView .report-head-title {
+    flex: 0 1 auto;
+    font-size: 0.8rem;
+  }
   .date-click-area {
     position: relative;
     display: inline-flex;
@@ -9595,6 +9600,35 @@
     if (officeProcurementDateInput.value) setOfficeReportViewDate(officeProcurementDateInput.value);
   });
   officeProcurementTodayBtn.addEventListener("click", function () { setOfficeReportViewDate(todayISO()); });
+
+  // Same horizontal-drag-changes-the-date gesture as the main tasks page's
+  // own date zone (setupSwipeGestures above) - dragging anywhere on either
+  // combined-report screen's header (except directly on the calendar input
+  // or a button) moves officeReportViewDate one day at a time.
+  function setupOfficeReportDateSwipe(el) {
+    if (!el) return;
+    var startX = 0, startY = 0, startTime = 0, tracking = false;
+    el.addEventListener("touchstart", function (e) {
+      if (e.touches.length !== 1 || e.target.closest("input, button")) { tracking = false; return; }
+      tracking = true;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      startTime = Date.now();
+    }, { passive: true });
+    el.addEventListener("touchend", function (e) {
+      if (!tracking) return;
+      tracking = false;
+      var touch = e.changedTouches[0];
+      var dx = touch.clientX - startX;
+      var dy = touch.clientY - startY;
+      var elapsed = Date.now() - startTime;
+      if (elapsed < 800 && Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+        setOfficeReportViewDate(addDaysToISO(officeReportViewDate, dx < 0 ? -1 : 1));
+      }
+    }, { passive: true });
+  }
+  setupOfficeReportDateSwipe(document.querySelector("#officeReportOptionsView .report-head"));
+  setupOfficeReportDateSwipe(document.querySelector("#officeProcurementView .report-head"));
 
   function openOfficeReportOptionsView(kindKey) {
     pendingOfficeReportKind = kindKey;
