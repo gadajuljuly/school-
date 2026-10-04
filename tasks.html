@@ -2230,7 +2230,13 @@
     overflow-y: auto;
     list-style: none;
     margin: 0;
-    padding: 0;
+    /* Left padding only: the urgent-task dot (.urgent-toggle.urgent)
+       deliberately bleeds past its own small box via transform:scale and
+       a glowing box-shadow, and sits at each row's far left edge - since
+       setting overflow-y here also makes overflow-x compute to clipping
+       (not visible) per the CSS spec, without this reserved space that
+       bleed gets clipped flat instead of rendering as a full circle. */
+    padding: 0 0 0 10px;
   }
   li.task {
     display: flex;
