@@ -3185,6 +3185,16 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="officeGroupInviteReceivedOverlay" hidden>
+    <div class="modal-box" role="alertdialog" aria-modal="true">
+      <p class="modal-message" id="officeGroupInviteReceivedMessage"></p>
+      <div class="modal-actions">
+        <button type="button" class="modal-btn modal-btn-yes" id="officeGroupInviteApproveBtn" data-i18n="confirmYesBtn">כן</button>
+        <button type="button" class="modal-btn modal-btn-no" id="officeGroupInviteDeclineBtn" data-i18n="confirmNoBtn">לא</button>
+      </div>
+    </div>
+  </div>
+
 
   <div class="modal-overlay" id="chatMsgActionOverlay" hidden>
     <div class="modal-box" role="alertdialog" aria-modal="true">
@@ -3469,8 +3479,12 @@
     officeGroupHeadOfficeTitle: { he: "הגדרת משרד ראשי", en: "Set Head Office", ar: "تحديد المكتب الرئيسي", ru: "Назначить главный офис" },
     officeGroupFinishBtn: { he: "סיום", en: "Finish", ar: "إنهاء", ru: "Готово" },
     officeGroupNoMembersMsg: { he: "יש להוסיף לפחות חבר אחד לקבוצה", en: "Add at least one group member", ar: "أضف عضوًا واحدًا على الأقل", ru: "Добавьте хотя бы одного участника" },
-    officeGroupCreatedMsg: { he: "הקבוצה נוצרה", en: "Group created", ar: "تم إنشاء المجموعة", ru: "Группа создана" },
+    officeGroupCreatedMsg: { he: "הקבוצה נוצרה, ההזמנות נשלחו וימתינו לאישור", en: "Group created, invites sent and awaiting approval", ar: "تم إنشاء المجموعة، تم إرسال الدعوات وهي بانتظار الموافقة", ru: "Группа создана, приглашения отправлены и ждут подтверждения" },
     officeGroupCreateErrorMsg: { he: "לא הצלחנו ליצור את הקבוצה, נסו שוב", en: "Couldn't create the group, try again", ar: "لم نتمكن من إنشاء المجموعة، حاول مرة أخرى", ru: "Не удалось создать группу, попробуйте снова" },
+    officeGroupInviteMemberMsgTemplate: { he: "{name} רוצה להוסיף אותך לקבוצת משרד, כך שהפרויקטים השיתופיים שלך יהיו חשופים למשרד הראשי של הקבוצה - לאשר?", en: "{name} wants to add you to an office group, so your shared projects will be visible to its Head Office - approve?", ar: "يريد {name} إضافتك إلى مجموعة مكتب، بحيث تكون مشاريعك المشتركة مرئية للمكتب الرئيسي للمجموعة - هل توافق؟", ru: "{name} хочет добавить вас в офисную группу, чтобы ваши общие проекты были видны её главному офису - подтвердить?" },
+    officeGroupInviteHeadOfficeMsgTemplate: { he: "{name} רוצה שתהיה המשרד הראשי של קבוצת משרד - לאשר?", en: "{name} wants you to be the Head Office of an office group - approve?", ar: "يريد {name} أن تكون المكتب الرئيسي لمجموعة مكتب - هل توافق؟", ru: "{name} хочет, чтобы вы стали главным офисом офисной группы - подтвердить?" },
+    officeGroupInviteApprovedMsg: { he: "אושר", en: "Approved", ar: "تمت الموافقة", ru: "Подтверждено" },
+    officeGroupInviteDeclinedMsg: { he: "ההזמנה נדחתה", en: "The invite was declined", ar: "تم رفض الدعوة", ru: "Приглашение отклонено" },
     nextBtn: { he: "הבא", en: "Next", ar: "التالي", ru: "Далее" },
     headOfficeMemberAddPlaceholder: { he: "05XXXXXXXX", en: "05XXXXXXXX", ar: "05XXXXXXXX", ru: "05XXXXXXXX" },
     headOfficeMemberInvalidMsg: { he: "מספר טלפון לא תקין", en: "Invalid phone number", ar: "رقم هاتف غير صالح", ru: "Неверный номер телефона" },
@@ -7691,20 +7705,21 @@
   headOfficeToggleOnBtn.addEventListener("click", function () { setHeadOfficeActive(true); });
   headOfficeToggleOffBtn.addEventListener("click", function () { setHeadOfficeActive(false); });
 
-  // Fetched once after login (and again right after creating a group) -
-  // every office_groups row where this account is either the creator or
-  // the named Head Office is enough to unlock the toggle above.
+  // Fetched once after login (and again right after an invite is
+  // approved) - being the creator of any group, or having an APPROVED
+  // head_office invite in one (see office_group_invites, invited there
+  // only resolves once the invited phone itself approves - see
+  // checkPendingOfficeGroupInvites below), is enough to unlock the toggle.
   function loadMyOfficeGroups() {
     if (!supabaseClient || !myPhoneNumber) return Promise.resolve();
     var asCreator = supabaseClient.from("office_groups").select("id").eq("creator_phone", myPhoneNumber);
-    var asHeadOffice = supabaseClient.from("office_groups").select("id").eq("head_office_phone", myPhoneNumber);
+    var asHeadOffice = supabaseClient.from("office_group_invites").select("id")
+      .eq("invited_phone", myPhoneNumber).eq("role", "head_office").eq("status", "approved");
     return Promise.all([asCreator, asHeadOffice]).then(function (results) {
-      var rowsA = (results[0] && results[0].data) || [];
-      var rowsB = (results[1] && results[1].data) || [];
-      var ids = {};
-      rowsA.concat(rowsB).forEach(function (r) { ids[r.id] = true; });
-      myOfficeGroups = Object.keys(ids);
-      canBeHeadOffice = myOfficeGroups.length > 0;
+      var creatorRows = (results[0] && results[0].data) || [];
+      var headOfficeRows = (results[1] && results[1].data) || [];
+      myOfficeGroups = creatorRows.map(function (r) { return r.id; });
+      canBeHeadOffice = (creatorRows.length + headOfficeRows.length) > 0;
       recomputeHeadOfficeMode();
       updateHeadOfficeToggleButtons();
       render();
@@ -7849,22 +7864,113 @@
   }
   officeGroupHeadOfficePickContactsBtn.addEventListener("click", pickContactForOfficeGroupHeadOffice);
 
+  // Creates the (empty) group, then sends one invite per member plus one
+  // for the chosen Head Office number - each only takes effect once ITS
+  // OWN invited phone approves it (checkPendingOfficeGroupInvites below),
+  // except when the creator names themselves (either role), which is
+  // approved immediately - nobody needs to ask their own permission.
   officeGroupHeadOfficeFinishBtn.addEventListener("click", function () {
     var headOfficePhone = normalizePhoneDigits(officeGroupHeadOfficeInput.value);
     if (!headOfficePhone) { alert(tr("headOfficeMemberInvalidMsg")); return; }
     if (!supabaseClient || !myPhoneNumber) return;
-    supabaseClient.from("office_groups").insert({
-      creator_phone: myPhoneNumber,
-      head_office_phone: headOfficePhone,
-      members: pendingOfficeGroupMembers
-    }).then(function (result) {
-      if (result && result.error) { alert(tr("officeGroupCreateErrorMsg")); return; }
-      officeGroupHeadOfficeOverlay.hidden = true;
-      pendingOfficeGroupMembers = [];
-      showToast(tr("officeGroupCreatedMsg"));
-      loadMyOfficeGroups();
-      loadSharedSheets();
+    supabaseClient.from("office_groups").insert({ creator_phone: myPhoneNumber }).select().then(function (result) {
+      if ((result && result.error) || !result.data || !result.data[0]) { alert(tr("officeGroupCreateErrorMsg")); return; }
+      var groupId = result.data[0].id;
+      var invites = pendingOfficeGroupMembers.map(function (phone) {
+        return {
+          group_id: groupId,
+          role: "member",
+          invited_phone: phone,
+          invited_by_phone: myPhoneNumber,
+          invited_by_name: myPhoneNumber,
+          status: phone === myPhoneNumber ? "approved" : "pending"
+        };
+      });
+      invites.push({
+        group_id: groupId,
+        role: "head_office",
+        invited_phone: headOfficePhone,
+        invited_by_phone: myPhoneNumber,
+        invited_by_name: myPhoneNumber,
+        status: headOfficePhone === myPhoneNumber ? "approved" : "pending"
+      });
+      supabaseClient.from("office_group_invites").insert(invites).then(function (inviteResult) {
+        if (inviteResult && inviteResult.error) { alert(tr("officeGroupCreateErrorMsg")); return; }
+        officeGroupHeadOfficeOverlay.hidden = true;
+        pendingOfficeGroupMembers = [];
+        showToast(tr("officeGroupCreatedMsg"));
+        loadMyOfficeGroups();
+        loadSharedSheets();
+      }, function () { alert(tr("officeGroupCreateErrorMsg")); });
     }, function () { alert(tr("officeGroupCreateErrorMsg")); });
+  });
+
+  // --- Receiving side: an office_group_invites row addressed to my own
+  // phone shows an approve/decline prompt, same queue-one-at-a-time
+  // pattern as checkPendingProjectInvites above. Approving just flips its
+  // status (the shared_projects RLS in office_groups.sql reads that
+  // directly) and, for a head_office invite, refreshes this account's own
+  // Head Office eligibility so the toggle appears right away.
+  var officeGroupInviteReceivedOverlay = document.getElementById("officeGroupInviteReceivedOverlay");
+  var officeGroupInviteReceivedMessage = document.getElementById("officeGroupInviteReceivedMessage");
+  var officeGroupInviteApproveBtn = document.getElementById("officeGroupInviteApproveBtn");
+  var officeGroupInviteDeclineBtn = document.getElementById("officeGroupInviteDeclineBtn");
+  var pendingOfficeGroupInvitesQueue = [];
+  var activeOfficeGroupInvite = null;
+
+  function checkPendingOfficeGroupInvites() {
+    if (!supabaseClient || !myPhoneNumber || activeOfficeGroupInvite) return;
+    try {
+      supabaseClient.from("office_group_invites").select("*")
+        .eq("invited_phone", myPhoneNumber).eq("status", "pending")
+        .then(function (result) {
+          if (!result || result.error || !result.data || !result.data.length) return;
+          pendingOfficeGroupInvitesQueue = result.data;
+          showNextPendingOfficeGroupInvite();
+        }, function () {});
+    } catch (e) {}
+  }
+  function showNextPendingOfficeGroupInvite() {
+    if (activeOfficeGroupInvite || !pendingOfficeGroupInvitesQueue.length) return;
+    activeOfficeGroupInvite = pendingOfficeGroupInvitesQueue.shift();
+    var senderLabel = activeOfficeGroupInvite.invited_by_name || activeOfficeGroupInvite.invited_by_phone;
+    var template = activeOfficeGroupInvite.role === "head_office"
+      ? tr("officeGroupInviteHeadOfficeMsgTemplate")
+      : tr("officeGroupInviteMemberMsgTemplate");
+    officeGroupInviteReceivedMessage.textContent = template.replace("{name}", senderLabel);
+    officeGroupInviteReceivedOverlay.hidden = false;
+  }
+  function closeOfficeGroupInviteReceivedModal() {
+    officeGroupInviteReceivedOverlay.hidden = true;
+    activeOfficeGroupInvite = null;
+    showNextPendingOfficeGroupInvite();
+  }
+  function resolveOfficeGroupInvite(invite, newStatus) {
+    if (!supabaseClient) return Promise.resolve();
+    return supabaseClient.from("office_group_invites")
+      .update({ status: newStatus, resolved_at: new Date().toISOString() })
+      .eq("id", invite.id)
+      .then(function (result) {
+        if (result && result.error) console.error("office_group_invites update failed:", result.error);
+      }, function (err) {
+        console.error("office_group_invites update failed:", err);
+      });
+  }
+  officeGroupInviteApproveBtn.addEventListener("click", function () {
+    if (!activeOfficeGroupInvite) return;
+    var invite = activeOfficeGroupInvite;
+    resolveOfficeGroupInvite(invite, "approved").then(function () {
+      if (invite.role === "head_office") loadMyOfficeGroups();
+      loadSharedSheets();
+    });
+    showToast(tr("officeGroupInviteApprovedMsg"));
+    closeOfficeGroupInviteReceivedModal();
+  });
+  officeGroupInviteDeclineBtn.addEventListener("click", function () {
+    if (!activeOfficeGroupInvite) return;
+    resolveOfficeGroupInvite(activeOfficeGroupInvite, "declined");
+    showToast(tr("officeGroupInviteDeclinedMsg"));
+    closeOfficeGroupInviteReceivedModal();
   });
 
   // Company logos can be large source images (a marketing PNG straight off
@@ -12522,6 +12628,7 @@
     loadSharedSheets();
     loadMyOfficeGroups();
     checkPendingProjectInvites();
+    checkPendingOfficeGroupInvites();
   }
 
   function sharedRowToSheet(row) {
@@ -12734,6 +12841,7 @@
     loadSharedSheets();
     loadMyOfficeGroups();
     checkPendingProjectInvites();
+    checkPendingOfficeGroupInvites();
   }
 
   function startSharedSheetsWatcher() {
