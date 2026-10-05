@@ -2756,11 +2756,9 @@
             <button id="addLogoBtn" data-i18n="addLogoBtn">הוספת לוגו</button>
           </div>
           <div class="menu-section">
-            <div class="menu-label" data-i18n="menuLabelHeadOfficeNumber">מספר משרד ראשי</div>
-            <input type="tel" id="headOfficeNumberInput" class="reminder-select" data-i18n-ph="headOfficeNumberPlaceholder" placeholder="05XXXXXXXX">
+            <button type="button" id="officeGroupCreateBtn" data-i18n="officeGroupCreateBtn">הקמת קבוצת משרד</button>
             <button type="button" id="headOfficeToggleOnBtn" data-i18n="headOfficeToggleOnBtn" hidden>מעבר למצב משרד ראשי</button>
             <button type="button" id="headOfficeToggleOffBtn" data-i18n="headOfficeToggleOffBtn" hidden>יציאה ממצב משרד ראשי</button>
-            <button type="button" id="headOfficeMembersBtn" data-i18n="headOfficeMembersBtn" hidden>חברי המשרד</button>
           </div>
           <div class="menu-section">
             <div class="menu-label" data-i18n="menuLabelLanguage">שפה</div>
@@ -3066,6 +3064,30 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="officeGroupMembersOverlay" hidden>
+    <div class="modal-box" role="alertdialog" aria-modal="true">
+      <p class="modal-message" data-i18n="officeGroupMembersTitle">חברי הקבוצה</p>
+      <div id="officeGroupMembersList"></div>
+      <button type="button" class="convert-to-note-btn" id="officeGroupMembersPickContactsBtn" data-i18n="sharedProjectPickContactsBtn" hidden>בחירה מאנשי הקשר</button>
+      <div class="modal-actions">
+        <button type="button" class="modal-btn modal-btn-primary" id="officeGroupMembersNextBtn" data-i18n="nextBtn">הבא</button>
+        <button type="button" class="modal-btn modal-btn-no" id="officeGroupMembersCancelBtn" data-i18n="cancelBtn">ביטול</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="officeGroupHeadOfficeOverlay" hidden>
+    <div class="modal-box" role="alertdialog" aria-modal="true">
+      <p class="modal-message" data-i18n="officeGroupHeadOfficeTitle">הגדרת משרד ראשי</p>
+      <input type="tel" id="officeGroupHeadOfficeInput" class="auth-input" dir="ltr" data-i18n-ph="headOfficeMemberAddPlaceholder" placeholder="05XXXXXXXX">
+      <button type="button" class="convert-to-note-btn" id="officeGroupHeadOfficePickContactsBtn" data-i18n="sharedProjectPickContactsBtn" hidden>בחירה מאנשי הקשר</button>
+      <div class="modal-actions">
+        <button type="button" class="modal-btn modal-btn-primary" id="officeGroupHeadOfficeFinishBtn" data-i18n="officeGroupFinishBtn">סיום</button>
+        <button type="button" class="modal-btn modal-btn-no" id="officeGroupHeadOfficeBackBtn" data-i18n="backBtn">חזרה</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="officeNameReportOverlay" hidden>
     <div class="modal-box" role="alertdialog" aria-modal="true">
       <p class="modal-message" id="officeNameReportModalMessage"></p>
@@ -3363,20 +3385,6 @@
     </div>
   </div>
 
-  <div class="report-view" id="headOfficeMembersView" hidden>
-    <div class="report-head">
-      <button type="button" class="report-back-btn" id="headOfficeMembersBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
-      <div class="report-head-title" data-i18n="headOfficeMembersBtn">חברי המשרד</div>
-    </div>
-    <p class="report-meta" data-i18n="headOfficeMembersIntro">מספרי הטלפון שהפרויקטים השיתופיים שלהם יהיו נגישים למשרד הראשי</p>
-    <button type="button" class="convert-to-note-btn" id="headOfficeWatchAllOnBtn" data-i18n="headOfficeWatchAllOnBtn">הצג את כל הפרויקטים השיתופיים של כל המשתמשים</button>
-    <button type="button" class="convert-to-note-btn" id="headOfficeWatchAllOffBtn" data-i18n="headOfficeWatchAllOffBtn" hidden>הפסק להציג את כל הפרויקטים השיתופיים</button>
-    <p class="report-meta" id="headOfficeWatchAllActiveMsg" data-i18n="headOfficeWatchAllActiveMsg" hidden>כרגע מוצגים כל הפרויקטים השיתופיים של כל המשתמשים</p>
-    <button type="button" class="convert-to-note-btn" id="headOfficeMembersPickContactsBtn" data-i18n="sharedProjectPickContactsBtn" hidden>בחירה מאנשי הקשר</button>
-    <div class="site-log-procurement-wrap">
-      <div id="headOfficeMembersList"></div>
-    </div>
-  </div>
 
   <div class="report-view" id="companyDashboardView" hidden>
     <div class="report-head">
@@ -3454,15 +3462,16 @@
     reminderEvery2Hours: { he: "כל שעתיים", en: "Every 2 hours", ar: "كل ساعتين", ru: "Каждые 2 часа" },
     reminderEvery4Hours: { he: "כל 4 שעות", en: "Every 4 hours", ar: "كل 4 ساعات", ru: "Каждые 4 часа" },
     menuLabelApp: { he: "האפליקציה", en: "App", ar: "التطبيق", ru: "Приложение" },
-    menuLabelHeadOfficeNumber: { he: "מספר משרד ראשי", en: "Head office number", ar: "رقم المكتب الرئيسي", ru: "Номер главного офиса" },
-    headOfficeNumberPlaceholder: { he: "05XXXXXXXX", en: "05XXXXXXXX", ar: "05XXXXXXXX", ru: "05XXXXXXXX" },
     headOfficeToggleOnBtn: { he: "מעבר למצב משרד ראשי", en: "Switch to Head Office mode", ar: "التبديل إلى وضع المكتب الرئيسي", ru: "Перейти в режим главного офиса" },
     headOfficeToggleOffBtn: { he: "יציאה ממצב משרד ראשי", en: "Exit Head Office mode", ar: "الخروج من وضع المكتب الرئيسي", ru: "Выйти из режима главного офиса" },
-    headOfficeMembersBtn: { he: "חברי המשרד", en: "Office members", ar: "أعضاء المكتب", ru: "Сотрудники офиса" },
-    headOfficeMembersIntro: { he: "מספרי הטלפון שהפרויקטים השיתופיים שלהם יהיו נגישים למשרד הראשי", en: "Phone numbers whose shared projects are accessible to Head Office", ar: "أرقام الهواتف التي ستكون مشاريعها المشتركة متاحة للمكتب الرئيسي", ru: "Номера телефонов, чьи совместные проекты будут доступны главному офису" },
-    headOfficeWatchAllOnBtn: { he: "הצג את כל הפרויקטים השיתופיים של כל המשתמשים", en: "Show every user's shared projects", ar: "إظهار جميع المشاريع المشتركة لكل المستخدمين", ru: "Показать общие проекты всех пользователей" },
-    headOfficeWatchAllOffBtn: { he: "הפסק להציג את כל הפרויקטים השיתופיים", en: "Stop showing every shared project", ar: "إيقاف إظهار جميع المشاريع المشتركة", ru: "Прекратить показ всех общих проектов" },
-    headOfficeWatchAllActiveMsg: { he: "כרגע מוצגים כל הפרויקטים השיתופיים של כל המשתמשים", en: "Every user's shared projects are currently shown", ar: "يتم الآن إظهار جميع المشاريع المشتركة لكل المستخدمين", ru: "Сейчас показаны общие проекты всех пользователей" },
+    officeGroupCreateBtn: { he: "הקמת קבוצת משרד", en: "Create office group", ar: "إنشاء مجموعة مكتب", ru: "Создать офисную группу" },
+    officeGroupMembersTitle: { he: "חברי הקבוצה", en: "Group members", ar: "أعضاء المجموعة", ru: "Участники группы" },
+    officeGroupHeadOfficeTitle: { he: "הגדרת משרד ראשי", en: "Set Head Office", ar: "تحديد المكتب الرئيسي", ru: "Назначить главный офис" },
+    officeGroupFinishBtn: { he: "סיום", en: "Finish", ar: "إنهاء", ru: "Готово" },
+    officeGroupNoMembersMsg: { he: "יש להוסיף לפחות חבר אחד לקבוצה", en: "Add at least one group member", ar: "أضف عضوًا واحدًا على الأقل", ru: "Добавьте хотя бы одного участника" },
+    officeGroupCreatedMsg: { he: "הקבוצה נוצרה", en: "Group created", ar: "تم إنشاء المجموعة", ru: "Группа создана" },
+    officeGroupCreateErrorMsg: { he: "לא הצלחנו ליצור את הקבוצה, נסו שוב", en: "Couldn't create the group, try again", ar: "لم نتمكن من إنشاء المجموعة، حاول مرة أخرى", ru: "Не удалось создать группу, попробуйте снова" },
+    nextBtn: { he: "הבא", en: "Next", ar: "التالي", ru: "Далее" },
     headOfficeMemberAddPlaceholder: { he: "05XXXXXXXX", en: "05XXXXXXXX", ar: "05XXXXXXXX", ru: "05XXXXXXXX" },
     headOfficeMemberInvalidMsg: { he: "מספר טלפון לא תקין", en: "Invalid phone number", ar: "رقم هاتف غير صالح", ru: "Неверный номер телефона" },
     officeReportsBtnTitle: { he: "דוחות מרוכזים", en: "Combined reports", ar: "تقارير مجمعة", ru: "Сводные отчёты" },
@@ -4010,11 +4019,6 @@
   var SUPABASE_ROW_ID = null;
   var myPhoneNumber = null;
   var sharedSheets = [];
-  // The phone numbers a Head Office account watches - see
-  // loadHeadOfficeWatchlist()/loadSharedSheets() below. The projects those
-  // numbers unlock land directly in sharedSheets (RLS-gated), not here;
-  // this is only the number list itself, for the "חברי המשרד" menu screen.
-  var headOfficeWatchlistNumbers = [];
   var supabaseClient = (window.supabase && SUPABASE_URL && SUPABASE_KEY)
     ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
     : null;
@@ -7639,54 +7643,21 @@
     logoFileInput.click();
   });
 
-  // Head Office mode has no server-side roles table to check against - it's
-  // a plain per-device setting: whoever is logged in on THIS device/browser
-  // enters Head Office mode if the phone number they signed in with matches
-  // the number saved here. Firebase's phoneNumber (myPhoneNumber) is always
-  // full E.164 (e.g. "+972525565932"), matching normalizePhoneDigits()'s
-  // own output, so they can be compared directly once both are normalized.
-  var HEAD_OFFICE_NUMBER_KEY = "itask-head-office-number";
-  var headOfficeNumberInput = document.getElementById("headOfficeNumberInput");
-  (function initHeadOfficeNumberInput() {
-    try {
-      var saved = localStorage.getItem(HEAD_OFFICE_NUMBER_KEY);
-      if (saved) headOfficeNumberInput.value = saved;
-    } catch (e) {}
-  })();
-
-  // A second, simpler way into Head Office mode for one specific account
-  // only (not a general-purpose setting anyone could type their own number
-  // into) - a one-tap toggle in the menu, visible only when logged in as
-  // this exact phone number. The toggle itself is still just a per-device
-  // localStorage flag, same as the number-matching path above; the two
-  // combine with OR so either one alone is enough to enter the mode.
-  var MY_OWN_PHONE_NUMBER = "+972523255088";
-  var HEAD_OFFICE_MANUAL_TOGGLE_KEY = "itask-head-office-manual-toggle";
-  var headOfficeToggleOnBtn = document.getElementById("headOfficeToggleOnBtn");
-  var headOfficeToggleOffBtn = document.getElementById("headOfficeToggleOffBtn");
-  function getHeadOfficeManualToggle() {
-    try { return localStorage.getItem(HEAD_OFFICE_MANUAL_TOGGLE_KEY) === "1"; } catch (e) { return false; }
-  }
-  function updateHeadOfficeToggleButtons() {
-    var isOwnAccount = myPhoneNumber === MY_OWN_PHONE_NUMBER;
-    var manualOn = getHeadOfficeManualToggle();
-    headOfficeToggleOnBtn.hidden = !isOwnAccount || manualOn;
-    headOfficeToggleOffBtn.hidden = !isOwnAccount || !manualOn;
-  }
-  function setHeadOfficeManualToggle(on) {
-    try { localStorage.setItem(HEAD_OFFICE_MANUAL_TOGGLE_KEY, on ? "1" : "0"); } catch (e) {}
-    recomputeHeadOfficeMode();
-    updateHeadOfficeToggleButtons();
-    loadHeadOfficeWatchlist();
-    state.menuOpen = false;
-    render();
-  }
-  headOfficeToggleOnBtn.addEventListener("click", function () { setHeadOfficeManualToggle(true); });
-  headOfficeToggleOffBtn.addEventListener("click", function () { setHeadOfficeManualToggle(false); });
-
+  // Head Office eligibility is now fully self-service and server-verified
+  // (office_groups table, see office_groups.sql) instead of a developer-
+  // hardcoded phone number: any user can set up a "group" (officeGroupCreateBtn
+  // below) naming one phone number as that group's Head Office and a list
+  // of member numbers whose shared projects it should see. Whoever created
+  // the group AND whoever was named its Head Office both get the toggle
+  // below in their own menu - the real read/write access itself comes from
+  // shared_projects' own RLS (office_groups.sql), not from this toggle,
+  // which is just a per-device "show me that view right now" preference.
   var isHeadOfficeMode = false;
+  var canBeHeadOffice = false;
+  var myOfficeGroups = [];
+  var HEAD_OFFICE_ACTIVE_KEY = "itask-head-office-active";
 
-  // The always-present "משרד ראשי" tab in Head Office mode. Not a real
+  // The always-present "הזמנות רכש" tab in Head Office mode. Not a real
   // shared/synced project - just one ordinary private sheet (in data.sheets,
   // persisted via the normal app_state save path) whose id is this fixed
   // constant, and whose tasks are entirely system-generated (see
@@ -7694,66 +7665,75 @@
   var HEAD_OFFICE_SHEET_ID = "head-office-main";
   var wasHeadOfficeModeLastRender = false;
 
+  function getHeadOfficeActivePref() {
+    try { return localStorage.getItem(HEAD_OFFICE_ACTIVE_KEY) === "1"; } catch (e) { return false; }
+  }
+  function setHeadOfficeActivePref(on) {
+    try { localStorage.setItem(HEAD_OFFICE_ACTIVE_KEY, on ? "1" : "0"); } catch (e) {}
+  }
   function recomputeHeadOfficeMode() {
-    var saved = null;
-    try { saved = localStorage.getItem(HEAD_OFFICE_NUMBER_KEY); } catch (e) {}
-    var normalizedSaved = saved && normalizePhoneDigits(saved);
-    var numberMatch = !!(myPhoneNumber && normalizedSaved && myPhoneNumber === normalizedSaved);
-    var manualMatch = myPhoneNumber === MY_OWN_PHONE_NUMBER && getHeadOfficeManualToggle();
-    isHeadOfficeMode = numberMatch || manualMatch;
+    isHeadOfficeMode = canBeHeadOffice && getHeadOfficeActivePref();
   }
-  headOfficeNumberInput.addEventListener("change", function () {
-    try { localStorage.setItem(HEAD_OFFICE_NUMBER_KEY, headOfficeNumberInput.value.trim()); } catch (e) {}
+
+  var headOfficeToggleOnBtn = document.getElementById("headOfficeToggleOnBtn");
+  var headOfficeToggleOffBtn = document.getElementById("headOfficeToggleOffBtn");
+  function updateHeadOfficeToggleButtons() {
+    headOfficeToggleOnBtn.hidden = !canBeHeadOffice || isHeadOfficeMode;
+    headOfficeToggleOffBtn.hidden = !canBeHeadOffice || !isHeadOfficeMode;
+  }
+  function setHeadOfficeActive(on) {
+    setHeadOfficeActivePref(on);
     recomputeHeadOfficeMode();
-    loadHeadOfficeWatchlist();
+    updateHeadOfficeToggleButtons();
+    state.menuOpen = false;
     render();
-  });
-
-  // "חברי המשרד" - the phone numbers whose shared projects Head Office can
-  // read (but never write to) for the combined reports, without being a
-  // real member of them. Rows: existing watched numbers with ✕ to remove,
-  // plus one add row at the bottom.
-  var headOfficeMembersBtn = document.getElementById("headOfficeMembersBtn");
-  var headOfficeMembersView = document.getElementById("headOfficeMembersView");
-  var headOfficeMembersBackBtn = document.getElementById("headOfficeMembersBackBtn");
-  var headOfficeMembersList = document.getElementById("headOfficeMembersList");
-  var headOfficeMembersPickContactsBtn = document.getElementById("headOfficeMembersPickContactsBtn");
-  headOfficeMembersPickContactsBtn.hidden = !contactPickerSupported;
-
-  // A single special watchlist row ("*") means "every shared project of
-  // every user", not one specific phone number - see head_office_watchlist.sql
-  // for the matching RLS clause. Reuses the exact same insert/delete/reload
-  // plumbing as a normal watched number, just with this one reserved value.
-  var HEAD_OFFICE_WATCH_ALL_MARKER = "*";
-  var headOfficeWatchAllOnBtn = document.getElementById("headOfficeWatchAllOnBtn");
-  var headOfficeWatchAllOffBtn = document.getElementById("headOfficeWatchAllOffBtn");
-  var headOfficeWatchAllActiveMsg = document.getElementById("headOfficeWatchAllActiveMsg");
-  headOfficeWatchAllOnBtn.addEventListener("click", function () { addHeadOfficeWatchedNumber(HEAD_OFFICE_WATCH_ALL_MARKER); });
-  headOfficeWatchAllOffBtn.addEventListener("click", function () { removeHeadOfficeWatchedNumber(HEAD_OFFICE_WATCH_ALL_MARKER); });
-
-  function addHeadOfficeWatchedNumber(phone) {
-    if (!supabaseClient || !myPhoneNumber) return;
-    if (headOfficeWatchlistNumbers.indexOf(phone) !== -1) return;
-    supabaseClient.from("head_office_watchlist").insert({ head_office_phone: myPhoneNumber, watched_phone: phone })
-      .then(function () { loadHeadOfficeWatchlist(); loadSharedSheets(); }, function () {});
   }
-  function removeHeadOfficeWatchedNumber(phone) {
-    if (!supabaseClient || !myPhoneNumber) return;
-    supabaseClient.from("head_office_watchlist").delete().eq("head_office_phone", myPhoneNumber).eq("watched_phone", phone)
-      .then(function () { loadHeadOfficeWatchlist(); loadSharedSheets(); }, function () {});
+  headOfficeToggleOnBtn.addEventListener("click", function () { setHeadOfficeActive(true); });
+  headOfficeToggleOffBtn.addEventListener("click", function () { setHeadOfficeActive(false); });
+
+  // Fetched once after login (and again right after creating a group) -
+  // every office_groups row where this account is either the creator or
+  // the named Head Office is enough to unlock the toggle above.
+  function loadMyOfficeGroups() {
+    if (!supabaseClient || !myPhoneNumber) return Promise.resolve();
+    var asCreator = supabaseClient.from("office_groups").select("id").eq("creator_phone", myPhoneNumber);
+    var asHeadOffice = supabaseClient.from("office_groups").select("id").eq("head_office_phone", myPhoneNumber);
+    return Promise.all([asCreator, asHeadOffice]).then(function (results) {
+      var rowsA = (results[0] && results[0].data) || [];
+      var rowsB = (results[1] && results[1].data) || [];
+      var ids = {};
+      rowsA.concat(rowsB).forEach(function (r) { ids[r.id] = true; });
+      myOfficeGroups = Object.keys(ids);
+      canBeHeadOffice = myOfficeGroups.length > 0;
+      recomputeHeadOfficeMode();
+      updateHeadOfficeToggleButtons();
+      render();
+    }, function () {});
   }
 
-  function renderHeadOfficeMembersList() {
-    var watchingAll = headOfficeWatchlistNumbers.indexOf(HEAD_OFFICE_WATCH_ALL_MARKER) !== -1;
-    headOfficeWatchAllOnBtn.hidden = watchingAll;
-    headOfficeWatchAllOffBtn.hidden = !watchingAll;
-    headOfficeWatchAllActiveMsg.hidden = !watchingAll;
-    headOfficeMembersList.innerHTML = "";
-    // Watching everyone already covers every individual number too - the
-    // per-number list/add-row only makes sense (and is only shown) when
-    // that broader switch is off.
-    if (watchingAll) return;
-    headOfficeWatchlistNumbers.forEach(function (phone) {
+  // "הקמת קבוצת משרד" - a two-step flow: pick the group's members (whose
+  // shared projects get watched), then pick the one phone number that
+  // becomes this group's Head Office. Either step takes a typed number or
+  // a contact.
+  var officeGroupCreateBtn = document.getElementById("officeGroupCreateBtn");
+  var officeGroupMembersOverlay = document.getElementById("officeGroupMembersOverlay");
+  var officeGroupMembersList = document.getElementById("officeGroupMembersList");
+  var officeGroupMembersPickContactsBtn = document.getElementById("officeGroupMembersPickContactsBtn");
+  var officeGroupMembersNextBtn = document.getElementById("officeGroupMembersNextBtn");
+  var officeGroupMembersCancelBtn = document.getElementById("officeGroupMembersCancelBtn");
+  var officeGroupHeadOfficeOverlay = document.getElementById("officeGroupHeadOfficeOverlay");
+  var officeGroupHeadOfficeInput = document.getElementById("officeGroupHeadOfficeInput");
+  var officeGroupHeadOfficePickContactsBtn = document.getElementById("officeGroupHeadOfficePickContactsBtn");
+  var officeGroupHeadOfficeFinishBtn = document.getElementById("officeGroupHeadOfficeFinishBtn");
+  var officeGroupHeadOfficeBackBtn = document.getElementById("officeGroupHeadOfficeBackBtn");
+  officeGroupMembersPickContactsBtn.hidden = !contactPickerSupported;
+  officeGroupHeadOfficePickContactsBtn.hidden = !contactPickerSupported;
+
+  var pendingOfficeGroupMembers = [];
+
+  function renderOfficeGroupMembersList() {
+    officeGroupMembersList.innerHTML = "";
+    pendingOfficeGroupMembers.forEach(function (phone) {
       var row = document.createElement("div");
       row.className = "site-log-entry";
       var phoneSpan = document.createElement("span");
@@ -7764,9 +7744,12 @@
       removeBtn.type = "button";
       removeBtn.className = "site-log-entry-remove";
       removeBtn.textContent = "✕";
-      removeBtn.addEventListener("click", function () { removeHeadOfficeWatchedNumber(phone); });
+      removeBtn.addEventListener("click", function () {
+        pendingOfficeGroupMembers = pendingOfficeGroupMembers.filter(function (p) { return p !== phone; });
+        renderOfficeGroupMembersList();
+      });
       row.appendChild(removeBtn);
-      headOfficeMembersList.appendChild(row);
+      officeGroupMembersList.appendChild(row);
     });
 
     var addRow = document.createElement("div");
@@ -7787,48 +7770,102 @@
     function submitAdd() {
       var phone = normalizePhoneDigits(addInput.value);
       if (!phone) { alert(tr("headOfficeMemberInvalidMsg")); return; }
-      addHeadOfficeWatchedNumber(phone);
+      if (pendingOfficeGroupMembers.indexOf(phone) === -1) pendingOfficeGroupMembers.push(phone);
+      renderOfficeGroupMembersList();
     }
     addBtn.addEventListener("click", submitAdd);
     addInput.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); submitAdd(); } });
     addRow.appendChild(addBtn);
-    headOfficeMembersList.appendChild(addRow);
+    officeGroupMembersList.appendChild(addRow);
   }
 
-  function openHeadOfficeMembersView() {
-    headOfficeMembersView.hidden = false;
-    renderHeadOfficeMembersList();
-  }
-  function closeHeadOfficeMembersView() {
-    headOfficeMembersView.hidden = true;
-  }
-  headOfficeMembersBtn.addEventListener("click", function () {
+  function openOfficeGroupCreateFlow() {
+    pendingOfficeGroupMembers = [];
+    renderOfficeGroupMembersList();
     state.menuOpen = false;
     render();
-    openHeadOfficeMembersView();
+    officeGroupMembersOverlay.hidden = false;
+  }
+  officeGroupCreateBtn.addEventListener("click", openOfficeGroupCreateFlow);
+  officeGroupMembersCancelBtn.addEventListener("click", function () { officeGroupMembersOverlay.hidden = true; });
+  officeGroupMembersOverlay.addEventListener("click", function (e) {
+    if (e.target === officeGroupMembersOverlay) officeGroupMembersOverlay.hidden = true;
   });
-  headOfficeMembersBackBtn.addEventListener("click", closeHeadOfficeMembersView);
 
-  function pickContactsForHeadOfficeMembers() {
+  function pickContactsForOfficeGroupMembers() {
     if (!contactPickerSupported) return;
+    function addPicked(phone) {
+      if (phone && pendingOfficeGroupMembers.indexOf(phone) === -1) pendingOfficeGroupMembers.push(phone);
+    }
     if (capacitorContactsAvailable) {
       pickOneNativeContact().then(function (picked) {
         if (!picked) return;
-        var phone = normalizePhoneDigits(picked.tel);
-        if (!phone) { alert(tr("headOfficeMemberInvalidMsg")); return; }
-        addHeadOfficeWatchedNumber(phone);
+        addPicked(normalizePhoneDigits(picked.tel));
+        renderOfficeGroupMembersList();
       });
       return;
     }
     navigator.contacts.select(["tel"], { multiple: true }).then(function (contacts) {
       contacts.forEach(function (c) {
         var tel = (c.tel && c.tel[0]) || "";
-        var phone = normalizePhoneDigits(tel);
-        if (phone) addHeadOfficeWatchedNumber(phone);
+        addPicked(normalizePhoneDigits(tel));
       });
+      renderOfficeGroupMembersList();
     }).catch(function () {});
   }
-  headOfficeMembersPickContactsBtn.addEventListener("click", pickContactsForHeadOfficeMembers);
+  officeGroupMembersPickContactsBtn.addEventListener("click", pickContactsForOfficeGroupMembers);
+
+  officeGroupMembersNextBtn.addEventListener("click", function () {
+    if (!pendingOfficeGroupMembers.length) { alert(tr("officeGroupNoMembersMsg")); return; }
+    officeGroupMembersOverlay.hidden = true;
+    officeGroupHeadOfficeInput.value = "";
+    officeGroupHeadOfficeOverlay.hidden = false;
+  });
+
+  officeGroupHeadOfficeBackBtn.addEventListener("click", function () {
+    officeGroupHeadOfficeOverlay.hidden = true;
+    officeGroupMembersOverlay.hidden = false;
+  });
+  officeGroupHeadOfficeOverlay.addEventListener("click", function (e) {
+    if (e.target === officeGroupHeadOfficeOverlay) officeGroupHeadOfficeOverlay.hidden = true;
+  });
+
+  function pickContactForOfficeGroupHeadOffice() {
+    if (!contactPickerSupported) return;
+    if (capacitorContactsAvailable) {
+      pickOneNativeContact().then(function (picked) {
+        if (!picked) return;
+        var phone = normalizePhoneDigits(picked.tel);
+        if (phone) officeGroupHeadOfficeInput.value = phone;
+      });
+      return;
+    }
+    navigator.contacts.select(["tel"], { multiple: false }).then(function (contacts) {
+      var c = contacts && contacts[0];
+      var tel = c && c.tel && c.tel[0];
+      var phone = tel && normalizePhoneDigits(tel);
+      if (phone) officeGroupHeadOfficeInput.value = phone;
+    }).catch(function () {});
+  }
+  officeGroupHeadOfficePickContactsBtn.addEventListener("click", pickContactForOfficeGroupHeadOffice);
+
+  officeGroupHeadOfficeFinishBtn.addEventListener("click", function () {
+    var headOfficePhone = normalizePhoneDigits(officeGroupHeadOfficeInput.value);
+    if (!headOfficePhone) { alert(tr("headOfficeMemberInvalidMsg")); return; }
+    if (!supabaseClient || !myPhoneNumber) return;
+    supabaseClient.from("office_groups").insert({
+      creator_phone: myPhoneNumber,
+      head_office_phone: headOfficePhone,
+      members: pendingOfficeGroupMembers
+    }).then(function (result) {
+      if (result && result.error) { alert(tr("officeGroupCreateErrorMsg")); return; }
+      officeGroupHeadOfficeOverlay.hidden = true;
+      pendingOfficeGroupMembers = [];
+      showToast(tr("officeGroupCreatedMsg"));
+      loadMyOfficeGroups();
+      loadSharedSheets();
+    }, function () { alert(tr("officeGroupCreateErrorMsg")); });
+  });
 
   // Company logos can be large source images (a marketing PNG straight off
   // someone's phone) - they're stored inline as data URLs in app_state's
@@ -9458,9 +9495,9 @@
   };
 
   // Every active shared project this account can act on - its own real
-  // memberships plus (full read/write, via head_office_watchlist.sql) any
-  // watched Head Office number's projects, already unified in sharedSheets
-  // by loadSharedSheets().
+  // memberships plus (full read/write, via office_groups.sql) any project
+  // whose member is in a group this account created or is the named Head
+  // Office of, already unified in sharedSheets by loadSharedSheets().
   function officeReportSheets() {
     return sharedSheets.filter(function (s) { return !s.ended; });
   }
@@ -11831,7 +11868,6 @@
     calendarFabBtn.hidden = isHeadOfficeMode;
     officeReportsBtn.hidden = !isHeadOfficeMode;
     reportFabBtn.hidden = isHeadOfficeMode;
-    headOfficeMembersBtn.hidden = !isHeadOfficeMode;
 
     var STATUS_LABEL = { 0: tr("statusPartial"), 1: tr("statusDone"), 2: tr("statusReset") };
 
@@ -12484,7 +12520,7 @@
       if (!usedInstantLocal) startLocalOnly();
     }
     loadSharedSheets();
-    loadHeadOfficeWatchlist();
+    loadMyOfficeGroups();
     checkPendingProjectInvites();
   }
 
@@ -12573,13 +12609,13 @@
 
   // No .contains("members", [myPhoneNumber]) filter here on purpose - RLS
   // alone decides what comes back: a project this account is a real member
-  // of, OR (for a Head Office account) a project where it has registered
-  // one of that project's members as a "watched number" (see
-  // head_office_watchlist.sql). Either way the row lands in this same
-  // sharedSheets array with full normal read/write access, so a watched
-  // project behaves exactly like a real membership everywhere in the app -
-  // task writing (shown in red to everyone else via isHeadOffice), chat,
-  // procurement purchase-marking, combined reports, all of it.
+  // of, OR a project whose member is in an office_groups row this account
+  // created or is the named Head Office of (see office_groups.sql). Either
+  // way the row lands in this same sharedSheets array with full normal
+  // read/write access, so a watched project behaves exactly like a real
+  // membership everywhere in the app - task writing (shown in red to
+  // everyone else via isHeadOffice), chat, procurement purchase-marking,
+  // combined reports, all of it.
   function loadSharedSheets() {
     if (!supabaseClient || !myPhoneNumber) return Promise.resolve();
     return supabaseClient.from(SHARED_TABLE).select("*")
@@ -12610,20 +12646,6 @@
         // loaded into sharedSheets.
         if (privateDataSettled) render();
         tryOpenPendingChat();
-      }, function () {});
-  }
-
-  // Just the list of watched phone numbers, for the "חברי המשרד" management
-  // screen - the projects themselves come in through loadSharedSheets()
-  // above (RLS grants access once a number is on this list), so adding or
-  // removing a watched number also re-triggers that load.
-  function loadHeadOfficeWatchlist() {
-    if (!supabaseClient || !myPhoneNumber || !isHeadOfficeMode) return Promise.resolve();
-    return supabaseClient.from("head_office_watchlist").select("watched_phone").eq("head_office_phone", myPhoneNumber)
-      .then(function (result) {
-        var rows = (result && result.data) || [];
-        headOfficeWatchlistNumbers = rows.map(function (r) { return r.watched_phone; });
-        if (typeof renderHeadOfficeMembersList === "function") renderHeadOfficeMembersList();
       }, function () {});
   }
 
@@ -12710,7 +12732,7 @@
   function refreshSharedSheetsIfIdle() {
     if (isEditingActively()) return;
     loadSharedSheets();
-    loadHeadOfficeWatchlist();
+    loadMyOfficeGroups();
     checkPendingProjectInvites();
   }
 
@@ -12760,8 +12782,6 @@
   function showApp(phoneNumber, rowId) {
     SUPABASE_ROW_ID = rowId;
     myPhoneNumber = phoneNumber;
-    recomputeHeadOfficeMode();
-    updateHeadOfficeToggleButtons();
     loadChatReadState();
     menuUsernameLabel.textContent = tr("loggedInAs") + phoneNumber;
     hideSplash();
