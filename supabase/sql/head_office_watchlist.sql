@@ -28,7 +28,12 @@ create policy "users manage their own head office watchlist"
 -- Addition to shared_projects' existing RLS: a Head Office account can
 -- SELECT and UPDATE (never INSERT a brand new project, never DELETE
 -- someone else's) a project it isn't a member of, as long as it has
--- registered at least one of that project's members as a watched number.
+-- registered at least one of that project's members as a watched number -
+-- OR has a single watched_phone = '*' row, which means "every shared
+-- project of every user" instead of one specific phone number (the "הצג את
+-- כל הפרויקטים השיתופיים של כל המשתמשים" button in the app's "חברי המשרד"
+-- screen just inserts/deletes that one reserved row through the exact same
+-- add/remove-watched-number call as any other number).
 -- Postgres combines multiple permissive policies for the same command with
 -- OR, so this only ever ADDS access on top of "members manage their shared
 -- projects" below - it can't weaken it. The app never writes `members`
@@ -42,7 +47,7 @@ create policy "head office watchers can read watched members projects"
     exists (
       select 1 from head_office_watchlist w
       where w.head_office_phone = (auth.jwt() ->> 'phone_number')
-        and w.watched_phone = any(members)
+        and (w.watched_phone = any(members) or w.watched_phone = '*')
     )
   );
 create policy "head office watchers can write watched members projects"
@@ -51,13 +56,13 @@ create policy "head office watchers can write watched members projects"
     exists (
       select 1 from head_office_watchlist w
       where w.head_office_phone = (auth.jwt() ->> 'phone_number')
-        and w.watched_phone = any(members)
+        and (w.watched_phone = any(members) or w.watched_phone = '*')
     )
   )
   with check (
     exists (
       select 1 from head_office_watchlist w
       where w.head_office_phone = (auth.jwt() ->> 'phone_number')
-        and w.watched_phone = any(members)
+        and (w.watched_phone = any(members) or w.watched_phone = '*')
     )
   );

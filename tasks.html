@@ -3369,6 +3369,9 @@
       <div class="report-head-title" data-i18n="headOfficeMembersBtn">חברי המשרד</div>
     </div>
     <p class="report-meta" data-i18n="headOfficeMembersIntro">מספרי הטלפון שהפרויקטים השיתופיים שלהם יהיו נגישים למשרד הראשי</p>
+    <button type="button" class="convert-to-note-btn" id="headOfficeWatchAllOnBtn" data-i18n="headOfficeWatchAllOnBtn">הצג את כל הפרויקטים השיתופיים של כל המשתמשים</button>
+    <button type="button" class="convert-to-note-btn" id="headOfficeWatchAllOffBtn" data-i18n="headOfficeWatchAllOffBtn" hidden>הפסק להציג את כל הפרויקטים השיתופיים</button>
+    <p class="report-meta" id="headOfficeWatchAllActiveMsg" data-i18n="headOfficeWatchAllActiveMsg" hidden>כרגע מוצגים כל הפרויקטים השיתופיים של כל המשתמשים</p>
     <button type="button" class="convert-to-note-btn" id="headOfficeMembersPickContactsBtn" data-i18n="sharedProjectPickContactsBtn" hidden>בחירה מאנשי הקשר</button>
     <div class="site-log-procurement-wrap">
       <div id="headOfficeMembersList"></div>
@@ -3457,6 +3460,9 @@
     headOfficeToggleOffBtn: { he: "יציאה ממצב משרד ראשי", en: "Exit Head Office mode", ar: "الخروج من وضع المكتب الرئيسي", ru: "Выйти из режима главного офиса" },
     headOfficeMembersBtn: { he: "חברי המשרד", en: "Office members", ar: "أعضاء المكتب", ru: "Сотрудники офиса" },
     headOfficeMembersIntro: { he: "מספרי הטלפון שהפרויקטים השיתופיים שלהם יהיו נגישים למשרד הראשי", en: "Phone numbers whose shared projects are accessible to Head Office", ar: "أرقام الهواتف التي ستكون مشاريعها المشتركة متاحة للمكتب الرئيسي", ru: "Номера телефонов, чьи совместные проекты будут доступны главному офису" },
+    headOfficeWatchAllOnBtn: { he: "הצג את כל הפרויקטים השיתופיים של כל המשתמשים", en: "Show every user's shared projects", ar: "إظهار جميع المشاريع المشتركة لكل المستخدمين", ru: "Показать общие проекты всех пользователей" },
+    headOfficeWatchAllOffBtn: { he: "הפסק להציג את כל הפרויקטים השיתופיים", en: "Stop showing every shared project", ar: "إيقاف إظهار جميع المشاريع المشتركة", ru: "Прекратить показ всех общих проектов" },
+    headOfficeWatchAllActiveMsg: { he: "כרגע מוצגים כל הפרויקטים השיתופיים של כל המשתמשים", en: "Every user's shared projects are currently shown", ar: "يتم الآن إظهار جميع المشاريع المشتركة لكل المستخدمين", ru: "Сейчас показаны общие проекты всех пользователей" },
     headOfficeMemberAddPlaceholder: { he: "05XXXXXXXX", en: "05XXXXXXXX", ar: "05XXXXXXXX", ru: "05XXXXXXXX" },
     headOfficeMemberInvalidMsg: { he: "מספר טלפון לא תקין", en: "Invalid phone number", ar: "رقم هاتف غير صالح", ru: "Неверный номер телефона" },
     officeReportsBtnTitle: { he: "דוחות מרוכזים", en: "Combined reports", ar: "تقارير مجمعة", ru: "Сводные отчёты" },
@@ -7714,6 +7720,17 @@
   var headOfficeMembersPickContactsBtn = document.getElementById("headOfficeMembersPickContactsBtn");
   headOfficeMembersPickContactsBtn.hidden = !contactPickerSupported;
 
+  // A single special watchlist row ("*") means "every shared project of
+  // every user", not one specific phone number - see head_office_watchlist.sql
+  // for the matching RLS clause. Reuses the exact same insert/delete/reload
+  // plumbing as a normal watched number, just with this one reserved value.
+  var HEAD_OFFICE_WATCH_ALL_MARKER = "*";
+  var headOfficeWatchAllOnBtn = document.getElementById("headOfficeWatchAllOnBtn");
+  var headOfficeWatchAllOffBtn = document.getElementById("headOfficeWatchAllOffBtn");
+  var headOfficeWatchAllActiveMsg = document.getElementById("headOfficeWatchAllActiveMsg");
+  headOfficeWatchAllOnBtn.addEventListener("click", function () { addHeadOfficeWatchedNumber(HEAD_OFFICE_WATCH_ALL_MARKER); });
+  headOfficeWatchAllOffBtn.addEventListener("click", function () { removeHeadOfficeWatchedNumber(HEAD_OFFICE_WATCH_ALL_MARKER); });
+
   function addHeadOfficeWatchedNumber(phone) {
     if (!supabaseClient || !myPhoneNumber) return;
     if (headOfficeWatchlistNumbers.indexOf(phone) !== -1) return;
@@ -7727,7 +7744,15 @@
   }
 
   function renderHeadOfficeMembersList() {
+    var watchingAll = headOfficeWatchlistNumbers.indexOf(HEAD_OFFICE_WATCH_ALL_MARKER) !== -1;
+    headOfficeWatchAllOnBtn.hidden = watchingAll;
+    headOfficeWatchAllOffBtn.hidden = !watchingAll;
+    headOfficeWatchAllActiveMsg.hidden = !watchingAll;
     headOfficeMembersList.innerHTML = "";
+    // Watching everyone already covers every individual number too - the
+    // per-number list/add-row only makes sense (and is only shown) when
+    // that broader switch is off.
+    if (watchingAll) return;
     headOfficeWatchlistNumbers.forEach(function (phone) {
       var row = document.createElement("div");
       row.className = "site-log-entry";
