@@ -30,6 +30,32 @@ create table if not exists office_group_invites (
   resolved_at timestamptz
 );
 
+-- A plain subquery inside a policy that reads the SAME table it's
+-- attached to (see the office_group_invites policy below) makes Postgres
+-- re-evaluate that table's row security recursively while resolving it,
+-- which Postgres rejects outright ("infinite recursion detected in
+-- policy") - and since policies on a table are OR'd together, that error
+-- broke EVERY query against office_group_invites and, transitively, every
+-- shared_projects query too (including the plain "members manage their
+-- shared projects" path everyone relies on), not just the Head Office
+-- case. A SECURITY DEFINER function sidesteps this the standard way: the
+-- query inside it runs in its own planning context instead of being
+-- inlined into the same recursive policy expression.
+create or replace function is_approved_office_group_head_office(p_group_id uuid)
+returns boolean
+language sql
+security definer
+stable
+as $$
+  select exists (
+    select 1 from office_group_invites
+    where group_id = p_group_id
+      and invited_phone = (auth.jwt() ->> 'phone_number')
+      and role = 'head_office'
+      and status = 'approved'
+  );
+$$;
+
 -- Drop every shared_projects policy from every earlier version of this
 -- file FIRST - an older one ("office group heads can read/write members
 -- projects") reads office_groups.members directly, and Postgres refuses
@@ -90,15 +116,7 @@ create policy "see invites sent to or by me"
 drop policy if exists "approved head office can read its group's invites" on office_group_invites;
 create policy "approved head office can read its group's invites"
   on office_group_invites for select
-  using (
-    exists (
-      select 1 from office_group_invites ho
-      where ho.group_id = office_group_invites.group_id
-        and ho.invited_phone = (auth.jwt() ->> 'phone_number')
-        and ho.role = 'head_office'
-        and ho.status = 'approved'
-    )
-  );
+  using (is_approved_office_group_head_office(group_id));
 
 -- Only the group's own creator can invite someone into it.
 drop policy if exists "group creator sends invites" on office_group_invites;
