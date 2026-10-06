@@ -14,15 +14,6 @@ create table if not exists office_groups (
   created_at timestamptz not null default now()
 );
 
--- If an earlier version of this file already ran, office_groups exists
--- with its own head_office_phone (not null) and members (not null)
--- columns - CREATE TABLE IF NOT EXISTS above is then a no-op and skips
--- them entirely, so every insert from the app (which no longer sends
--- either field) would fail a not-null constraint. Drop them unconditionally;
--- harmless if they were never there.
-alter table office_groups drop column if exists head_office_phone;
-alter table office_groups drop column if exists members;
-
 -- One row per invited phone number per group: 'member' rows are people
 -- whose shared projects the group's Head Office should see once approved;
 -- 'head_office' rows are the (usually one) phone number granted that
@@ -38,6 +29,27 @@ create table if not exists office_group_invites (
   created_at timestamptz not null default now(),
   resolved_at timestamptz
 );
+
+-- Drop every shared_projects policy from every earlier version of this
+-- file FIRST - an older one ("office group heads can read/write members
+-- projects") reads office_groups.members directly, and Postgres refuses
+-- to drop a column a live policy still depends on. Must happen before the
+-- column drop just below.
+drop policy if exists "head office watchers can read watched members projects" on shared_projects;
+drop policy if exists "head office watchers can write watched members projects" on shared_projects;
+drop policy if exists "head offices can read exposed users projects" on shared_projects;
+drop policy if exists "head offices can write exposed users projects" on shared_projects;
+drop policy if exists "office group heads can read members projects" on shared_projects;
+drop policy if exists "office group heads can write members projects" on shared_projects;
+
+-- If an earlier version of this file already ran, office_groups exists
+-- with its own head_office_phone (not null) and members (not null)
+-- columns - CREATE TABLE IF NOT EXISTS above is then a no-op and skips
+-- them entirely, so every insert from the app (which no longer sends
+-- either field) would fail a not-null constraint. Drop them unconditionally
+-- now that nothing depends on them; harmless if they were never there.
+alter table office_groups drop column if exists head_office_phone;
+alter table office_groups drop column if exists members;
 
 alter table office_groups enable row level security;
 alter table office_group_invites enable row level security;
@@ -88,20 +100,13 @@ create policy "invited phone resolves their own invite"
   using (invited_phone = (auth.jwt() ->> 'phone_number'))
   with check (invited_phone = (auth.jwt() ->> 'phone_number'));
 
--- Replaces the flat office_groups.members/head_office_phone columns from
--- the first version of this file: a Head Office account (or the group's
--- own creator) can see/write a shared project once there's an APPROVED
--- member invite (in a group they're the approved Head Office of, or that
--- they created) whose phone is one of the project's own members. Postgres
--- combines multiple permissive policies for the same command with OR, so
--- this only ever ADDS access on top of "members manage their shared
--- projects" - it can't weaken it.
-drop policy if exists "head office watchers can read watched members projects" on shared_projects;
-drop policy if exists "head office watchers can write watched members projects" on shared_projects;
-drop policy if exists "head offices can read exposed users projects" on shared_projects;
-drop policy if exists "head offices can write exposed users projects" on shared_projects;
-drop policy if exists "office group heads can read members projects" on shared_projects;
-drop policy if exists "office group heads can write members projects" on shared_projects;
+-- A Head Office account (or the group's own creator) can see/write a
+-- shared project once there's an APPROVED member invite (in a group
+-- they're the approved Head Office of, or that they created) whose phone
+-- is one of the project's own members. Postgres combines multiple
+-- permissive policies for the same command with OR, so this only ever
+-- ADDS access on top of "members manage their shared projects" - it
+-- can't weaken it.
 create policy "office group heads can read members projects"
   on shared_projects for select
   using (
