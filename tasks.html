@@ -3079,6 +3079,7 @@
   <div class="modal-overlay" id="officeGroupHeadOfficeOverlay" hidden>
     <div class="modal-box" role="alertdialog" aria-modal="true">
       <p class="modal-message" data-i18n="officeGroupHeadOfficeTitle">הגדרת משרד ראשי</p>
+      <p class="modal-submessage" data-i18n="officeGroupHeadOfficeHint">השאירו ריק כדי להיות המשרד הראשי של הקבוצה בעצמכם</p>
       <input type="tel" id="officeGroupHeadOfficeInput" class="auth-input" dir="ltr" data-i18n-ph="headOfficeMemberAddPlaceholder" placeholder="05XXXXXXXX">
       <button type="button" class="convert-to-note-btn" id="officeGroupHeadOfficePickContactsBtn" data-i18n="sharedProjectPickContactsBtn" hidden>בחירה מאנשי הקשר</button>
       <div class="modal-actions">
@@ -3477,6 +3478,7 @@
     officeGroupCreateBtn: { he: "הקמת קבוצת משרד", en: "Create office group", ar: "إنشاء مجموعة مكتب", ru: "Создать офисную группу" },
     officeGroupMembersTitle: { he: "חברי הקבוצה", en: "Group members", ar: "أعضاء المجموعة", ru: "Участники группы" },
     officeGroupHeadOfficeTitle: { he: "הגדרת משרד ראשי", en: "Set Head Office", ar: "تحديد المكتب الرئيسي", ru: "Назначить главный офис" },
+    officeGroupHeadOfficeHint: { he: "השאירו ריק כדי להיות המשרד הראשי של הקבוצה בעצמכם", en: "Leave empty to be the group's Head Office yourself", ar: "اتركه فارغًا لتكون أنت المكتب الرئيسي للمجموعة", ru: "Оставьте пустым, чтобы самому стать главным офисом группы" },
     officeGroupFinishBtn: { he: "סיום", en: "Finish", ar: "إنهاء", ru: "Готово" },
     officeGroupNoMembersMsg: { he: "יש להוסיף לפחות חבר אחד לקבוצה", en: "Add at least one group member", ar: "أضف عضوًا واحدًا على الأقل", ru: "Добавьте хотя бы одного участника" },
     officeGroupCreatedMsg: { he: "הקבוצה נוצרה, ההזמנות נשלחו וימתינו לאישור", en: "Group created, invites sent and awaiting approval", ar: "تم إنشاء المجموعة، تم إرسال الدعوات وهي بانتظار الموافقة", ru: "Группа создана, приглашения отправлены и ждут подтверждения" },
@@ -7870,7 +7872,11 @@
   // except when the creator names themselves (either role), which is
   // approved immediately - nobody needs to ask their own permission.
   officeGroupHeadOfficeFinishBtn.addEventListener("click", function () {
-    var headOfficePhone = normalizePhoneDigits(officeGroupHeadOfficeInput.value);
+    // Left empty, the creator is the group's Head Office themselves (a
+    // group can have only its own creator as Head Office) - only a
+    // typed-but-invalid number blocks finishing.
+    var rawHeadOfficeInput = officeGroupHeadOfficeInput.value.trim();
+    var headOfficePhone = rawHeadOfficeInput ? normalizePhoneDigits(rawHeadOfficeInput) : myPhoneNumber;
     if (!headOfficePhone) { alert(tr("headOfficeMemberInvalidMsg")); return; }
     if (!supabaseClient || !myPhoneNumber) return;
     supabaseClient.from("office_groups").insert({ creator_phone: myPhoneNumber }).select().then(function (result) {
