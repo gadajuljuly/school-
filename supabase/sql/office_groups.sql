@@ -81,6 +81,25 @@ create policy "see invites sent to or by me"
     or invited_by_phone = (auth.jwt() ->> 'phone_number')
   );
 
+-- Without this, a Head Office account that is neither the member nor the
+-- group's creator (the normal case - Head Office is usually a third
+-- phone number) has no RLS visibility into the MEMBER invite rows at
+-- all, so the shared_projects policy below - which joins against exactly
+-- those rows to decide what to expose - silently finds nothing and the
+-- Head Office never sees any project, even once everyone has approved.
+drop policy if exists "approved head office can read its group's invites" on office_group_invites;
+create policy "approved head office can read its group's invites"
+  on office_group_invites for select
+  using (
+    exists (
+      select 1 from office_group_invites ho
+      where ho.group_id = office_group_invites.group_id
+        and ho.invited_phone = (auth.jwt() ->> 'phone_number')
+        and ho.role = 'head_office'
+        and ho.status = 'approved'
+    )
+  );
+
 -- Only the group's own creator can invite someone into it.
 drop policy if exists "group creator sends invites" on office_group_invites;
 create policy "group creator sends invites"
