@@ -1818,11 +1818,19 @@
     color: var(--ink-muted);
     font-variant-numeric: tabular-nums;
   }
+  .sheets-search-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex-shrink: 0;
+  }
   .sheets-search {
     position: relative;
     flex-shrink: 0;
     margin-bottom: 1px;
   }
+  .head-office-icon-btn img { width: 100%; height: 100%; display: block; object-fit: cover; border-radius: 7px; }
+  .head-office-icon-btn.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
   .menu-btn {
     width: 34px;
     height: 34px;
@@ -2780,11 +2788,16 @@
         <div class="sheets-bar" id="sheetsBarPrivate"></div>
         <div class="sheets-bar" id="sheetsBarShared"></div>
       </div>
-      <div class="sheets-search">
-        <button class="menu-btn" id="searchBtn" data-i18n-title="searchBtnTitle" title="חיפוש משימות" aria-haspopup="true" aria-expanded="false">&#128269;</button>
-        <div class="search-panel" id="searchPanel" hidden>
-          <input type="text" id="searchInput" class="search-input" data-i18n-ph="searchInputPlaceholder" placeholder="חיפוש משימות בכל הפרויקטים..." autocomplete="off">
-          <div class="search-results" id="searchResults"></div>
+      <div class="sheets-search-stack">
+        <button type="button" class="menu-btn head-office-icon-btn" id="headOfficeIconBtn" hidden data-i18n-title="headOfficeIconBtnTitle" title="מעבר למצב משרד ראשי">
+          <img src="tasks-head-office-icon.webp" alt="">
+        </button>
+        <div class="sheets-search">
+          <button class="menu-btn" id="searchBtn" data-i18n-title="searchBtnTitle" title="חיפוש משימות" aria-haspopup="true" aria-expanded="false">&#128269;</button>
+          <div class="search-panel" id="searchPanel" hidden>
+            <input type="text" id="searchInput" class="search-input" data-i18n-ph="searchInputPlaceholder" placeholder="חיפוש משימות בכל הפרויקטים..." autocomplete="off">
+            <div class="search-results" id="searchResults"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -3537,6 +3550,7 @@
     logoInvalidFileMsg: { he: "יש לבחור קובץ תמונה תקין", en: "Please choose a valid image file", ar: "الرجاء اختيار ملف صورة صالح", ru: "Пожалуйста, выберите корректный файл изображения" },
     menuLabelLanguage: { he: "שפה", en: "Language", ar: "اللغة", ru: "Язык" },
     searchBtnTitle: { he: "חיפוש משימות", en: "Search tasks", ar: "البحث عن المهام", ru: "Поиск задач" },
+    headOfficeIconBtnTitle: { he: "מעבר למצב משרד ראשי", en: "Switch to Head Office mode", ar: "التبديل إلى وضع المكتب الرئيسي", ru: "Перейти в режим главного офиса" },
     searchInputPlaceholder: { he: "חיפוש משימות בכל הפרויקטים...", en: "Search tasks across all projects...", ar: "ابحث عن المهام في جميع المشاريع...", ru: "Поиск задач по всем проектам..." },
     searchEmptyPrompt: { he: "הקלידו כדי לחפש", en: "Type to search", ar: "اكتب للبحث", ru: "Введите текст для поиска" },
     searchNoResults: { he: "לא נמצאו תוצאות", en: "No results found", ar: "لم يتم العثور على نتائج", ru: "Ничего не найдено" },
@@ -7710,9 +7724,17 @@
 
   var headOfficeToggleOnBtn = document.getElementById("headOfficeToggleOnBtn");
   var headOfficeToggleOffBtn = document.getElementById("headOfficeToggleOffBtn");
+  // A compact icon equivalent of the two menu buttons above, sitting above
+  // the search icon on the main screen - one toggle button instead of two
+  // (there's no room to stack two icons here), showing the current state
+  // via its own "active" outline rather than swapping to a second icon.
+  var headOfficeIconBtn = document.getElementById("headOfficeIconBtn");
   function updateHeadOfficeToggleButtons() {
     headOfficeToggleOnBtn.hidden = !canBeHeadOffice || isHeadOfficeMode;
     headOfficeToggleOffBtn.hidden = !canBeHeadOffice || !isHeadOfficeMode;
+    headOfficeIconBtn.hidden = !canBeHeadOffice;
+    headOfficeIconBtn.classList.toggle("active", isHeadOfficeMode);
+    headOfficeIconBtn.setAttribute("aria-pressed", String(isHeadOfficeMode));
   }
   function setHeadOfficeActive(on) {
     setHeadOfficeActivePref(on);
@@ -7723,6 +7745,7 @@
   }
   headOfficeToggleOnBtn.addEventListener("click", function () { setHeadOfficeActive(true); });
   headOfficeToggleOffBtn.addEventListener("click", function () { setHeadOfficeActive(false); });
+  headOfficeIconBtn.addEventListener("click", function () { setHeadOfficeActive(!isHeadOfficeMode); });
 
   // Fetched once after login (and again right after an invite is
   // approved) - being the creator of any group, or having an APPROVED
