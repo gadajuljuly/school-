@@ -93,6 +93,19 @@ create policy "group creator sends invites"
     )
   );
 
+-- Only the group's own creator can remove someone from it (member or the
+-- head_office invite alike) - lets the app's group-management screen add
+-- or delete members after creation, not just at setup time.
+drop policy if exists "group creator removes invites" on office_group_invites;
+create policy "group creator removes invites"
+  on office_group_invites for delete
+  using (
+    exists (
+      select 1 from office_groups g
+      where g.id = group_id and g.creator_phone = (auth.jwt() ->> 'phone_number')
+    )
+  );
+
 -- Only the invited phone can approve/decline their own invite.
 drop policy if exists "invited phone resolves their own invite" on office_group_invites;
 create policy "invited phone resolves their own invite"
