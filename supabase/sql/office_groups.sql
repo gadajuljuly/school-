@@ -14,6 +14,15 @@ create table if not exists office_groups (
   created_at timestamptz not null default now()
 );
 
+-- If an earlier version of this file already ran, office_groups exists
+-- with its own head_office_phone (not null) and members (not null)
+-- columns - CREATE TABLE IF NOT EXISTS above is then a no-op and skips
+-- them entirely, so every insert from the app (which no longer sends
+-- either field) would fail a not-null constraint. Drop them unconditionally;
+-- harmless if they were never there.
+alter table office_groups drop column if exists head_office_phone;
+alter table office_groups drop column if exists members;
+
 -- One row per invited phone number per group: 'member' rows are people
 -- whose shared projects the group's Head Office should see once approved;
 -- 'head_office' rows are the (usually one) phone number granted that
@@ -145,13 +154,6 @@ create policy "office group heads can write members projects"
         and mem.invited_phone = any(members)
     )
   );
-
--- If you ran the very first version of this file (with a flat `members`
--- text[] + `head_office_phone` column on office_groups directly, no
--- approval step), those columns are no longer used by the app at all -
--- drop them once you've confirmed the new flow works:
---   alter table office_groups drop column if exists members;
---   alter table office_groups drop column if exists head_office_phone;
 
 -- The old per-account watchlist table (an even earlier version of Head
 -- Office access) is no longer read by the app either - safe to drop:

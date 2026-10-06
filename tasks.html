@@ -7874,7 +7874,11 @@
     if (!headOfficePhone) { alert(tr("headOfficeMemberInvalidMsg")); return; }
     if (!supabaseClient || !myPhoneNumber) return;
     supabaseClient.from("office_groups").insert({ creator_phone: myPhoneNumber }).select().then(function (result) {
-      if ((result && result.error) || !result.data || !result.data[0]) { alert(tr("officeGroupCreateErrorMsg")); return; }
+      if ((result && result.error) || !result.data || !result.data[0]) {
+        console.error("office_groups insert failed:", result && result.error);
+        alert(tr("officeGroupCreateErrorMsg"));
+        return;
+      }
       var groupId = result.data[0].id;
       var invites = pendingOfficeGroupMembers.map(function (phone) {
         return {
@@ -7895,7 +7899,11 @@
         status: headOfficePhone === myPhoneNumber ? "approved" : "pending"
       });
       supabaseClient.from("office_group_invites").insert(invites).then(function (inviteResult) {
-        if (inviteResult && inviteResult.error) { alert(tr("officeGroupCreateErrorMsg")); return; }
+        if (inviteResult && inviteResult.error) {
+          console.error("office_group_invites insert failed:", inviteResult.error);
+          alert(tr("officeGroupCreateErrorMsg"));
+          return;
+        }
         officeGroupHeadOfficeOverlay.hidden = true;
         pendingOfficeGroupMembers = [];
         showToast(tr("officeGroupCreatedMsg"));
