@@ -9834,6 +9834,14 @@
     var dismissed = sheet.dismissedHeadOfficeIds || [];
     var seenIds = {};
     var changed = false;
+    // A new notification is dated today (not the order's own date) so it
+    // shows up right away regardless of when it was actually sent - once
+    // created, the existing daily rollover (rollSheetsForward) carries it
+    // forward exactly like any other open task, same as every other
+    // project, and leaves it be the moment it's marked done, so it only
+    // drops off the day after that. targetDate (used to jump to the right
+    // project's procurement list) stays the order's own date throughout.
+    var today = todayISO();
     officeReportSheets().forEach(function (s) {
       (s.siteLogs || []).forEach(function (log) {
         if (!log.procurementSentDate) return;
@@ -9847,7 +9855,7 @@
             status: 0,
             urgent: false,
             type: "task",
-            date: log.date,
+            date: today,
             createdAt: Date.now(),
             headOfficeVirtual: true,
             targetSheetId: s.id,
