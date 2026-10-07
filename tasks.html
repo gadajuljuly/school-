@@ -12299,6 +12299,12 @@
     }
     var rowEditable = editable && !state.showingCompleted && !isHeadOfficeVirtualSheet;
 
+    // Rebuilding the list via innerHTML resets its own scroll position to
+    // the top - restoring it afterward (the browser clamps automatically
+    // if the list got shorter) keeps a long, scrolled-down list from
+    // jumping back up every time, e.g. after deleting one task near the
+    // bottom.
+    var taskListScrollTop = taskList.scrollTop;
     taskList.innerHTML = "";
     visible.forEach(function (t) {
       var isNote = t.type === "note";
@@ -12529,6 +12535,7 @@
         textEl.select();
       }
     });
+    taskList.scrollTop = taskListScrollTop;
 
     sheetTitle.textContent = activeSheet().name;
     renderSheetTitleLogo();
