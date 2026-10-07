@@ -12270,13 +12270,13 @@
       renderChatMessages();
       return;
     }
-    // The "משרד ראשי" virtual sheet has no completed/active distinction and
-    // nothing addable - its tasks are entirely system-generated notification
-    // entries (see syncHeadOfficeVirtualTasks), never created or completed
-    // by hand.
+    // The "הזמנות רכש" virtual sheet has nothing addable - its tasks are
+    // entirely system-generated notification entries (see
+    // syncHeadOfficeVirtualTasks), never created by hand - but browsing
+    // completed ones works the same as any other project.
     var isHeadOfficeVirtualSheet = activeSheet().id === HEAD_OFFICE_SHEET_ID;
-    showCompletedTasksBtn.hidden = viewingArchive || state.showingCompleted || isHeadOfficeVirtualSheet;
-    showActiveTasksBtn.hidden = viewingArchive || !state.showingCompleted || isHeadOfficeVirtualSheet;
+    showCompletedTasksBtn.hidden = viewingArchive || state.showingCompleted;
+    showActiveTasksBtn.hidden = viewingArchive || !state.showingCompleted;
     addForm.hidden = isPast || state.showingCompleted || isHeadOfficeVirtualSheet;
 
     // Browsing completed tasks shows every done task across every date in
