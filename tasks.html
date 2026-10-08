@@ -2426,8 +2426,16 @@
 
   .empty-state {
     color: var(--ink-muted);
-    padding: 4px 0 16px;
+    padding: 20px 0 16px;
     font-size: 0.88rem;
+    text-align: center;
+  }
+  .empty-state-icon {
+    display: block;
+    width: 40px;
+    height: 40px;
+    margin: 0 auto 10px;
+    opacity: 0.45;
   }
 
   .modal-overlay {
@@ -2811,7 +2819,10 @@
         <div class="sheet-title" id="sheetTitle"></div>
       </div>
       <ol class="task-list" id="taskList"></ol>
-      <div class="empty-state" id="emptyState" data-i18n="emptyStateToday" style="display:none;">אין שורות בפרויקט הזה עדיין</div>
+      <div class="empty-state" id="emptyState" style="display:none;">
+        <svg class="empty-state-icon" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="7" y="4" width="26" height="32" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M13 14h14M13 20h14M13 26h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span id="emptyStateText" data-i18n="emptyStateToday">אין שורות בפרויקט הזה עדיין</span>
+      </div>
       <form class="add-row" id="addForm">
         <span class="row-mark" aria-hidden="true"><svg viewBox="0 0 20 18" xmlns="http://www.w3.org/2000/svg"><path d="M4 3 L16 15 M1.5 3 L6.5 3 M13.5 3 L18.5 3 M1.5 15 L6.5 15 M13.5 15 L18.5 15" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg></span>
         <input type="text" id="taskInput" data-i18n-ph="taskInputPlaceholder" placeholder="חדש..." maxlength="200" required autocomplete="off">
@@ -4426,6 +4437,7 @@
   var addForm = document.getElementById("addForm");
   var taskList = document.getElementById("taskList");
   var emptyState = document.getElementById("emptyState");
+  var emptyStateText = document.getElementById("emptyStateText");
   var showCompletedTasksBtn = document.getElementById("showCompletedTasksBtn");
   var showActiveTasksBtn = document.getElementById("showActiveTasksBtn");
   var sheetTitle = document.getElementById("sheetTitle");
@@ -12541,10 +12553,10 @@
     renderSheetTitleLogo();
 
     if (state.showingCompleted) {
-      emptyState.textContent = tr("emptyStateCompleted");
+      emptyStateText.textContent = tr("emptyStateCompleted");
       progressText.textContent = "";
     } else {
-      emptyState.textContent = isToday
+      emptyStateText.textContent = isToday
         ? tr("emptyStateToday")
         : isFuture
           ? tr("emptyStateFuture")
