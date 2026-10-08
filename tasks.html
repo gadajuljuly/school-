@@ -1813,11 +1813,6 @@
     gap: 10px;
     position: relative;
   }
-  .notebook-progress {
-    font-size: 0.8rem;
-    color: var(--ink-muted);
-    font-variant-numeric: tabular-nums;
-  }
   .sheets-search-stack {
     display: flex;
     flex-direction: column;
@@ -2497,29 +2492,6 @@
     color: var(--accent-contrast);
   }
 
-  .install-fab {
-    position: fixed;
-    left: 50%;
-    bottom: 20px;
-    transform: translateX(-50%);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 20px;
-    border: none;
-    border-radius: 999px;
-    background: var(--accent);
-    color: var(--accent-contrast);
-    font-family: inherit;
-    font-size: 0.92rem;
-    font-weight: 600;
-    cursor: pointer;
-    box-shadow: 0 10px 30px var(--shadow);
-    z-index: 15;
-  }
-  .install-fab[hidden] { display: none; }
-  .install-fab:hover { background: var(--accent); opacity: 0.9; }
-
   .splash-screen {
     position: fixed;
     inset: 0;
@@ -2735,7 +2707,6 @@
       </span>
       <div class="notebook-app-name">ITASK</div>
       <div class="head-right">
-        <span class="notebook-progress" id="progressText"></span>
         <button class="menu-btn" id="menuBtn" data-i18n-title="menuBtnTitle" title="תפריט" aria-haspopup="true" aria-expanded="false"><img src="tasks-menu-icon.webp" alt=""></button>
         <div class="menu-panel" id="menuPanel" hidden>
           <div class="menu-section" id="accountMenuSection">
@@ -3457,16 +3428,6 @@
     </div>
   </div>
 
-  <button type="button" class="install-fab" id="installBtn" data-i18n="installFab" hidden>&#128241; התקן אפליקציה</button>
-
-  <div class="modal-overlay" id="iosInstallOverlay" hidden>
-    <div class="modal-box" role="alertdialog" aria-modal="true">
-      <p class="modal-message" id="installInstructions"></p>
-      <div class="modal-actions">
-        <button type="button" class="modal-btn modal-btn-yes" id="iosInstallCloseBtn" data-i18n="iosInstallCloseBtn">הבנתי</button>
-      </div>
-    </div>
-  </div>
 </div>
 
 <script>
@@ -3598,8 +3559,6 @@
     moveModeCopyBtn: { he: "העתקה", en: "Copy", ar: "نسخ", ru: "Копировать" },
     convertToNoteBtn: { he: "הפוך למזכרת", en: "Convert to note", ar: "تحويل إلى ملاحظة", ru: "Сделать заметкой" },
     convertToTaskBtn: { he: "הפוך למשימה", en: "Convert to task", ar: "تحويل إلى مهمة", ru: "Сделать задачей" },
-    installFab: { he: "📱 התקן אפליקציה", en: "📱 Install app", ar: "📱 تثبيت التطبيق", ru: "📱 Установить приложение" },
-    iosInstallCloseBtn: { he: "הבנתי", en: "Got it", ar: "فهمت", ru: "Понятно" },
     projectWord: { he: "פרויקט", en: "Project", ar: "مشروع", ru: "Проект" },
     noOtherProjects: { he: "אין פרויקטים אחרים", en: "No other projects", ar: "لا توجد مشاريع أخرى", ru: "Нет других проектов" },
     mustHaveOneProject: { he: "חייב להישאר לפחות פרויקט אחד.", en: "At least one project must remain.", ar: "يجب أن يبقى مشروع واحد على الأقل.", ru: "Должен остаться хотя бы один проект." },
@@ -3634,26 +3593,7 @@
     markUrgent: { he: "לחצו לסימון כדחוף", en: "Click to mark as urgent", ar: "اضغط للتعليم كعاجل", ru: "Нажмите, чтобы отметить как срочное" },
     confirmDeleteTask: { he: 'למחוק את השורה "{name}"?', en: 'Delete the row "{name}"?', ar: 'هل تريد حذف العنصر "{name}"؟', ru: 'Удалить запись «{name}»?' },
     completedOn: { he: "הושלם בתאריך ", en: "Completed on ", ar: "اكتمل بتاريخ ", ru: "Выполнено " },
-    completedCount: { he: " הושלמו", en: " done", ar: " مكتملة", ru: " выполнено" },
     loggedInAs: { he: "מחובר/ת עם ", en: "Logged in with ", ar: "تم تسجيل الدخول برقم ", ru: "Вы вошли с номером " },
-    installInstructionsIOS: {
-      he: "כדי להתקין את האפליקציה באייפון:<br><br>1. הקש על כפתור השיתוף בסרגל הדפדפן (בדרך כלל למטה, ריבוע עם חץ)<br>2. גלול ובחר ב-\"הוסף למסך הבית\" (Add to Home Screen)<br>3. הקש \"הוסף\" למעלה",
-      en: "To install the app on iPhone:<br><br>1. Tap the Share button in the browser toolbar (usually a square with an arrow)<br>2. Scroll and choose \"Add to Home Screen\"<br>3. Tap \"Add\" at the top",
-      ar: "لتثبيت التطبيق على الآيفون:<br><br>1. اضغط على زر المشاركة في شريط أدوات المتصفح (عادة مربع بسهم)<br>2. مرّر واختر \"إضافة إلى الشاشة الرئيسية\"<br>3. اضغط \"إضافة\" في الأعلى",
-      ru: "Чтобы установить приложение на iPhone:<br><br>1. Нажмите кнопку «Поделиться» на панели браузера (обычно квадрат со стрелкой)<br>2. Прокрутите и выберите «На экран «Домой»»<br>3. Нажмите «Добавить» вверху"
-    },
-    installInstructionsAndroid: {
-      he: "כדי להתקין את האפליקציה:<br><br>1. הקש על תפריט שלוש הנקודות (⋮) למעלה בדפדפן<br>2. בחר \"הוספה למסך הבית\" או \"התקן אפליקציה\"<br>3. אשר את ההתקנה",
-      en: "To install the app:<br><br>1. Tap the three-dot menu (⋮) at the top of the browser<br>2. Choose \"Add to Home Screen\" or \"Install app\"<br>3. Confirm the installation",
-      ar: "لتثبيت التطبيق:<br><br>1. اضغط على قائمة النقاط الثلاث (⋮) أعلى المتصفح<br>2. اختر \"إضافة إلى الشاشة الرئيسية\" أو \"تثبيت التطبيق\"<br>3. أكّد التثبيت",
-      ru: "Чтобы установить приложение:<br><br>1. Нажмите на меню из трёх точек (⋮) вверху браузера<br>2. Выберите «Добавить на главный экран» или «Установить приложение»<br>3. Подтвердите установку"
-    },
-    installInstructionsDesktop: {
-      he: "כדי להתקין את האפליקציה:<br><br>1. חפש סמל התקנה (⊕ או מחשב עם חץ) בצד ימין של שורת הכתובת<br>2. אם אינך רואה אותו — פתח את תפריט שלוש הנקודות (⋮) ובחר \"התקן אפליקציה\"",
-      en: "To install the app:<br><br>1. Look for an install icon (⊕ or a monitor with an arrow) on the right side of the address bar<br>2. If you don't see it — open the three-dot menu (⋮) and choose \"Install app\"",
-      ar: "لتثبيت التطبيق:<br><br>1. ابحث عن أيقونة التثبيت (⊕ أو شاشة بسهم) على يمين شريط العنوان<br>2. إذا لم تجدها — افتح قائمة النقاط الثلاث (⋮) واختر \"تثبيت التطبيق\"",
-      ru: "Чтобы установить приложение:<br><br>1. Найдите значок установки (⊕ или монитор со стрелкой) справа в адресной строке<br>2. Если не видите его — откройте меню из трёх точек (⋮) и выберите «Установить приложение»"
-    },
     reportsBtnTitle: { he: "דוחות פגישות וסיורים", en: "Meeting and tour reports", ar: "تقارير الاجتماعات والجولات", ru: "Отчёты о встречах и обходах" },
     tasksBtnTitle: { he: "חזרה למשימות", en: "Back to tasks", ar: "العودة إلى المهام", ru: "Назад к задачам" },
     calendarBtnTitle: { he: "בחירת תאריך", en: "Pick a date", ar: "اختيار تاريخ", ru: "Выбрать дату" },
@@ -4441,7 +4381,6 @@
   var showCompletedTasksBtn = document.getElementById("showCompletedTasksBtn");
   var showActiveTasksBtn = document.getElementById("showActiveTasksBtn");
   var sheetTitle = document.getElementById("sheetTitle");
-  var progressText = document.getElementById("progressText");
   var menuBtn = document.getElementById("menuBtn");
   var menuPanel = document.getElementById("menuPanel");
   var searchBtn = document.getElementById("searchBtn");
@@ -4598,60 +4537,6 @@
   moveTaskOverlay.addEventListener("click", function (e) {
     if (e.target === moveTaskOverlay) closeMoveTask();
   });
-
-  (function setupInstallPrompt() {
-    var installBtn = document.getElementById("installBtn");
-    var instructionsOverlay = document.getElementById("iosInstallOverlay");
-    var instructionsCloseBtn = document.getElementById("iosInstallCloseBtn");
-    var instructionsText = document.getElementById("installInstructions");
-    var deferredPrompt = null;
-
-    var isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
-    // A Capacitor WebView never reports display-mode: standalone (it isn't a
-    // browser-installed PWA), so without this check this "install app"
-    // prompt showed up permanently inside the already-installed native app.
-    var isCapacitorNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
-    if (isStandalone || isCapacitorNative) return;
-
-    var ua = navigator.userAgent;
-    var isIOS = /iphone|ipad|ipod/i.test(ua) && !window.MSStream;
-    var isAndroid = /android/i.test(ua);
-
-    function fallbackInstructions() {
-      if (isIOS) return tr("installInstructionsIOS");
-      if (isAndroid) return tr("installInstructionsAndroid");
-      return tr("installInstructionsDesktop");
-    }
-
-    installBtn.hidden = false;
-
-    window.addEventListener("beforeinstallprompt", function (e) {
-      e.preventDefault();
-      deferredPrompt = e;
-      installBtn.hidden = false;
-    });
-
-    window.addEventListener("appinstalled", function () {
-      installBtn.hidden = true;
-      deferredPrompt = null;
-    });
-
-    installBtn.addEventListener("click", function () {
-      if (deferredPrompt) {
-        installBtn.hidden = true;
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then(function () { deferredPrompt = null; });
-      } else {
-        instructionsText.innerHTML = fallbackInstructions();
-        instructionsOverlay.hidden = false;
-      }
-    });
-
-    instructionsCloseBtn.addEventListener("click", function () { instructionsOverlay.hidden = true; });
-    instructionsOverlay.addEventListener("click", function (e) {
-      if (e.target === instructionsOverlay) instructionsOverlay.hidden = true;
-    });
-  })();
 
   function isoToFullDisplay(iso) {
     var parts = iso.split("-");
@@ -12228,7 +12113,6 @@
       addForm.hidden = true;
       showCompletedTasksBtn.hidden = true;
       showActiveTasksBtn.hidden = true;
-      progressText.textContent = "";
       renderSheetReportsList();
       return;
     }
@@ -12236,7 +12120,6 @@
       addForm.hidden = true;
       showCompletedTasksBtn.hidden = true;
       showActiveTasksBtn.hidden = true;
-      progressText.textContent = "";
       // Kept in sync here (not just on entry) so changing the date via the
       // normal top date controls/swipe while already in diary mode updates
       // which day's log the icons below point to, same as it always did.
@@ -12248,7 +12131,6 @@
       addForm.hidden = true;
       showCompletedTasksBtn.hidden = true;
       showActiveTasksBtn.hidden = true;
-      progressText.textContent = "";
       // Kept in sync here (not just on entry) so switching project tabs
       // while already in library mode updates whose folders are shown,
       // same as diary mode does for the date above.
@@ -12260,7 +12142,6 @@
       addForm.hidden = true;
       showCompletedTasksBtn.hidden = true;
       showActiveTasksBtn.hidden = true;
-      progressText.textContent = "";
       var chatSheet = activeSheet();
       // A sheet switch while chat is open can land on a non-shared
       // project, which has no chat at all - fall back to tasks mode for
@@ -12554,16 +12435,12 @@
 
     if (state.showingCompleted) {
       emptyStateText.textContent = tr("emptyStateCompleted");
-      progressText.textContent = "";
     } else {
       emptyStateText.textContent = isToday
         ? tr("emptyStateToday")
         : isFuture
           ? tr("emptyStateFuture")
           : tr("emptyStatePast");
-      var total = sheetTasks.length;
-      var doneCount = sheetTasks.filter(function (t) { return t.status === 2; }).length;
-      progressText.textContent = doneCount + "/" + total + tr("completedCount");
     }
     emptyState.style.display = visible.length ? "none" : "block";
 
@@ -13327,11 +13204,7 @@
   // Registering the service worker here (even inside the native Capacitor
   // app) is what makes push notifications/reminders work there at all -
   // pushManager.subscribe() and the "push" event both need an active SW
-  // registration. This used to be skipped for Capacitor to stop a
-  // redundant "install app" banner, but that banner turned out to come
-  // from this app's own install-fab button (guarded separately below),
-  // not from having a registered SW - so skipping registration here was
-  // only ever breaking push notifications in the native app for no reason.
+  // registration.
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     window.addEventListener("load", function () {
       navigator.serviceWorker.register("tasks-sw.js").then(function (reg) {
