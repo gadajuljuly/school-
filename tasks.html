@@ -1804,9 +1804,10 @@
     font-weight: 700;
     font-size: 0.85rem;
     letter-spacing: 0.08em;
-    color: var(--accent);
     pointer-events: none;
   }
+  .notebook-app-name .app-name-i { color: #bf4e30; }
+  .notebook-app-name .app-name-rest { color: #44563c; }
   .head-right {
     display: flex;
     align-items: center;
@@ -2705,7 +2706,7 @@
         </span>
         <button type="button" class="today-btn" id="todayBtn" data-i18n="todayBtn" hidden>היום</button>
       </span>
-      <div class="notebook-app-name">ITASK</div>
+      <div class="notebook-app-name"><span class="app-name-i">I</span><span class="app-name-rest">TASK</span></div>
       <div class="head-right">
         <button class="menu-btn" id="menuBtn" data-i18n-title="menuBtnTitle" title="תפריט" aria-haspopup="true" aria-expanded="false"><img src="tasks-menu-icon.webp" alt=""></button>
         <div class="menu-panel" id="menuPanel" hidden>
