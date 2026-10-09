@@ -53,6 +53,21 @@ async function getFcmAccessToken(): Promise<string> {
   return cachedFcmToken.token;
 }
 
+// A plain "notification" FCM message (what this always sends) is drawn by
+// Android itself straight from the device's notification tray code - never
+// through tasks-sw.js's own "push" handler, which only ever runs for a
+// foregrounded tab or the web/PWA install. Its sound/vibration/heads-up
+// behavior comes entirely from whichever Android notification channel it's
+// filed under; with no channel_id given, that's the app's default channel,
+// which is why requireInteraction/vibrate set on the web side (tasks-sw.js)
+// have no effect at all in the native Android app. Routing an "alarm":"1"
+// per-task reminder through a dedicated high-importance channel ID is the
+// only way to make it actually nag there - but the channel itself still has
+// to be created once in the native project's own code (outside this repo)
+// with that same ID, or Android silently falls back to the default channel
+// again, same as if this were never set.
+var TASK_ALARM_ANDROID_CHANNEL_ID = "task_alarm_channel";
+
 async function sendFcmMessage(
   fcmToken: string,
   title: string,
@@ -60,10 +75,14 @@ async function sendFcmMessage(
   data: Record<string, string>,
 ): Promise<{ ok: boolean; shouldRemove: boolean; error?: string }> {
   const accessToken = await getFcmAccessToken();
+  var androidBlock: any = { priority: "high" };
+  if (data.alarm === "1") {
+    androidBlock.notification = { channel_id: TASK_ALARM_ANDROID_CHANNEL_ID };
+  }
   const res = await fetch(`https://fcm.googleapis.com/v1/projects/${FCM_PROJECT_ID}/messages:send`, {
     method: "POST",
     headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ message: { token: fcmToken, notification: { title, body }, data, android: { priority: "high" } } }),
+    body: JSON.stringify({ message: { token: fcmToken, notification: { title, body }, data, android: androidBlock } }),
   });
   if (res.ok) return { ok: true, shouldRemove: false };
   const errJson = await res.json().catch(() => ({}));
