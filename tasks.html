@@ -2265,7 +2265,6 @@
      are actually enough tasks to need it, with the add-row then staying
      put right below it. */
   ol.task-list {
-    position: relative;
     flex: 0 1 auto;
     min-height: 0;
     overflow-y: auto;
@@ -2277,28 +2276,10 @@
        setting overflow-y here also makes overflow-x compute to clipping
        (not visible) per the CSS spec, without this reserved space that
        bleed gets clipped flat instead of rendering as a full circle.
-       Generous on purpose - 10px still clipped it. Also wide enough now
-       to host the reminder-alarm indicator past the row's own content. */
-    padding: 0 0 0 26px;
-  }
-  /* .ruled-body's own ruled-paper background paints straight through this
-     element's transparent padding area too (it's clipped to .ruled-body's
-     content-box, which this list exactly fills) - without this opaque
-     cover, anything placed in that left gutter (the reminder-alarm icon)
-     would still visibly sit on top of the blue ruled lines instead of
-     reading as outside them. Sits behind the actual row content (painted
-     before it in DOM/paint order), never above. */
-  ol.task-list::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    width: 26px;
-    background: var(--paper);
+       Generous on purpose - 10px still clipped it. */
+    padding: 0 0 0 20px;
   }
   li.task {
-    position: relative;
     display: flex;
     align-items: flex-end;
     gap: 6px;
@@ -2407,17 +2388,30 @@
     flex-shrink: 0;
   }
   .task-actions button:hover { opacity: 1; color: var(--danger); }
+  /* Sits outside ol.task-list entirely (a sibling, not a descendant) so
+     it's never subject to that element's own overflow clipping (needed
+     for its vertical scrollbar) - the only way to let its icons bleed
+     into .ruled-body's own left padding, right at the page's edge,
+     instead of being boxed in whatever space the task list reserves for
+     itself. Its own top/height are synced in JS to ol.task-list's actual
+     rendered position every render (the surrounding layout shifts - the
+     title row, completed-toggle, empty state - so that can't be a fixed
+     CSS value), and it's translated on scroll to stay locked to each
+     task's row as the list scrolls past underneath it. */
+  .task-reminder-icons-layer {
+    position: absolute;
+    left: 0;
+    width: 44px;
+    overflow: hidden;
+    pointer-events: none;
+  }
   .task-reminder-indicator {
     position: absolute;
-    left: -22px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 18px;
-    height: 18px;
-    display: flex;
-    align-items: center;
+    left: 8px;
+    width: 27px;
+    height: 27px;
     cursor: pointer;
-    z-index: 1;
+    pointer-events: auto;
   }
   .task-reminder-indicator img { width: 100%; height: 100%; display: block; object-fit: contain; }
   .row-date {
@@ -2848,6 +2842,7 @@
         <div class="sheet-title" id="sheetTitle"></div>
       </div>
       <ol class="task-list" id="taskList"></ol>
+      <div class="task-reminder-icons-layer" id="taskReminderIconsLayer"></div>
       <form class="add-row" id="addForm">
         <span class="row-mark" aria-hidden="true"><svg viewBox="0 0 20 18" xmlns="http://www.w3.org/2000/svg"><path d="M4 3 L16 15 M1.5 3 L6.5 3 M13.5 3 L18.5 3 M1.5 15 L6.5 15 M13.5 15 L18.5 15" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg></span>
         <input type="text" id="taskInput" data-i18n-ph="taskInputPlaceholder" placeholder="חדש..." maxlength="200" required autocomplete="off">
@@ -4479,6 +4474,7 @@
   var taskInput = document.getElementById("taskInput");
   var addForm = document.getElementById("addForm");
   var taskList = document.getElementById("taskList");
+  var taskReminderIconsLayer = document.getElementById("taskReminderIconsLayer");
   var emptyState = document.getElementById("emptyState");
   var emptyStateText = document.getElementById("emptyStateText");
   var showCompletedTasksBtn = document.getElementById("showCompletedTasksBtn");
@@ -4672,6 +4668,46 @@
       return reminder.minutes === 30 ? tr("taskReminderActiveEvery30") : tr("taskReminderActiveEveryHour");
     }
     return tr("taskReminderActiveAt") + reminder.time;
+  }
+
+  // The reminder-alarm icons live in their own layer, a sibling of
+  // #taskList rather than a child of any one row - #taskList's own
+  // overflow-y:auto also clips overflow-x (a plain CSS limitation, not a
+  // choice), so an icon placed inside it can never bleed further left
+  // than the list's own box, no matter how it's positioned. Sitting
+  // outside it instead lets the icons reach all the way to the page's
+  // own left edge. The tradeoff: since the layer doesn't scroll on its
+  // own, every row's vertical position and the list's live scroll offset
+  // both have to be tracked here by hand instead of coming for free.
+  function syncTaskReminderIconsLayerBounds() {
+    taskReminderIconsLayer.style.top = taskList.offsetTop + "px";
+    taskReminderIconsLayer.style.height = taskList.offsetHeight + "px";
+  }
+  function applyTaskReminderIconsScroll() {
+    taskReminderIconsLayer.style.transform = "translateY(" + (-taskList.scrollTop) + "px)";
+  }
+  taskList.addEventListener("scroll", applyTaskReminderIconsScroll);
+  window.addEventListener("resize", syncTaskReminderIconsLayerBounds);
+
+  function renderTaskReminderIconsLayer(entries) {
+    syncTaskReminderIconsLayerBounds();
+    taskReminderIconsLayer.innerHTML = "";
+    entries.forEach(function (entry) {
+      var icon = document.createElement("span");
+      icon.className = "task-reminder-indicator";
+      icon.style.top = entry.top + "px";
+      icon.innerHTML = '<img src="tasks-reminder-icon.webp" alt="">';
+      icon.title = describeTaskReminder(entry.task.reminder);
+      if (entry.editable) {
+        icon.addEventListener("click", function (e) {
+          e.stopPropagation();
+          pendingMoveTaskId = entry.task.id;
+          openTaskReminderModal();
+        });
+      }
+      taskReminderIconsLayer.appendChild(icon);
+    });
+    applyTaskReminderIconsScroll();
   }
 
   function openTaskReminderModal() {
@@ -12336,6 +12372,7 @@
     var libraryMode = state.viewMode === "library";
     var chatMode = state.viewMode === "chat";
     taskList.hidden = reportsMode || diaryMode || libraryMode || chatMode;
+    taskReminderIconsLayer.hidden = taskList.hidden;
     emptyState.hidden = reportsMode || diaryMode || libraryMode || chatMode;
     if (reportsMode || diaryMode || libraryMode || chatMode) emptyState.style.display = "none";
     sheetReportsList.hidden = !reportsMode;
@@ -12433,6 +12470,7 @@
     // bottom.
     var taskListScrollTop = taskList.scrollTop;
     taskList.innerHTML = "";
+    var reminderRowsForIconsLayer = [];
     visible.forEach(function (t) {
       var isNote = t.type === "note";
       var li = document.createElement("li");
@@ -12618,21 +12656,6 @@
       });
       actions.appendChild(delBtn);
 
-      var reminderIndicator = null;
-      if (t.reminder) {
-        reminderIndicator = document.createElement("span");
-        reminderIndicator.className = "task-reminder-indicator";
-        reminderIndicator.innerHTML = '<img src="tasks-reminder-icon.webp" alt="">';
-        reminderIndicator.title = describeTaskReminder(t.reminder);
-        if (rowEditable) {
-          reminderIndicator.addEventListener("click", function (e) {
-            e.stopPropagation();
-            pendingMoveTaskId = t.id;
-            openTaskReminderModal();
-          });
-        }
-      }
-
       var lead = document.createElement("span");
       lead.className = "row-lead";
       if (isNote) {
@@ -12652,8 +12675,8 @@
         li.appendChild(dateBadge);
       }
       li.appendChild(actions);
-      if (reminderIndicator) li.appendChild(reminderIndicator);
       taskList.appendChild(li);
+      if (t.reminder) reminderRowsForIconsLayer.push({ task: t, editable: rowEditable, top: li.offsetTop });
 
       if (!(rowEditable && state.editingTaskId === t.id)) {
         var textOverflowPx = textLabel.scrollWidth - textEl.clientWidth;
@@ -12679,6 +12702,7 @@
       }
     });
     taskList.scrollTop = taskListScrollTop;
+    renderTaskReminderIconsLayer(reminderRowsForIconsLayer);
 
     sheetTitle.textContent = activeSheet().name;
     renderSheetTitleLogo();
