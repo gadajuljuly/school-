@@ -2990,6 +2990,7 @@
         <button type="button" id="moveModeMoveBtn" data-i18n="moveModeMoveBtn">העברה</button>
         <button type="button" id="moveModeCopyBtn" data-i18n="moveModeCopyBtn">העתקה</button>
       </div>
+      <button type="button" class="convert-to-note-btn" id="shareTaskBtn" data-i18n="shareTaskBtn">שיתוף</button>
       <button type="button" class="convert-to-note-btn" id="convertToNoteBtn" data-i18n="convertToNoteBtn" hidden>הפוך למזכרת</button>
       <button type="button" class="convert-to-note-btn" id="convertToTaskBtn" data-i18n="convertToTaskBtn" hidden>הפוך למשימה</button>
       <button type="button" class="convert-to-note-btn" id="transferToLogBtn" data-i18n="taskTransferToLogBtn" hidden>העברה ליומן</button>
@@ -3562,6 +3563,7 @@
     confirmNoBtn: { he: "לא", en: "No", ar: "لا", ru: "Нет" },
     moveTaskModalMessage: { he: "העברה או העתקה של המשימה", en: "Move or copy this task", ar: "نقل أو نسخ هذه المهمة", ru: "Переместить или скопировать задачу" },
     moveTaskProjectsTitle: { he: "בחירת פרויקט יעד", en: "Choose a destination project", ar: "اختيار المشروع الوجهة", ru: "Выберите проект назначения" },
+    shareTaskBtn: { he: "שיתוף", en: "Share", ar: "مشاركة", ru: "Поделиться" },
     moveModeMoveBtn: { he: "העברה", en: "Move", ar: "نقل", ru: "Переместить" },
     moveModeCopyBtn: { he: "העתקה", en: "Copy", ar: "نسخ", ru: "Копировать" },
     convertToNoteBtn: { he: "הפוך למזכרת", en: "Convert to note", ar: "تحويل إلى ملاحظة", ru: "Сделать заметкой" },
@@ -4426,6 +4428,7 @@
   var moveTaskProjectsCancelBtn = document.getElementById("moveTaskProjectsCancelBtn");
   var moveModeMoveBtn = document.getElementById("moveModeMoveBtn");
   var moveModeCopyBtn = document.getElementById("moveModeCopyBtn");
+  var shareTaskBtn = document.getElementById("shareTaskBtn");
   var convertToNoteBtn = document.getElementById("convertToNoteBtn");
   var convertToTaskBtn = document.getElementById("convertToTaskBtn");
   var transferToLogBtn = document.getElementById("transferToLogBtn");
@@ -4508,6 +4511,35 @@
   }
   moveModeMoveBtn.addEventListener("click", function () { openMoveTaskProjectsModal("move"); });
   moveModeCopyBtn.addEventListener("click", function () { openMoveTaskProjectsModal("copy"); });
+  shareTaskBtn.addEventListener("click", function () {
+    var task = activeSheet().tasks.find(function (t) { return t.id === pendingMoveTaskId; });
+    closeMoveTask();
+    if (!task) return;
+    var text = task.text;
+    // The Android WebView this app runs in natively has no navigator.share()
+    // at all (same reason file-sharing needs the Capacitor Share plugin
+    // elsewhere) - without this branch the button would silently fall
+    // through to a clipboard copy there instead of a real WhatsApp/etc.
+    // share sheet.
+    if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform() &&
+        window.Capacitor.Plugins && window.Capacitor.Plugins.Share) {
+      window.Capacitor.Plugins.Share.share({ title: "ITASK", text: text }).catch(function () {});
+      return;
+    }
+    if (navigator.share) {
+      navigator.share({ title: "ITASK", text: text }).catch(function () {});
+      return;
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () {
+        showToast(tr("chatMsgCopiedMsg"));
+      }, function () {
+        alert(text);
+      });
+      return;
+    }
+    alert(text);
+  });
   convertToNoteBtn.addEventListener("click", function () {
     var task = activeSheet().tasks.find(function (t) { return t.id === pendingMoveTaskId; });
     if (task) {
