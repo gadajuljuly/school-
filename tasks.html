@@ -2108,6 +2108,35 @@
     margin-bottom: 14px;
   }
   .convert-to-note-btn[hidden] { display: none; }
+  .danger-text-btn { color: var(--danger); border-color: var(--danger); }
+  .task-reminder-time-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .task-reminder-time-row[hidden] { display: none; }
+  .task-reminder-time-row input[type="time"] {
+    flex: 1;
+    min-width: 0;
+    padding: 9px;
+    border-radius: 8px;
+    border: 1px solid var(--rule);
+    background: var(--paper-alt);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 0.9rem;
+  }
+  .task-reminder-time-row button {
+    padding: 9px 16px;
+    border-radius: 8px;
+    border: none;
+    background: var(--accent);
+    color: var(--accent-contrast);
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
   .sheet-tab:hover:not(.active) {
     background: rgba(0, 0, 0, 0.05);
     color: var(--ink);
@@ -2991,6 +3020,7 @@
         <button type="button" id="moveModeCopyBtn" data-i18n="moveModeCopyBtn">העתקה</button>
       </div>
       <button type="button" class="convert-to-note-btn" id="shareTaskBtn" data-i18n="shareTaskBtn">שיתוף</button>
+      <button type="button" class="convert-to-note-btn" id="taskReminderBtn" data-i18n="taskReminderBtn">התראה</button>
       <button type="button" class="convert-to-note-btn" id="convertToNoteBtn" data-i18n="convertToNoteBtn" hidden>הפוך למזכרת</button>
       <button type="button" class="convert-to-note-btn" id="convertToTaskBtn" data-i18n="convertToTaskBtn" hidden>הפוך למשימה</button>
       <button type="button" class="convert-to-note-btn" id="transferToLogBtn" data-i18n="taskTransferToLogBtn" hidden>העברה ליומן</button>
@@ -3007,6 +3037,26 @@
       <div class="move-task-projects" id="moveTaskProjects"></div>
       <div class="modal-actions">
         <button type="button" class="modal-btn modal-btn-no" id="moveTaskProjectsCancelBtn" data-i18n="cancelBtn">ביטול</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="taskReminderOverlay" hidden>
+    <div class="modal-box" role="alertdialog" aria-modal="true">
+      <p class="modal-message" data-i18n="taskReminderModalMessage">תדירות ההתראה</p>
+      <p class="reminder-status" id="taskReminderCurrentStatus" hidden></p>
+      <div class="move-task-mode">
+        <button type="button" id="taskReminderEvery30Btn" data-i18n="taskReminderEvery30">כל חצי שעה</button>
+        <button type="button" id="taskReminderEvery60Btn" data-i18n="taskReminderEveryHour">כל שעה</button>
+      </div>
+      <button type="button" class="convert-to-note-btn" id="taskReminderTimeToggleBtn" data-i18n="taskReminderSpecificTime">שעה מסוימת</button>
+      <div class="task-reminder-time-row" id="taskReminderTimeRow" hidden>
+        <input type="time" id="taskReminderTimeInput">
+        <button type="button" id="taskReminderTimeConfirmBtn" data-i18n="confirmBtn">אישור</button>
+      </div>
+      <button type="button" class="convert-to-note-btn danger-text-btn" id="taskReminderOffBtn" data-i18n="taskReminderTurnOff" hidden>כיבוי התראה</button>
+      <div class="modal-actions">
+        <button type="button" class="modal-btn modal-btn-no" id="taskReminderCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </div>
   </div>
@@ -3564,6 +3614,18 @@
     moveTaskModalMessage: { he: "העברה או העתקה של המשימה", en: "Move or copy this task", ar: "نقل أو نسخ هذه المهمة", ru: "Переместить или скопировать задачу" },
     moveTaskProjectsTitle: { he: "בחירת פרויקט יעד", en: "Choose a destination project", ar: "اختيار المشروع الوجهة", ru: "Выберите проект назначения" },
     shareTaskBtn: { he: "שיתוף", en: "Share", ar: "مشاركة", ru: "Поделиться" },
+    taskReminderBtn: { he: "התראה", en: "Reminder", ar: "تذكير", ru: "Напоминание" },
+    taskReminderModalMessage: { he: "תדירות ההתראה", en: "Reminder frequency", ar: "تكرار التذكير", ru: "Частота напоминания" },
+    taskReminderEvery30: { he: "כל חצי שעה", en: "Every half hour", ar: "كل نصف ساعة", ru: "Каждые полчаса" },
+    taskReminderEveryHour: { he: "כל שעה", en: "Every hour", ar: "كل ساعة", ru: "Каждый час" },
+    taskReminderSpecificTime: { he: "שעה מסוימת", en: "Specific time", ar: "وقت محدد", ru: "Определённое время" },
+    taskReminderTurnOff: { he: "כיבוי התראה", en: "Turn off reminder", ar: "إيقاف التذكير", ru: "Выключить напоминание" },
+    taskReminderSetMsg: { he: "ההתראה הופעלה", en: "Reminder set", ar: "تم تفعيل التذكير", ru: "Напоминание установлено" },
+    taskReminderOffMsg: { he: "ההתראה כובתה", en: "Reminder turned off", ar: "تم إيقاف التذكير", ru: "Напоминание выключено" },
+    taskReminderActiveEvery30: { he: "פעילה: כל חצי שעה", en: "Active: every half hour", ar: "نشط: كل نصف ساعة", ru: "Активно: каждые полчаса" },
+    taskReminderActiveEveryHour: { he: "פעילה: כל שעה", en: "Active: every hour", ar: "نشط: كل ساعة", ru: "Активно: каждый час" },
+    taskReminderActiveAt: { he: "פעילה: בשעה ", en: "Active: at ", ar: "نشط: الساعة ", ru: "Активно: в " },
+    taskReminderNotSupportedMsg: { he: "התראות לא נתמכות או חסומות במכשיר הזה", en: "Notifications aren't supported or are blocked on this device", ar: "الإشعارات غير مدعومة أو محظورة على هذا الجهاز", ru: "Уведомления не поддерживаются или заблокированы на этом устройстве" },
     moveModeMoveBtn: { he: "העברה", en: "Move", ar: "نقل", ru: "Переместить" },
     moveModeCopyBtn: { he: "העתקה", en: "Copy", ar: "نسخ", ru: "Копировать" },
     convertToNoteBtn: { he: "הפוך למזכרת", en: "Convert to note", ar: "تحويل إلى ملاحظة", ru: "Сделать заметкой" },
@@ -4429,6 +4491,17 @@
   var moveModeMoveBtn = document.getElementById("moveModeMoveBtn");
   var moveModeCopyBtn = document.getElementById("moveModeCopyBtn");
   var shareTaskBtn = document.getElementById("shareTaskBtn");
+  var taskReminderBtn = document.getElementById("taskReminderBtn");
+  var taskReminderOverlay = document.getElementById("taskReminderOverlay");
+  var taskReminderCurrentStatus = document.getElementById("taskReminderCurrentStatus");
+  var taskReminderEvery30Btn = document.getElementById("taskReminderEvery30Btn");
+  var taskReminderEvery60Btn = document.getElementById("taskReminderEvery60Btn");
+  var taskReminderTimeToggleBtn = document.getElementById("taskReminderTimeToggleBtn");
+  var taskReminderTimeRow = document.getElementById("taskReminderTimeRow");
+  var taskReminderTimeInput = document.getElementById("taskReminderTimeInput");
+  var taskReminderTimeConfirmBtn = document.getElementById("taskReminderTimeConfirmBtn");
+  var taskReminderOffBtn = document.getElementById("taskReminderOffBtn");
+  var taskReminderCancelBtn = document.getElementById("taskReminderCancelBtn");
   var convertToNoteBtn = document.getElementById("convertToNoteBtn");
   var convertToTaskBtn = document.getElementById("convertToTaskBtn");
   var transferToLogBtn = document.getElementById("transferToLogBtn");
@@ -4500,6 +4573,7 @@
   function closeMoveTask() {
     moveTaskOverlay.hidden = true;
     moveTaskProjectsOverlay.hidden = true;
+    taskReminderOverlay.hidden = true;
     pendingMoveTaskId = null;
   }
   function openMoveTaskProjectsModal(mode) {
@@ -4540,6 +4614,91 @@
     }
     alert(text);
   });
+
+  // Reuses the same push_subscriptions row/permission flow the general
+  // "תזכורות משימות" menu setting and auto-enabled chat notifications
+  // already go through - a task reminder has nowhere to deliver through
+  // without an active push subscription for this device.
+  function ensurePushReadyForTaskReminder() {
+    if (!supabaseClient || !SUPABASE_ROW_ID || !pushSupported()) return Promise.resolve(false);
+    return pushPermissionDenied().then(function (denied) {
+      if (denied) return false;
+      return requestPushPermissionGranted().then(function (granted) {
+        if (!granted) return false;
+        return ensurePushIdentity().then(function (identity) {
+          return upsertPushSubscriptionRow({}, identity);
+        }).then(function (result) {
+          return !(result && result.error);
+        });
+      });
+    }).catch(function () { return false; });
+  }
+
+  function describeTaskReminder(reminder) {
+    if (!reminder) return "";
+    if (reminder.type === "interval") {
+      return reminder.minutes === 30 ? tr("taskReminderActiveEvery30") : tr("taskReminderActiveEveryHour");
+    }
+    return tr("taskReminderActiveAt") + reminder.time;
+  }
+
+  function openTaskReminderModal() {
+    var task = activeSheet().tasks.find(function (t) { return t.id === pendingMoveTaskId; });
+    moveTaskOverlay.hidden = true;
+    taskReminderTimeRow.hidden = true;
+    taskReminderTimeInput.value = (task && task.reminder && task.reminder.type === "time") ? task.reminder.time : "";
+    var statusText = task ? describeTaskReminder(task.reminder) : "";
+    taskReminderCurrentStatus.hidden = !statusText;
+    taskReminderCurrentStatus.textContent = statusText;
+    taskReminderOffBtn.hidden = !task || !task.reminder;
+    taskReminderOverlay.hidden = false;
+  }
+
+  function setTaskReminder(reminder) {
+    var task = activeSheet().tasks.find(function (t) { return t.id === pendingMoveTaskId; });
+    if (!task) { closeMoveTask(); return; }
+    if (!reminder) {
+      delete task.reminder;
+      saveData();
+      closeMoveTask();
+      showToast(tr("taskReminderOffMsg"));
+      render();
+      return;
+    }
+    ensurePushReadyForTaskReminder().then(function (ok) {
+      if (!ok) {
+        alert(tr("taskReminderNotSupportedMsg"));
+        return;
+      }
+      task.reminder = reminder;
+      saveData();
+      closeMoveTask();
+      showToast(tr("taskReminderSetMsg"));
+      render();
+    });
+  }
+
+  taskReminderBtn.addEventListener("click", openTaskReminderModal);
+  taskReminderEvery30Btn.addEventListener("click", function () {
+    setTaskReminder({ type: "interval", minutes: 30, lastSentAt: null });
+  });
+  taskReminderEvery60Btn.addEventListener("click", function () {
+    setTaskReminder({ type: "interval", minutes: 60, lastSentAt: null });
+  });
+  taskReminderTimeToggleBtn.addEventListener("click", function () {
+    taskReminderTimeRow.hidden = !taskReminderTimeRow.hidden;
+    if (!taskReminderTimeRow.hidden) taskReminderTimeInput.focus();
+  });
+  taskReminderTimeConfirmBtn.addEventListener("click", function () {
+    if (!taskReminderTimeInput.value) return;
+    setTaskReminder({ type: "time", time: taskReminderTimeInput.value, firedAt: null });
+  });
+  taskReminderOffBtn.addEventListener("click", function () { setTaskReminder(null); });
+  taskReminderCancelBtn.addEventListener("click", closeMoveTask);
+  taskReminderOverlay.addEventListener("click", function (e) {
+    if (e.target === taskReminderOverlay) closeMoveTask();
+  });
+
   convertToNoteBtn.addEventListener("click", function () {
     var task = activeSheet().tasks.find(function (t) { return t.id === pendingMoveTaskId; });
     if (task) {

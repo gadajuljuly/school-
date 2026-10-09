@@ -89,70 +89,152 @@ function pickIncompleteTask(
   return candidates[Math.floor(Math.random() * candidates.length)];
 }
 
+// Per-task reminders (set via the task's long-press "התראה" button) store an
+// HH:MM clock time with no timezone of its own - it means that time in the
+// app's own (Israel) wall-clock, not the edge function's host timezone
+// (Supabase runs these in UTC), so comparing against the server's own local
+// hours/minutes would fire hours off. Format "now" through this timezone
+// explicitly instead.
+const APP_TIME_ZONE = "Asia/Jerusalem";
+function nowHHMMInAppTimeZone(now: Date): string {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: APP_TIME_ZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(now);
+  const h = parts.find((p) => p.type === "hour")?.value ?? "00";
+  const m = parts.find((p) => p.type === "minute")?.value ?? "00";
+  return `${h}:${m}`;
+}
+
+type DueTaskReminder = { taskText: string; sheetName: string; taskId: string; sheetId: string; date: string; task: any };
+
+// Scans every task across every (non-ended) sheet for a per-task reminder
+// (set via the "התראה" long-press button) that's due right now - an
+// "interval" one (every 30/60 minutes) due since its own last send, or a
+// one-shot "time" alarm whose clock time matches this exact minute and
+// hasn't already fired. Mutates the matched tasks' reminder bookkeeping
+// in place (lastSentAt/firedAt) so the caller just needs to persist
+// appData back once after sending, same as any other in-place task edit.
+function findDueTaskReminders(appData: any, now: Date, nowHHMM: string): DueTaskReminder[] {
+  if (!appData || !Array.isArray(appData.sheets)) return [];
+  const due: DueTaskReminder[] = [];
+  for (const sheet of appData.sheets) {
+    if (sheet.ended) continue;
+    for (const t of sheet.tasks || []) {
+      const r = t.reminder;
+      if (!r || t.status === 2) continue;
+      if (r.type === "interval") {
+        const elapsedMinutes = r.lastSentAt ? (now.getTime() - new Date(r.lastSentAt).getTime()) / 60000 : Infinity;
+        if (elapsedMinutes < r.minutes) continue;
+        r.lastSentAt = now.toISOString();
+      } else if (r.type === "time") {
+        if (r.firedAt || r.time !== nowHHMM) continue;
+        r.firedAt = now.toISOString();
+      } else {
+        continue;
+      }
+      due.push({ taskText: t.text, sheetName: sheet.name, taskId: t.id, sheetId: sheet.id, date: t.date, task: t });
+    }
+  }
+  return due;
+}
+
+// Single send path shared by the random-incomplete-task reminder and
+// per-task reminders below - both just need "did it go out, and if not,
+// is this token/endpoint dead" out of either the FCM or Web Push branch.
+async function sendPush(
+  sub: any,
+  title: string,
+  body: string,
+  data: Record<string, string>,
+): Promise<{ ok: boolean; shouldRemove: boolean }> {
+  try {
+    if (sub.fcm_token) {
+      const result = await sendFcmMessage(sub.fcm_token, title, body, data);
+      return { ok: result.ok, shouldRemove: result.shouldRemove };
+    }
+    await webpush.sendNotification(
+      { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+      JSON.stringify({ title, body, data }),
+    );
+    return { ok: true, shouldRemove: false };
+  } catch (err: any) {
+    const status = err?.statusCode || err?.status;
+    const shouldRemove = err?.shouldRemove || status === 404 || status === 410;
+    return { ok: false, shouldRemove };
+  }
+}
+
 Deno.serve(async () => {
   const now = new Date();
+  const nowHHMM = nowHHMMInAppTimeZone(now);
 
-  const { data: subs, error } = await supabase
-    .from("push_subscriptions")
-    .select("*")
-    .not("frequency_minutes", "is", null)
-    .gt("frequency_minutes", 0);
+  // Every row, not just ones with a general frequency set - a per-task
+  // reminder (the task's own "התראה" long-press option) has to be checked
+  // for every device regardless of whether that device also has the
+  // general "תזכורות משימות" menu setting turned on; it's a separate,
+  // independent feature that happens to share the same push plumbing.
+  const { data: subs, error } = await supabase.from("push_subscriptions").select("*");
 
   if (error) {
     return new Response(JSON.stringify({ error: error.message }), { status: 500 });
   }
 
-  const due = (subs || []).filter((s) => {
-    if (!s.last_sent_at) return true;
-    const elapsedMinutes = (now.getTime() - new Date(s.last_sent_at).getTime()) / 60000;
-    return elapsedMinutes >= s.frequency_minutes;
-  });
-
   let sent = 0;
   let removed = 0;
+  let taskRemindersSent = 0;
 
-  for (const sub of due) {
+  for (const sub of subs || []) {
+    const globalDue = !!sub.frequency_minutes && sub.frequency_minutes > 0 &&
+      (!sub.last_sent_at || (now.getTime() - new Date(sub.last_sent_at).getTime()) / 60000 >= sub.frequency_minutes);
+
     const { data: appRow } = await supabase
       .from("app_state")
       .select("data")
       .eq("id", sub.user_id)
       .maybeSingle();
+    const appData = appRow?.data;
 
-    const pick = pickIncompleteTask(appRow?.data);
-    if (!pick) {
-      await supabase.from("push_subscriptions").update({ last_sent_at: now.toISOString() }).eq("id", sub.id);
-      continue;
-    }
-
-    const title = pick.sheetName;
-    const body = pick.taskText;
-    const data = { taskId: pick.taskId, sheetId: pick.sheetId, date: pick.date };
-
-    try {
-      if (sub.fcm_token) {
-        const result = await sendFcmMessage(sub.fcm_token, title, body, data);
-        if (!result.ok) throw Object.assign(new Error(result.error), { shouldRemove: result.shouldRemove });
+    if (globalDue) {
+      const pick = pickIncompleteTask(appData);
+      if (!pick) {
+        await supabase.from("push_subscriptions").update({ last_sent_at: now.toISOString() }).eq("id", sub.id);
       } else {
-        await webpush.sendNotification(
-          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-          JSON.stringify({ title, body, data }),
-        );
-      }
-      sent++;
-      await supabase.from("push_subscriptions").update({ last_sent_at: now.toISOString() }).eq("id", sub.id);
-    } catch (err: any) {
-      const status = err?.statusCode || err?.status;
-      const shouldRemove = err?.shouldRemove || status === 404 || status === 410;
-      if (shouldRemove) {
-        await supabase.from("push_subscriptions").delete().eq("id", sub.id);
-        removed++;
-      } else {
+        const result = await sendPush(sub, pick.sheetName, pick.taskText, {
+          taskId: pick.taskId,
+          sheetId: pick.sheetId,
+          date: pick.date,
+        });
+        if (result.shouldRemove) {
+          await supabase.from("push_subscriptions").delete().eq("id", sub.id);
+          removed++;
+          continue; // this subscription is gone - nothing left here to send task reminders to either
+        }
+        if (result.ok) sent++;
         await supabase.from("push_subscriptions").update({ last_sent_at: now.toISOString() }).eq("id", sub.id);
       }
     }
+
+    // findDueTaskReminders mutates the matched tasks' reminder bookkeeping
+    // (lastSentAt/firedAt) in place on appData - persisted once below,
+    // the same shape as any other in-place task edit this app makes.
+    const dueTaskReminders = findDueTaskReminders(appData, now, nowHHMM);
+    if (dueTaskReminders.length) {
+      for (const dr of dueTaskReminders) {
+        const result = await sendPush(sub, dr.sheetName, dr.taskText, {
+          taskId: dr.taskId,
+          sheetId: dr.sheetId,
+          date: dr.date,
+        });
+        if (result.ok) taskRemindersSent++;
+      }
+      await supabase.from("app_state").update({ data: appData }).eq("id", sub.user_id);
+    }
   }
 
-  return new Response(JSON.stringify({ checked: subs?.length || 0, due: due.length, sent, removed }), {
+  return new Response(JSON.stringify({ checked: subs?.length || 0, sent, removed, taskRemindersSent }), {
     headers: { "Content-Type": "application/json" },
   });
 });
