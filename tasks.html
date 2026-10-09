@@ -2388,6 +2388,16 @@
     flex-shrink: 0;
   }
   .task-actions button:hover { opacity: 1; color: var(--danger); }
+  .task-reminder-indicator {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+    color: var(--danger);
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+  }
+  .task-reminder-indicator svg { width: 100%; height: 100%; display: block; }
   .row-date {
     flex-shrink: 0;
     font-size: 0.72rem;
@@ -12215,6 +12225,7 @@
   }
 
   var URGENT_CIRCLE_SVG = '<svg viewBox="0 0 11 11" xmlns="http://www.w3.org/2000/svg"><circle cx="5.5" cy="5.5" r="4" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
+  var TASK_REMINDER_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="13" r="8" stroke="currentColor" stroke-width="2"/><path d="M12 9v4l3 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 3L2 6M19 3l3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
 
   // Highlights whichever of the 4 footer icons the user is "inside" right
   // now. Checks state.viewMode directly (not the DOM's hidden attributes,
@@ -12586,6 +12597,21 @@
       });
       actions.appendChild(delBtn);
 
+      var reminderIndicator = null;
+      if (t.reminder) {
+        reminderIndicator = document.createElement("span");
+        reminderIndicator.className = "task-reminder-indicator";
+        reminderIndicator.innerHTML = TASK_REMINDER_ICON_SVG;
+        reminderIndicator.title = describeTaskReminder(t.reminder);
+        if (rowEditable) {
+          reminderIndicator.addEventListener("click", function (e) {
+            e.stopPropagation();
+            pendingMoveTaskId = t.id;
+            openTaskReminderModal();
+          });
+        }
+      }
+
       var lead = document.createElement("span");
       lead.className = "row-lead";
       if (isNote) {
@@ -12605,6 +12631,7 @@
         li.appendChild(dateBadge);
       }
       li.appendChild(actions);
+      if (reminderIndicator) li.appendChild(reminderIndicator);
       taskList.appendChild(li);
 
       if (!(rowEditable && state.editingTaskId === t.id)) {
