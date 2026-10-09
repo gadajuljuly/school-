@@ -2265,6 +2265,11 @@
      are actually enough tasks to need it, with the add-row then staying
      put right below it. */
   ol.task-list {
+    /* Needed so each row's offsetTop/offsetParent resolves relative to
+       this element (not .ruled-body further up) - the reminder-icon
+       layer's own JS positioning math (see
+       syncTaskReminderIconsLayerBounds) depends on that. */
+    position: relative;
     flex: 0 1 auto;
     min-height: 0;
     overflow-y: auto;
