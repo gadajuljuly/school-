@@ -1,6 +1,6 @@
 // ITASK
 // © 2026 Ahmad Juljoly. All rights reserved.
-var CACHE_NAME = "tasks-app-v228";
+var CACHE_NAME = "tasks-app-v229";
 var CORE_ASSETS = [
   "./tasks.html",
   "./tasks-manifest.json",
@@ -92,6 +92,19 @@ self.addEventListener("push", function (event) {
   if (event.data) {
     try { payload = event.data.json(); } catch (e) {}
   }
+  // A per-task reminder (send-reminders' findDueTaskReminders path, see
+  // its "alarm":"1" data flag) is meant to nag like a real alarm clock,
+  // not pass by quietly like the general "תזכורות משימות" nudge - stays
+  // on screen until dismissed instead of auto-clearing, and buzzes.
+  // Note: this only governs the web/PWA notification. The native Android
+  // app's own backgrounded system-tray notification for an FCM message
+  // with a "notification" payload is drawn by Android itself from the
+  // app's default notification channel, never through this handler - a
+  // true heads-up/vibrate alarm there needs a dedicated high-importance
+  // channel declared in the native project's own code, which lives
+  // outside this repo (android-app/android is generated locally, not
+  // checked in).
+  var isAlarm = !!(payload.data && payload.data.alarm);
   event.waitUntil(
     self.registration.showNotification(payload.title, {
       body: payload.body,
@@ -102,8 +115,10 @@ self.addEventListener("push", function (event) {
       // unrecognizable blank blob there. This is a dedicated, already-
       // transparent monochrome cutout of the "X" glyph instead.
       badge: "./tasks-badge-96.png",
-      tag: "task-reminder",
+      tag: (payload.data && payload.data.tag) || "task-reminder",
       renotify: true,
+      requireInteraction: isAlarm,
+      vibrate: isAlarm ? [300, 150, 300, 150, 300, 150, 300] : undefined,
       data: payload.data || null
     })
   );

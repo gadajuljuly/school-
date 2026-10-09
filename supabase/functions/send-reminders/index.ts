@@ -223,10 +223,17 @@ Deno.serve(async () => {
     const dueTaskReminders = findDueTaskReminders(appData, now, nowHHMM);
     if (dueTaskReminders.length) {
       for (const dr of dueTaskReminders) {
+        // "alarm" tells the service worker to show this one like a real
+        // alarm clock (stays on screen, vibrates) instead of a quiet
+        // passing nudge - and a per-task tag keeps two different tasks'
+        // alarms from collapsing into a single notification the way the
+        // shared "task-reminder" tag would.
         const result = await sendPush(sub, dr.sheetName, dr.taskText, {
           taskId: dr.taskId,
           sheetId: dr.sheetId,
           date: dr.date,
+          alarm: "1",
+          tag: "task-reminder-" + dr.taskId,
         });
         if (result.ok) taskRemindersSent++;
       }

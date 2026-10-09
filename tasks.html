@@ -2376,6 +2376,9 @@
     -webkit-user-select: text;
     -webkit-touch-callout: default;
   }
+  .task-actions {
+    transform: translateX(-20px);
+  }
   .task-actions button {
     background: none;
     border: none;
@@ -2410,6 +2413,7 @@
     left: 8px;
     width: 27px;
     height: 27px;
+    transform: translateY(-50%);
     cursor: pointer;
     pointer-events: auto;
   }
@@ -4695,7 +4699,7 @@
     entries.forEach(function (entry) {
       var icon = document.createElement("span");
       icon.className = "task-reminder-indicator";
-      icon.style.top = entry.top + "px";
+      icon.style.top = (entry.top + entry.height / 2) + "px";
       icon.innerHTML = '<img src="tasks-reminder-icon.webp" alt="">';
       icon.title = describeTaskReminder(entry.task.reminder);
       if (entry.editable) {
@@ -12676,7 +12680,7 @@
       }
       li.appendChild(actions);
       taskList.appendChild(li);
-      if (t.reminder) reminderRowsForIconsLayer.push({ task: t, editable: rowEditable, top: li.offsetTop });
+      if (t.reminder) reminderRowsForIconsLayer.push({ task: t, editable: rowEditable, top: li.offsetTop, height: li.offsetHeight });
 
       if (!(rowEditable && state.editingTaskId === t.id)) {
         var textOverflowPx = textLabel.scrollWidth - textEl.clientWidth;
