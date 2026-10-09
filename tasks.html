@@ -2265,6 +2265,7 @@
      are actually enough tasks to need it, with the add-row then staying
      put right below it. */
   ol.task-list {
+    position: relative;
     flex: 0 1 auto;
     min-height: 0;
     overflow-y: auto;
@@ -2276,8 +2277,25 @@
        setting overflow-y here also makes overflow-x compute to clipping
        (not visible) per the CSS spec, without this reserved space that
        bleed gets clipped flat instead of rendering as a full circle.
-       Generous on purpose - 10px still clipped it. */
-    padding: 0 0 0 20px;
+       Generous on purpose - 10px still clipped it. Also wide enough now
+       to host the reminder-alarm indicator past the row's own content. */
+    padding: 0 0 0 26px;
+  }
+  /* .ruled-body's own ruled-paper background paints straight through this
+     element's transparent padding area too (it's clipped to .ruled-body's
+     content-box, which this list exactly fills) - without this opaque
+     cover, anything placed in that left gutter (the reminder-alarm icon)
+     would still visibly sit on top of the blue ruled lines instead of
+     reading as outside them. Sits behind the actual row content (painted
+     before it in DOM/paint order), never above. */
+  ol.task-list::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 26px;
+    background: var(--paper);
   }
   li.task {
     position: relative;
@@ -2391,7 +2409,7 @@
   .task-actions button:hover { opacity: 1; color: var(--danger); }
   .task-reminder-indicator {
     position: absolute;
-    left: -18px;
+    left: -24px;
     top: 50%;
     transform: translateY(-50%);
     width: 15px;
