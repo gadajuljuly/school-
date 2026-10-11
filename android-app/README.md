@@ -149,3 +149,17 @@ path automatically (see `capacitorShareAvailable` in `tasks.html`). This is a
 **new native plugin**, so it needs `npm install` (picks up both packages),
 then `npx cap sync android`, then rebuild and reinstall - a plain website
 update alone won't add this.
+
+## In-app update prompt (one-time native setup)
+
+Ordinary website changes reach everyone on next launch with no Play
+release, but native changes (notification channels, launcher icon, new
+plugins) only arrive through Play, whose background auto-update can take a
+day or more. `@capawesome/capacitor-app-update` closes that gap: `tasks.html`
+(see `capacitorAppUpdateAvailable`) asks Play on every launch/resume whether
+a newer version exists and, if so, opens Play's full-screen "update now"
+flow inside the app. This is a **new native plugin**, so it needs
+`npm install`, then `npx cap sync android`, then a rebuilt and published
+release - only versions released *after* that one will be offered this way.
+It only works for copies installed from Google Play (including test tracks),
+not for builds installed straight from Android Studio.

@@ -12806,6 +12806,40 @@
     });
   }
 
+  // Native-only changes (notification channels, launcher icon, plugins)
+  // still need a new Play release, and Play's own background auto-update can
+  // take a day or more to reach a phone. @capawesome/capacitor-app-update
+  // asks Play directly whether a newer version exists and, if so, opens
+  // Play's full-screen "update now" flow right inside the app. Checked on
+  // launch and every time the app comes back to the foreground, so someone
+  // who backs out of the prompt gets it again next time. Only does anything
+  // in the Play-installed native app; the plugin is absent everywhere else.
+  var capacitorAppUpdateAvailable = !!(
+    window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform() &&
+    window.Capacitor.Plugins && window.Capacitor.Plugins.AppUpdate
+  );
+  if (capacitorAppUpdateAvailable) {
+    var appUpdateCheckRunning = false;
+    var checkForNativeAppUpdate = function () {
+      if (appUpdateCheckRunning) return;
+      appUpdateCheckRunning = true;
+      var AppUpdate = window.Capacitor.Plugins.AppUpdate;
+      AppUpdate.getAppUpdateInfo().then(function (info) {
+        // 2 = UPDATE_AVAILABLE, 3 = an update the user already started
+        // (resume it rather than leaving it half-done)
+        if ((info.updateAvailability === 2 && info.immediateUpdateAllowed) || info.updateAvailability === 3) {
+          return AppUpdate.performImmediateUpdate();
+        }
+      }).catch(function () {}).then(function () {
+        appUpdateCheckRunning = false;
+      });
+    };
+    checkForNativeAppUpdate();
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState === "visible") checkForNativeAppUpdate();
+    });
+  }
+
   function loadFromLocalOrDefault() {
     return loadLocalData() || defaultData();
   }
