@@ -163,3 +163,24 @@ flow inside the app. This is a **new native plugin**, so it needs
 release - only versions released *after* that one will be offered this way.
 It only works for copies installed from Google Play (including test tracks),
 not for builds installed straight from Android Studio.
+
+## Alarm-clock task reminders (native plugin in `native-src/`)
+
+A pushed FCM notification can only ring once, so per-task reminders ring
+through a small local plugin instead: `tasks.html` (`syncNativeTaskAlarms`)
+hands the plugin every active reminder, and it schedules them with
+AlarmManager and shows an insistent alarm-sound notification that keeps
+ringing until "כבה" or "נודניק" (5 minutes) is pressed. Reminders the app
+has picked up are flagged `nativeAlarm`, and `send-reminders` stops also
+pushing those to native devices.
+
+The generated `android/` project isn't in git, so the sources live in
+`android-app/native-src/` and are copied in:
+
+1. Copy every `.java` file from `native-src/` into
+   `android/app/src/main/java/com/gadajuljuly/itask/`.
+2. In `MainActivity.java`, add `registerPlugin(ItaskAlarmPlugin.class);` as
+   the first line of `onCreate`, before `super.onCreate(savedInstanceState);`.
+3. Add the permissions and receivers from
+   `native-src/AndroidManifest-additions.xml` to `AndroidManifest.xml`.
+4. Rebuild and publish.

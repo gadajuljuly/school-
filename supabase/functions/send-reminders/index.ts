@@ -129,7 +129,7 @@ function nowHHMMInAppTimeZone(now: Date): string {
 
 const ONE_SHOT_GRACE_MINUTES = 15;
 
-type DueTaskReminder = { taskText: string; sheetName: string; taskId: string; sheetId: string; date: string; task: any };
+type DueTaskReminder = { taskText: string; sheetName: string; taskId: string; sheetId: string; date: string; task: any; nativeAlarm: boolean };
 
 // Scans every task across every (non-ended) sheet for a per-task reminder
 // (set via the "התראה" long-press button) that's due right now - an
@@ -170,7 +170,7 @@ function findDueTaskReminders(appData: any, now: Date, nowHHMM: string): DueTask
       } else {
         continue;
       }
-      due.push({ taskText: t.text, sheetName: sheet.name, taskId: t.id, sheetId: sheet.id, date: t.date, task: t });
+      due.push({ taskText: t.text, sheetName: sheet.name, taskId: t.id, sheetId: sheet.id, date: t.date, task: t, nativeAlarm: !!r.nativeAlarm });
     }
   }
   return due;
@@ -258,6 +258,9 @@ Deno.serve(async () => {
     const dueTaskReminders = findDueTaskReminders(appData, now, nowHHMM);
     if (dueTaskReminders.length) {
       for (const dr of dueTaskReminders) {
+        // The native app (ItaskAlarm plugin) already rings this one itself
+        // as a real alarm clock - pushing it too would double it up there.
+        if (dr.nativeAlarm && sub.fcm_token) continue;
         // "alarm" tells the service worker to show this one like a real
         // alarm clock (stays on screen, vibrates) instead of a quiet
         // passing nudge - and a per-task tag keeps two different tasks'

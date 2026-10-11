@@ -3661,6 +3661,7 @@
     taskReminderActiveEvery30: { he: "פעילה: כל חצי שעה", en: "Active: every half hour", ar: "نشط: كل نصف ساعة", ru: "Активно: каждые полчаса" },
     taskReminderActiveEveryHour: { he: "פעילה: כל שעה", en: "Active: every hour", ar: "نشط: كل ساعة", ru: "Активно: каждый час" },
     taskReminderActiveAt: { he: "פעילה: בשעה ", en: "Active: at ", ar: "نشط: الساعة ", ru: "Активно: в " },
+    exactAlarmPermissionPrompt: { he: "כדי שהשעון המעורר יצלצל בדיוק בזמן, צריך לאשר לאפליקציה \"שעונים מעוררים ותזכורות\". לפתוח את ההגדרה?", en: "For the alarm to ring exactly on time, allow \"Alarms & reminders\" for this app. Open the setting?", ar: "لكي يرن المنبه في الوقت المحدد بالضبط، اسمح لهذا التطبيق بـ \"المنبهات والتذكيرات\". فتح الإعداد؟", ru: "Чтобы будильник звонил точно вовремя, разрешите приложению «Будильники и напоминания». Открыть настройку?" },
     taskReminderNotSupportedMsg: { he: "התראות לא נתמכות או חסומות במכשיר הזה", en: "Notifications aren't supported or are blocked on this device", ar: "الإشعارات غير مدعومة أو محظورة على هذا الجهاز", ru: "Уведомления не поддерживаются или заблокированы на этом устройстве" },
     moveModeMoveBtn: { he: "העברה", en: "Move", ar: "نقل", ru: "Переместить" },
     moveModeCopyBtn: { he: "העתקה", en: "Copy", ar: "نسخ", ru: "Копировать" },
@@ -4707,6 +4708,59 @@
     if (changed) { saveData(); render(); }
   }
   setInterval(pruneFinishedTaskReminders, 30000);
+
+  // In the native app, per-task reminders ring as a real alarm clock: the
+  // ItaskAlarm plugin (android-app/native-src) schedules them with Android's
+  // AlarmManager and shows an insistent notification that keeps ringing
+  // until "כבה"/"נודניק" is pressed - something a pushed FCM notification
+  // can never do. This hands it the full current set on every render (it
+  // replaces whatever was scheduled before), and flags each reminder
+  // nativeAlarm so send-reminders stops also pushing it to native devices.
+  // Private projects only, same as send-reminders itself.
+  var nativeTaskAlarmPlugin = (
+    window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform() &&
+    window.Capacitor.Plugins && window.Capacitor.Plugins.ItaskAlarm
+  ) || null;
+  var lastNativeTaskAlarmsJson = null;
+  function syncNativeTaskAlarms() {
+    if (!nativeTaskAlarmPlugin || dataLoadBlocked || !privateDataSettled) return;
+    var alarms = [];
+    var flagged = false;
+    (data.sheets || []).forEach(function (sheet) {
+      if (sheet.ended) return;
+      (sheet.tasks || []).forEach(function (t) {
+        var r = t.reminder;
+        if (t.status === 2 || !isTaskReminderActive(r)) return;
+        var entry = { id: sheet.id + ":" + t.id, title: sheet.name, body: t.text };
+        if (r.type === "time" && r.fireAt) {
+          entry.at = Date.parse(r.fireAt);
+        } else if (r.type === "interval") {
+          if (!r.startedAt) { r.startedAt = new Date().toISOString(); flagged = true; }
+          entry.at = Date.parse(r.startedAt) + r.minutes * 60000;
+          entry.repeatMinutes = r.minutes;
+        } else {
+          return;
+        }
+        if (!r.nativeAlarm) { r.nativeAlarm = true; flagged = true; }
+        alarms.push(entry);
+      });
+    });
+    if (flagged) saveData();
+    var json = JSON.stringify(alarms);
+    if (json === lastNativeTaskAlarmsJson) return;
+    lastNativeTaskAlarmsJson = json;
+    nativeTaskAlarmPlugin.setAlarms({ alarms: alarms }).catch(function () { lastNativeTaskAlarmsJson = null; });
+  }
+  // Android 12+ only rings an alarm on the exact minute with the user's
+  // "Alarms & reminders" permission; without it alarms can drift by minutes.
+  function ensureExactAlarmPermission() {
+    if (!nativeTaskAlarmPlugin) return;
+    nativeTaskAlarmPlugin.canScheduleExact().then(function (res) {
+      if (res && res.value === false && confirm(tr("exactAlarmPermissionPrompt"))) {
+        nativeTaskAlarmPlugin.openExactAlarmSettings();
+      }
+    }).catch(function () {});
+  }
   document.addEventListener("visibilitychange", function () {
     if (document.visibilityState === "visible") pruneFinishedTaskReminders();
   });
@@ -4792,15 +4846,16 @@
       closeMoveTask();
       showToast(tr("taskReminderSetMsg"));
       render();
+      ensureExactAlarmPermission();
     });
   }
 
   taskReminderBtn.addEventListener("click", openTaskReminderModal);
   taskReminderEvery30Btn.addEventListener("click", function () {
-    setTaskReminder({ type: "interval", minutes: 30, lastSentAt: null });
+    setTaskReminder({ type: "interval", minutes: 30, startedAt: new Date().toISOString(), lastSentAt: null });
   });
   taskReminderEvery60Btn.addEventListener("click", function () {
-    setTaskReminder({ type: "interval", minutes: 60, lastSentAt: null });
+    setTaskReminder({ type: "interval", minutes: 60, startedAt: new Date().toISOString(), lastSentAt: null });
   });
   taskReminderTimeToggleBtn.addEventListener("click", function () {
     taskReminderTimeRow.hidden = !taskReminderTimeRow.hidden;
@@ -12755,6 +12810,7 @@
     });
     taskList.scrollTop = taskListScrollTop;
     renderTaskReminderIconsLayer(reminderRowsForIconsLayer);
+    syncNativeTaskAlarms();
 
     sheetTitle.textContent = activeSheet().name;
     renderSheetTitleLogo();
