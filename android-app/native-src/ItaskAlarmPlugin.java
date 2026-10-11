@@ -29,6 +29,15 @@ public class ItaskAlarmPlugin extends Plugin {
         }
     }
 
+    // Reminders whose ringing was turned off ("כבה") since the last call,
+    // as "sheetId:taskId" ids - the page removes them from their tasks.
+    @PluginMethod
+    public void takeTurnedOffAlarms(PluginCall call) {
+        JSObject result = new JSObject();
+        result.put("ids", TaskAlarmScheduler.takeTurnedOff(getContext()));
+        call.resolve(result);
+    }
+
     @PluginMethod
     public void canScheduleExact(PluginCall call) {
         JSObject result = new JSObject();

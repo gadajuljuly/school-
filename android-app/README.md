@@ -169,8 +169,11 @@ not for builds installed straight from Android Studio.
 A pushed FCM notification can only ring once, so per-task reminders ring
 through a small local plugin instead: `tasks.html` (`syncNativeTaskAlarms`)
 hands the plugin every active reminder, and it schedules them with
-AlarmManager and shows an insistent alarm-sound notification that keeps
-ringing until "כבה" or "נודניק" (5 minutes) is pressed. Reminders the app
+AlarmManager and shows an insistent notification that keeps tapping out a
+Morse-telegraph sound (`native-src/task_alarm_morse.wav`) until "כבה" or
+"נודניק" (5 minutes) is pressed. "כבה" turns the reminder off and the page
+then removes it from the task; marking the task done pauses its reminder
+(un-marking it before its time brings it back). Reminders the app
 has picked up are flagged `nativeAlarm`, and `send-reminders` stops also
 pushing those to native devices.
 
@@ -179,8 +182,10 @@ The generated `android/` project isn't in git, so the sources live in
 
 1. Copy every `.java` file from `native-src/` into
    `android/app/src/main/java/com/gadajuljuly/itask/`.
-2. In `MainActivity.java`, add `registerPlugin(ItaskAlarmPlugin.class);` as
+2. Copy `native-src/task_alarm_morse.wav` into `android/app/src/main/res/raw/`
+   (create the `raw` folder if it doesn't exist).
+3. In `MainActivity.java`, add `registerPlugin(ItaskAlarmPlugin.class);` as
    the first line of `onCreate`, before `super.onCreate(savedInstanceState);`.
-3. Add the permissions and receivers from
+4. Add the permissions and receivers from
    `native-src/AndroidManifest-additions.xml` to `AndroidManifest.xml`.
-4. Rebuild and publish.
+5. Rebuild and publish.

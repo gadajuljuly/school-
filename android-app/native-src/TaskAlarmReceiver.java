@@ -19,7 +19,7 @@ public class TaskAlarmReceiver extends BroadcastReceiver {
                     intent.getStringExtra(TaskAlarmScheduler.EXTRA_TITLE),
                     intent.getStringExtra(TaskAlarmScheduler.EXTRA_BODY));
         } else if (TaskAlarmScheduler.ACTION_STOP.equals(action)) {
-            TaskAlarmScheduler.stopRinging(context, id);
+            TaskAlarmScheduler.turnOff(context, id);
         }
     }
 }

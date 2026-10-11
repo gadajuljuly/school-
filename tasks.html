@@ -2115,7 +2115,8 @@
     margin-bottom: 14px;
   }
   .task-reminder-time-row[hidden] { display: none; }
-  .task-reminder-time-row input[type="time"] {
+  .task-reminder-time-row input[type="time"],
+  .task-reminder-time-row input[type="date"] {
     flex: 1;
     min-width: 0;
     padding: 9px;
@@ -3087,6 +3088,7 @@
       </div>
       <button type="button" class="convert-to-note-btn" id="taskReminderTimeToggleBtn" data-i18n="taskReminderSpecificTime">שעה מסוימת</button>
       <div class="task-reminder-time-row" id="taskReminderTimeRow" hidden>
+        <input type="date" id="taskReminderDateInput">
         <input type="time" id="taskReminderTimeInput">
         <button type="button" id="taskReminderTimeConfirmBtn" data-i18n="confirmBtn">אישור</button>
       </div>
@@ -3661,6 +3663,9 @@
     taskReminderActiveEvery30: { he: "פעילה: כל חצי שעה", en: "Active: every half hour", ar: "نشط: كل نصف ساعة", ru: "Активно: каждые полчаса" },
     taskReminderActiveEveryHour: { he: "פעילה: כל שעה", en: "Active: every hour", ar: "نشط: كل ساعة", ru: "Активно: каждый час" },
     taskReminderActiveAt: { he: "פעילה: בשעה ", en: "Active: at ", ar: "نشط: الساعة ", ru: "Активно: в " },
+    taskReminderActiveOnDate: { he: "פעילה: בתאריך ", en: "Active: on ", ar: "نشط: بتاريخ ", ru: "Активно: " },
+    taskReminderAtTimeWord: { he: "בשעה ", en: "at ", ar: "الساعة ", ru: "в " },
+    taskReminderPastMsg: { he: "המועד שנבחר כבר עבר", en: "That time has already passed", ar: "هذا الوقت قد مضى بالفعل", ru: "Это время уже прошло" },
     exactAlarmPermissionPrompt: { he: "כדי שהשעון המעורר יצלצל בדיוק בזמן, צריך לאשר לאפליקציה \"שעונים מעוררים ותזכורות\". לפתוח את ההגדרה?", en: "For the alarm to ring exactly on time, allow \"Alarms & reminders\" for this app. Open the setting?", ar: "لكي يرن المنبه في الوقت المحدد بالضبط، اسمح لهذا التطبيق بـ \"المنبهات والتذكيرات\". فتح الإعداد؟", ru: "Чтобы будильник звонил точно вовремя, разрешите приложению «Будильники и напоминания». Открыть настройку?" },
     taskReminderNotSupportedMsg: { he: "התראות לא נתמכות או חסומות במכשיר הזה", en: "Notifications aren't supported or are blocked on this device", ar: "الإشعارات غير مدعومة أو محظورة على هذا الجهاز", ru: "Уведомления не поддерживаются или заблокированы на этом устройстве" },
     moveModeMoveBtn: { he: "העברה", en: "Move", ar: "نقل", ru: "Переместить" },
@@ -4537,6 +4542,7 @@
   var taskReminderTimeToggleBtn = document.getElementById("taskReminderTimeToggleBtn");
   var taskReminderTimeRow = document.getElementById("taskReminderTimeRow");
   var taskReminderTimeInput = document.getElementById("taskReminderTimeInput");
+  var taskReminderDateInput = document.getElementById("taskReminderDateInput");
   var taskReminderTimeConfirmBtn = document.getElementById("taskReminderTimeConfirmBtn");
   var taskReminderOffBtn = document.getElementById("taskReminderOffBtn");
   var taskReminderCancelBtn = document.getElementById("taskReminderCancelBtn");
@@ -4674,13 +4680,17 @@
 
   // A one-shot "time" alarm is finished once it has rung: the server
   // removes it then, but this device's in-memory copy only learns that on
-  // its next load, so it also expires locally a minute after fireAt - the
+  // its next load, so it also expires locally shortly after fireAt - the
   // alarm icon disappears and the reminder option resets on time either way.
+  // In the native app it stays until the ringing is turned off ("כבה",
+  // reported back by the plugin), with an hour as the outer limit in case
+  // it's never touched (snoozes in between keep it alive meanwhile).
   function isTaskReminderActive(reminder) {
     if (!reminder) return false;
     if (reminder.type !== "time") return true;
     if (reminder.firedAt) return false;
-    return !reminder.fireAt || Date.parse(reminder.fireAt) + 60000 > Date.now();
+    var graceMs = nativeTaskAlarmPlugin ? 60 * 60000 : 60000;
+    return !reminder.fireAt || Date.parse(reminder.fireAt) + graceMs > Date.now();
   }
   function nextOccurrenceOfTime(hhmm) {
     var parts = hhmm.split(":");
@@ -4689,7 +4699,27 @@
     if (d.getTime() <= Date.now()) d.setDate(d.getDate() + 1);
     return d.toISOString();
   }
+  // "כבה" on a ringing native alarm turns that reminder off for good: the
+  // plugin queues the ids and this removes them from the data.
+  function collectNativeAlarmsTurnedOff() {
+    if (!nativeTaskAlarmPlugin || dataLoadBlocked || !privateDataSettled) return;
+    nativeTaskAlarmPlugin.takeTurnedOffAlarms().then(function (res) {
+      var ids = (res && res.ids) || [];
+      if (!ids.length) return;
+      var changed = false;
+      (data.sheets || []).forEach(function (sheet) {
+        (sheet.tasks || []).forEach(function (t) {
+          if (t.reminder && ids.indexOf(sheet.id + ":" + t.id) !== -1) {
+            delete t.reminder;
+            changed = true;
+          }
+        });
+      });
+      if (changed) { saveData(); render(); }
+    }).catch(function () {});
+  }
   function pruneFinishedTaskReminders() {
+    collectNativeAlarmsTurnedOff();
     if (isEditingActively()) return;
     var changed = false;
     allSheets().forEach(function (sheet) {
@@ -4770,6 +4800,9 @@
     if (reminder.type === "interval") {
       return reminder.minutes === 30 ? tr("taskReminderActiveEvery30") : tr("taskReminderActiveEveryHour");
     }
+    if (reminder.date) {
+      return tr("taskReminderActiveOnDate") + isoToDisplay(reminder.date) + " " + tr("taskReminderAtTimeWord") + reminder.time;
+    }
     return tr("taskReminderActiveAt") + reminder.time;
   }
 
@@ -4817,7 +4850,10 @@
     var task = activeSheet().tasks.find(function (t) { return t.id === pendingMoveTaskId; });
     moveTaskOverlay.hidden = true;
     taskReminderTimeRow.hidden = true;
-    taskReminderTimeInput.value = (task && task.reminder && task.reminder.type === "time") ? task.reminder.time : "";
+    var currentTimeReminder = (task && isTaskReminderActive(task.reminder) && task.reminder.type === "time") ? task.reminder : null;
+    taskReminderTimeInput.value = currentTimeReminder ? currentTimeReminder.time : "";
+    taskReminderDateInput.value = (currentTimeReminder && currentTimeReminder.date) || todayISO();
+    taskReminderDateInput.min = todayISO();
     var statusText = task ? describeTaskReminder(task.reminder) : "";
     taskReminderCurrentStatus.hidden = !statusText;
     taskReminderCurrentStatus.textContent = statusText;
@@ -4862,9 +4898,15 @@
     if (!taskReminderTimeRow.hidden) taskReminderTimeInput.focus();
   });
   taskReminderTimeConfirmBtn.addEventListener("click", function () {
-    if (!taskReminderTimeInput.value) return;
+    if (!taskReminderTimeInput.value || !taskReminderDateInput.value) return;
     var time = taskReminderTimeInput.value;
-    setTaskReminder({ type: "time", time: time, fireAt: nextOccurrenceOfTime(time), firedAt: null });
+    var date = taskReminderDateInput.value;
+    var fireAtDate = new Date(date + "T" + time);
+    if (isNaN(fireAtDate.getTime()) || fireAtDate.getTime() <= Date.now()) {
+      showToast(tr("taskReminderPastMsg"));
+      return;
+    }
+    setTaskReminder({ type: "time", date: date, time: time, fireAt: fireAtDate.toISOString(), firedAt: null });
   });
   taskReminderOffBtn.addEventListener("click", function () { setTaskReminder(null); });
   taskReminderCancelBtn.addEventListener("click", closeMoveTask);
@@ -12322,8 +12364,6 @@
     if (t) {
       var wasDone = t.status === 2;
       t.status = (t.status + 1) % 3;
-      // a finished task has nothing left to remind about
-      if (t.status === 2) delete t.reminder;
       saveData();
       if (sheet.shared && t.type === "task" && wasDone !== (t.status === 2)) {
         sendChatSystemMessage(sheet.id, t.status === 2 ? "done" : "undone", t.text, myPhoneNumber);
@@ -12783,7 +12823,8 @@
       }
       li.appendChild(actions);
       taskList.appendChild(li);
-      if (isTaskReminderActive(t.reminder)) reminderRowsForIconsLayer.push({ task: t, editable: rowEditable, top: li.offsetTop, height: li.offsetHeight });
+      // done tasks keep their reminder (it comes back if un-marked) but it's paused
+      if (t.status !== 2 && isTaskReminderActive(t.reminder)) reminderRowsForIconsLayer.push({ task: t, editable: rowEditable, top: li.offsetTop, height: li.offsetHeight });
 
       if (!(rowEditable && state.editingTaskId === t.id)) {
         var textOverflowPx = textLabel.scrollWidth - textEl.clientWidth;
