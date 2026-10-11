@@ -4671,8 +4671,48 @@
     }).catch(function () { return false; });
   }
 
+  // A one-shot "time" alarm is finished once it has rung: the server
+  // removes it then, but this device's in-memory copy only learns that on
+  // its next load, so it also expires locally a minute after fireAt - the
+  // alarm icon disappears and the reminder option resets on time either way.
+  function isTaskReminderActive(reminder) {
+    if (!reminder) return false;
+    if (reminder.type !== "time") return true;
+    if (reminder.firedAt) return false;
+    return !reminder.fireAt || Date.parse(reminder.fireAt) + 60000 > Date.now();
+  }
+  function nextOccurrenceOfTime(hhmm) {
+    var parts = hhmm.split(":");
+    var d = new Date();
+    d.setHours(+parts[0], +parts[1], 0, 0);
+    if (d.getTime() <= Date.now()) d.setDate(d.getDate() + 1);
+    return d.toISOString();
+  }
+  function pruneFinishedTaskReminders() {
+    if (isEditingActively()) return;
+    var changed = false;
+    allSheets().forEach(function (sheet) {
+      (sheet.tasks || []).forEach(function (t) {
+        if (!t.reminder || t.reminder.type !== "time") return;
+        if (!isTaskReminderActive(t.reminder)) {
+          delete t.reminder;
+          changed = true;
+        } else if (!t.reminder.fireAt) {
+          // set before fireAt existed - pin it to its next occurrence
+          t.reminder.fireAt = nextOccurrenceOfTime(t.reminder.time);
+          changed = true;
+        }
+      });
+    });
+    if (changed) { saveData(); render(); }
+  }
+  setInterval(pruneFinishedTaskReminders, 30000);
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible") pruneFinishedTaskReminders();
+  });
+
   function describeTaskReminder(reminder) {
-    if (!reminder) return "";
+    if (!isTaskReminderActive(reminder)) return "";
     if (reminder.type === "interval") {
       return reminder.minutes === 30 ? tr("taskReminderActiveEvery30") : tr("taskReminderActiveEveryHour");
     }
@@ -4727,7 +4767,7 @@
     var statusText = task ? describeTaskReminder(task.reminder) : "";
     taskReminderCurrentStatus.hidden = !statusText;
     taskReminderCurrentStatus.textContent = statusText;
-    taskReminderOffBtn.hidden = !task || !task.reminder;
+    taskReminderOffBtn.hidden = !task || !isTaskReminderActive(task.reminder);
     taskReminderOverlay.hidden = false;
   }
 
@@ -4768,7 +4808,8 @@
   });
   taskReminderTimeConfirmBtn.addEventListener("click", function () {
     if (!taskReminderTimeInput.value) return;
-    setTaskReminder({ type: "time", time: taskReminderTimeInput.value, firedAt: null });
+    var time = taskReminderTimeInput.value;
+    setTaskReminder({ type: "time", time: time, fireAt: nextOccurrenceOfTime(time), firedAt: null });
   });
   taskReminderOffBtn.addEventListener("click", function () { setTaskReminder(null); });
   taskReminderCancelBtn.addEventListener("click", closeMoveTask);
@@ -12226,6 +12267,8 @@
     if (t) {
       var wasDone = t.status === 2;
       t.status = (t.status + 1) % 3;
+      // a finished task has nothing left to remind about
+      if (t.status === 2) delete t.reminder;
       saveData();
       if (sheet.shared && t.type === "task" && wasDone !== (t.status === 2)) {
         sendChatSystemMessage(sheet.id, t.status === 2 ? "done" : "undone", t.text, myPhoneNumber);
@@ -12685,7 +12728,7 @@
       }
       li.appendChild(actions);
       taskList.appendChild(li);
-      if (t.reminder) reminderRowsForIconsLayer.push({ task: t, editable: rowEditable, top: li.offsetTop, height: li.offsetHeight });
+      if (isTaskReminderActive(t.reminder)) reminderRowsForIconsLayer.push({ task: t, editable: rowEditable, top: li.offsetTop, height: li.offsetHeight });
 
       if (!(rowEditable && state.editingTaskId === t.id)) {
         var textOverflowPx = textLabel.scrollWidth - textEl.clientWidth;

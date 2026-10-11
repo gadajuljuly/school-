@@ -127,6 +127,8 @@ function nowHHMMInAppTimeZone(now: Date): string {
   return `${h}:${m}`;
 }
 
+const ONE_SHOT_GRACE_MINUTES = 15;
+
 type DueTaskReminder = { taskText: string; sheetName: string; taskId: string; sheetId: string; date: string; task: any };
 
 // Scans every task across every (non-ended) sheet for a per-task reminder
@@ -134,7 +136,7 @@ type DueTaskReminder = { taskText: string; sheetName: string; taskId: string; sh
 // "interval" one (every 30/60 minutes) due since its own last send, or a
 // one-shot "time" alarm whose clock time matches this exact minute and
 // hasn't already fired. Mutates the matched tasks' reminder bookkeeping
-// in place (lastSentAt/firedAt) so the caller just needs to persist
+// in place (lastSentAt, or removing a fired one-shot) so the caller just needs to persist
 // appData back once after sending, same as any other in-place task edit.
 function findDueTaskReminders(appData: any, now: Date, nowHHMM: string): DueTaskReminder[] {
   if (!appData || !Array.isArray(appData.sheets)) return [];
@@ -149,8 +151,22 @@ function findDueTaskReminders(appData: any, now: Date, nowHHMM: string): DueTask
         if (elapsedMinutes < r.minutes) continue;
         r.lastSentAt = now.toISOString();
       } else if (r.type === "time") {
-        if (r.firedAt || r.time !== nowHHMM) continue;
-        r.firedAt = now.toISOString();
+        if (r.firedAt) continue;
+        // fireAt (set by the app since this change) pins the alarm to one
+        // exact moment, so a stale device copy that later re-saves an
+        // already-fired reminder can't make it ring again the next day -
+        // anything more than a few minutes past fireAt is just dropped.
+        // Older reminders without it fall back to the plain clock match.
+        if (r.fireAt) {
+          const lateMinutes = (now.getTime() - new Date(r.fireAt).getTime()) / 60000;
+          if (lateMinutes < 0) continue;
+          if (lateMinutes > ONE_SHOT_GRACE_MINUTES) { delete t.reminder; continue; }
+        } else if (r.time !== nowHHMM) {
+          continue;
+        }
+        // A one-shot alarm is finished once sent: drop it entirely so the
+        // task's alarm icon disappears and its reminder option resets.
+        delete t.reminder;
       } else {
         continue;
       }
