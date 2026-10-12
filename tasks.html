@@ -2773,16 +2773,8 @@
     cursor: pointer;
   }
   .focus-task:first-of-type { border-top: none; }
-  .focus-task-mark {
-    flex: none;
-    width: 14px;
-    height: 14px;
-    margin-top: 4px;
-    border-radius: 50%;
-    border: 2px solid var(--accent);
-  }
-  .focus-task.partial .focus-task-mark { background: linear-gradient(90deg, var(--accent) 50%, transparent 50%); }
-  .focus-task.done .focus-task-mark { background: var(--accent); }
+  .focus-task .row-mark { margin-top: 2px; }
+  .focus-task.done .row-mark { opacity: 0.5; }
   .focus-task.done .focus-task-text { text-decoration: line-through; color: var(--ink-muted); }
   .focus-task-text { flex: 1; overflow-wrap: anywhere; user-select: none; -webkit-user-select: none; }
   .focus-task-alarm { flex: none; width: 18px; height: 18px; }
@@ -4950,8 +4942,10 @@
   function buildFocusTaskRow(sheet, t, editable) {
     var row = document.createElement("div");
     row.className = "focus-task" + (t.status === 1 ? " partial" : "") + (t.status === 2 ? " done" : "");
+    // the same X status mark as the main list (the app's brand mark)
     var mark = document.createElement("span");
-    mark.className = "focus-task-mark";
+    mark.className = "row-mark";
+    mark.innerHTML = rowMarkSvg(t.status);
     var text = document.createElement("span");
     text.className = "focus-task-text";
     text.textContent = t.text;

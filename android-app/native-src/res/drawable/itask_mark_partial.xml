@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The app's X status mark (tasks.html ROW_MARK_*_D): partly done, half of
+     the red stroke drawn. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="20dp"
+    android:height="18dp"
+    android:viewportWidth="20"
+    android:viewportHeight="18">
+    <path
+        android:pathData="M4,3 L16,15 M1.5,3 L6.5,3 M13.5,3 L18.5,3 M1.5,15 L6.5,15 M13.5,15 L18.5,15"
+        android:strokeColor="#2C2A24"
+        android:strokeLineCap="round"
+        android:strokeWidth="2.1" />
+    <path
+        android:pathData="M16,3 L10,9"
+        android:strokeColor="#B6473F"
+        android:strokeLineCap="round"
+        android:strokeWidth="2.1" />
+</vector>

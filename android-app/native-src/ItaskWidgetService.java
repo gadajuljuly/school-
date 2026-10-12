@@ -69,7 +69,8 @@ public class ItaskWidgetService extends RemoteViewsService {
                 views.setTextViewText(R.id.itask_widget_row_text, row.text);
             } else {
                 views = new RemoteViews(context.getPackageName(), R.layout.itask_widget_task_row);
-                views.setTextViewText(R.id.itask_widget_row_mark, row.status == 1 ? "◐" : "○");
+                views.setImageViewResource(R.id.itask_widget_row_mark,
+                        row.status == 1 ? R.drawable.itask_mark_partial : R.drawable.itask_mark_open);
                 views.setTextViewText(R.id.itask_widget_row_text, row.text);
             }
             views.setOnClickFillInIntent(R.id.itask_widget_row_root, new Intent());
