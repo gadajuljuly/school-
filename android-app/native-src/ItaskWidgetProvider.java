@@ -15,11 +15,11 @@ import org.json.JSONObject;
 
 // Home-screen "המשימות שלי" widget, shaped like the app: project tabs on
 // top (the current project plus its neighbours - tapping a side tab moves
-// to it) and that project's open tasks on the page below.
+// to it) and that project's open tasks on the page below. Tapping a task
+// opens the app on that task, tapping the current tab on that project.
 // It can't reach Supabase itself, so tasks.html (syncNativeWidget) hands it
 // the list through ItaskAlarmPlugin.setWidgetData whenever it changes; it
-// shows the last list the app saw. Tapping a task or the title opens the
-// app's full-screen tasks-only view.
+// shows the last list the app saw.
 public class ItaskWidgetProvider extends AppWidgetProvider {
     static final String PREFS = "itask_widget";
     static final String KEY_DATA = "data";
@@ -92,10 +92,11 @@ public class ItaskWidgetProvider extends AppWidgetProvider {
         String nextLabel = index < count - 1 ? tabLabel(projects.optJSONObject(index + 1)) : "";
         String emptyText = data.optString("emptyText", "");
 
-        PendingIntent open = PendingIntent.getActivity(c, 0, ItaskAlarmPlugin.focusViewIntent(c),
+        String projectView = project != null ? "task|" + project.optString("id") + "||" : null;
+        PendingIntent open = PendingIntent.getActivity(c, 0, ItaskAlarmPlugin.openAppIntent(c, projectView),
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        // list rows only add an (empty) fill-in to this, so it must be mutable
-        PendingIntent openTemplate = PendingIntent.getActivity(c, 1, ItaskAlarmPlugin.focusViewIntent(c),
+        // each list row fills in its own task, so this must be mutable
+        PendingIntent openTemplate = PendingIntent.getActivity(c, 1, ItaskAlarmPlugin.openAppIntent(c, null),
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE);
         PendingIntent prev = PendingIntent.getBroadcast(c, 2,
                 new Intent(c, ItaskWidgetProvider.class).setAction(ACTION_PREV), PendingIntent.FLAG_IMMUTABLE);

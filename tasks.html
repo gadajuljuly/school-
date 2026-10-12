@@ -2705,117 +2705,9 @@
     .sheet-tab { max-width: 100px; }
     .notebook-date { font-size: 0.95rem; }
   }
-  /* "המשימות שלי": a full-screen, tasks-only view of every open task
-     grouped by project - opened from the home-screen widget or the app
-     icon's long-press shortcut (native), or tasks.html#focus. */
-  .focus-view {
-    position: fixed;
-    inset: 0;
-    /* above the app's own menus (30), below its modals (40) so the task
-       long-press menu can open on top of this view */
-    z-index: 35;
-    background: var(--desk);
-    overflow-y: auto;
-    padding: calc(env(safe-area-inset-top, 0px) + 14px) 14px calc(env(safe-area-inset-bottom, 0px) + 20px);
-  }
-  .focus-view[hidden] { display: none; }
-  .focus-view-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 14px;
-  }
-  .focus-view-header h2 {
-    flex: 1;
-    margin: 0;
-    font-family: "Rubik", "Assistant", sans-serif;
-    font-size: 1.35rem;
-    color: var(--accent);
-  }
-  .focus-view-header button {
-    padding: 8px 14px;
-    border-radius: 999px;
-    border: none;
-    background: var(--accent);
-    color: var(--accent-contrast);
-    font-family: inherit;
-    font-size: 0.9rem;
-    font-weight: 600;
-    cursor: pointer;
-  }
-  /* tabs row + page, shaped like the app's own notebook */
-  .focus-notebook {
-    border-radius: 10px;
-    overflow: hidden;
-    box-shadow: 0 1px 4px var(--shadow);
-  }
-  .focus-notebook .focus-project {
-    border-radius: 0;
-    box-shadow: none;
-    margin-bottom: 0;
-  }
-  .focus-notebook .focus-view-empty { margin: 16px 0; }
-  .focus-project {
-    background: var(--paper);
-    border-radius: 14px;
-    box-shadow: 0 1px 4px var(--shadow);
-    padding: 12px 14px;
-    margin-bottom: 12px;
-  }
-  .focus-project-name {
-    font-weight: 700;
-    font-size: 1.05rem;
-    color: var(--ink);
-    margin-bottom: 6px;
-  }
-  .focus-task {
-    -webkit-touch-callout: none;
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    width: 100%;
-    padding: 8px 0;
-    border: none;
-    border-top: 1px solid var(--rule);
-    background: none;
-    color: var(--ink);
-    font-family: inherit;
-    font-size: 0.98rem;
-    text-align: start;
-    cursor: pointer;
-  }
-  .focus-task:first-of-type { border-top: none; }
-  .focus-task .row-mark { margin-top: 2px; }
-  .focus-task.done .row-mark { opacity: 0.5; }
-  .focus-task.done .focus-task-text { text-decoration: line-through; color: var(--ink-muted); }
-  .focus-task-text { flex: 1; overflow-wrap: anywhere; user-select: none; -webkit-user-select: none; }
-  .focus-task-alarm { flex: none; width: 18px; height: 18px; }
-  .focus-task-open {
-    flex: none;
-    padding: 0 4px;
-    border: none;
-    background: none;
-    font-family: inherit;
-    cursor: pointer;
-    color: var(--accent);
-    font-size: 1.1rem;
-    line-height: 1.2;
-  }
-  .focus-view-empty {
-    text-align: center;
-    color: var(--ink-muted);
-    margin-top: 40px;
-  }
 </style>
 </head>
 <body>
-<div class="focus-view" id="focusView" hidden>
-  <div class="focus-view-header">
-    <h2 data-i18n="focusViewTitle">המשימות שלי</h2>
-    <button type="button" id="focusViewOpenAppBtn" data-i18n="focusViewOpenApp">לאפליקציה המלאה</button>
-  </div>
-  <div id="focusViewBody"></div>
-</div>
 <div id="navDebugToast" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#222;color:#fff;font-size:13px;line-height:1.4;padding:8px 12px;direction:rtl;display:none;white-space:pre-wrap;"></div>
 <div class="app-toast" id="appToast"></div>
 <div class="offline-sync-badge" id="offlineSyncBadge" data-i18n="offlineSyncBadgeMsg" hidden>השינויים נשמרו במכשיר וישמרו בשרת כשיהיה חיבור לאינטרנט</div>
@@ -3772,7 +3664,6 @@
     taskReminderActiveEveryHour: { he: "פעילה: כל שעה", en: "Active: every hour", ar: "نشط: كل ساعة", ru: "Активно: каждый час" },
     taskReminderActiveAt: { he: "פעילה: בשעה ", en: "Active: at ", ar: "نشط: الساعة ", ru: "Активно: в " },
     focusViewTitle: { he: "המשימות שלי", en: "My tasks", ar: "مهامي", ru: "Мои задачи" },
-    focusViewOpenApp: { he: "לאפליקציה המלאה", en: "Full app", ar: "التطبيق الكامل", ru: "Всё приложение" },
     focusViewEmpty: { he: "אין משימות פתוחות", en: "No open tasks", ar: "لا توجد مهام مفتوحة", ru: "Нет открытых задач" },
     taskReminderActiveOnDate: { he: "פעילה: בתאריך ", en: "Active: on ", ar: "نشط: بتاريخ ", ru: "Активно: " },
     taskReminderAtTimeWord: { he: "בשעה ", en: "at ", ar: "الساعة ", ru: "в " },
@@ -4893,8 +4784,7 @@
     nativeTaskAlarmPlugin.setAlarms({ alarms: alarms }).catch(function () { lastNativeTaskAlarmsJson = null; });
   }
   // Every open task (not done, not a note) of every live project, oldest
-  // first - shared by the full-screen "המשימות שלי" view and the native
-  // home-screen widget so both always show the same thing.
+  // first - what the native home-screen widget shows.
   function openTasksByProject() {
     return allSheets().filter(function (sheet) {
       return !sheet.ended && sheet.id !== HEAD_OFFICE_SHEET_ID;
@@ -4909,229 +4799,47 @@
     });
   }
 
-  var focusView = document.getElementById("focusView");
-  var focusViewBody = document.getElementById("focusViewBody");
-  // Tasks marked done from this view stay listed (struck through) until it
-  // closes, so a mistaken tap can be undone right here.
-  var focusKeepIds = {};
-  var focusActiveSheetId = null;
-  function renderFocusView() {
-    focusViewBody.innerHTML = "";
-    var today = todayISO();
-    var groups = allSheets().filter(function (sheet) {
-      return !sheet.ended && sheet.id !== HEAD_OFFICE_SHEET_ID;
-    }).map(function (sheet) {
-      var tasks = (sheet.tasks || []).filter(function (t) {
-        return t.type !== "note" && !t.headOfficeVirtual && (t.text || "").trim() &&
-          (t.status !== 2 || focusKeepIds[t.id]);
-      }).sort(function (a, b) {
-        if (a.date !== b.date) return a.date < b.date ? -1 : 1;
-        return (a.createdAt || 0) - (b.createdAt || 0);
-      });
-      return { sheet: sheet, tasks: tasks };
-    });
-    if (!groups.length) {
-      var empty = document.createElement("p");
-      empty.className = "focus-view-empty";
-      empty.textContent = tr("focusViewEmpty");
-      focusViewBody.appendChild(empty);
-      return;
-    }
-    // One project at a time under the same project tabs as the main app
-    // (same classes, private and shared rows), starting on the project
-    // that's open in the app.
-    var current = groups.find(function (g) { return g.sheet.id === focusActiveSheetId; }) ||
-      groups.find(function (g) { return g.sheet.id === data.activeSheetId; }) || groups[0];
-    focusActiveSheetId = current.sheet.id;
-
-    var notebook = document.createElement("div");
-    notebook.className = "focus-notebook";
-    var row = document.createElement("div");
-    row.className = "sheets-row";
-    var stack = document.createElement("div");
-    stack.className = "sheets-bars-stack";
-    var privateBar = document.createElement("div");
-    privateBar.className = "sheets-bar";
-    var sharedBar = document.createElement("div");
-    sharedBar.className = "sheets-bar";
-    var activeTab = null;
-    groups.forEach(function (group) {
-      var sheet = group.sheet;
-      var tab = document.createElement("div");
-      tab.className = "sheet-tab" + (group === current ? " active" : "");
-      var label = document.createElement("span");
-      label.className = "sheet-tab-label";
-      label.textContent = (sheet.shared ? "👥 " : "") + sheet.name;
-      tab.appendChild(label);
-      if (sheet.shared) {
-        var unreadCount = getUnreadCount(sheet);
-        if (unreadCount > 0) {
-          var unreadBadge = document.createElement("span");
-          unreadBadge.className = "sheet-tab-unread-badge";
-          unreadBadge.textContent = unreadCount > 99 ? "99+" : String(unreadCount);
-          tab.appendChild(unreadBadge);
-        }
-      }
-      tab.addEventListener("click", function () {
-        focusActiveSheetId = sheet.id;
-        renderFocusView();
-      });
-      if (group === current) activeTab = tab;
-      (sheet.shared ? sharedBar : privateBar).appendChild(tab);
-    });
-    if (privateBar.children.length) stack.appendChild(privateBar);
-    if (sharedBar.children.length) stack.appendChild(sharedBar);
-    row.appendChild(stack);
-    notebook.appendChild(row);
-
-    var card = document.createElement("section");
-    card.className = "focus-project";
-    if (!current.tasks.length) {
-      var none = document.createElement("p");
-      none.className = "focus-view-empty";
-      none.textContent = tr("focusViewEmpty");
-      card.appendChild(none);
-    }
-    current.tasks.forEach(function (t) {
-      card.appendChild(buildFocusTaskRow(current.sheet, t, t.date >= today));
-    });
-    notebook.appendChild(card);
-    focusViewBody.appendChild(notebook);
-    if (activeTab) activeTab.scrollIntoView({ block: "nearest", inline: "center" });
-  }
-
-  // Same gestures as a row in the main list: tap cycles its status,
-  // a one-second press opens the task's long-press menu (move/copy,
-  // share, reminder, convert to note...). The arrow jumps to the task in
-  // the full app. Past-dated rows are read-only there too, so they only
-  // get the arrow.
-  function buildFocusTaskRow(sheet, t, editable) {
-    var row = document.createElement("div");
-    row.className = "focus-task" + (t.status === 1 ? " partial" : "") + (t.status === 2 ? " done" : "");
-    // the same X status mark as the main list (the app's brand mark)
-    var mark = document.createElement("span");
-    mark.className = "row-mark";
-    mark.innerHTML = rowMarkSvg(t.status);
-    var text = document.createElement("span");
-    text.className = "focus-task-text";
-    text.textContent = t.text;
-    row.appendChild(mark);
-    row.appendChild(text);
-    if (t.status !== 2 && isTaskReminderActive(t.reminder)) {
-      var alarm = document.createElement("img");
-      alarm.className = "focus-task-alarm";
-      alarm.src = "tasks-reminder-icon.webp";
-      alarm.alt = "";
-      alarm.title = describeTaskReminder(t.reminder);
-      row.appendChild(alarm);
-    }
-    var open = document.createElement("button");
-    open.type = "button";
-    open.className = "focus-task-open";
-    open.textContent = "\u2197";
-    open.title = tr("focusViewOpenApp");
-    open.addEventListener("click", function (e) {
-      e.stopPropagation();
-      closeFocusView();
-      viewingArchive = false;
-      data.activeSheetId = sheet.id;
-      state.viewDate = t.date;
-      state.showingCompleted = false;
-      render();
-    });
-    row.appendChild(open);
-    if (!editable) return row;
-
-    var longPressFired = false;
-    row.addEventListener("click", function () {
-      if (longPressFired) { longPressFired = false; return; }
-      focusKeepIds[t.id] = true;
-      cycleStatus(t.id, sheet);
-    });
-    var pressStartX = 0, pressStartY = 0;
-    var startPress = function (e) {
-      if (e.target.closest("button")) return;
-      var point = e.touches ? e.touches[0] : e;
-      pressStartX = point.clientX;
-      pressStartY = point.clientY;
-      longPressFired = false;
-      clearTimeout(longPressTimer);
-      longPressTimer = setTimeout(function () {
-        longPressFired = true;
-        // the task menu's actions all work on the active project
-        data.activeSheetId = sheet.id;
-        state.viewDate = t.date;
-        openMoveTaskModal(t.id);
-      }, 1000);
-    };
-    var cancelPress = function () { clearTimeout(longPressTimer); };
-    var movePress = function (e) {
-      var point = e.touches ? e.touches[0] : e;
-      if (Math.abs(point.clientX - pressStartX) > 10 || Math.abs(point.clientY - pressStartY) > 10) cancelPress();
-    };
-    row.addEventListener("mousedown", startPress);
-    row.addEventListener("mouseup", cancelPress);
-    row.addEventListener("mouseleave", cancelPress);
-    row.addEventListener("mousemove", movePress);
-    row.addEventListener("touchstart", startPress, { passive: true });
-    row.addEventListener("touchend", cancelPress);
-    row.addEventListener("touchmove", movePress, { passive: true });
-    row.addEventListener("contextmenu", function (e) { e.preventDefault(); });
-    return row;
-  }
-  function openFocusView() {
+  // Native app: tapping the home-screen widget starts the app with
+  // "task|sheetId|date|taskId" (just the project when tapping its tab):
+  // picked up at startup (takeLaunchView) or, when the app was already
+  // running, through the "launchView" event, and opened like a tapped
+  // notification. ("focus", from app versions before 15, just opens the app.)
+  function openLaunchView(view) {
+    if (!view || view.indexOf("task|") !== 0) return;
+    var parts = view.split("|");
     closeMoveTask();
-    focusKeepIds = {};
-    focusActiveSheetId = null;
-    renderFocusView();
-    focusView.hidden = false;
-    focusView.scrollTop = 0;
-  }
-  function closeFocusView() {
-    focusView.hidden = true;
-    if (location.hash === "#focus") history.replaceState(null, "", location.pathname + location.search);
-  }
-  document.getElementById("focusViewOpenAppBtn").addEventListener("click", function () {
-    closeFocusView();
-    // a long-press here may have switched the active project underneath
+    viewingArchive = false;
+    state.showingCompleted = false;
+    navigateToTaskLink(parts[1] || null, parts[2] || null, parts[3] || null, false);
     render();
-  });
-  window.addEventListener("hashchange", function () {
-    if (location.hash === "#focus") openFocusView();
-  });
-
-  // Native app: the widget and the icon's "המשימות שלי" shortcut launch the
-  // app asking for this view - picked up at startup (takeLaunchView) or,
-  // when the app was already running, through the "launchView" event.
+  }
   var launchViewChecked = false;
   function checkLaunchView() {
-    if (launchViewChecked) return;
+    if (launchViewChecked || !nativeTaskAlarmPlugin) return;
     launchViewChecked = true;
-    if (location.hash === "#focus") openFocusView();
-    if (!nativeTaskAlarmPlugin) return;
     nativeTaskAlarmPlugin.takeLaunchView().then(function (res) {
-      if (res && res.view === "focus") openFocusView();
+      if (res) openLaunchView(res.view);
     }).catch(function () {});
     nativeTaskAlarmPlugin.addListener("launchView", function (e) {
-      if (e && e.view === "focus") {
-        openFocusView();
-        nativeTaskAlarmPlugin.takeLaunchView().catch(function () {});
-      }
+      if (e) openLaunchView(e.view);
+      nativeTaskAlarmPlugin.takeLaunchView().catch(function () {});
     });
   }
 
-  // Hands the home-screen widget the same open-tasks list (it can't read
+  // Hands the home-screen widget the open-tasks list (it can't read
   // Supabase itself), whenever it changes.
   var lastNativeWidgetJson = null;
   function syncNativeWidget() {
-    if (dataLoadBlocked || !privateDataSettled) return;
+    if (!nativeTaskAlarmPlugin || dataLoadBlocked || !privateDataSettled) return;
     checkLaunchView();
-    if (!nativeTaskAlarmPlugin) return;
     var projects = openTasksByProject().map(function (group) {
       return {
+        id: group.sheet.id,
         name: group.sheet.name,
         shared: !!group.sheet.shared,
-        tasks: group.tasks.map(function (t) { return { text: t.text, status: t.status || 0 }; })
+        tasks: group.tasks.map(function (t) {
+          return { id: t.id, date: t.date, text: t.text, status: t.status || 0 };
+        })
       };
     });
     var json = JSON.stringify(projects);
@@ -13215,7 +12923,6 @@
     taskList.scrollTop = taskListScrollTop;
     renderTaskReminderIconsLayer(reminderRowsForIconsLayer);
     syncNativeTaskAlarms();
-    if (!focusView.hidden) renderFocusView();
     syncNativeWidget();
 
     sheetTitle.textContent = activeSheet().name;

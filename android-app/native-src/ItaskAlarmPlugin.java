@@ -10,42 +10,40 @@ import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
-import androidx.core.content.pm.ShortcutInfoCompat;
 import androidx.core.content.pm.ShortcutManagerCompat;
-import androidx.core.graphics.drawable.IconCompat;
+import java.util.Collections;
 import org.json.JSONArray;
 
 // Bridge for tasks.html. Alarms (syncNativeTaskAlarms there): the page sends
 // the full set of active per-task reminders and this replaces whatever was
 // scheduled before, so the native side never needs to know about tasks.
 // Widget (syncNativeWidget): the page sends the open-tasks list for the
-// home-screen widget. Launch view: the widget and the icon's "המשימות שלי"
-// shortcut start the app with EXTRA_VIEW, which the page picks up to open its
-// full-screen tasks-only view.
+// home-screen widget. Launch view: tapping the widget starts the app with
+// EXTRA_VIEW ("task|sheetId|date|taskId"), which the page picks up to open
+// that project/task.
 @CapacitorPlugin(name = "ItaskAlarm")
 public class ItaskAlarmPlugin extends Plugin {
     static final String EXTRA_VIEW = "itask_view";
-    static final String ACTION_OPEN_FOCUS = "com.gadajuljuly.itask.OPEN_FOCUS";
-    private static final String SHORTCUT_ID = "my_tasks";
+    static final String ACTION_OPEN_TASK = "com.gadajuljuly.itask.OPEN_TASK";
+    // the "המשימות שלי" shortcut versions 13-14 added (that screen is gone)
+    private static final String OLD_SHORTCUT_ID = "my_tasks";
 
     private String pendingLaunchView = null;
 
-    static Intent focusViewIntent(android.content.Context c) {
-        return new Intent(c, MainActivity.class)
-                .setAction(ACTION_OPEN_FOCUS)
-                .putExtra(EXTRA_VIEW, "focus")
+    // Opens the app on a project ("task|sheetId||") or a task
+    // ("task|sheetId|date|taskId"); null just opens the app.
+    static Intent openAppIntent(android.content.Context c, String view) {
+        Intent i = new Intent(c, MainActivity.class)
+                .setAction(ACTION_OPEN_TASK)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        if (view != null) i.putExtra(EXTRA_VIEW, view);
+        return i;
     }
 
     @Override
     public void load() {
         if (getActivity() != null) takeViewFromIntent(getActivity().getIntent());
-        ShortcutInfoCompat shortcut = new ShortcutInfoCompat.Builder(getContext(), SHORTCUT_ID)
-                .setShortLabel("המשימות שלי")
-                .setIcon(IconCompat.createWithResource(getContext(), R.mipmap.ic_launcher))
-                .setIntent(focusViewIntent(getContext()))
-                .build();
-        ShortcutManagerCompat.pushDynamicShortcut(getContext(), shortcut);
+        ShortcutManagerCompat.removeDynamicShortcuts(getContext(), Collections.singletonList(OLD_SHORTCUT_ID));
     }
 
     @Override

@@ -192,15 +192,16 @@ The generated `android/` project isn't in git, so the sources live in
    `native-src/AndroidManifest-additions.xml` to `AndroidManifest.xml`.
 5. Rebuild and publish.
 
-## "המשימות שלי" widget and shortcut (same `native-src/` plugin)
+## "המשימות שלי" home-screen widget (same `native-src/` plugin)
 
-A home-screen widget lists every open task grouped by project, and the
-app icon's long-press menu gets a "המשימות שלי" shortcut. Both open the
-app straight into `tasks.html`'s full-screen tasks-only view (also
-reachable on the web as `tasks.html#focus`). The widget can't read
-Supabase itself: `tasks.html` (`syncNativeWidget`) pushes the list to it
-whenever it changes, so it shows what the app last saw. The widget's
-receiver and service are in `native-src/AndroidManifest-additions.xml`.
+A home-screen widget shaped like the app: project tabs on top (the current
+project between its neighbours; tapping a side tab switches) and that
+project's open tasks below, with the app's X status marks. Tapping a task
+opens the app on that task (like tapping a notification), tapping the
+current tab opens that project. The widget can't read Supabase itself:
+`tasks.html` (`syncNativeWidget`) pushes the list to it whenever it changes,
+so it shows what the app last saw. Its receiver and service are in
+`native-src/AndroidManifest-additions.xml`.
 
 ## Before every Android build
 

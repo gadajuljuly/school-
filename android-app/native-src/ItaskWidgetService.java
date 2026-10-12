@@ -21,10 +21,12 @@ public class ItaskWidgetService extends RemoteViewsService {
         final boolean project;
         final String text;
         final int status;
-        Row(boolean project, String text, int status) {
+        final String view; // what tapping it opens in the app
+        Row(boolean project, String text, int status, String view) {
             this.project = project;
             this.text = text;
             this.status = status;
+            this.view = view;
         }
     }
 
@@ -48,9 +50,12 @@ public class ItaskWidgetService extends RemoteViewsService {
             JSONObject p = projects.optJSONObject(ItaskWidgetProvider.currentProject(context, projects.length()));
             JSONArray tasks = p != null ? p.optJSONArray("tasks") : null;
             if (tasks == null) return;
+            String sheetId = p.optString("id");
             for (int j = 0; j < tasks.length(); j++) {
                 JSONObject t = tasks.optJSONObject(j);
-                if (t != null) rows.add(new Row(false, t.optString("text"), t.optInt("status", 0)));
+                if (t == null) continue;
+                String view = "task|" + sheetId + "|" + t.optString("date") + "|" + t.optString("id");
+                rows.add(new Row(false, t.optString("text"), t.optInt("status", 0), view));
             }
         }
 
@@ -70,7 +75,8 @@ public class ItaskWidgetService extends RemoteViewsService {
                         row.status == 1 ? R.drawable.itask_mark_partial : R.drawable.itask_mark_open);
                 views.setTextViewText(R.id.itask_widget_row_text, row.text);
             }
-            views.setOnClickFillInIntent(R.id.itask_widget_row_root, new Intent());
+            views.setOnClickFillInIntent(R.id.itask_widget_row_root,
+                    new Intent().putExtra(ItaskAlarmPlugin.EXTRA_VIEW, row.view));
             return views;
         }
 
