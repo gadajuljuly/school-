@@ -2711,7 +2711,9 @@
   .focus-view {
     position: fixed;
     inset: 0;
-    z-index: 60;
+    /* above the app's own menus (30), below its modals (40) so the task
+       long-press menu can open on top of this view */
+    z-index: 35;
     background: var(--desk);
     overflow-y: auto;
     padding: calc(env(safe-area-inset-top, 0px) + 14px) 14px calc(env(safe-area-inset-bottom, 0px) + 20px);
@@ -2755,6 +2757,7 @@
     margin-bottom: 6px;
   }
   .focus-task {
+    -webkit-touch-callout: none;
     display: flex;
     align-items: flex-start;
     gap: 10px;
@@ -2779,7 +2782,17 @@
     border: 2px solid var(--accent);
   }
   .focus-task.partial .focus-task-mark { background: linear-gradient(90deg, var(--accent) 50%, transparent 50%); }
-  .focus-task-text { flex: 1; overflow-wrap: anywhere; }
+  .focus-task.done .focus-task-mark { background: var(--accent); }
+  .focus-task.done .focus-task-text { text-decoration: line-through; color: var(--ink-muted); }
+  .focus-task-text { flex: 1; overflow-wrap: anywhere; user-select: none; -webkit-user-select: none; }
+  .focus-task-alarm { flex: none; width: 18px; height: 18px; }
+  .focus-task-open {
+    flex: none;
+    padding: 0 4px;
+    color: var(--accent);
+    font-size: 1.1rem;
+    line-height: 1.2;
+  }
   .focus-view-empty {
     text-align: center;
     color: var(--ink-muted);
@@ -4890,9 +4903,24 @@
 
   var focusView = document.getElementById("focusView");
   var focusViewBody = document.getElementById("focusViewBody");
+  // Tasks marked done from this view stay listed (struck through) until it
+  // closes, so a mistaken tap can be undone right here.
+  var focusKeepIds = {};
   function renderFocusView() {
     focusViewBody.innerHTML = "";
-    var groups = openTasksByProject();
+    var today = todayISO();
+    var groups = allSheets().filter(function (sheet) {
+      return !sheet.ended && sheet.id !== HEAD_OFFICE_SHEET_ID;
+    }).map(function (sheet) {
+      var tasks = (sheet.tasks || []).filter(function (t) {
+        return t.type !== "note" && !t.headOfficeVirtual && (t.text || "").trim() &&
+          (t.status !== 2 || focusKeepIds[t.id]);
+      }).sort(function (a, b) {
+        if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+        return (a.createdAt || 0) - (b.createdAt || 0);
+      });
+      return { sheet: sheet, tasks: tasks };
+    }).filter(function (group) { return group.tasks.length; });
     if (!groups.length) {
       var empty = document.createElement("p");
       empty.className = "focus-view-empty";
@@ -4908,32 +4936,92 @@
       name.textContent = group.sheet.name;
       card.appendChild(name);
       group.tasks.forEach(function (t) {
-        var row = document.createElement("button");
-        row.type = "button";
-        row.className = "focus-task" + (t.status === 1 ? " partial" : "");
-        var mark = document.createElement("span");
-        mark.className = "focus-task-mark";
-        var text = document.createElement("span");
-        text.className = "focus-task-text";
-        text.textContent = t.text;
-        row.appendChild(mark);
-        row.appendChild(text);
-        // tapping a task jumps to it in the full app
-        row.addEventListener("click", function () {
-          closeFocusView();
-          viewingArchive = false;
-          data.activeSheetId = group.sheet.id;
-          state.viewDate = t.date;
-          state.showingCompleted = false;
-          render();
-        });
-        card.appendChild(row);
+        card.appendChild(buildFocusTaskRow(group.sheet, t, t.date >= today));
       });
       focusViewBody.appendChild(card);
     });
   }
+
+  // Same gestures as a row in the main list: tap cycles its status,
+  // a one-second press opens the task's long-press menu (move/copy,
+  // share, reminder, convert to note...). The arrow jumps to the task in
+  // the full app. Past-dated rows are read-only there too, so they only
+  // get the arrow.
+  function buildFocusTaskRow(sheet, t, editable) {
+    var row = document.createElement("div");
+    row.className = "focus-task" + (t.status === 1 ? " partial" : "") + (t.status === 2 ? " done" : "");
+    var mark = document.createElement("span");
+    mark.className = "focus-task-mark";
+    var text = document.createElement("span");
+    text.className = "focus-task-text";
+    text.textContent = t.text;
+    row.appendChild(mark);
+    row.appendChild(text);
+    if (t.status !== 2 && isTaskReminderActive(t.reminder)) {
+      var alarm = document.createElement("img");
+      alarm.className = "focus-task-alarm";
+      alarm.src = "tasks-reminder-icon.webp";
+      alarm.alt = "";
+      alarm.title = describeTaskReminder(t.reminder);
+      row.appendChild(alarm);
+    }
+    var open = document.createElement("button");
+    open.type = "button";
+    open.className = "focus-task-open";
+    open.textContent = "\u2197";
+    open.title = tr("focusViewOpenApp");
+    open.addEventListener("click", function (e) {
+      e.stopPropagation();
+      closeFocusView();
+      viewingArchive = false;
+      data.activeSheetId = sheet.id;
+      state.viewDate = t.date;
+      state.showingCompleted = false;
+      render();
+    });
+    row.appendChild(open);
+    if (!editable) return row;
+
+    var longPressFired = false;
+    row.addEventListener("click", function () {
+      if (longPressFired) { longPressFired = false; return; }
+      focusKeepIds[t.id] = true;
+      cycleStatus(t.id, sheet);
+    });
+    var pressStartX = 0, pressStartY = 0;
+    var startPress = function (e) {
+      if (e.target.closest("button")) return;
+      var point = e.touches ? e.touches[0] : e;
+      pressStartX = point.clientX;
+      pressStartY = point.clientY;
+      longPressFired = false;
+      clearTimeout(longPressTimer);
+      longPressTimer = setTimeout(function () {
+        longPressFired = true;
+        // the task menu's actions all work on the active project
+        data.activeSheetId = sheet.id;
+        state.viewDate = t.date;
+        openMoveTaskModal(t.id);
+      }, 1000);
+    };
+    var cancelPress = function () { clearTimeout(longPressTimer); };
+    var movePress = function (e) {
+      var point = e.touches ? e.touches[0] : e;
+      if (Math.abs(point.clientX - pressStartX) > 10 || Math.abs(point.clientY - pressStartY) > 10) cancelPress();
+    };
+    row.addEventListener("mousedown", startPress);
+    row.addEventListener("mouseup", cancelPress);
+    row.addEventListener("mouseleave", cancelPress);
+    row.addEventListener("mousemove", movePress);
+    row.addEventListener("touchstart", startPress, { passive: true });
+    row.addEventListener("touchend", cancelPress);
+    row.addEventListener("touchmove", movePress, { passive: true });
+    row.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+    return row;
+  }
   function openFocusView() {
     closeMoveTask();
+    focusKeepIds = {};
     renderFocusView();
     focusView.hidden = false;
     focusView.scrollTop = 0;
@@ -4942,7 +5030,11 @@
     focusView.hidden = true;
     if (location.hash === "#focus") history.replaceState(null, "", location.pathname + location.search);
   }
-  document.getElementById("focusViewOpenAppBtn").addEventListener("click", closeFocusView);
+  document.getElementById("focusViewOpenAppBtn").addEventListener("click", function () {
+    closeFocusView();
+    // a long-press here may have switched the active project underneath
+    render();
+  });
   window.addEventListener("hashchange", function () {
     if (location.hash === "#focus") openFocusView();
   });
@@ -12567,8 +12659,8 @@
     addTypeOverlay.hidden = false;
   });
 
-  function cycleStatus(id) {
-    var sheet = activeSheet();
+  function cycleStatus(id, inSheet) {
+    var sheet = inSheet || activeSheet();
     var t = sheet.tasks.find(function (x) { return x.id === id; });
     if (t) {
       var wasDone = t.status === 2;
