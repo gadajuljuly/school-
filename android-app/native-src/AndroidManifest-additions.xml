@@ -5,6 +5,7 @@
 <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 <uses-permission android:name="android.permission.VIBRATE" />
 <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
 <!-- 2) Inside <application ...>, just before its closing </application> tag: -->
 <receiver android:name=".TaskAlarmReceiver" android:exported="false" />
@@ -27,3 +28,7 @@
     android:name=".ItaskWidgetService"
     android:exported="false"
     android:permission="android.permission.BIND_REMOTEVIEWS" />
+<service
+    android:name=".TaskAlarmRingingService"
+    android:exported="false"
+    android:foregroundServiceType="shortService" />

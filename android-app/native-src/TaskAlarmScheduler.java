@@ -40,6 +40,8 @@ public final class TaskAlarmScheduler {
     private static final String KEY_TURNED_OFF = "turnedOff";
     private static final String CHANNEL_ID = "task_alarm_morse";
     private static final int MAX_FIRED_KEYS = 200;
+    // ".. - .- ... -.-" (ITASK), matching the sound
+    static final long[] MORSE_VIBRATION = {0, 80, 80, 80, 240, 240, 240, 80, 80, 240, 240, 80, 80, 80, 80, 80, 240, 240, 80, 80, 80, 240, 900};
     private static final String SNOOZE_SUFFIX = "#snooze";
     private static final long SNOOZE_MS = 5 * 60 * 1000L;
     private static final long RING_TIMEOUT_MS = 10 * 60 * 1000L;
@@ -121,6 +123,7 @@ public final class TaskAlarmScheduler {
 
     static void stopRinging(Context c, String id) {
         c.getSystemService(NotificationManager.class).cancel(id.hashCode());
+        TaskAlarmRingingService.stopIfRinging(c, id);
     }
 
     // "כבה": silence it, unschedule the alarm (and any pending snooze of it),
@@ -226,7 +229,7 @@ public final class TaskAlarmScheduler {
         return PendingIntent.getBroadcast(c, 0, i, flags | PendingIntent.FLAG_IMMUTABLE);
     }
 
-    private static PendingIntent actionIntent(Context c, String action, String id, String title, String body) {
+    static PendingIntent actionIntent(Context c, String action, String id, String title, String body) {
         Intent i = new Intent(c, TaskAlarmReceiver.class)
                 .setAction(action)
                 .setData(Uri.parse("itask-alarm://" + Uri.encode(id)))
@@ -236,18 +239,25 @@ public final class TaskAlarmScheduler {
         return PendingIntent.getBroadcast(c, 0, i, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
-    private static Intent launchIntent(Context c) {
+    static Intent launchIntent(Context c) {
         Intent i = c.getPackageManager().getLaunchIntentForPackage(c.getPackageName());
         if (i == null) i = new Intent(c, MainActivity.class);
         i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         return i;
     }
 
+    // Rings through TaskAlarmRingingService, which plays the Morse clip itself
+    // on the alarm stream - like the phone's own alarm clock it then rings
+    // even with the phone on vibrate/silent, which a notification sound
+    // never does. Falls back to a plain insistent notification if the
+    // service can't start (e.g. an inexact alarm, without the exact-alarm
+    // permission, isn't allowed to start a foreground service).
     private static void showRinging(Context c, String id, String title, String body) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                 c.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             return;
         }
+        if (TaskAlarmRingingService.start(c, id, title, body)) return;
         ensureChannel(c);
         PendingIntent open = PendingIntent.getActivity(c, 0, launchIntent(c),
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
@@ -277,8 +287,7 @@ public final class TaskAlarmScheduler {
                 NotificationManager.IMPORTANCE_HIGH);
         channel.setDescription("מצלצל בצלצול טלגרף עד שלוחצים כבה או נודניק");
         channel.enableVibration(true);
-        // ".. - .- ... -.-" (ITASK), matching the sound
-        channel.setVibrationPattern(new long[]{0, 80, 80, 80, 240, 240, 240, 80, 80, 240, 240, 80, 80, 80, 80, 80, 240, 240, 80, 80, 80, 240});
+        channel.setVibrationPattern(MORSE_VIBRATION);
         channel.setSound(Uri.parse("android.resource://" + c.getPackageName() + "/raw/task_alarm_morse"),
                 new AudioAttributes.Builder()
                         .setUsage(AudioAttributes.USAGE_ALARM)

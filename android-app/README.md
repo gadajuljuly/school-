@@ -169,9 +169,11 @@ not for builds installed straight from Android Studio.
 A pushed FCM notification can only ring once, so per-task reminders ring
 through a small local plugin instead: `tasks.html` (`syncNativeTaskAlarms`)
 hands the plugin every active reminder, and it schedules them with
-AlarmManager and shows an insistent notification that keeps tapping out a
-Morse-telegraph sound (`native-src/res/raw/task_alarm_morse.wav`) until "כבה" or
-"נודניק" (5 minutes) is pressed. "כבה" turns the reminder off and the page
+AlarmManager and rings through `TaskAlarmRingingService`, a short foreground
+service that loops a Morse-telegraph sound (`native-src/res/raw/task_alarm_morse.wav`)
+on the alarm stream - so, like the phone's own alarm clock, it's heard even
+on vibrate/silent - until "כבה" or "נודניק" (5 minutes) is pressed, or two
+minutes pass. "כבה" turns the reminder off and the page
 then removes it from the task; marking the task done pauses its reminder
 (un-marking it before its time brings it back). Reminders the app
 has picked up are flagged `nativeAlarm`, and `send-reminders` stops also
