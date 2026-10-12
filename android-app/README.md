@@ -199,3 +199,12 @@ reachable on the web as `tasks.html#focus`). The widget can't read
 Supabase itself: `tasks.html` (`syncNativeWidget`) pushes the list to it
 whenever it changes, so it shows what the app last saw. The widget's
 receiver and service are in `native-src/AndroidManifest-additions.xml`.
+
+## Before every Android build
+
+Run `android-app\prepare-android.bat` (double-click it). It pulls the latest
+code, runs `npm install` and `npx cap sync android`, and copies everything in
+`native-src/` (Java sources and `res/`) into the local `android/` project.
+Then raise `versionCode`/`versionName` in `build.gradle (:app)` and build.
+The one-time edits from the sections above (`AndroidManifest.xml`,
+`registerPlugin` in `MainActivity.java`) stay in place between builds.
