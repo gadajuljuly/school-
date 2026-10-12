@@ -9,8 +9,8 @@ import java.util.List;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-// Supplies the widget's scrolling list: a project-name row followed by that
-// project's open tasks, for each project.
+// Supplies the widget's scrolling list: the open tasks of the project
+// currently shown in its header.
 public class ItaskWidgetService extends RemoteViewsService {
     @Override
     public RemoteViewsFactory onGetViewFactory(Intent intent) {
@@ -39,21 +39,18 @@ public class ItaskWidgetService extends RemoteViewsService {
         @Override public void onCreate() {}
         @Override public void onDestroy() { rows.clear(); }
 
+        // Only the project the header currently shows (ItaskWidgetProvider).
         @Override
         public void onDataSetChanged() {
             rows.clear();
             JSONArray projects = ItaskWidgetProvider.loadData(context).optJSONArray("projects");
-            if (projects == null) return;
-            for (int i = 0; i < projects.length(); i++) {
-                JSONObject p = projects.optJSONObject(i);
-                if (p == null) continue;
-                rows.add(new Row(true, p.optString("name"), 0));
-                JSONArray tasks = p.optJSONArray("tasks");
-                if (tasks == null) continue;
-                for (int j = 0; j < tasks.length(); j++) {
-                    JSONObject t = tasks.optJSONObject(j);
-                    if (t != null) rows.add(new Row(false, t.optString("text"), t.optInt("status", 0)));
-                }
+            if (projects == null || projects.length() == 0) return;
+            JSONObject p = projects.optJSONObject(ItaskWidgetProvider.currentProject(context, projects.length()));
+            JSONArray tasks = p != null ? p.optJSONArray("tasks") : null;
+            if (tasks == null) return;
+            for (int j = 0; j < tasks.length(); j++) {
+                JSONObject t = tasks.optJSONObject(j);
+                if (t != null) rows.add(new Row(false, t.optString("text"), t.optInt("status", 0)));
             }
         }
 

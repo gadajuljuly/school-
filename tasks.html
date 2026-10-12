@@ -2743,6 +2743,37 @@
     font-weight: 600;
     cursor: pointer;
   }
+  .focus-tabs {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    margin-bottom: 4px;
+    scrollbar-width: none;
+  }
+  .focus-tabs::-webkit-scrollbar { display: none; }
+  .focus-tab {
+    flex-shrink: 0;
+    max-width: 160px;
+    padding: 7px 14px;
+    border: 2px solid var(--rule);
+    border-radius: 999px;
+    background: var(--tab-inactive);
+    color: var(--ink-muted);
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+  }
+  .focus-tab.active {
+    background: var(--paper);
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  .focus-tab-count { font-weight: 600; opacity: 0.75; }
   .focus-project {
     background: var(--paper);
     border-radius: 14px;
@@ -4898,6 +4929,7 @@
   // Tasks marked done from this view stay listed (struck through) until it
   // closes, so a mistaken tap can be undone right here.
   var focusKeepIds = {};
+  var focusActiveSheetId = null;
   function renderFocusView() {
     focusViewBody.innerHTML = "";
     var today = todayISO();
@@ -4920,18 +4952,40 @@
       focusViewBody.appendChild(empty);
       return;
     }
+    // One project at a time, picked from a row of tabs (like the main app),
+    // starting on whichever project is open in the app.
+    var current = groups.find(function (g) { return g.sheet.id === focusActiveSheetId; }) ||
+      groups.find(function (g) { return g.sheet.id === data.activeSheetId; }) || groups[0];
+    focusActiveSheetId = current.sheet.id;
+    var tabs = document.createElement("div");
+    tabs.className = "focus-tabs";
+    var activeTab = null;
     groups.forEach(function (group) {
-      var card = document.createElement("section");
-      card.className = "focus-project";
-      var name = document.createElement("div");
-      name.className = "focus-project-name";
-      name.textContent = group.sheet.name;
-      card.appendChild(name);
-      group.tasks.forEach(function (t) {
-        card.appendChild(buildFocusTaskRow(group.sheet, t, t.date >= today));
+      var tab = document.createElement("button");
+      tab.type = "button";
+      tab.className = "focus-tab" + (group === current ? " active" : "");
+      var open = group.tasks.filter(function (t) { return t.status !== 2; }).length;
+      tab.textContent = group.sheet.name + " ";
+      var count = document.createElement("span");
+      count.className = "focus-tab-count";
+      count.textContent = "(" + open + ")";
+      tab.appendChild(count);
+      tab.addEventListener("click", function () {
+        focusActiveSheetId = group.sheet.id;
+        renderFocusView();
       });
-      focusViewBody.appendChild(card);
+      if (group === current) activeTab = tab;
+      tabs.appendChild(tab);
     });
+    focusViewBody.appendChild(tabs);
+    if (activeTab) activeTab.scrollIntoView({ block: "nearest", inline: "center" });
+
+    var card = document.createElement("section");
+    card.className = "focus-project";
+    current.tasks.forEach(function (t) {
+      card.appendChild(buildFocusTaskRow(current.sheet, t, t.date >= today));
+    });
+    focusViewBody.appendChild(card);
   }
 
   // Same gestures as a row in the main list: tap cycles its status,
@@ -5016,6 +5070,7 @@
   function openFocusView() {
     closeMoveTask();
     focusKeepIds = {};
+    focusActiveSheetId = null;
     renderFocusView();
     focusView.hidden = false;
     focusView.scrollTop = 0;
