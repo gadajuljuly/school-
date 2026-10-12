@@ -173,7 +173,8 @@ AlarmManager and rings through `TaskAlarmRingingService`, a short foreground
 service that loops a Morse-telegraph sound (`native-src/res/raw/task_alarm_morse.wav`)
 on the alarm stream - so, like the phone's own alarm clock, it's heard even
 on vibrate/silent - until "כבה" or "נודניק" (5 minutes) is pressed, or two
-minutes pass. "כבה" turns the reminder off and the page
+minutes pass. Pressing any side button (power, volume) while it rings
+snoozes it for 5 minutes, like an alarm clock. "כבה" turns the reminder off and the page
 then removes it from the task; marking the task done pauses its reminder
 (un-marking it before its time brings it back). Reminders the app
 has picked up are flagged `nativeAlarm`, and `send-reminders` stops also
