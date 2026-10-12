@@ -2743,37 +2743,18 @@
     font-weight: 600;
     cursor: pointer;
   }
-  .focus-tabs {
-    display: flex;
-    gap: 6px;
-    overflow-x: auto;
-    padding-bottom: 8px;
-    margin-bottom: 4px;
-    scrollbar-width: none;
-  }
-  .focus-tabs::-webkit-scrollbar { display: none; }
-  .focus-tab {
-    flex-shrink: 0;
-    max-width: 160px;
-    padding: 7px 14px;
-    border: 2px solid var(--rule);
-    border-radius: 999px;
-    background: var(--tab-inactive);
-    color: var(--ink-muted);
-    font-family: inherit;
-    font-size: 0.85rem;
-    font-weight: 700;
-    white-space: nowrap;
+  /* tabs row + page, shaped like the app's own notebook */
+  .focus-notebook {
+    border-radius: 10px;
     overflow: hidden;
-    text-overflow: ellipsis;
-    cursor: pointer;
+    box-shadow: 0 1px 4px var(--shadow);
   }
-  .focus-tab.active {
-    background: var(--paper);
-    color: var(--accent);
-    border-color: var(--accent);
+  .focus-notebook .focus-project {
+    border-radius: 0;
+    box-shadow: none;
+    margin-bottom: 0;
   }
-  .focus-tab-count { font-weight: 600; opacity: 0.75; }
+  .focus-notebook .focus-view-empty { margin: 16px 0; }
   .focus-project {
     background: var(--paper);
     border-radius: 14px;
@@ -2812,6 +2793,10 @@
   .focus-task-open {
     flex: none;
     padding: 0 4px;
+    border: none;
+    background: none;
+    font-family: inherit;
+    cursor: pointer;
     color: var(--accent);
     font-size: 1.1rem;
     line-height: 1.2;
@@ -4921,7 +4906,7 @@
         return (a.createdAt || 0) - (b.createdAt || 0);
       });
       return { sheet: sheet, tasks: tasks };
-    }).filter(function (group) { return group.tasks.length; });
+    });
   }
 
   var focusView = document.getElementById("focusView");
@@ -4944,7 +4929,7 @@
         return (a.createdAt || 0) - (b.createdAt || 0);
       });
       return { sheet: sheet, tasks: tasks };
-    }).filter(function (group) { return group.tasks.length; });
+    });
     if (!groups.length) {
       var empty = document.createElement("p");
       empty.className = "focus-view-empty";
@@ -4952,40 +4937,67 @@
       focusViewBody.appendChild(empty);
       return;
     }
-    // One project at a time, picked from a row of tabs (like the main app),
-    // starting on whichever project is open in the app.
+    // One project at a time under the same project tabs as the main app
+    // (same classes, private and shared rows), starting on the project
+    // that's open in the app.
     var current = groups.find(function (g) { return g.sheet.id === focusActiveSheetId; }) ||
       groups.find(function (g) { return g.sheet.id === data.activeSheetId; }) || groups[0];
     focusActiveSheetId = current.sheet.id;
-    var tabs = document.createElement("div");
-    tabs.className = "focus-tabs";
+
+    var notebook = document.createElement("div");
+    notebook.className = "focus-notebook";
+    var row = document.createElement("div");
+    row.className = "sheets-row";
+    var stack = document.createElement("div");
+    stack.className = "sheets-bars-stack";
+    var privateBar = document.createElement("div");
+    privateBar.className = "sheets-bar";
+    var sharedBar = document.createElement("div");
+    sharedBar.className = "sheets-bar";
     var activeTab = null;
     groups.forEach(function (group) {
-      var tab = document.createElement("button");
-      tab.type = "button";
-      tab.className = "focus-tab" + (group === current ? " active" : "");
-      var open = group.tasks.filter(function (t) { return t.status !== 2; }).length;
-      tab.textContent = group.sheet.name + " ";
-      var count = document.createElement("span");
-      count.className = "focus-tab-count";
-      count.textContent = "(" + open + ")";
-      tab.appendChild(count);
+      var sheet = group.sheet;
+      var tab = document.createElement("div");
+      tab.className = "sheet-tab" + (group === current ? " active" : "");
+      var label = document.createElement("span");
+      label.className = "sheet-tab-label";
+      label.textContent = (sheet.shared ? "👥 " : "") + sheet.name;
+      tab.appendChild(label);
+      if (sheet.shared) {
+        var unreadCount = getUnreadCount(sheet);
+        if (unreadCount > 0) {
+          var unreadBadge = document.createElement("span");
+          unreadBadge.className = "sheet-tab-unread-badge";
+          unreadBadge.textContent = unreadCount > 99 ? "99+" : String(unreadCount);
+          tab.appendChild(unreadBadge);
+        }
+      }
       tab.addEventListener("click", function () {
-        focusActiveSheetId = group.sheet.id;
+        focusActiveSheetId = sheet.id;
         renderFocusView();
       });
       if (group === current) activeTab = tab;
-      tabs.appendChild(tab);
+      (sheet.shared ? sharedBar : privateBar).appendChild(tab);
     });
-    focusViewBody.appendChild(tabs);
-    if (activeTab) activeTab.scrollIntoView({ block: "nearest", inline: "center" });
+    if (privateBar.children.length) stack.appendChild(privateBar);
+    if (sharedBar.children.length) stack.appendChild(sharedBar);
+    row.appendChild(stack);
+    notebook.appendChild(row);
 
     var card = document.createElement("section");
     card.className = "focus-project";
+    if (!current.tasks.length) {
+      var none = document.createElement("p");
+      none.className = "focus-view-empty";
+      none.textContent = tr("focusViewEmpty");
+      card.appendChild(none);
+    }
     current.tasks.forEach(function (t) {
       card.appendChild(buildFocusTaskRow(current.sheet, t, t.date >= today));
     });
-    focusViewBody.appendChild(card);
+    notebook.appendChild(card);
+    focusViewBody.appendChild(notebook);
+    if (activeTab) activeTab.scrollIntoView({ block: "nearest", inline: "center" });
   }
 
   // Same gestures as a row in the main list: tap cycles its status,
@@ -5118,6 +5130,7 @@
     var projects = openTasksByProject().map(function (group) {
       return {
         name: group.sheet.name,
+        shared: !!group.sheet.shared,
         tasks: group.tasks.map(function (t) { return { text: t.text, status: t.status || 0 }; })
       };
     });

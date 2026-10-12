@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The app's other project tabs (.sheet-tab): muted fill, slanted left edge. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="100dp"
+    android:height="30dp"
+    android:viewportWidth="100"
+    android:viewportHeight="30">
+    <path
+        android:fillColor="#E4DCC4"
+        android:pathData="M8,0 L100,0 L100,30 L0,30 Z" />
+    <path
+        android:pathData="M0,30 L8,1 L99,1 L99,29 L0,29"
+        android:strokeColor="#C2D9EC"
+        android:strokeWidth="2" />
+</vector>

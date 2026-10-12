@@ -13,8 +13,9 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-// Home-screen "המשימות שלי" widget: one project's open tasks at a time,
-// with › / ‹ in the header to page between projects (like the app's tabs).
+// Home-screen "המשימות שלי" widget, shaped like the app: project tabs on
+// top (the current project plus its neighbours - tapping a side tab moves
+// to it) and that project's open tasks on the page below.
 // It can't reach Supabase itself, so tasks.html (syncNativeWidget) hands it
 // the list through ItaskAlarmPlugin.setWidgetData whenever it changes; it
 // shows the last list the app saw. Tapping a task or the title opens the
@@ -51,7 +52,12 @@ public class ItaskWidgetProvider extends AppWidgetProvider {
     static int currentProject(Context c, int count) {
         if (count == 0) return 0;
         int i = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getInt(KEY_PROJECT, 0);
-        return ((i % count) + count) % count;
+        return Math.max(0, Math.min(i, count - 1));
+    }
+
+    private static String tabLabel(JSONObject project) {
+        if (project == null) return "";
+        return (project.optBoolean("shared") ? "👥 " : "") + project.optString("name");
     }
 
     @Override
@@ -60,10 +66,9 @@ public class ItaskWidgetProvider extends AppWidgetProvider {
         if (ACTION_PREV.equals(action) || ACTION_NEXT.equals(action)) {
             JSONArray projects = loadData(context).optJSONArray("projects");
             int count = projects != null ? projects.length() : 0;
-            if (count > 1) {
-                int i = currentProject(context, count) + (ACTION_NEXT.equals(action) ? 1 : -1);
-                context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-                        .putInt(KEY_PROJECT, ((i % count) + count) % count).apply();
+            int i = currentProject(context, count) + (ACTION_NEXT.equals(action) ? 1 : -1);
+            if (i >= 0 && i < count) {
+                context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putInt(KEY_PROJECT, i).apply();
                 refresh(context);
             }
             return;
@@ -82,7 +87,9 @@ public class ItaskWidgetProvider extends AppWidgetProvider {
         int count = projects != null ? projects.length() : 0;
         int index = currentProject(c, count);
         JSONObject project = count > 0 ? projects.optJSONObject(index) : null;
-        String title = project != null ? project.optString("name") : data.optString("title", "");
+        String title = project != null ? tabLabel(project) : data.optString("title", "");
+        String prevLabel = index > 0 ? tabLabel(projects.optJSONObject(index - 1)) : "";
+        String nextLabel = index < count - 1 ? tabLabel(projects.optJSONObject(index + 1)) : "";
         String emptyText = data.optString("emptyText", "");
 
         PendingIntent open = PendingIntent.getActivity(c, 0, ItaskAlarmPlugin.focusViewIntent(c),
@@ -94,15 +101,16 @@ public class ItaskWidgetProvider extends AppWidgetProvider {
                 new Intent(c, ItaskWidgetProvider.class).setAction(ACTION_PREV), PendingIntent.FLAG_IMMUTABLE);
         PendingIntent next = PendingIntent.getBroadcast(c, 3,
                 new Intent(c, ItaskWidgetProvider.class).setAction(ACTION_NEXT), PendingIntent.FLAG_IMMUTABLE);
-        int arrows = count > 1 ? View.VISIBLE : View.INVISIBLE;
 
         for (int id : ids) {
             RemoteViews views = new RemoteViews(c.getPackageName(), R.layout.itask_widget);
             if (!title.isEmpty()) views.setTextViewText(R.id.itask_widget_title, title);
-            views.setTextViewText(R.id.itask_widget_counter, count > 1 ? (index + 1) + "/" + count : "");
             if (!emptyText.isEmpty()) views.setTextViewText(R.id.itask_widget_empty, emptyText);
-            views.setViewVisibility(R.id.itask_widget_prev, arrows);
-            views.setViewVisibility(R.id.itask_widget_next, arrows);
+            views.setTextViewText(R.id.itask_widget_prev, prevLabel);
+            views.setTextViewText(R.id.itask_widget_next, nextLabel);
+            // no neighbour on that side: keep the tab's space, hide the tab
+            views.setViewVisibility(R.id.itask_widget_prev, prevLabel.isEmpty() ? View.INVISIBLE : View.VISIBLE);
+            views.setViewVisibility(R.id.itask_widget_next, nextLabel.isEmpty() ? View.INVISIBLE : View.VISIBLE);
             views.setOnClickPendingIntent(R.id.itask_widget_prev, prev);
             views.setOnClickPendingIntent(R.id.itask_widget_next, next);
             Intent service = new Intent(c, ItaskWidgetService.class)
