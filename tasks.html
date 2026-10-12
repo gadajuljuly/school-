@@ -2705,9 +2705,96 @@
     .sheet-tab { max-width: 100px; }
     .notebook-date { font-size: 0.95rem; }
   }
+  /* "המשימות שלי": a full-screen, tasks-only view of every open task
+     grouped by project - opened from the home-screen widget or the app
+     icon's long-press shortcut (native), or tasks.html#focus. */
+  .focus-view {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    background: var(--desk);
+    overflow-y: auto;
+    padding: calc(env(safe-area-inset-top, 0px) + 14px) 14px calc(env(safe-area-inset-bottom, 0px) + 20px);
+  }
+  .focus-view[hidden] { display: none; }
+  .focus-view-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .focus-view-header h2 {
+    flex: 1;
+    margin: 0;
+    font-family: "Rubik", "Assistant", sans-serif;
+    font-size: 1.35rem;
+    color: var(--accent);
+  }
+  .focus-view-header button {
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: none;
+    background: var(--accent);
+    color: var(--accent-contrast);
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .focus-project {
+    background: var(--paper);
+    border-radius: 14px;
+    box-shadow: 0 1px 4px var(--shadow);
+    padding: 12px 14px;
+    margin-bottom: 12px;
+  }
+  .focus-project-name {
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: var(--ink);
+    margin-bottom: 6px;
+  }
+  .focus-task {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 0;
+    border: none;
+    border-top: 1px solid var(--rule);
+    background: none;
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 0.98rem;
+    text-align: start;
+    cursor: pointer;
+  }
+  .focus-task:first-of-type { border-top: none; }
+  .focus-task-mark {
+    flex: none;
+    width: 14px;
+    height: 14px;
+    margin-top: 4px;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+  }
+  .focus-task.partial .focus-task-mark { background: linear-gradient(90deg, var(--accent) 50%, transparent 50%); }
+  .focus-task-text { flex: 1; overflow-wrap: anywhere; }
+  .focus-view-empty {
+    text-align: center;
+    color: var(--ink-muted);
+    margin-top: 40px;
+  }
 </style>
 </head>
 <body>
+<div class="focus-view" id="focusView" hidden>
+  <div class="focus-view-header">
+    <h2 data-i18n="focusViewTitle">המשימות שלי</h2>
+    <button type="button" id="focusViewOpenAppBtn" data-i18n="focusViewOpenApp">לאפליקציה המלאה</button>
+  </div>
+  <div id="focusViewBody"></div>
+</div>
 <div id="navDebugToast" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#222;color:#fff;font-size:13px;line-height:1.4;padding:8px 12px;direction:rtl;display:none;white-space:pre-wrap;"></div>
 <div class="app-toast" id="appToast"></div>
 <div class="offline-sync-badge" id="offlineSyncBadge" data-i18n="offlineSyncBadgeMsg" hidden>השינויים נשמרו במכשיר וישמרו בשרת כשיהיה חיבור לאינטרנט</div>
@@ -3663,6 +3750,9 @@
     taskReminderActiveEvery30: { he: "פעילה: כל חצי שעה", en: "Active: every half hour", ar: "نشط: كل نصف ساعة", ru: "Активно: каждые полчаса" },
     taskReminderActiveEveryHour: { he: "פעילה: כל שעה", en: "Active: every hour", ar: "نشط: كل ساعة", ru: "Активно: каждый час" },
     taskReminderActiveAt: { he: "פעילה: בשעה ", en: "Active: at ", ar: "نشط: الساعة ", ru: "Активно: в " },
+    focusViewTitle: { he: "המשימות שלי", en: "My tasks", ar: "مهامي", ru: "Мои задачи" },
+    focusViewOpenApp: { he: "לאפליקציה המלאה", en: "Full app", ar: "التطبيق الكامل", ru: "Всё приложение" },
+    focusViewEmpty: { he: "אין משימות פתוחות", en: "No open tasks", ar: "لا توجد مهام مفتوحة", ru: "Нет открытых задач" },
     taskReminderActiveOnDate: { he: "פעילה: בתאריך ", en: "Active: on ", ar: "نشط: بتاريخ ", ru: "Активно: " },
     taskReminderAtTimeWord: { he: "בשעה ", en: "at ", ar: "الساعة ", ru: "в " },
     taskReminderPastMsg: { he: "המועד שנבחר כבר עבר", en: "That time has already passed", ar: "هذا الوقت قد مضى بالفعل", ru: "Это время уже прошло" },
@@ -4781,6 +4871,125 @@
     lastNativeTaskAlarmsJson = json;
     nativeTaskAlarmPlugin.setAlarms({ alarms: alarms }).catch(function () { lastNativeTaskAlarmsJson = null; });
   }
+  // Every open task (not done, not a note) of every live project, oldest
+  // first - shared by the full-screen "המשימות שלי" view and the native
+  // home-screen widget so both always show the same thing.
+  function openTasksByProject() {
+    return allSheets().filter(function (sheet) {
+      return !sheet.ended && sheet.id !== HEAD_OFFICE_SHEET_ID;
+    }).map(function (sheet) {
+      var tasks = (sheet.tasks || []).filter(function (t) {
+        return t.type !== "note" && t.status !== 2 && !t.headOfficeVirtual && (t.text || "").trim();
+      }).sort(function (a, b) {
+        if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+        return (a.createdAt || 0) - (b.createdAt || 0);
+      });
+      return { sheet: sheet, tasks: tasks };
+    }).filter(function (group) { return group.tasks.length; });
+  }
+
+  var focusView = document.getElementById("focusView");
+  var focusViewBody = document.getElementById("focusViewBody");
+  function renderFocusView() {
+    focusViewBody.innerHTML = "";
+    var groups = openTasksByProject();
+    if (!groups.length) {
+      var empty = document.createElement("p");
+      empty.className = "focus-view-empty";
+      empty.textContent = tr("focusViewEmpty");
+      focusViewBody.appendChild(empty);
+      return;
+    }
+    groups.forEach(function (group) {
+      var card = document.createElement("section");
+      card.className = "focus-project";
+      var name = document.createElement("div");
+      name.className = "focus-project-name";
+      name.textContent = group.sheet.name;
+      card.appendChild(name);
+      group.tasks.forEach(function (t) {
+        var row = document.createElement("button");
+        row.type = "button";
+        row.className = "focus-task" + (t.status === 1 ? " partial" : "");
+        var mark = document.createElement("span");
+        mark.className = "focus-task-mark";
+        var text = document.createElement("span");
+        text.className = "focus-task-text";
+        text.textContent = t.text;
+        row.appendChild(mark);
+        row.appendChild(text);
+        // tapping a task jumps to it in the full app
+        row.addEventListener("click", function () {
+          closeFocusView();
+          viewingArchive = false;
+          data.activeSheetId = group.sheet.id;
+          state.viewDate = t.date;
+          state.showingCompleted = false;
+          render();
+        });
+        card.appendChild(row);
+      });
+      focusViewBody.appendChild(card);
+    });
+  }
+  function openFocusView() {
+    closeMoveTask();
+    renderFocusView();
+    focusView.hidden = false;
+    focusView.scrollTop = 0;
+  }
+  function closeFocusView() {
+    focusView.hidden = true;
+    if (location.hash === "#focus") history.replaceState(null, "", location.pathname + location.search);
+  }
+  document.getElementById("focusViewOpenAppBtn").addEventListener("click", closeFocusView);
+  window.addEventListener("hashchange", function () {
+    if (location.hash === "#focus") openFocusView();
+  });
+
+  // Native app: the widget and the icon's "המשימות שלי" shortcut launch the
+  // app asking for this view - picked up at startup (takeLaunchView) or,
+  // when the app was already running, through the "launchView" event.
+  var launchViewChecked = false;
+  function checkLaunchView() {
+    if (launchViewChecked) return;
+    launchViewChecked = true;
+    if (location.hash === "#focus") openFocusView();
+    if (!nativeTaskAlarmPlugin) return;
+    nativeTaskAlarmPlugin.takeLaunchView().then(function (res) {
+      if (res && res.view === "focus") openFocusView();
+    }).catch(function () {});
+    nativeTaskAlarmPlugin.addListener("launchView", function (e) {
+      if (e && e.view === "focus") {
+        openFocusView();
+        nativeTaskAlarmPlugin.takeLaunchView().catch(function () {});
+      }
+    });
+  }
+
+  // Hands the home-screen widget the same open-tasks list (it can't read
+  // Supabase itself), whenever it changes.
+  var lastNativeWidgetJson = null;
+  function syncNativeWidget() {
+    if (dataLoadBlocked || !privateDataSettled) return;
+    checkLaunchView();
+    if (!nativeTaskAlarmPlugin) return;
+    var projects = openTasksByProject().map(function (group) {
+      return {
+        name: group.sheet.name,
+        tasks: group.tasks.map(function (t) { return { text: t.text, status: t.status || 0 }; })
+      };
+    });
+    var json = JSON.stringify(projects);
+    if (json === lastNativeWidgetJson) return;
+    lastNativeWidgetJson = json;
+    nativeTaskAlarmPlugin.setWidgetData({
+      projects: projects,
+      title: tr("focusViewTitle"),
+      emptyText: tr("focusViewEmpty")
+    }).catch(function () { lastNativeWidgetJson = null; });
+  }
+
   // Android 12+ only rings an alarm on the exact minute with the user's
   // "Alarms & reminders" permission; without it alarms can drift by minutes.
   function ensureExactAlarmPermission() {
@@ -12852,6 +13061,8 @@
     taskList.scrollTop = taskListScrollTop;
     renderTaskReminderIconsLayer(reminderRowsForIconsLayer);
     syncNativeTaskAlarms();
+    if (!focusView.hidden) renderFocusView();
+    syncNativeWidget();
 
     sheetTitle.textContent = activeSheet().name;
     renderSheetTitleLogo();

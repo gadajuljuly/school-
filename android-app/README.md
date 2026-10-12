@@ -170,7 +170,7 @@ A pushed FCM notification can only ring once, so per-task reminders ring
 through a small local plugin instead: `tasks.html` (`syncNativeTaskAlarms`)
 hands the plugin every active reminder, and it schedules them with
 AlarmManager and shows an insistent notification that keeps tapping out a
-Morse-telegraph sound (`native-src/task_alarm_morse.wav`) until "כבה" or
+Morse-telegraph sound (`native-src/res/raw/task_alarm_morse.wav`) until "כבה" or
 "נודניק" (5 minutes) is pressed. "כבה" turns the reminder off and the page
 then removes it from the task; marking the task done pauses its reminder
 (un-marking it before its time brings it back). Reminders the app
@@ -182,10 +182,20 @@ The generated `android/` project isn't in git, so the sources live in
 
 1. Copy every `.java` file from `native-src/` into
    `android/app/src/main/java/com/gadajuljuly/itask/`.
-2. Copy `native-src/task_alarm_morse.wav` into `android/app/src/main/res/raw/`
-   (create the `raw` folder if it doesn't exist).
+2. Copy the `native-src/res/` folder over `android/app/src/main/res/`
+   (the Morse sound and the widget's layouts/config).
 3. In `MainActivity.java`, add `registerPlugin(ItaskAlarmPlugin.class);` as
    the first line of `onCreate`, before `super.onCreate(savedInstanceState);`.
 4. Add the permissions and receivers from
    `native-src/AndroidManifest-additions.xml` to `AndroidManifest.xml`.
 5. Rebuild and publish.
+
+## "המשימות שלי" widget and shortcut (same `native-src/` plugin)
+
+A home-screen widget lists every open task grouped by project, and the
+app icon's long-press menu gets a "המשימות שלי" shortcut. Both open the
+app straight into `tasks.html`'s full-screen tasks-only view (also
+reachable on the web as `tasks.html#focus`). The widget can't read
+Supabase itself: `tasks.html` (`syncNativeWidget`) pushes the list to it
+whenever it changes, so it shows what the app last saw. The widget's
+receiver and service are in `native-src/AndroidManifest-additions.xml`.
