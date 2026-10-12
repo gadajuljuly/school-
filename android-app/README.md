@@ -187,7 +187,7 @@ The generated `android/` project isn't in git, so the sources live in
 1. Copy every `.java` file from `native-src/` into
    `android/app/src/main/java/com/gadajuljuly/itask/`.
 2. Copy the `native-src/res/` folder over `android/app/src/main/res/`
-   (the Morse sound and the widget's layouts/config).
+   (the reminder chime and the widget's layouts/config).
 3. In `MainActivity.java`, add `registerPlugin(ItaskAlarmPlugin.class);` as
    the first line of `onCreate`, before `super.onCreate(savedInstanceState);`.
 4. Add the permissions and receivers from
