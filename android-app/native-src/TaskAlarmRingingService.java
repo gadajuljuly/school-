@@ -26,10 +26,13 @@ import android.os.Vibrator;
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 
-// Plays a ringing reminder the way an alarm clock does: the Morse clip loops
-// on the alarm stream (alarm volume, heard even when the phone is on
-// vibrate/silent) with a repeating vibration, until "כבה"/"נודניק" or
-// RING_MS. Like an alarm clock, pressing any of the phone's side buttons
+// Plays a ringing reminder the way an alarm clock does: a soft 1.5-second
+// "ding-dong" with a double buzz every CHIME_INTERVAL_MS, on the alarm
+// stream (alarm volume, heard even when the phone is on vibrate/silent),
+// until "כבה"/"נודניק". The service itself may only run a few minutes
+// (shortService), so after RING_MS it hands over to an exact alarm that
+// starts it again moments later - the chiming just carries on until it's
+// turned off. Like an alarm clock, pressing any of the phone's side buttons
 // (power, volume up/down) while it rings snoozes it for 5 minutes. A short
 // foreground service, because a broadcast receiver can't keep a player
 // alive; starting it from an exact alarm is allowed.
@@ -37,6 +40,7 @@ public class TaskAlarmRingingService extends Service {
     private static final String ACTION_START = "com.gadajuljuly.itask.RING_START";
     private static final String CHANNEL_ID = "task_alarm_ringing";
     private static final long RING_MS = 2 * 60 * 1000L; // inside shortService's 3-minute limit
+    private static final long CHIME_INTERVAL_MS = 10 * 1000L;
     // the alarm itself may light the screen up as it starts - not a button press
     private static final long BUTTON_GRACE_MS = 2000L;
 
@@ -45,7 +49,9 @@ public class TaskAlarmRingingService extends Service {
     private MediaPlayer player;
     private Vibrator vibrator;
     private final Handler handler = new Handler(Looper.getMainLooper());
-    private final Runnable timeout = this::stopRingingKeepNotification;
+    private final Runnable timeout = this::continueAfterServiceLimit;
+    private final Runnable chime = this::chime;
+    private AudioAttributes alarmAudio;
     private String ringingTitle = "";
     private String ringingBody = "";
     private long ringStartedAt = 0;
@@ -103,7 +109,7 @@ public class TaskAlarmRingingService extends Service {
     // shortService ran out of time (Android 14+)
     @Override
     public void onTimeout(int startId, int fgsType) {
-        stopRingingKeepNotification();
+        continueAfterServiceLimit();
     }
 
     @Override
@@ -119,35 +125,49 @@ public class TaskAlarmRingingService extends Service {
         return null;
     }
 
-    // Time's up without an answer: go quiet but leave the notification (and
-    // its buttons) in place.
-    private void stopRingingKeepNotification() {
-        stopSound();
-        stopForeground(STOP_FOREGROUND_DETACH);
-        ringingId = null;
-        stopSelf();
+    // Still unanswered when this run of the service has to end: re-arm the
+    // same reminder for the next chime slot, so it keeps going until "כבה".
+    private void continueAfterServiceLimit() {
+        String id = ringingId;
+        if (id == null) {
+            stopSelf();
+            return;
+        }
+        TaskAlarmScheduler.snoozeFor(this, id, ringingTitle, ringingBody, CHIME_INTERVAL_MS);
     }
 
     private void startSound() {
-        AudioAttributes alarm = new AudioAttributes.Builder()
+        alarmAudio = new AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_ALARM)
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                 .build();
         try {
             player = new MediaPlayer();
-            player.setAudioAttributes(alarm);
-            player.setDataSource(this, Uri.parse("android.resource://" + getPackageName() + "/raw/task_alarm_morse"));
-            player.setLooping(true);
+            player.setAudioAttributes(alarmAudio);
+            player.setDataSource(this, Uri.parse("android.resource://" + getPackageName() + "/raw/task_alarm_dingdong"));
             player.prepare();
-            player.start();
         } catch (Exception e) {
             if (player != null) player.release();
             player = null;
         }
         vibrator = getSystemService(Vibrator.class);
-        if (vibrator != null && vibrator.hasVibrator() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            vibrator.vibrate(VibrationEffect.createWaveform(TaskAlarmScheduler.MORSE_VIBRATION, 0), alarm);
+        chime();
+    }
+
+    // One "ding-dong" + double buzz, then again in CHIME_INTERVAL_MS.
+    private void chime() {
+        if (player != null) {
+            try {
+                player.seekTo(0);
+                player.start();
+            } catch (IllegalStateException ignored) {
+            }
         }
+        if (vibrator != null && vibrator.hasVibrator() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            vibrator.vibrate(VibrationEffect.createWaveform(TaskAlarmScheduler.DING_DONG_VIBRATION, -1), alarmAudio);
+        }
+        handler.removeCallbacks(chime);
+        handler.postDelayed(chime, CHIME_INTERVAL_MS);
     }
 
     // Power button: the screen turning off or on. Volume buttons: an active
@@ -205,6 +225,7 @@ public class TaskAlarmRingingService extends Service {
 
     private void stopSound() {
         stopListeningForSideButtons();
+        handler.removeCallbacks(chime);
         if (player != null) {
             try { player.stop(); } catch (IllegalStateException ignored) {}
             player.release();

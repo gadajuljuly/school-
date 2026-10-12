@@ -19,10 +19,9 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 // Schedules per-task reminders like an alarm clock: AlarmManager wakes the
-// phone at the exact minute, and the notification is FLAG_INSISTENT on a
-// channel whose sound is a Morse-telegraph clip (res/raw/task_alarm_morse),
-// so it keeps tapping out and vibrating until the user presses "כבה" or
-// "נודניק" (or ten minutes pass). "כבה" (or swiping it away) turns the
+// phone at the exact minute and TaskAlarmRingingService chimes a soft
+// "ding-dong" (res/raw/task_alarm_dingdong) every 10 seconds until the user
+// presses "כבה" or "נודניק". "כבה" (or swiping it away) turns the
 // reminder off for good: it's unscheduled here and queued for tasks.html
 // to remove from the task (takeTurnedOff).
 // Each alarm is {id, title, body, at (epoch ms), repeatMinutes?, snooze?}.
@@ -38,10 +37,12 @@ public final class TaskAlarmScheduler {
     private static final String KEY = "alarms";
     private static final String KEY_FIRED = "fired";
     private static final String KEY_TURNED_OFF = "turnedOff";
-    private static final String CHANNEL_ID = "task_alarm_morse";
+    // fallback channel, used only when the ringing service can't start
+    private static final String CHANNEL_ID = "task_alarm_dingdong";
+    private static final String OLD_MORSE_CHANNEL_ID = "task_alarm_morse";
     private static final int MAX_FIRED_KEYS = 200;
-    // ".. - .- ... -.-" (ITASK), matching the sound
-    static final long[] MORSE_VIBRATION = {0, 80, 80, 80, 240, 240, 240, 80, 80, 240, 240, 80, 80, 80, 80, 80, 240, 240, 80, 80, 80, 240, 900};
+    // two soft buzzes, one per bell of the chime
+    static final long[] DING_DONG_VIBRATION = {0, 250, 300, 250};
     private static final String SNOOZE_SUFFIX = "#snooze";
     private static final long SNOOZE_MS = 5 * 60 * 1000L;
     private static final long RING_TIMEOUT_MS = 10 * 60 * 1000L;
@@ -100,14 +101,18 @@ public final class TaskAlarmScheduler {
         scheduleAllAndSave(c, next);
     }
 
-    static synchronized void snooze(Context c, String id, String title, String body) {
+    static void snooze(Context c, String id, String title, String body) {
+        snoozeFor(c, id, title, body, SNOOZE_MS);
+    }
+
+    static synchronized void snoozeFor(Context c, String id, String title, String body, long delayMs) {
         stopRinging(c, id);
         try {
             JSONObject a = new JSONObject();
             a.put("id", baseId(id) + SNOOZE_SUFFIX);
             a.put("title", title);
             a.put("body", body);
-            a.put("at", System.currentTimeMillis() + SNOOZE_MS);
+            a.put("at", System.currentTimeMillis() + delayMs);
             a.put("snooze", true);
             JSONArray alarms = load(c);
             JSONArray next = new JSONArray();
@@ -282,13 +287,14 @@ public final class TaskAlarmScheduler {
     private static void ensureChannel(Context c) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
         NotificationManager nm = c.getSystemService(NotificationManager.class);
+        nm.deleteNotificationChannel(OLD_MORSE_CHANNEL_ID);
         if (nm.getNotificationChannel(CHANNEL_ID) != null) return;
-        NotificationChannel channel = new NotificationChannel(CHANNEL_ID, "תזכורות משימה (מורס)",
+        NotificationChannel channel = new NotificationChannel(CHANNEL_ID, "תזכורות משימה (דינג־דונג)",
                 NotificationManager.IMPORTANCE_HIGH);
-        channel.setDescription("מצלצל בצלצול טלגרף עד שלוחצים כבה או נודניק");
+        channel.setDescription("פעמון דינג־דונג עדין עד שלוחצים כבה או נודניק");
         channel.enableVibration(true);
-        channel.setVibrationPattern(MORSE_VIBRATION);
-        channel.setSound(Uri.parse("android.resource://" + c.getPackageName() + "/raw/task_alarm_morse"),
+        channel.setVibrationPattern(DING_DONG_VIBRATION);
+        channel.setSound(Uri.parse("android.resource://" + c.getPackageName() + "/raw/task_alarm_dingdong"),
                 new AudioAttributes.Builder()
                         .setUsage(AudioAttributes.USAGE_ALARM)
                         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
