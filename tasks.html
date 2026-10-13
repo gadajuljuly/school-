@@ -1774,6 +1774,8 @@
     cursor: pointer;
   }
   .cal-app-btn[hidden] { display: none; }
+  /* always on the date's right: first in RTL, last in LTR languages */
+  html[dir="ltr"] .cal-app-btn { order: 3; }
   .cal-app-btn img { width: 100%; height: 100%; display: block; }
   .date-click-area {
     position: relative;
