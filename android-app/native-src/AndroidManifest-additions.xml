@@ -6,6 +6,8 @@
 <uses-permission android:name="android.permission.VIBRATE" />
 <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+<uses-permission android:name="android.permission.READ_CALENDAR" />
+<uses-permission android:name="android.permission.WRITE_CALENDAR" />
 
 <!-- 2) Inside <application ...>, just before its closing </application> tag: -->
 <receiver android:name=".TaskAlarmReceiver" android:exported="false" />
@@ -32,3 +34,15 @@
     android:name=".TaskAlarmRingingService"
     android:exported="false"
     android:foregroundServiceType="shortService" />
+
+<!-- 3) Inside the existing <activity android:name=".MainActivity" ...> element,
+     next to its other <intent-filter>, so ITASK shows up in Android's share
+     sheet for text (a WhatsApp message -> a new task): -->
+<intent-filter>
+    <action android:name="android.intent.action.SEND" />
+    <category android:name="android.intent.category.DEFAULT" />
+    <data android:mimeType="text/plain" />
+</intent-filter>
+
+<!-- 4) In MainActivity.java, next to registerPlugin(ItaskAlarmPlugin.class): -->
+<!--    registerPlugin(ItaskCalendarPlugin.class); -->

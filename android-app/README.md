@@ -213,3 +213,19 @@ code, runs `npm install` and `npx cap sync android`, and copies everything in
 Then raise `versionCode`/`versionName` in `build.gradle (:app)` and build.
 The one-time edits from the sections above (`AndroidManifest.xml`,
 `registerPlugin` in `MainActivity.java`) stay in place between builds.
+
+## Calendar and share-to-task (`native-src/ItaskCalendarPlugin.java`, `ItaskAlarmPlugin.java`)
+
+- **לוח שנה** (diary screen): `tasks.html` shows month / week / day / list
+  views over the phone's own calendars through `ItaskCalendarPlugin`
+  (Android `CalendarContract`, READ/WRITE_CALENDAR) - the same store the
+  phone's calendar app uses, so Google, Samsung and Outlook (when the
+  Outlook app's "Sync calendars" is on) events all appear, and events added
+  or edited here sync out through their own account. Needs
+  `registerPlugin(ItaskCalendarPlugin.class);` in `MainActivity.java`.
+- **Share to ITASK**: an `ACTION_SEND` text/plain intent-filter on
+  MainActivity puts ITASK in Android's share sheet; `ItaskAlarmPlugin`
+  hands the text to the page (launch view "share"), which opens an
+  add-task dialog with the text, a project and a date.
+
+Both need the manifest additions in `native-src/AndroidManifest-additions.xml`.

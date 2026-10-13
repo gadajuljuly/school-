@@ -20,7 +20,9 @@ import org.json.JSONArray;
 // Widget (syncNativeWidget): the page sends the open-tasks list for the
 // home-screen widget. Launch view: tapping the widget starts the app with
 // EXTRA_VIEW ("task|sheetId|date|taskId"), which the page picks up to open
-// that project/task.
+// that project/task; text shared into ITASK from another app (Android's
+// share sheet - a WhatsApp message...) arrives as view "share" plus the text,
+// and the page opens it as a new task.
 @CapacitorPlugin(name = "ItaskAlarm")
 public class ItaskAlarmPlugin extends Plugin {
     static final String EXTRA_VIEW = "itask_view";
@@ -29,6 +31,7 @@ public class ItaskAlarmPlugin extends Plugin {
     private static final String OLD_SHORTCUT_ID = "my_tasks";
 
     private String pendingLaunchView = null;
+    private String pendingSharedText = null;
 
     // Opens the app on a project ("task|sheetId||") or a task
     // ("task|sheetId|date|taskId"); null just opens the app.
@@ -52,12 +55,23 @@ public class ItaskAlarmPlugin extends Plugin {
         if (takeViewFromIntent(intent)) {
             JSObject event = new JSObject();
             event.put("view", pendingLaunchView);
+            if (pendingSharedText != null) event.put("text", pendingSharedText);
             notifyListeners("launchView", event);
         }
     }
 
     private boolean takeViewFromIntent(Intent intent) {
+        if (intent != null && Intent.ACTION_SEND.equals(intent.getAction())
+                && intent.getStringExtra(Intent.EXTRA_TEXT) != null) {
+            pendingLaunchView = "share";
+            pendingSharedText = intent.getStringExtra(Intent.EXTRA_TEXT);
+            // so a later reload doesn't offer the same text again
+            intent.setAction(Intent.ACTION_MAIN);
+            intent.removeExtra(Intent.EXTRA_TEXT);
+            return true;
+        }
         if (intent == null || intent.getStringExtra(EXTRA_VIEW) == null) return false;
+        pendingSharedText = null;
         pendingLaunchView = intent.getStringExtra(EXTRA_VIEW);
         intent.removeExtra(EXTRA_VIEW); // so a later reload doesn't reopen it
         return true;
@@ -67,7 +81,9 @@ public class ItaskAlarmPlugin extends Plugin {
     public void takeLaunchView(PluginCall call) {
         JSObject result = new JSObject();
         result.put("view", pendingLaunchView);
+        if (pendingSharedText != null) result.put("text", pendingSharedText);
         pendingLaunchView = null;
+        pendingSharedText = null;
         call.resolve(result);
     }
 

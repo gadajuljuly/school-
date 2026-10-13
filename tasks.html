@@ -2705,9 +2705,377 @@
     .sheet-tab { max-width: 100px; }
     .notebook-date { font-size: 0.95rem; }
   }
+  /* לוח שנה: a full calendar over the phone's own calendars (Google,
+     Samsung, Outlook if its app syncs calendars), via the native
+     ItaskCalendar plugin. Paper colours to match the rest of the app. */
+  .cal-view {
+    position: fixed;
+    inset: 0;
+    z-index: 36;
+    background: var(--desk);
+    display: flex;
+    flex-direction: column;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .cal-view[hidden] { display: none; }
+  .cal-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 10px 6px;
+  }
+  .cal-title {
+    flex: 1;
+    margin: 0;
+    font-family: "Rubik", "Assistant", sans-serif;
+    font-size: 1.2rem;
+    color: var(--accent);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .cal-icon-btn {
+    min-width: 36px;
+    height: 36px;
+    padding: 0 8px;
+    border-radius: 999px;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .cal-modes {
+    display: flex;
+    gap: 4px;
+    padding: 0 10px 8px;
+  }
+  .cal-mode-btn {
+    flex: 1;
+    padding: 7px 0;
+    border-radius: 8px;
+    border: 1px solid var(--rule);
+    background: var(--tab-inactive);
+    color: var(--ink-muted);
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .cal-mode-btn.active {
+    background: var(--paper);
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  .cal-body {
+    flex: 1;
+    min-height: 0;
+    margin: 0 8px 8px;
+    background: var(--paper);
+    border-radius: 10px;
+    box-shadow: 0 1px 4px var(--shadow);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+  .cal-message {
+    margin: auto;
+    padding: 24px;
+    text-align: center;
+    color: var(--ink-muted);
+    line-height: 1.6;
+  }
+  .cal-message button { margin-top: 12px; }
+  .cal-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    border-bottom: 1px solid var(--rule);
+    background: var(--paper-alt);
+  }
+  .cal-weekdays div {
+    text-align: center;
+    padding: 6px 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--ink-muted);
+  }
+  .cal-month-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    grid-template-rows: repeat(6, 1fr);
+    min-height: 0;
+  }
+  .cal-day-cell {
+    border-inline-start: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    padding: 2px;
+    overflow: hidden;
+    cursor: pointer;
+    min-width: 0;
+  }
+  .cal-day-cell:nth-child(7n+1) { border-inline-start: none; }
+  .cal-day-cell.other-month { background: rgba(0, 0, 0, 0.03); }
+  .cal-day-cell.other-month .cal-day-num { color: var(--ink-muted); opacity: 0.6; }
+  .cal-day-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .cal-day-cell.today .cal-day-num,
+  .cal-col-head.today .cal-col-num { background: var(--danger); color: var(--accent-contrast); }
+  .cal-chip {
+    display: block;
+    margin-top: 1px;
+    padding: 1px 3px;
+    border-radius: 3px;
+    font-size: 0.66rem;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #fff;
+  }
+  .cal-chip.timed {
+    background: none;
+    color: var(--ink);
+    padding-inline-start: 0;
+  }
+  .cal-chip.timed::before {
+    content: "";
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--chip-color, var(--accent));
+    margin-inline-end: 3px;
+    vertical-align: middle;
+  }
+  .cal-more { font-size: 0.65rem; color: var(--ink-muted); padding: 0 3px; }
+  .cal-cols-head {
+    display: flex;
+    border-bottom: 1px solid var(--rule);
+    background: var(--paper-alt);
+  }
+  .cal-gutter { flex: none; width: 42px; }
+  .cal-col-head {
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+    padding: 4px 0;
+    cursor: pointer;
+  }
+  .cal-col-name { font-size: 0.72rem; font-weight: 700; color: var(--ink-muted); }
+  .cal-col-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .cal-allday-row {
+    display: flex;
+    border-bottom: 1px solid var(--rule);
+    min-height: 4px;
+  }
+  .cal-allday-cell { flex: 1; min-width: 0; padding: 1px; }
+  .cal-time-scroll { flex: 1; overflow-y: auto; position: relative; }
+  .cal-time-grid { display: flex; position: relative; }
+  .cal-hours { flex: none; width: 42px; }
+  .cal-hour-label {
+    height: 48px;
+    font-size: 0.65rem;
+    color: var(--ink-muted);
+    text-align: center;
+    transform: translateY(-6px);
+  }
+  .cal-col {
+    flex: 1;
+    min-width: 0;
+    position: relative;
+    border-inline-start: 1px solid var(--rule);
+    background-image: repeating-linear-gradient(var(--rule) 0, var(--rule) 1px, transparent 1px, transparent 48px);
+  }
+  .cal-event-block {
+    position: absolute;
+    border-radius: 4px;
+    padding: 2px 3px;
+    font-size: 0.68rem;
+    line-height: 1.25;
+    color: #fff;
+    overflow: hidden;
+    box-sizing: border-box;
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+  }
+  .cal-now-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--danger);
+    z-index: 2;
+    pointer-events: none;
+  }
+  .cal-agenda { flex: 1; overflow-y: auto; padding: 4px 12px 70px; }
+  .cal-agenda-day {
+    font-weight: 700;
+    color: var(--accent);
+    margin: 12px 0 4px;
+    font-size: 0.9rem;
+  }
+  .cal-agenda-day.today { color: var(--danger); }
+  .cal-agenda-item {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 8px 0;
+    border-top: 1px solid var(--rule);
+    cursor: pointer;
+  }
+  .cal-agenda-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; }
+  .cal-agenda-time { flex: none; width: 82px; font-size: 0.8rem; color: var(--ink-muted); text-align: end; }
+  .cal-agenda-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .cal-agenda-loc { font-size: 0.78rem; color: var(--ink-muted); }
+  .cal-fab {
+    position: absolute;
+    bottom: 14px;
+    inset-inline-start: 14px;
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    border: none;
+    background: var(--danger);
+    color: var(--accent-contrast);
+    font-size: 1.8rem;
+    line-height: 1;
+    box-shadow: 0 4px 12px var(--shadow);
+    cursor: pointer;
+    z-index: 3;
+  }
+  .cal-form { display: flex; flex-direction: column; gap: 10px; }
+  .cal-form label { font-size: 0.8rem; color: var(--ink-muted); font-weight: 600; }
+  .cal-form input[type="text"], .cal-form input[type="date"], .cal-form input[type="time"],
+  .cal-form select, .cal-form textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid var(--rule);
+    background: var(--paper-alt);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 0.95rem;
+  }
+  .cal-form textarea { min-height: 60px; resize: vertical; }
+  .cal-form-row { display: flex; gap: 8px; }
+  .cal-form-row > * { flex: 1; min-width: 0; }
+  .cal-form-check { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--ink); }
+  .cal-form-note { font-size: 0.78rem; color: var(--ink-muted); margin: 0; }
+  .cal-editor-box { max-width: 380px; max-height: 88vh; overflow-y: auto; }
+  .cal-cal-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--rule); }
+  .cal-cal-swatch { flex: none; width: 14px; height: 14px; border-radius: 4px; }
+  .cal-cal-name { flex: 1; min-width: 0; }
+  .cal-cal-account { font-size: 0.75rem; color: var(--ink-muted); }
 </style>
 </head>
 <body>
+<div class="cal-view" id="calView" hidden>
+  <div class="cal-header">
+    <button type="button" class="cal-icon-btn" id="calCloseBtn" aria-label="close">✕</button>
+    <h2 class="cal-title" id="calTitle"></h2>
+    <button type="button" class="cal-icon-btn" id="calPrevBtn">›</button>
+    <button type="button" class="cal-icon-btn" id="calTodayBtn" data-i18n="calToday">היום</button>
+    <button type="button" class="cal-icon-btn" id="calNextBtn">‹</button>
+    <button type="button" class="cal-icon-btn" id="calCalendarsBtn" data-i18n-title="calCalendarsTitle" title="יומנים">☰</button>
+  </div>
+  <div class="cal-modes">
+    <button type="button" class="cal-mode-btn" data-cal-mode="month" data-i18n="calModeMonth">חודש</button>
+    <button type="button" class="cal-mode-btn" data-cal-mode="week" data-i18n="calModeWeek">שבוע</button>
+    <button type="button" class="cal-mode-btn" data-cal-mode="day" data-i18n="calModeDay">יום</button>
+    <button type="button" class="cal-mode-btn" data-cal-mode="agenda" data-i18n="calModeAgenda">רשימה</button>
+  </div>
+  <div class="cal-body" id="calBody"></div>
+</div>
+<div class="modal-overlay" id="calEventOverlay" hidden style="z-index:41">
+  <div class="modal-box cal-editor-box">
+    <form class="cal-form" id="calEventForm">
+      <input type="text" id="calEvTitle" data-i18n-ph="calEvTitlePlaceholder" placeholder="כותרת">
+      <label class="cal-form-check"><input type="checkbox" id="calEvAllDay"> <span data-i18n="calEvAllDay">כל היום</span></label>
+      <label data-i18n="calEvStart">התחלה</label>
+      <div class="cal-form-row"><input type="date" id="calEvStartDate"><input type="time" id="calEvStartTime"></div>
+      <label data-i18n="calEvEnd">סיום</label>
+      <div class="cal-form-row"><input type="date" id="calEvEndDate"><input type="time" id="calEvEndTime"></div>
+      <label data-i18n="calEvRepeat">חזרה</label>
+      <select id="calEvRepeat">
+        <option value="" data-i18n="calRepeatNone">ללא</option>
+        <option value="FREQ=DAILY" data-i18n="calRepeatDaily">כל יום</option>
+        <option value="FREQ=WEEKLY" data-i18n="calRepeatWeekly">כל שבוע</option>
+        <option value="FREQ=MONTHLY" data-i18n="calRepeatMonthly">כל חודש</option>
+        <option value="FREQ=YEARLY" data-i18n="calRepeatYearly">כל שנה</option>
+      </select>
+      <p class="cal-form-note" id="calEvSeriesNote" data-i18n="calEvSeriesNote" hidden>אירוע חוזר: השינויים יחולו על כל המופעים</p>
+      <label data-i18n="calEvReminder">תזכורת</label>
+      <select id="calEvReminder">
+        <option value="-1" data-i18n="calReminderNone">ללא</option>
+        <option value="0" data-i18n="calReminderAtTime">בזמן האירוע</option>
+        <option value="5" data-i18n="calReminder5">5 דקות לפני</option>
+        <option value="10" data-i18n="calReminder10">10 דקות לפני</option>
+        <option value="15" data-i18n="calReminder15">15 דקות לפני</option>
+        <option value="30" data-i18n="calReminder30">30 דקות לפני</option>
+        <option value="60" data-i18n="calReminder60">שעה לפני</option>
+        <option value="1440" data-i18n="calReminder1440">יום לפני</option>
+      </select>
+      <label data-i18n="calEvCalendar">יומן</label>
+      <select id="calEvCalendar"></select>
+      <input type="text" id="calEvLocation" data-i18n-ph="calEvLocationPlaceholder" placeholder="מיקום">
+      <textarea id="calEvDescription" data-i18n-ph="calEvDescriptionPlaceholder" placeholder="תיאור"></textarea>
+      <div class="modal-actions">
+        <button type="submit" class="modal-btn modal-btn-primary" data-i18n="calSave">שמירה</button>
+        <button type="button" class="modal-btn modal-btn-no" id="calEvCancelBtn" data-i18n="cancelBtn">ביטול</button>
+      </div>
+      <button type="button" class="convert-to-note-btn danger-text-btn" id="calEvDeleteBtn" data-i18n="calEvDelete" hidden>מחיקת האירוע</button>
+    </form>
+  </div>
+</div>
+<div class="modal-overlay" id="calCalendarsOverlay" hidden style="z-index:41">
+  <div class="modal-box cal-editor-box">
+    <p class="modal-message" data-i18n="calCalendarsTitle">יומנים</p>
+    <div id="calCalendarsList"></div>
+    <div class="modal-actions" style="margin-top:12px">
+      <button type="button" class="modal-btn modal-btn-primary" id="calCalendarsDoneBtn" data-i18n="calDone">סיום</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="shareTaskOverlay" hidden style="z-index:41">
+  <div class="modal-box cal-editor-box">
+    <form class="cal-form" id="shareTaskForm">
+      <p class="modal-message" data-i18n="shareTaskTitle">הוספת משימה</p>
+      <textarea id="shareTaskText"></textarea>
+      <label data-i18n="shareTaskProject">פרויקט</label>
+      <select id="shareTaskProject"></select>
+      <label data-i18n="shareTaskDate">תאריך</label>
+      <input type="date" id="shareTaskDate">
+      <div class="modal-actions">
+        <button type="submit" class="modal-btn modal-btn-primary" data-i18n="shareTaskAdd">הוספה</button>
+        <button type="button" class="modal-btn modal-btn-no" id="shareTaskCancelBtn" data-i18n="cancelBtn">ביטול</button>
+      </div>
+    </form>
+  </div>
+</div>
 <div id="navDebugToast" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#222;color:#fff;font-size:13px;line-height:1.4;padding:8px 12px;direction:rtl;display:none;white-space:pre-wrap;"></div>
 <div class="app-toast" id="appToast"></div>
 <div class="offline-sync-badge" id="offlineSyncBadge" data-i18n="offlineSyncBadgeMsg" hidden>השינויים נשמרו במכשיר וישמרו בשרת כשיהיה חיבור לאינטרנט</div>
@@ -2884,6 +3252,10 @@
           <div class="library-item" id="siteLogProcurementBtn">
             <div class="library-item-thumb"><img src="tasks-procurement-icon.webp" alt=""></div>
             <div class="library-item-name" data-i18n="siteLogProcurement">רכש</div>
+          </div>
+          <div class="library-item" id="calendarAppBtn" hidden>
+            <div class="library-item-thumb"><img src="tasks-calendar-app-icon.webp" alt=""></div>
+            <div class="library-item-name" data-i18n="calAppName">לוח שנה</div>
           </div>
         </div>
         <div class="diary-actions-fixed">
@@ -3663,6 +4035,56 @@
     taskReminderActiveEvery30: { he: "פעילה: כל חצי שעה", en: "Active: every half hour", ar: "نشط: كل نصف ساعة", ru: "Активно: каждые полчаса" },
     taskReminderActiveEveryHour: { he: "פעילה: כל שעה", en: "Active: every hour", ar: "نشط: كل ساعة", ru: "Активно: каждый час" },
     taskReminderActiveAt: { he: "פעילה: בשעה ", en: "Active: at ", ar: "نشط: الساعة ", ru: "Активно: в " },
+    calAppName: { he: "לוח שנה", en: "Calendar", ar: "التقويم", ru: "Календарь" },
+    calToday: { he: "היום", en: "Today", ar: "اليوم", ru: "Сегодня" },
+    calCalendarsTitle: { he: "יומנים", en: "Calendars", ar: "التقاويم", ru: "Календари" },
+    calModeMonth: { he: "חודש", en: "Month", ar: "شهر", ru: "Месяц" },
+    calModeWeek: { he: "שבוע", en: "Week", ar: "أسبوع", ru: "Неделя" },
+    calModeDay: { he: "יום", en: "Day", ar: "يوم", ru: "День" },
+    calModeAgenda: { he: "רשימה", en: "Agenda", ar: "قائمة", ru: "Список" },
+    calEvTitlePlaceholder: { he: "כותרת", en: "Title", ar: "العنوان", ru: "Название" },
+    calEvAllDay: { he: "כל היום", en: "All day", ar: "طوال اليوم", ru: "Весь день" },
+    calEvStart: { he: "התחלה", en: "Starts", ar: "البداية", ru: "Начало" },
+    calEvEnd: { he: "סיום", en: "Ends", ar: "النهاية", ru: "Конец" },
+    calEvRepeat: { he: "חזרה", en: "Repeat", ar: "التكرار", ru: "Повтор" },
+    calRepeatNone: { he: "ללא", en: "Does not repeat", ar: "بدون تكرار", ru: "Не повторять" },
+    calRepeatDaily: { he: "כל יום", en: "Every day", ar: "كل يوم", ru: "Каждый день" },
+    calRepeatWeekly: { he: "כל שבוע", en: "Every week", ar: "كل أسبوع", ru: "Каждую неделю" },
+    calRepeatMonthly: { he: "כל חודש", en: "Every month", ar: "كل شهر", ru: "Каждый месяц" },
+    calRepeatYearly: { he: "כל שנה", en: "Every year", ar: "كل سنة", ru: "Каждый год" },
+    calEvSeriesNote: { he: "אירוע חוזר: השינויים יחולו על כל המופעים", en: "Repeating event: changes apply to every occurrence", ar: "حدث متكرر: التغييرات تنطبق على كل التكرارات", ru: "Повторяющееся событие: изменения применятся ко всем повторам" },
+    calEvReminder: { he: "תזכורת", en: "Reminder", ar: "تذكير", ru: "Напоминание" },
+    calReminderNone: { he: "ללא", en: "None", ar: "بدون", ru: "Нет" },
+    calReminderAtTime: { he: "בזמן האירוע", en: "At start", ar: "عند البدء", ru: "В начале" },
+    calReminder5: { he: "5 דקות לפני", en: "5 minutes before", ar: "قبل 5 دقائق", ru: "За 5 минут" },
+    calReminder10: { he: "10 דקות לפני", en: "10 minutes before", ar: "قبل 10 دقائق", ru: "За 10 минут" },
+    calReminder15: { he: "15 דקות לפני", en: "15 minutes before", ar: "قبل 15 دقيقة", ru: "За 15 минут" },
+    calReminder30: { he: "30 דקות לפני", en: "30 minutes before", ar: "قبل 30 دقيقة", ru: "За 30 минут" },
+    calReminder60: { he: "שעה לפני", en: "1 hour before", ar: "قبل ساعة", ru: "За час" },
+    calReminder1440: { he: "יום לפני", en: "1 day before", ar: "قبل يوم", ru: "За день" },
+    calEvCalendar: { he: "יומן", en: "Calendar", ar: "التقويم", ru: "Календарь" },
+    calEvLocationPlaceholder: { he: "מיקום", en: "Location", ar: "الموقع", ru: "Место" },
+    calEvDescriptionPlaceholder: { he: "תיאור", en: "Description", ar: "الوصف", ru: "Описание" },
+    calSave: { he: "שמירה", en: "Save", ar: "حفظ", ru: "Сохранить" },
+    calEvDelete: { he: "מחיקת האירוע", en: "Delete event", ar: "حذف الحدث", ru: "Удалить событие" },
+    calDone: { he: "סיום", en: "Done", ar: "تم", ru: "Готово" },
+    calNoTitle: { he: "(ללא כותרת)", en: "(No title)", ar: "(بدون عنوان)", ru: "(Без названия)" },
+    calNoEvents: { he: "אין אירועים בתקופה הזו", en: "No events in this period", ar: "لا توجد أحداث في هذه الفترة", ru: "Нет событий за этот период" },
+    calNoCalendars: { he: "לא נמצאו יומנים במכשיר", en: "No calendars found on this device", ar: "لم يتم العثور على تقاويم على هذا الجهاز", ru: "Календари на устройстве не найдены" },
+    calNoWritableCalendar: { he: "אין במכשיר יומן שאפשר לשמור בו אירועים. הוסיפו חשבון Google או הפעילו סנכרון יומנים ב-Outlook.", en: "There's no calendar on this device that events can be saved to. Add a Google account or turn on calendar sync in Outlook.", ar: "لا يوجد تقويم على هذا الجهاز يمكن حفظ الأحداث فيه. أضف حساب Google أو فعّل مزامنة التقويم في Outlook.", ru: "На устройстве нет календаря для сохранения событий. Добавьте аккаунт Google или включите синхронизацию календаря в Outlook." },
+    calPermissionNeeded: { he: "כדי להציג את לוח השנה של המכשיר, ITASK צריך הרשאת גישה ליומן.", en: "To show this device's calendar, ITASK needs calendar access.", ar: "لعرض تقويم الجهاز، يحتاج ITASK إلى إذن الوصول إلى التقويم.", ru: "Чтобы показать календарь устройства, ITASK нужен доступ к календарю." },
+    calGrantAccess: { he: "אישור גישה", en: "Allow access", ar: "السماح بالوصول", ru: "Разрешить доступ" },
+    calLoadError: { he: "לא הצלחנו לטעון את לוח השנה", en: "Couldn't load the calendar", ar: "تعذر تحميل التقويم", ru: "Не удалось загрузить календарь" },
+    calSaveError: { he: "לא הצלחנו לשמור את השינוי ביומן", en: "Couldn't save the change to the calendar", ar: "تعذر حفظ التغيير في التقويم", ru: "Не удалось сохранить изменение в календаре" },
+    calEndBeforeStart: { he: "שעת הסיום חייבת להיות אחרי שעת ההתחלה", en: "The end must be after the start", ar: "يجب أن تكون النهاية بعد البداية", ru: "Окончание должно быть после начала" },
+    calSavedMsg: { he: "האירוע נשמר", en: "Event saved", ar: "تم حفظ الحدث", ru: "Событие сохранено" },
+    calDeletedMsg: { he: "האירוע נמחק", en: "Event deleted", ar: "تم حذف الحدث", ru: "Событие удалено" },
+    calDeleteConfirm: { he: "למחוק את האירוע?", en: "Delete this event?", ar: "حذف هذا الحدث؟", ru: "Удалить это событие?" },
+    shareTaskTitle: { he: "הוספת משימה", en: "Add a task", ar: "إضافة مهمة", ru: "Добавить задачу" },
+    shareTaskProject: { he: "פרויקט", en: "Project", ar: "المشروع", ru: "Проект" },
+    shareTaskDate: { he: "תאריך", en: "Date", ar: "التاريخ", ru: "Дата" },
+    shareTaskAdd: { he: "הוספה", en: "Add", ar: "إضافة", ru: "Добавить" },
+    shareTaskAddedMsg: { he: "המשימה נוספה", en: "Task added", ar: "تمت إضافة المهمة", ru: "Задача добавлена" },
     focusViewTitle: { he: "המשימות שלי", en: "My tasks", ar: "مهامي", ru: "Мои задачи" },
     focusViewEmpty: { he: "אין משימות פתוחות", en: "No open tasks", ar: "لا توجد مهام مفتوحة", ru: "Нет открытых задач" },
     taskReminderActiveOnDate: { he: "פעילה: בתאריך ", en: "Active: on ", ar: "نشط: بتاريخ ", ru: "Активно: " },
@@ -4799,12 +5221,15 @@
     });
   }
 
-  // Native app: tapping the home-screen widget starts the app with
+  // Native app: text shared into ITASK from another app (a WhatsApp
+  // message...) arrives as view "share" with its text - see
+  // openShareTaskModal. Tapping the home-screen widget starts the app with
   // "task|sheetId|date|taskId" (just the project when tapping its tab):
   // picked up at startup (takeLaunchView) or, when the app was already
   // running, through the "launchView" event, and opened like a tapped
   // notification. ("focus", from app versions before 15, just opens the app.)
-  function openLaunchView(view) {
+  function openLaunchView(view, text) {
+    if (view === "share") { openShareTaskModal(text); return; }
     if (!view || view.indexOf("task|") !== 0) return;
     var parts = view.split("|");
     closeMoveTask();
@@ -4818,10 +5243,10 @@
     if (launchViewChecked || !nativeTaskAlarmPlugin) return;
     launchViewChecked = true;
     nativeTaskAlarmPlugin.takeLaunchView().then(function (res) {
-      if (res) openLaunchView(res.view);
+      if (res) openLaunchView(res.view, res.text);
     }).catch(function () {});
     nativeTaskAlarmPlugin.addListener("launchView", function (e) {
-      if (e) openLaunchView(e.view);
+      if (e) openLaunchView(e.view, e.text);
       nativeTaskAlarmPlugin.takeLaunchView().catch(function () {});
     });
   }
@@ -4851,6 +5276,709 @@
       emptyText: tr("focusViewEmpty")
     }).catch(function () { lastNativeWidgetJson = null; });
   }
+
+  // ---------------------------------------------------------------------
+  // לוח שנה: month / week / day / list views over the phone's own
+  // calendars, read and written through the native ItaskCalendar plugin
+  // (android-app/native-src) - so it shows and edits the same events as the
+  // phone's calendar app, Google Calendar, and Outlook (when the Outlook
+  // app's "Sync calendars" is on). Opened from the diary (יומן) screen.
+  // ---------------------------------------------------------------------
+  var calPlugin = (
+    window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform() &&
+    window.Capacitor.Plugins && window.Capacitor.Plugins.ItaskCalendar
+  ) || null;
+  var CAL_MODE_KEY = "itask-cal-mode";
+  var CAL_HIDDEN_KEY = "itask-cal-hidden";
+  var CAL_LAST_CALENDAR_KEY = "itask-cal-last-calendar";
+  var CAL_HOUR_PX = 48;
+  var calView = document.getElementById("calView");
+  var calBody = document.getElementById("calBody");
+  var calTitle = document.getElementById("calTitle");
+  var calState = {
+    mode: "month",
+    anchor: new Date(),
+    events: [],
+    calendars: [],
+    hidden: {},
+    loadSeq: 0
+  };
+  try {
+    calState.mode = localStorage.getItem(CAL_MODE_KEY) || "month";
+    calState.hidden = JSON.parse(localStorage.getItem(CAL_HIDDEN_KEY) || "{}") || {};
+  } catch (e) {}
+
+  var calAppBtn = document.getElementById("calendarAppBtn");
+  calAppBtn.hidden = !calPlugin;
+  calAppBtn.addEventListener("click", openCalendarView);
+
+  function calLocale() {
+    return { he: "he-IL", en: "en-US", ar: "ar", ru: "ru-RU" }[currentLang] || "he-IL";
+  }
+  function calStartOfDay(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+  function calAddDays(d, n) { return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n, d.getHours(), d.getMinutes()); }
+  function calSameDay(a, b) {
+    return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  }
+  function calWeekStart(d) { return calAddDays(calStartOfDay(d), -calStartOfDay(d).getDay()); }
+  function calYmd(d) {
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  function calHm(d) { return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); }
+  function calParseYmd(s) { var p = s.split("-"); return new Date(+p[0], +p[1] - 1, +p[2]); }
+  function calColor(n) {
+    if (n === null || n === undefined) return "#35618f";
+    var c = (n >>> 0) & 0xffffff;
+    return "#" + c.toString(16).padStart(6, "0");
+  }
+
+  // All-day events are stored at UTC midnight (Android's rule): map them to
+  // local calendar days so they land on the right date in every timezone.
+  function calEventStart(ev) {
+    if (!ev.allDay) return new Date(ev.begin);
+    var u = new Date(ev.begin);
+    return new Date(u.getUTCFullYear(), u.getUTCMonth(), u.getUTCDate());
+  }
+  function calEventEnd(ev) {
+    if (!ev.allDay) return new Date(ev.end);
+    var u = new Date(ev.end);
+    return new Date(u.getUTCFullYear(), u.getUTCMonth(), u.getUTCDate());
+  }
+  function calEventsOn(day) {
+    var dayStart = calStartOfDay(day), dayEnd = calAddDays(dayStart, 1);
+    return calState.events.filter(function (ev) {
+      var s = calEventStart(ev), e = calEventEnd(ev);
+      if (e <= s) e = new Date(s.getTime() + 1);
+      return s < dayEnd && e > dayStart;
+    }).sort(function (a, b) {
+      if (a.allDay !== b.allDay) return a.allDay ? -1 : 1;
+      return a.begin - b.begin;
+    });
+  }
+
+  function calRange() {
+    var a = calState.anchor;
+    if (calState.mode === "month") {
+      var first = new Date(a.getFullYear(), a.getMonth(), 1);
+      var start = calWeekStart(first);
+      return { from: start, to: calAddDays(start, 42) };
+    }
+    if (calState.mode === "week") {
+      var ws = calWeekStart(a);
+      return { from: ws, to: calAddDays(ws, 7) };
+    }
+    if (calState.mode === "day") {
+      var ds = calStartOfDay(a);
+      return { from: ds, to: calAddDays(ds, 1) };
+    }
+    var ts = calStartOfDay(a);
+    return { from: ts, to: calAddDays(ts, 60) };
+  }
+
+  function openCalendarView() {
+    if (!calPlugin) return;
+    calState.anchor = new Date();
+    calView.hidden = false;
+    calEnsurePermission(function () { calLoadCalendars().then(calLoadAndRender); });
+  }
+  function closeCalendarView() {
+    calView.hidden = true;
+    document.getElementById("calEventOverlay").hidden = true;
+    document.getElementById("calCalendarsOverlay").hidden = true;
+  }
+  document.getElementById("calCloseBtn").addEventListener("click", closeCalendarView);
+
+  function calShowMessage(text, buttonText, onButton) {
+    calBody.innerHTML = "";
+    var box = document.createElement("div");
+    box.className = "cal-message";
+    box.textContent = text;
+    if (buttonText) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "modal-btn modal-btn-primary";
+      btn.textContent = buttonText;
+      btn.addEventListener("click", onButton);
+      box.appendChild(document.createElement("br"));
+      box.appendChild(btn);
+    }
+    calBody.appendChild(box);
+  }
+
+  function calEnsurePermission(then) {
+    calPlugin.checkPermissions().then(function (st) {
+      if (st && st.calendar === "granted") { then(); return; }
+      calPlugin.requestPermissions({ permissions: ["calendar"] }).then(function (st2) {
+        if (st2 && st2.calendar === "granted") then();
+        else calShowMessage(tr("calPermissionNeeded"), tr("calGrantAccess"), function () { calEnsurePermission(then); });
+      }, function () {
+        calShowMessage(tr("calPermissionNeeded"), tr("calGrantAccess"), function () { calEnsurePermission(then); });
+      });
+    }, function () {
+      calShowMessage(tr("calLoadError"));
+    });
+  }
+
+  function calLoadCalendars() {
+    return calPlugin.listCalendars().then(function (res) {
+      calState.calendars = (res && res.calendars) || [];
+    }, function () { calState.calendars = []; });
+  }
+
+  function calLoadAndRender() {
+    var range = calRange();
+    var seq = ++calState.loadSeq;
+    calRenderTitle();
+    calPlugin.listEvents({ from: range.from.getTime(), to: range.to.getTime() }).then(function (res) {
+      if (seq !== calState.loadSeq) return;
+      calState.events = ((res && res.events) || []).filter(function (ev) {
+        return !calState.hidden[String(ev.calendarId)];
+      });
+      calRender();
+    }, function () {
+      if (seq === calState.loadSeq) calShowMessage(tr("calLoadError"));
+    });
+  }
+
+  function calRenderTitle() {
+    var a = calState.anchor, loc = calLocale(), text;
+    if (calState.mode === "month") {
+      text = a.toLocaleDateString(loc, { month: "long", year: "numeric" });
+    } else if (calState.mode === "week") {
+      var ws = calWeekStart(a), we = calAddDays(ws, 6);
+      text = ws.toLocaleDateString(loc, { day: "numeric", month: "short" }) + " – " +
+        we.toLocaleDateString(loc, { day: "numeric", month: "short", year: "numeric" });
+    } else if (calState.mode === "day") {
+      text = a.toLocaleDateString(loc, { weekday: "long", day: "numeric", month: "long" });
+    } else {
+      text = tr("calModeAgenda");
+    }
+    calTitle.textContent = text;
+    document.querySelectorAll("[data-cal-mode]").forEach(function (b) {
+      b.classList.toggle("active", b.getAttribute("data-cal-mode") === calState.mode);
+    });
+  }
+
+  function calRender() {
+    calRenderTitle();
+    calBody.innerHTML = "";
+    if (calState.mode === "month") calRenderMonth();
+    else if (calState.mode === "agenda") calRenderAgenda();
+    else calRenderDays(calState.mode === "week" ? 7 : 1);
+    var fab = document.createElement("button");
+    fab.type = "button";
+    fab.className = "cal-fab";
+    fab.textContent = "+";
+    fab.addEventListener("click", function () {
+      var start = calSameDay(calState.anchor, new Date()) ? new Date() : calStartOfDay(calState.anchor);
+      if (calSameDay(start, new Date())) start.setMinutes(0, 0, 0), start.setHours(start.getHours() + 1);
+      else start.setHours(9);
+      calOpenEditor(null, start);
+    });
+    calBody.appendChild(fab);
+  }
+
+  function calWeekdayHeaders(container, start, count) {
+    for (var i = 0; i < count; i++) {
+      var d = document.createElement("div");
+      d.textContent = calAddDays(start, i).toLocaleDateString(calLocale(), { weekday: "short" });
+      container.appendChild(d);
+    }
+  }
+
+  // Month cells and all-day lanes: the title alone, like the phone's
+  // calendar - a timed event gets a coloured dot, an all-day one a bar.
+  function calChip(ev) {
+    var chip = document.createElement("span");
+    var color = calColor(ev.color);
+    chip.className = "cal-chip" + (ev.allDay ? "" : " timed");
+    if (ev.allDay) chip.style.background = color;
+    else chip.style.setProperty("--chip-color", color);
+    chip.textContent = ev.title || tr("calNoTitle");
+    chip.addEventListener("click", function (e) { e.stopPropagation(); calOpenEditor(ev); });
+    return chip;
+  }
+
+  function calRenderMonth() {
+    var a = calState.anchor;
+    var gridStart = calWeekStart(new Date(a.getFullYear(), a.getMonth(), 1));
+    var head = document.createElement("div");
+    head.className = "cal-weekdays";
+    calWeekdayHeaders(head, gridStart, 7);
+    calBody.appendChild(head);
+    var grid = document.createElement("div");
+    grid.className = "cal-month-grid";
+    var today = new Date();
+    for (var i = 0; i < 42; i++) {
+      (function (day) {
+        var cell = document.createElement("div");
+        cell.className = "cal-day-cell" + (day.getMonth() !== a.getMonth() ? " other-month" : "") +
+          (calSameDay(day, today) ? " today" : "");
+        var num = document.createElement("span");
+        num.className = "cal-day-num";
+        num.textContent = day.getDate();
+        cell.appendChild(num);
+        var evs = calEventsOn(day);
+        evs.slice(0, 3).forEach(function (ev) { cell.appendChild(calChip(ev)); });
+        if (evs.length > 3) {
+          var more = document.createElement("div");
+          more.className = "cal-more";
+          more.textContent = "+" + (evs.length - 3);
+          cell.appendChild(more);
+        }
+        cell.addEventListener("click", function () {
+          calState.anchor = day;
+          calSetMode("day");
+        });
+        grid.appendChild(cell);
+      })(calAddDays(gridStart, i));
+    }
+    calBody.appendChild(grid);
+  }
+
+  function calRenderDays(count) {
+    var start = count === 7 ? calWeekStart(calState.anchor) : calStartOfDay(calState.anchor);
+    var today = new Date();
+    var head = document.createElement("div");
+    head.className = "cal-cols-head";
+    var g = document.createElement("div");
+    g.className = "cal-gutter";
+    head.appendChild(g);
+    var allDayRow = document.createElement("div");
+    allDayRow.className = "cal-allday-row";
+    var g2 = document.createElement("div");
+    g2.className = "cal-gutter";
+    allDayRow.appendChild(g2);
+    var days = [];
+    for (var i = 0; i < count; i++) days.push(calAddDays(start, i));
+    days.forEach(function (day) {
+      var ch = document.createElement("div");
+      ch.className = "cal-col-head" + (calSameDay(day, today) ? " today" : "");
+      var nm = document.createElement("div");
+      nm.className = "cal-col-name";
+      nm.textContent = day.toLocaleDateString(calLocale(), { weekday: "short" });
+      var nu = document.createElement("span");
+      nu.className = "cal-col-num";
+      nu.textContent = day.getDate();
+      ch.appendChild(nm);
+      ch.appendChild(nu);
+      if (count === 7) ch.addEventListener("click", function () { calState.anchor = day; calSetMode("day"); });
+      head.appendChild(ch);
+      var ad = document.createElement("div");
+      ad.className = "cal-allday-cell";
+      calEventsOn(day).filter(function (ev) { return ev.allDay; }).forEach(function (ev) { ad.appendChild(calChip(ev)); });
+      allDayRow.appendChild(ad);
+    });
+    calBody.appendChild(head);
+    calBody.appendChild(allDayRow);
+
+    var scroll = document.createElement("div");
+    scroll.className = "cal-time-scroll";
+    var grid = document.createElement("div");
+    grid.className = "cal-time-grid";
+    grid.style.height = (24 * CAL_HOUR_PX) + "px";
+    var hours = document.createElement("div");
+    hours.className = "cal-hours";
+    for (var h = 0; h < 24; h++) {
+      var hl = document.createElement("div");
+      hl.className = "cal-hour-label";
+      hl.textContent = h === 0 ? "" : String(h).padStart(2, "0") + ":00";
+      hours.appendChild(hl);
+    }
+    grid.appendChild(hours);
+    days.forEach(function (day) {
+      var col = document.createElement("div");
+      col.className = "cal-col";
+      col.addEventListener("click", function (e) {
+        if (e.target !== col) return;
+        var rect = col.getBoundingClientRect();
+        var minutes = Math.floor(((e.clientY - rect.top) / CAL_HOUR_PX) * 2) * 30;
+        var s = calStartOfDay(day);
+        s.setMinutes(minutes);
+        calOpenEditor(null, s);
+      });
+      calLayoutTimed(calEventsOn(day).filter(function (ev) { return !ev.allDay; }), day).forEach(function (item) {
+        var block = document.createElement("div");
+        block.className = "cal-event-block";
+        block.style.background = calColor(item.ev.color);
+        block.style.top = item.top + "px";
+        block.style.height = Math.max(item.height, 18) + "px";
+        block.style.insetInlineStart = (item.lane / item.lanes * 100) + "%";
+        block.style.width = "calc(" + (100 / item.lanes) + "% - 2px)";
+        block.textContent = (item.ev.title || tr("calNoTitle")) + " " + calHm(calEventStart(item.ev));
+        block.addEventListener("click", function (e) { e.stopPropagation(); calOpenEditor(item.ev); });
+        col.appendChild(block);
+      });
+      if (calSameDay(day, today)) {
+        var now = document.createElement("div");
+        now.className = "cal-now-line";
+        now.style.top = ((today.getHours() * 60 + today.getMinutes()) / 60 * CAL_HOUR_PX) + "px";
+        col.appendChild(now);
+      }
+      grid.appendChild(col);
+    });
+    scroll.appendChild(grid);
+    calBody.appendChild(scroll);
+    var focusHour = days.some(function (d) { return calSameDay(d, today); }) ? Math.max(today.getHours() - 1, 0) : 7;
+    scroll.scrollTop = focusHour * CAL_HOUR_PX;
+  }
+
+  // Side-by-side lanes for overlapping timed events within one day.
+  function calLayoutTimed(evs, day) {
+    var dayStart = calStartOfDay(day).getTime(), dayEnd = calAddDays(calStartOfDay(day), 1).getTime();
+    var items = evs.map(function (ev) {
+      var s = Math.max(ev.begin, dayStart), e = Math.min(Math.max(ev.end, ev.begin + 15 * 60000), dayEnd);
+      return { ev: ev, s: s, e: e, top: (s - dayStart) / 3600000 * CAL_HOUR_PX, height: (e - s) / 3600000 * CAL_HOUR_PX };
+    }).sort(function (a, b) { return a.s - b.s; });
+    var cluster = [], clusterEnd = 0;
+    function flush() {
+      var lanesEnd = [];
+      cluster.forEach(function (it) {
+        var lane = lanesEnd.findIndex(function (end) { return end <= it.s; });
+        if (lane === -1) { lane = lanesEnd.length; lanesEnd.push(it.e); } else lanesEnd[lane] = it.e;
+        it.lane = lane;
+      });
+      cluster.forEach(function (it) { it.lanes = lanesEnd.length; });
+      cluster = [];
+    }
+    items.forEach(function (it) {
+      if (cluster.length && it.s >= clusterEnd) flush();
+      cluster.push(it);
+      clusterEnd = cluster.length === 1 ? it.e : Math.max(clusterEnd, it.e);
+    });
+    flush();
+    return items;
+  }
+
+  function calRenderAgenda() {
+    var list = document.createElement("div");
+    list.className = "cal-agenda";
+    var start = calStartOfDay(calState.anchor), today = new Date(), any = false;
+    for (var i = 0; i < 60; i++) {
+      var day = calAddDays(start, i);
+      var evs = calEventsOn(day);
+      if (!evs.length) continue;
+      any = true;
+      var h = document.createElement("div");
+      h.className = "cal-agenda-day" + (calSameDay(day, today) ? " today" : "");
+      h.textContent = day.toLocaleDateString(calLocale(), { weekday: "long", day: "numeric", month: "long" });
+      list.appendChild(h);
+      evs.forEach(function (ev) {
+        var row = document.createElement("div");
+        row.className = "cal-agenda-item";
+        var dot = document.createElement("span");
+        dot.className = "cal-agenda-dot";
+        dot.style.background = calColor(ev.color);
+        var time = document.createElement("span");
+        time.className = "cal-agenda-time";
+        time.dir = "ltr";
+        time.textContent = ev.allDay ? tr("calEvAllDay") : calHm(calEventStart(ev)) + "–" + calHm(calEventEnd(ev));
+        var text = document.createElement("div");
+        text.className = "cal-agenda-text";
+        text.textContent = ev.title || tr("calNoTitle");
+        if (ev.location) {
+          var loc = document.createElement("div");
+          loc.className = "cal-agenda-loc";
+          loc.textContent = ev.location;
+          text.appendChild(loc);
+        }
+        row.appendChild(dot);
+        row.appendChild(time);
+        row.appendChild(text);
+        row.addEventListener("click", function () { calOpenEditor(ev); });
+        list.appendChild(row);
+      });
+    }
+    if (!any) {
+      var none = document.createElement("div");
+      none.className = "cal-message";
+      none.textContent = tr("calNoEvents");
+      list.appendChild(none);
+    }
+    calBody.appendChild(list);
+  }
+
+  function calSetMode(mode) {
+    calState.mode = mode;
+    try { localStorage.setItem(CAL_MODE_KEY, mode); } catch (e) {}
+    calLoadAndRender();
+  }
+  document.querySelectorAll("[data-cal-mode]").forEach(function (b) {
+    b.addEventListener("click", function () { calSetMode(b.getAttribute("data-cal-mode")); });
+  });
+  function calShift(dir) {
+    var a = calState.anchor;
+    if (calState.mode === "month") calState.anchor = new Date(a.getFullYear(), a.getMonth() + dir, 1);
+    else if (calState.mode === "week") calState.anchor = calAddDays(a, 7 * dir);
+    else if (calState.mode === "day") calState.anchor = calAddDays(a, dir);
+    else calState.anchor = calAddDays(a, 30 * dir);
+    calLoadAndRender();
+  }
+  // RTL: the right-hand "›" goes back, the left-hand "‹" goes forward
+  document.getElementById("calPrevBtn").addEventListener("click", function () { calShift(-1); });
+  document.getElementById("calNextBtn").addEventListener("click", function () { calShift(1); });
+  document.getElementById("calTodayBtn").addEventListener("click", function () {
+    calState.anchor = new Date();
+    calLoadAndRender();
+  });
+  // Swipe sideways to move between months/weeks/days, like the phone's calendar.
+  (function () {
+    var sx = 0, sy = 0;
+    calBody.addEventListener("touchstart", function (e) { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive: true });
+    calBody.addEventListener("touchend", function (e) {
+      var dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
+      if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+        var rtl = document.documentElement.dir === "rtl";
+        calShift((dx > 0) === rtl ? 1 : -1);
+      }
+    }, { passive: true });
+  })();
+
+  // ---- event editor ----
+  var calEditing = null;
+  var calEvOverlay = document.getElementById("calEventOverlay");
+  var calEvTitle = document.getElementById("calEvTitle");
+  var calEvAllDay = document.getElementById("calEvAllDay");
+  var calEvStartDate = document.getElementById("calEvStartDate");
+  var calEvStartTime = document.getElementById("calEvStartTime");
+  var calEvEndDate = document.getElementById("calEvEndDate");
+  var calEvEndTime = document.getElementById("calEvEndTime");
+  var calEvRepeat = document.getElementById("calEvRepeat");
+  var calEvReminder = document.getElementById("calEvReminder");
+  var calEvCalendar = document.getElementById("calEvCalendar");
+  var calEvLocation = document.getElementById("calEvLocation");
+  var calEvDescription = document.getElementById("calEvDescription");
+  var calEvDeleteBtn = document.getElementById("calEvDeleteBtn");
+  var calEvSeriesNote = document.getElementById("calEvSeriesNote");
+
+  function calSyncTimeInputs() {
+    calEvStartTime.hidden = calEvAllDay.checked;
+    calEvEndTime.hidden = calEvAllDay.checked;
+  }
+  calEvAllDay.addEventListener("change", calSyncTimeInputs);
+  calEvStartDate.addEventListener("change", function () {
+    if (calEvEndDate.value < calEvStartDate.value) calEvEndDate.value = calEvStartDate.value;
+  });
+
+  function calFillCalendarSelect(selectedId) {
+    calEvCalendar.innerHTML = "";
+    var writable = calState.calendars.filter(function (c) { return c.writable; });
+    var last = null;
+    try { last = localStorage.getItem(CAL_LAST_CALENDAR_KEY); } catch (e) {}
+    writable.forEach(function (c) {
+      var o = document.createElement("option");
+      o.value = String(c.id);
+      o.textContent = c.name + (c.account && c.account !== c.name ? " (" + c.account + ")" : "");
+      calEvCalendar.appendChild(o);
+    });
+    var want = selectedId !== null && selectedId !== undefined ? String(selectedId) : last;
+    if (want && writable.some(function (c) { return String(c.id) === want; })) calEvCalendar.value = want;
+    else {
+      var primary = writable.find(function (c) { return c.primary; });
+      if (primary) calEvCalendar.value = String(primary.id);
+    }
+    return writable.length;
+  }
+
+  function calFillForm(v) {
+    calEvTitle.value = v.title || "";
+    calEvAllDay.checked = !!v.allDay;
+    calEvStartDate.value = calYmd(v.start);
+    calEvStartTime.value = calHm(v.start);
+    calEvEndDate.value = calYmd(v.end);
+    calEvEndTime.value = calHm(v.end);
+    calEvRepeat.value = v.rrule ? (["FREQ=DAILY", "FREQ=WEEKLY", "FREQ=MONTHLY", "FREQ=YEARLY"].find(function (f) {
+      return v.rrule.indexOf(f) === 0;
+    }) || "") : "";
+    calEvReminder.value = String(v.reminder === undefined ? -1 : v.reminder);
+    if (!calEvReminder.value) calEvReminder.value = "-1";
+    calEvLocation.value = v.location || "";
+    calEvDescription.value = v.description || "";
+    calSyncTimeInputs();
+  }
+
+  function calOpenEditor(ev, newStart) {
+    if (!calFillCalendarSelect(ev ? ev.calendarId : null)) {
+      alert(tr("calNoWritableCalendar"));
+      return;
+    }
+    calEditing = ev ? { eventId: ev.eventId } : null;
+    calEvDeleteBtn.hidden = !ev;
+    calEvSeriesNote.hidden = !(ev && ev.rrule);
+    if (!ev) {
+      var s = newStart || new Date();
+      calFillForm({ start: s, end: new Date(s.getTime() + 3600000), reminder: 10 });
+      calEvOverlay.hidden = false;
+      calEvTitle.focus();
+      return;
+    }
+    // the series' own start/end/reminder, not just this occurrence's
+    calPlugin.getEvent({ eventId: ev.eventId }).then(function (full) {
+      var allDay = !!full.allDay;
+      var start = allDay ? calEventStart({ allDay: true, begin: full.dtstart }) : new Date(full.dtstart);
+      var endMs = full.dtend || (full.dtstart + (full.durationMs || 3600000));
+      var end = allDay ? calAddDays(calEventStart({ allDay: true, begin: endMs }), -1) : new Date(endMs);
+      if (allDay && end < start) end = start;
+      calFillForm({
+        title: full.title, allDay: allDay, start: start, end: end, rrule: full.rrule,
+        reminder: full.reminders && full.reminders.length ? full.reminders[0] : -1,
+        location: full.location, description: full.description
+      });
+      calEvCalendar.value = String(full.calendarId);
+      calEvOverlay.hidden = false;
+    }, function () { alert(tr("calLoadError")); });
+  }
+
+  function calCloseEditor() {
+    calEvOverlay.hidden = true;
+    calEditing = null;
+  }
+  document.getElementById("calEvCancelBtn").addEventListener("click", calCloseEditor);
+  calEvOverlay.addEventListener("click", function (e) { if (e.target === calEvOverlay) calCloseEditor(); });
+
+  document.getElementById("calEventForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    if (!calEvStartDate.value || !calEvEndDate.value) return;
+    var allDay = calEvAllDay.checked;
+    var start, end;
+    if (allDay) {
+      var sd = calParseYmd(calEvStartDate.value), ed = calParseYmd(calEvEndDate.value);
+      start = Date.UTC(sd.getFullYear(), sd.getMonth(), sd.getDate());
+      end = Date.UTC(ed.getFullYear(), ed.getMonth(), ed.getDate() + 1);
+    } else {
+      start = new Date(calEvStartDate.value + "T" + (calEvStartTime.value || "09:00")).getTime();
+      end = new Date(calEvEndDate.value + "T" + (calEvEndTime.value || "10:00")).getTime();
+    }
+    if (end <= start) { alert(tr("calEndBeforeStart")); return; }
+    var payload = {
+      calendarId: Number(calEvCalendar.value),
+      title: calEvTitle.value.trim(),
+      allDay: allDay,
+      start: start,
+      end: end,
+      rrule: calEvRepeat.value,
+      reminderMinutes: Number(calEvReminder.value),
+      location: calEvLocation.value.trim(),
+      description: calEvDescription.value.trim()
+    };
+    if (calEditing) payload.eventId = calEditing.eventId;
+    try { localStorage.setItem(CAL_LAST_CALENDAR_KEY, calEvCalendar.value); } catch (err) {}
+    calPlugin.saveEvent(payload).then(function () {
+      calCloseEditor();
+      showToast(tr("calSavedMsg"));
+      calLoadAndRender();
+    }, function () { alert(tr("calSaveError")); });
+  });
+
+  calEvDeleteBtn.addEventListener("click", function () {
+    if (!calEditing || !confirm(tr("calDeleteConfirm"))) return;
+    calPlugin.deleteEvent({ eventId: calEditing.eventId }).then(function () {
+      calCloseEditor();
+      showToast(tr("calDeletedMsg"));
+      calLoadAndRender();
+    }, function () { alert(tr("calSaveError")); });
+  });
+
+  // ---- which calendars to show ----
+  var calCalendarsOverlay = document.getElementById("calCalendarsOverlay");
+  document.getElementById("calCalendarsBtn").addEventListener("click", function () {
+    var list = document.getElementById("calCalendarsList");
+    list.innerHTML = "";
+    if (!calState.calendars.length) {
+      var none = document.createElement("p");
+      none.className = "cal-form-note";
+      none.textContent = tr("calNoCalendars");
+      list.appendChild(none);
+    }
+    calState.calendars.forEach(function (c) {
+      var row = document.createElement("label");
+      row.className = "cal-cal-row";
+      var cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = !calState.hidden[String(c.id)];
+      cb.addEventListener("change", function () {
+        if (cb.checked) delete calState.hidden[String(c.id)];
+        else calState.hidden[String(c.id)] = true;
+        try { localStorage.setItem(CAL_HIDDEN_KEY, JSON.stringify(calState.hidden)); } catch (e) {}
+      });
+      var sw = document.createElement("span");
+      sw.className = "cal-cal-swatch";
+      sw.style.background = calColor(c.color);
+      var name = document.createElement("span");
+      name.className = "cal-cal-name";
+      name.textContent = c.name;
+      if (c.account) {
+        var acc = document.createElement("div");
+        acc.className = "cal-cal-account";
+        acc.textContent = c.account;
+        name.appendChild(acc);
+      }
+      row.appendChild(cb);
+      row.appendChild(sw);
+      row.appendChild(name);
+      list.appendChild(row);
+    });
+    calCalendarsOverlay.hidden = false;
+  });
+  document.getElementById("calCalendarsDoneBtn").addEventListener("click", function () {
+    calCalendarsOverlay.hidden = true;
+    calLoadAndRender();
+  });
+
+  // ---------------------------------------------------------------------
+  // Shared text (e.g. a WhatsApp message via Android's share sheet) ->
+  // a new task: ItaskAlarmPlugin hands it over as launch view "share".
+  // ---------------------------------------------------------------------
+  var shareTaskOverlay = document.getElementById("shareTaskOverlay");
+  var shareTaskText = document.getElementById("shareTaskText");
+  var shareTaskProject = document.getElementById("shareTaskProject");
+  var shareTaskDate = document.getElementById("shareTaskDate");
+  function openShareTaskModal(text) {
+    closeMoveTask();
+    shareTaskText.value = (text || "").trim();
+    shareTaskProject.innerHTML = "";
+    allSheets().filter(function (s) {
+      return !s.ended && s.id !== HEAD_OFFICE_SHEET_ID;
+    }).forEach(function (s) {
+      var o = document.createElement("option");
+      o.value = s.id;
+      o.textContent = (s.shared ? "👥 " : "") + s.name;
+      shareTaskProject.appendChild(o);
+    });
+    if (allSheets().some(function (s) { return s.id === data.activeSheetId && !s.ended; })) {
+      shareTaskProject.value = data.activeSheetId;
+    }
+    shareTaskDate.value = todayISO();
+    shareTaskOverlay.hidden = false;
+  }
+  document.getElementById("shareTaskCancelBtn").addEventListener("click", function () {
+    shareTaskOverlay.hidden = true;
+  });
+  document.getElementById("shareTaskForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var text = shareTaskText.value.replace(/\s*\n\s*/g, " ").trim();
+    var sheet = allSheets().find(function (s) { return s.id === shareTaskProject.value; });
+    if (!text || !sheet) return;
+    var date = shareTaskDate.value || todayISO();
+    sheet.tasks.push({
+      id: uid(),
+      text: text,
+      status: 0,
+      urgent: false,
+      type: "task",
+      date: date,
+      createdAt: Date.now()
+    });
+    shareTaskOverlay.hidden = true;
+    viewingArchive = false;
+    state.viewMode = "tasks";
+    state.showingCompleted = false;
+    data.activeSheetId = sheet.id;
+    state.viewDate = clampViewDate(date);
+    saveData();
+    render();
+    showToast(tr("shareTaskAddedMsg"));
+  });
 
   // Android 12+ only rings an alarm on the exact minute with the user's
   // "Alarms & reminders" permission; without it alarms can drift by minutes.
