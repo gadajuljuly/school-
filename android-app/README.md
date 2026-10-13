@@ -216,7 +216,7 @@ The one-time edits from the sections above (`AndroidManifest.xml`,
 
 ## Calendar and share-to-task (`native-src/ItaskCalendarPlugin.java`, `ItaskAlarmPlugin.java`)
 
-- **לוח שנה** (diary screen): `tasks.html` shows month / week / day / list
+- **לוח שנה** (icon next to the date): `tasks.html` shows month / week / day / list
   views over the phone's own calendars through `ItaskCalendarPlugin`
   (Android `CalendarContract`, READ/WRITE_CALENDAR) - the same store the
   phone's calendar app uses, so Google, Samsung and Outlook (when the
