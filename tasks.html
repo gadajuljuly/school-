@@ -2748,6 +2748,20 @@
     font-weight: 600;
     cursor: pointer;
   }
+  .cal-pick-banner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 10px 8px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: var(--danger);
+    color: var(--accent-contrast);
+    font-size: 0.88rem;
+    font-weight: 600;
+  }
+  .cal-pick-banner[hidden] { display: none; }
+  .cal-pick-banner span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
   .cal-modes {
     display: flex;
     gap: 4px;
@@ -2983,6 +2997,7 @@
   .cal-form textarea { min-height: 60px; resize: vertical; }
   .cal-form-row { display: flex; gap: 8px; }
   .cal-form-row > * { flex: 1; min-width: 0; }
+  .cal-form [hidden] { display: none !important; }
   .cal-form-check { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--ink); }
   .cal-form-note { font-size: 0.78rem; color: var(--ink-muted); margin: 0; }
   .cal-editor-box { max-width: 380px; max-height: 88vh; overflow-y: auto; }
@@ -3001,6 +3016,10 @@
     <button type="button" class="cal-icon-btn" id="calTodayBtn" data-i18n="calToday">היום</button>
     <button type="button" class="cal-icon-btn" id="calNextBtn">‹</button>
     <button type="button" class="cal-icon-btn" id="calCalendarsBtn" data-i18n-title="calCalendarsTitle" title="יומנים">☰</button>
+  </div>
+  <div class="cal-pick-banner" id="calPickBanner" hidden>
+    <span id="calPickText"></span>
+    <button type="button" class="cal-icon-btn" id="calPickCancelBtn" data-i18n="cancelBtn">ביטול</button>
   </div>
   <div class="cal-modes">
     <button type="button" class="cal-mode-btn" data-cal-mode="month" data-i18n="calModeMonth">חודש</button>
@@ -4035,6 +4054,8 @@
     taskReminderActiveEvery30: { he: "פעילה: כל חצי שעה", en: "Active: every half hour", ar: "نشط: كل نصف ساعة", ru: "Активно: каждые полчаса" },
     taskReminderActiveEveryHour: { he: "פעילה: כל שעה", en: "Active: every hour", ar: "نشط: كل ساعة", ru: "Активно: каждый час" },
     taskReminderActiveAt: { he: "פעילה: בשעה ", en: "Active: at ", ar: "نشط: الساعة ", ru: "Активно: в " },
+    calPickPrompt: { he: "בחרו מועד להתראה:", en: "Pick a time for the reminder:", ar: "اختر موعد التذكير:", ru: "Выберите время напоминания:" },
+    calReminderSetMsg: { he: "ההתראה נקבעה ונוספה ללוח השנה", en: "Reminder set and added to the calendar", ar: "تم ضبط التذكير وإضافته إلى التقويم", ru: "Напоминание установлено и добавлено в календарь" },
     calAppName: { he: "לוח שנה", en: "Calendar", ar: "التقويم", ru: "Календарь" },
     calToday: { he: "היום", en: "Today", ar: "اليوم", ru: "Сегодня" },
     calCalendarsTitle: { he: "יומנים", en: "Calendars", ar: "التقاويم", ru: "Календари" },
@@ -5301,7 +5322,9 @@
     events: [],
     calendars: [],
     hidden: {},
-    loadSeq: 0
+    loadSeq: 0,
+    // set while picking a task reminder's time ({sheetId, taskId, text})
+    pick: null
   };
   try {
     calState.mode = localStorage.getItem(CAL_MODE_KEY) || "month";
@@ -5381,7 +5404,52 @@
     calView.hidden = false;
     calEnsurePermission(function () { calLoadCalendars().then(calLoadAndRender); });
   }
+  // Task long-press -> התראה -> לוח שנה: the calendar opens on today's day
+  // view; tapping a time opens the event editor with the task's text, and
+  // saving puts the task in the phone's calendar AND sets the task's
+  // ringing reminder (dinging, snooze...) for that same moment.
+  var calPickBanner = document.getElementById("calPickBanner");
+  function openCalendarForTaskReminder(sheetId, task) {
+    if (!calPlugin || !task) return;
+    calState.pick = { sheetId: sheetId, taskId: task.id, text: task.text };
+    document.getElementById("calPickText").textContent = tr("calPickPrompt") + " " + task.text;
+    calPickBanner.hidden = false;
+    calState.mode = "day";
+    calState.anchor = new Date();
+    calView.hidden = false;
+    calEnsurePermission(function () { calLoadCalendars().then(calLoadAndRender); });
+  }
+  document.getElementById("calPickCancelBtn").addEventListener("click", closeCalendarView);
+
+  function calApplyPickedReminder(startMs, eventId) {
+    var pick = calState.pick;
+    var sheet = pick && allSheets().find(function (s) { return s.id === pick.sheetId; });
+    var task = sheet && (sheet.tasks || []).find(function (t) { return t.id === pick.taskId; });
+    if (!task) return;
+    var old = task.reminder;
+    if (old && old.calendarEventId && old.calendarEventId !== eventId) {
+      calPlugin.deleteEvent({ eventId: old.calendarEventId }).catch(function () {});
+    }
+    var at = new Date(startMs);
+    task.reminder = {
+      type: "time",
+      date: calYmd(at),
+      time: calHm(at),
+      fireAt: at.toISOString(),
+      firedAt: null,
+      calendarEventId: eventId
+    };
+    saveData();
+    closeCalendarView();
+    render();
+    showToast(tr("calReminderSetMsg"));
+    ensureExactAlarmPermission();
+  }
+
   function closeCalendarView() {
+    calState.pick = null;
+    calPickBanner.hidden = true;
+    try { calState.mode = localStorage.getItem(CAL_MODE_KEY) || "month"; } catch (e) {}
     calView.hidden = true;
     document.getElementById("calEventOverlay").hidden = true;
     document.getElementById("calCalendarsOverlay").hidden = true;
@@ -5805,9 +5873,20 @@
     calEditing = ev ? { eventId: ev.eventId } : null;
     calEvDeleteBtn.hidden = !ev;
     calEvSeriesNote.hidden = !(ev && ev.rrule);
+    // picking a task reminder: a one-time, timed slot - the task's own
+    // ringing reminder does the alerting, so no calendar reminder either
+    var picking = !ev && !!calState.pick;
+    calEvAllDay.parentElement.hidden = picking;
+    calEvRepeat.hidden = picking;
+    calEvRepeat.previousElementSibling.hidden = picking;
     if (!ev) {
       var s = newStart || new Date();
-      calFillForm({ start: s, end: new Date(s.getTime() + 3600000), reminder: 10 });
+      calFillForm({
+        title: picking ? calState.pick.text : "",
+        start: s,
+        end: new Date(s.getTime() + 3600000),
+        reminder: picking ? -1 : 10
+      });
       calEvOverlay.hidden = false;
       calEvTitle.focus();
       return;
@@ -5850,6 +5929,7 @@
       end = new Date(calEvEndDate.value + "T" + (calEvEndTime.value || "10:00")).getTime();
     }
     if (end <= start) { alert(tr("calEndBeforeStart")); return; }
+    if (!calEditing && calState.pick && start <= Date.now()) { alert(tr("taskReminderPastMsg")); return; }
     var payload = {
       calendarId: Number(calEvCalendar.value),
       title: calEvTitle.value.trim(),
@@ -5863,8 +5943,13 @@
     };
     if (calEditing) payload.eventId = calEditing.eventId;
     try { localStorage.setItem(CAL_LAST_CALENDAR_KEY, calEvCalendar.value); } catch (err) {}
-    calPlugin.saveEvent(payload).then(function () {
+    var pickingReminder = !calEditing && !!calState.pick;
+    calPlugin.saveEvent(payload).then(function (res) {
       calCloseEditor();
+      if (pickingReminder) {
+        calApplyPickedReminder(start, res && res.eventId);
+        return;
+      }
       showToast(tr("calSavedMsg"));
       calLoadAndRender();
     }, function () { alert(tr("calSaveError")); });
@@ -6092,7 +6177,19 @@
   taskReminderEvery60Btn.addEventListener("click", function () {
     setTaskReminder({ type: "interval", minutes: 60, startedAt: new Date().toISOString(), lastSentAt: null });
   });
+  // With the native calendar available, "שעה מסוימת" becomes "לוח שנה":
+  // the time is picked on the calendar and the task is added to it too
+  // (openCalendarForTaskReminder). Otherwise the plain date/time fields.
+  if (calPlugin) taskReminderTimeToggleBtn.setAttribute("data-i18n", "calAppName");
+  taskReminderTimeToggleBtn.textContent = tr(taskReminderTimeToggleBtn.getAttribute("data-i18n"));
   taskReminderTimeToggleBtn.addEventListener("click", function () {
+    if (calPlugin) {
+      var sheet = activeSheet();
+      var task = sheet.tasks.find(function (t) { return t.id === pendingMoveTaskId; });
+      closeMoveTask();
+      openCalendarForTaskReminder(sheet.id, task);
+      return;
+    }
     taskReminderTimeRow.hidden = !taskReminderTimeRow.hidden;
     if (!taskReminderTimeRow.hidden) taskReminderTimeInput.focus();
   });
