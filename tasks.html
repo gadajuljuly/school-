@@ -2998,6 +2998,20 @@
   .cal-form-row { display: flex; gap: 8px; }
   .cal-form-row > * { flex: 1; min-width: 0; }
   .cal-form [hidden] { display: none !important; }
+  .cal-copy-projects { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+  .cal-copy-projects[hidden] { display: none; }
+  .cal-copy-projects button {
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--rule);
+    background: var(--paper-alt);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-align: start;
+    cursor: pointer;
+  }
   .cal-form-check { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--ink); }
   .cal-form-note { font-size: 0.78rem; color: var(--ink-muted); margin: 0; }
   .cal-editor-box { max-width: 380px; max-height: 88vh; overflow-y: auto; }
@@ -3076,6 +3090,19 @@
     <div id="calCalendarsList"></div>
     <div class="modal-actions" style="margin-top:12px">
       <button type="button" class="modal-btn modal-btn-primary" id="calCalendarsDoneBtn" data-i18n="calDone">סיום</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="calCopyOverlay" hidden style="z-index:41">
+  <div class="modal-box cal-editor-box">
+    <p class="modal-message" id="calCopyMessage"></p>
+    <div class="move-task-mode" id="calCopyTypeRow">
+      <button type="button" id="calCopyTaskBtn" data-i18n="addTypeTaskBtn">משימה</button>
+      <button type="button" id="calCopyNoteBtn" data-i18n="addTypeNoteBtn">מזכרת</button>
+    </div>
+    <div class="cal-copy-projects" id="calCopyProjects" hidden></div>
+    <div class="modal-actions">
+      <button type="button" class="modal-btn modal-btn-no" id="calCopyCancelBtn" data-i18n="cancelBtn">ביטול</button>
     </div>
   </div>
 </div>
@@ -4054,6 +4081,9 @@
     taskReminderActiveEvery30: { he: "פעילה: כל חצי שעה", en: "Active: every half hour", ar: "نشط: كل نصف ساعة", ru: "Активно: каждые полчаса" },
     taskReminderActiveEveryHour: { he: "פעילה: כל שעה", en: "Active: every hour", ar: "نشط: كل ساعة", ru: "Активно: каждый час" },
     taskReminderActiveAt: { he: "פעילה: בשעה ", en: "Active: at ", ar: "نشط: الساعة ", ru: "Активно: в " },
+    calCopyPickProject: { he: "לאיזה פרויקט להעתיק?", en: "Copy to which project?", ar: "النسخ إلى أي مشروع؟", ru: "В какой проект скопировать?" },
+    calCopiedTaskMsg: { he: "האירוע הועתק כמשימה לפרויקט", en: "Event copied as a task to", ar: "تم نسخ الحدث كمهمة إلى", ru: "Событие скопировано как задача в" },
+    calCopiedNoteMsg: { he: "האירוע הועתק כמזכרת לפרויקט", en: "Event copied as a note to", ar: "تم نسخ الحدث كملاحظة إلى", ru: "Событие скопировано как заметка в" },
     calPickPrompt: { he: "בחרו מועד להתראה:", en: "Pick a time for the reminder:", ar: "اختر موعد التذكير:", ru: "Выберите время напоминания:" },
     calReminderSetMsg: { he: "ההתראה נקבעה ונוספה ללוח השנה", en: "Reminder set and added to the calendar", ar: "تم ضبط التذكير وإضافته إلى التقويم", ru: "Напоминание установлено и добавлено в календарь" },
     calAppName: { he: "לוח שנה", en: "Calendar", ar: "التقويم", ru: "Календарь" },
@@ -5453,6 +5483,7 @@
     calView.hidden = true;
     document.getElementById("calEventOverlay").hidden = true;
     document.getElementById("calCalendarsOverlay").hidden = true;
+    calCopyOverlay.hidden = true;
   }
   document.getElementById("calCloseBtn").addEventListener("click", closeCalendarView);
 
@@ -5563,9 +5594,107 @@
     if (ev.allDay) chip.style.background = color;
     else chip.style.setProperty("--chip-color", color);
     chip.textContent = ev.title || tr("calNoTitle");
-    chip.addEventListener("click", function (e) { e.stopPropagation(); calOpenEditor(ev); });
+    calBindEvent(chip, ev);
     return chip;
   }
+
+  // Tap an event to edit it; press and hold to copy it into a project as a
+  // task or a מזכרת (calOpenCopy).
+  function calBindEvent(el, ev) {
+    var timer = null, fired = false, sx = 0, sy = 0;
+    function start(e) {
+      var p = e.touches ? e.touches[0] : e;
+      sx = p.clientX; sy = p.clientY;
+      fired = false;
+      clearTimeout(timer);
+      timer = setTimeout(function () { fired = true; calOpenCopy(ev); }, 600);
+    }
+    function cancel() { clearTimeout(timer); }
+    function move(e) {
+      var p = e.touches ? e.touches[0] : e;
+      if (Math.abs(p.clientX - sx) > 10 || Math.abs(p.clientY - sy) > 10) cancel();
+    }
+    el.addEventListener("touchstart", start, { passive: true });
+    el.addEventListener("touchend", cancel);
+    el.addEventListener("touchmove", move, { passive: true });
+    el.addEventListener("mousedown", start);
+    el.addEventListener("mouseup", cancel);
+    el.addEventListener("mouseleave", cancel);
+    el.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+    el.style.webkitTouchCallout = "none";
+    el.style.userSelect = "none";
+    el.addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (fired) { fired = false; return; }
+      calOpenEditor(ev);
+    });
+  }
+
+  // ---- copy an event into a project (task / מזכרת) ----
+  var calCopyOverlay = document.getElementById("calCopyOverlay");
+  var calCopyProjects = document.getElementById("calCopyProjects");
+  var calCopyTypeRow = document.getElementById("calCopyTypeRow");
+  var calCopyMessage = document.getElementById("calCopyMessage");
+  var calCopyEvent = null, calCopyType = "task";
+  function calOpenCopy(ev) {
+    calCopyEvent = ev;
+    calCopyMessage.textContent = ev.title || tr("calNoTitle");
+    calCopyTypeRow.hidden = false;
+    calCopyProjects.hidden = true;
+    calCopyOverlay.hidden = false;
+  }
+  function calCloseCopy() {
+    calCopyOverlay.hidden = true;
+    calCopyEvent = null;
+  }
+  function calCopyChooseType(type) {
+    calCopyType = type;
+    calCopyTypeRow.hidden = true;
+    calCopyMessage.textContent = tr("calCopyPickProject");
+    calCopyProjects.innerHTML = "";
+    allSheets().filter(function (s) {
+      return !s.ended && s.id !== HEAD_OFFICE_SHEET_ID;
+    }).forEach(function (sheet) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.textContent = (sheet.shared ? "👥 " : "") + sheet.name;
+      b.addEventListener("click", function () { calCopyInto(sheet); });
+      calCopyProjects.appendChild(b);
+    });
+    calCopyProjects.hidden = false;
+  }
+  // Same shape as a row added by hand (addPendingTask): the event's title,
+  // on the event's own date; a timed event's start time goes in the text of
+  // a task, and is the time of a מזכרת.
+  function calCopyInto(sheet) {
+    var ev = calCopyEvent;
+    if (!ev) return;
+    var start = calEventStart(ev);
+    var title = (ev.title || tr("calNoTitle")).trim();
+    var newTask = {
+      id: uid(),
+      text: calCopyType === "task" && !ev.allDay ? title + " (" + calHm(start) + ")" : title,
+      status: 0,
+      urgent: false,
+      type: calCopyType,
+      date: calYmd(start),
+      createdAt: Date.now()
+    };
+    if (calCopyType === "note") newTask.time = ev.allDay ? currentTimeHHMM() : calHm(start);
+    if (isHeadOfficeMode) newTask.isHeadOffice = true;
+    sheet.tasks.push(newTask);
+    saveData();
+    if (sheet.shared && calCopyType === "task") {
+      sendChatSystemMessage(sheet.id, "added", newTask.text, myPhoneNumber);
+    }
+    calCloseCopy();
+    showToast(tr(calCopyType === "task" ? "calCopiedTaskMsg" : "calCopiedNoteMsg") + " " + sheet.name);
+    render();
+  }
+  document.getElementById("calCopyTaskBtn").addEventListener("click", function () { calCopyChooseType("task"); });
+  document.getElementById("calCopyNoteBtn").addEventListener("click", function () { calCopyChooseType("note"); });
+  document.getElementById("calCopyCancelBtn").addEventListener("click", calCloseCopy);
+  calCopyOverlay.addEventListener("click", function (e) { if (e.target === calCopyOverlay) calCloseCopy(); });
 
   function calRenderMonth() {
     var a = calState.anchor;
@@ -5674,7 +5803,7 @@
         block.style.insetInlineStart = (item.lane / item.lanes * 100) + "%";
         block.style.width = "calc(" + (100 / item.lanes) + "% - 2px)";
         block.textContent = (item.ev.title || tr("calNoTitle")) + " " + calHm(calEventStart(item.ev));
-        block.addEventListener("click", function (e) { e.stopPropagation(); calOpenEditor(item.ev); });
+        calBindEvent(block, item.ev);
         col.appendChild(block);
       });
       if (calSameDay(day, today)) {
@@ -5753,7 +5882,7 @@
         row.appendChild(dot);
         row.appendChild(time);
         row.appendChild(text);
-        row.addEventListener("click", function () { calOpenEditor(ev); });
+        calBindEvent(row, ev);
         list.appendChild(row);
       });
     }
