@@ -2889,7 +2889,7 @@
     margin-inline-end: 3px;
     vertical-align: middle;
   }
-  .cal-more { font-size: 0.65rem; color: var(--ink-muted); padding: 0 3px; }
+  .cal-more { font-size: 0.65rem; color: var(--ink-muted); padding: 0 3px; text-align: right; }
   .cal-cols-head {
     display: flex;
     border-bottom: 1px solid var(--rule);
@@ -5732,6 +5732,7 @@
           var more = document.createElement("div");
           more.className = "cal-more";
           more.textContent = "+" + (evs.length - 3);
+          more.dir = "ltr";
           cell.appendChild(more);
         }
         cell.addEventListener("click", function () {
@@ -6045,7 +6046,16 @@
       });
       calEvCalendar.value = String(full.calendarId);
       calEvOverlay.hidden = false;
-    }, function () { alert(tr("calLoadError")); });
+    }, function () {
+      // couldn't read the series itself: edit from this occurrence's data
+      var start = calEventStart(ev);
+      var end = ev.allDay ? calAddDays(calEventEnd(ev), -1) : calEventEnd(ev);
+      calFillForm({
+        title: ev.title, allDay: !!ev.allDay, start: start, end: end < start ? start : end,
+        rrule: ev.rrule, reminder: -1, location: ev.location, description: ""
+      });
+      calEvOverlay.hidden = false;
+    });
   }
 
   function calCloseEditor() {

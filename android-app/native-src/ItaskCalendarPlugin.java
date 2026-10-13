@@ -34,6 +34,22 @@ import java.util.TimeZone;
 )
 public class ItaskCalendarPlugin extends Plugin {
 
+    // PluginCall.getLong/getInt only accept a value JSON-parsed as exactly
+    // that type - a small number (an event or calendar id) arrives as an
+    // Integer and getLong silently returns its default instead. Read any
+    // numeric value here.
+    private static long num(PluginCall call, String key, long def) {
+        Object v = call.getData().opt(key);
+        if (v instanceof Number) return ((Number) v).longValue();
+        if (v instanceof String) {
+            try {
+                return (long) Double.parseDouble((String) v);
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return def;
+    }
+
     private boolean ensureAccess(PluginCall call) {
         if (getPermissionState("calendar") == PermissionState.GRANTED) return true;
         call.reject("calendar permission not granted", "NO_PERMISSION");
@@ -79,8 +95,8 @@ public class ItaskCalendarPlugin extends Plugin {
     @PluginMethod
     public void listEvents(PluginCall call) {
         if (!ensureAccess(call)) return;
-        long from = call.getLong("from", 0L);
-        long to = call.getLong("to", 0L);
+        long from = num(call, "from", 0L);
+        long to = num(call, "to", 0L);
         Uri.Builder uri = CalendarContract.Instances.CONTENT_URI.buildUpon();
         ContentUris.appendId(uri, from);
         ContentUris.appendId(uri, to);
@@ -126,7 +142,7 @@ public class ItaskCalendarPlugin extends Plugin {
     @PluginMethod
     public void getEvent(PluginCall call) {
         if (!ensureAccess(call)) return;
-        long eventId = call.getLong("eventId", -1L);
+        long eventId = num(call, "eventId", -1L);
         ContentResolver cr = getContext().getContentResolver();
         String[] projection = {
                 CalendarContract.Events.TITLE,
@@ -175,15 +191,15 @@ public class ItaskCalendarPlugin extends Plugin {
     @PluginMethod
     public void saveEvent(PluginCall call) {
         if (!ensureAccess(call)) return;
-        long eventId = call.getLong("eventId", -1L);
+        long eventId = num(call, "eventId", -1L);
         boolean allDay = Boolean.TRUE.equals(call.getBoolean("allDay", false));
-        long start = call.getLong("start", 0L);
-        long end = call.getLong("end", 0L);
+        long start = num(call, "start", 0L);
+        long end = num(call, "end", 0L);
         String rrule = call.getString("rrule", "");
-        int reminder = call.getInt("reminderMinutes", -1);
+        int reminder = (int) num(call, "reminderMinutes", -1L);
 
         ContentValues v = new ContentValues();
-        v.put(CalendarContract.Events.CALENDAR_ID, call.getLong("calendarId", 0L));
+        v.put(CalendarContract.Events.CALENDAR_ID, num(call, "calendarId", 0L));
         v.put(CalendarContract.Events.TITLE, call.getString("title", ""));
         v.put(CalendarContract.Events.EVENT_LOCATION, call.getString("location", ""));
         v.put(CalendarContract.Events.DESCRIPTION, call.getString("description", ""));
@@ -236,7 +252,7 @@ public class ItaskCalendarPlugin extends Plugin {
     @PluginMethod
     public void deleteEvent(PluginCall call) {
         if (!ensureAccess(call)) return;
-        long eventId = call.getLong("eventId", -1L);
+        long eventId = num(call, "eventId", -1L);
         try {
             getContext().getContentResolver().delete(
                     ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, eventId), null, null);
