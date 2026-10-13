@@ -5674,24 +5674,26 @@
     });
     calCopyProjects.hidden = false;
   }
-  // Same shape as a row added by hand (addPendingTask): the event's title,
-  // on the event's own date; a timed event's start time goes in the text of
-  // a task, and is the time of a מזכרת.
+  // Same shape as a row added by hand (addPendingTask), dated today - the
+  // day it was copied, so it shows up right away in the project's list -
+  // with the event's own date (and start time, if it has one) kept in the
+  // text, e.g. "פגישה עם הקבלן (18/10 09:00)".
   function calCopyInto(sheet) {
     var ev = calCopyEvent;
     if (!ev) return;
     var start = calEventStart(ev);
     var title = (ev.title || tr("calNoTitle")).trim();
+    var when = isoToDisplay(calYmd(start)) + (ev.allDay ? "" : " " + calHm(start));
     var newTask = {
       id: uid(),
-      text: calCopyType === "task" && !ev.allDay ? title + " (" + calHm(start) + ")" : title,
+      text: title + " (" + when + ")",
       status: 0,
       urgent: false,
       type: calCopyType,
-      date: calYmd(start),
+      date: todayISO(),
       createdAt: Date.now()
     };
-    if (calCopyType === "note") newTask.time = ev.allDay ? currentTimeHHMM() : calHm(start);
+    if (calCopyType === "note") newTask.time = currentTimeHHMM();
     if (isHeadOfficeMode) newTask.isHeadOffice = true;
     sheet.tasks.push(newTask);
     saveData();
