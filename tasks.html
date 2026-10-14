@@ -3639,7 +3639,7 @@
         <button type="button" id="taskReminderEvery30Btn" data-i18n="taskReminderEvery30">כל חצי שעה</button>
         <button type="button" id="taskReminderEvery60Btn" data-i18n="taskReminderEveryHour">כל שעה</button>
       </div>
-      <button type="button" class="convert-to-note-btn" id="taskReminderTimeToggleBtn" data-i18n="taskReminderSpecificTime">שעה מסוימת</button>
+      <button type="button" class="convert-to-note-btn" id="taskReminderTimeToggleBtn" data-i18n="taskReminderSpecificTime">בחר שעה</button>
       <div class="task-reminder-time-row" id="taskReminderTimeRow" hidden>
         <input type="date" id="taskReminderDateInput">
         <input type="time" id="taskReminderTimeInput">
@@ -4212,7 +4212,7 @@
     taskReminderModalMessage: { he: "תדירות ההתראה", en: "Reminder frequency", ar: "تكرار التذكير", ru: "Частота напоминания" },
     taskReminderEvery30: { he: "כל חצי שעה", en: "Every half hour", ar: "كل نصف ساعة", ru: "Каждые полчаса" },
     taskReminderEveryHour: { he: "כל שעה", en: "Every hour", ar: "كل ساعة", ru: "Каждый час" },
-    taskReminderSpecificTime: { he: "שעה מסוימת", en: "Specific time", ar: "وقت محدد", ru: "Определённое время" },
+    taskReminderSpecificTime: { he: "בחר שעה", en: "Pick a time", ar: "اختر وقتًا", ru: "Выбрать время" },
     taskReminderTurnOff: { he: "כיבוי התראה", en: "Turn off reminder", ar: "إيقاف التذكير", ru: "Выключить напоминание" },
     taskReminderSetMsg: { he: "ההתראה הופעלה", en: "Reminder set", ar: "تم تفعيل التذكير", ru: "Напоминание установлено" },
     taskReminderOffMsg: { he: "ההתראה כובתה", en: "Reminder turned off", ar: "تم إيقاف التذكير", ru: "Напоминание выключено" },
@@ -6660,11 +6660,6 @@
   taskReminderEvery60Btn.addEventListener("click", function () {
     setTaskReminder({ type: "interval", minutes: 60, startedAt: new Date().toISOString(), lastSentAt: null });
   });
-  // With the native calendar available, "שעה מסוימת" becomes "לוח שנה":
-  // the time is picked on the calendar and the task is added to it too
-  // (openCalendarForTaskReminder). Otherwise the plain date/time fields.
-  if (calPlugin) taskReminderTimeToggleBtn.setAttribute("data-i18n", "calAppName");
-  taskReminderTimeToggleBtn.textContent = tr(taskReminderTimeToggleBtn.getAttribute("data-i18n"));
   // Task long-press -> calendar-with-arrow button: pick the reminder's
   // moment straight on the calendar (the התראה button keeps the every
   // 30/60 minutes choice).
