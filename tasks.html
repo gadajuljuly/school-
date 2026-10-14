@@ -6543,14 +6543,16 @@
     moveTaskOverlay.hidden = true;
     taskReminderTimeRow.hidden = true;
     var currentTimeReminder = (task && isTaskReminderActive(task.reminder) && task.reminder.type === "time") ? task.reminder : null;
-    taskReminderTimeInput.value = currentTimeReminder ? currentTimeReminder.time : "";
-    taskReminderDateInput.value = (currentTimeReminder && currentTimeReminder.date) || todayISO();
+    var nextHour = new Date(Date.now() + 3600000);
+    taskReminderTimeInput.value = currentTimeReminder ? currentTimeReminder.time :
+      ("0" + nextHour.getHours()).slice(-2) + ":00";
+    taskReminderDateInput.value = (currentTimeReminder && currentTimeReminder.date) ||
+      (currentTimeReminder ? todayISO() : calYmd(nextHour));
     taskReminderDateInput.min = todayISO();
     var statusText = task ? describeTaskReminder(task.reminder) : "";
     taskReminderCurrentStatus.hidden = !statusText;
     taskReminderCurrentStatus.textContent = statusText;
     taskReminderOffBtn.hidden = !task || !isTaskReminderActive(task.reminder);
-    taskReminderTimeToggleBtn.hidden = !!calPlugin;
     taskReminderOverlay.hidden = false;
   }
 
@@ -6601,14 +6603,9 @@
     closeMoveTask();
     openCalendarForTaskReminder(sheet.id, task);
   });
+  // "שעה מסוימת": a date + time for the reminder without putting it in the
+  // phone's calendar (the menu's calendar button does that).
   taskReminderTimeToggleBtn.addEventListener("click", function () {
-    if (calPlugin) {
-      var sheet = activeSheet();
-      var task = sheet.tasks.find(function (t) { return t.id === pendingMoveTaskId; });
-      closeMoveTask();
-      openCalendarForTaskReminder(sheet.id, task);
-      return;
-    }
     taskReminderTimeRow.hidden = !taskReminderTimeRow.hidden;
     if (!taskReminderTimeRow.hidden) taskReminderTimeInput.focus();
   });
