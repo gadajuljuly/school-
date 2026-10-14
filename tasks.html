@@ -2460,6 +2460,9 @@
     pointer-events: auto;
   }
   .task-reminder-indicator img { width: 100%; height: 100%; display: block; object-fit: contain; }
+  /* a task with both a calendar link and a reminder: two smaller icons */
+  .task-reminder-indicator.is-pair-cal { left: 1px; width: 22px; height: 22px; }
+  .task-reminder-indicator.is-pair-alarm { left: 24px; width: 19px; height: 19px; }
   .row-date {
     flex-shrink: 0;
     font-size: 0.72rem;
@@ -3611,6 +3614,7 @@
         <button type="button" class="task-menu-icon" id="taskCalendarReminderBtn" data-i18n-title="calAppName" title="לוח שנה" hidden><span class="cal-live-icon"><img src="tasks-calendar-app-icon-blank.webp" alt=""><span class="cal-live-wd"></span><span class="cal-live-day"></span></span><span class="task-icon-arrow">&#8617;</span></button>
         <button type="button" class="task-menu-icon" id="taskChatQuoteBtn" data-i18n-title="taskChatQuoteBtnTitle" title="ציטוט בצ'אט הפרויקט" hidden><img src="tasks-chat-icon.webp" alt=""><span class="task-icon-arrow">&#8617;</span></button>
       </div>
+      <button type="button" class="convert-to-note-btn" id="removeFromCalendarBtn" data-i18n="removeFromCalendarBtn" hidden>הסרה מלוח השנה</button>
       <button type="button" class="convert-to-note-btn" id="convertToNoteBtn" data-i18n="convertToNoteBtn" hidden>הפוך למזכרת</button>
       <button type="button" class="convert-to-note-btn" id="convertToTaskBtn" data-i18n="convertToTaskBtn" hidden>הפוך למשימה</button>
       <button type="button" class="convert-to-note-btn" id="transferToLogBtn" data-i18n="taskTransferToLogBtn" hidden>העברה ליומן</button>
@@ -4225,6 +4229,9 @@
     calCopiedNoteMsg: { he: "האירוע הועתק כמזכרת לפרויקט", en: "Event copied as a note to", ar: "تم نسخ الحدث كملاحظة إلى", ru: "Событие скопировано как заметка в" },
     calPickPrompt: { he: "בחרו מועד להתראה:", en: "Pick a time for the reminder:", ar: "اختر موعد التذكير:", ru: "Выберите время напоминания:" },
     calReminderSetMsg: { he: "נוסף ללוח השנה - התראה רבע שעה לפני", en: "Added to the calendar - reminder 15 minutes before", ar: "أضيف إلى التقويم - تذكير قبل 15 دقيقة", ru: "Добавлено в календарь - напоминание за 15 минут" },
+    removeFromCalendarBtn: { he: "הסרה מלוח השנה", en: "Remove from calendar", ar: "إزالة من التقويم", ru: "Убрать из календаря" },
+    removeFromCalendarConfirm: { he: "להסיר את המשימה מלוח השנה? האירוע יימחק מלוח השנה של הטלפון", en: "Remove the task from the calendar? The event will be deleted from the phone's calendar", ar: "إزالة المهمة من التقويم؟ سيتم حذف الحدث من تقويم الهاتف", ru: "Убрать задачу из календаря? Событие будет удалено из календаря телефона" },
+    removeFromCalendarMsg: { he: "הוסר מלוח השנה", en: "Removed from the calendar", ar: "أزيل من التقويم", ru: "Убрано из календаря" },
     calEventMissingMsg: { he: "האירוע כבר לא נמצא בלוח השנה", en: "The event is no longer in the calendar", ar: "الحدث لم يعد موجودًا في التقويم", ru: "Этого события больше нет в календаре" },
     calAppName: { he: "לוח שנה", en: "Calendar", ar: "التقويم", ru: "Календарь" },
     calToday: { he: "היום", en: "Today", ar: "اليوم", ru: "Сегодня" },
@@ -5152,6 +5159,7 @@
   var taskReminderBtn = document.getElementById("taskReminderBtn");
   var taskChatQuoteBtn = document.getElementById("taskChatQuoteBtn");
   var taskCalendarReminderBtn = document.getElementById("taskCalendarReminderBtn");
+  var removeFromCalendarBtn = document.getElementById("removeFromCalendarBtn");
   var taskReminderOverlay = document.getElementById("taskReminderOverlay");
   var taskReminderCurrentStatus = document.getElementById("taskReminderCurrentStatus");
   var taskReminderEvery30Btn = document.getElementById("taskReminderEvery30Btn");
@@ -5232,9 +5240,11 @@
     taskChatQuoteBtn.hidden = !activeSheet().shared;
     taskCalendarReminderBtn.hidden = !calPlugin;
     var menuCalIcon = taskCalendarReminderBtn.querySelector(".cal-live-icon");
-    var calReminder = task && task.reminder && task.reminder.calendarEventId && isTaskReminderActive(task.reminder) && task.reminder.fireAt;
-    if (calReminder) menuCalIcon.dataset.at = task.reminder.eventAt || task.reminder.fireAt;
+    if (task) migrateCalendarReminderToLink(task);
+    var menuLink = calPlugin && task && isCalendarLinkShown(task.calendarLink) && isMyTaskReminder(activeSheet(), task.calendarLink);
+    if (menuLink) menuCalIcon.dataset.at = task.calendarLink.eventAt;
     else delete menuCalIcon.dataset.at;
+    removeFromCalendarBtn.hidden = !menuLink;
     updateLiveCalendarIcons();
     moveTaskOverlay.hidden = false;
   }
@@ -5341,6 +5351,10 @@
       var changed = false;
       allSheets().forEach(function (sheet) {
         (sheet.tasks || []).forEach(function (t) {
+          if (t.calendarLink && !t.calendarLink.firedAt && ids.indexOf(sheet.id + ":" + t.id + ":cal") !== -1) {
+            t.calendarLink.firedAt = new Date().toISOString();
+            changed = true;
+          }
           if (t.reminder && ids.indexOf(sheet.id + ":" + t.id) !== -1) {
             delete t.reminder;
             changed = true;
@@ -5350,12 +5364,44 @@
       if (changed) { saveData(); render(); }
     }).catch(function () {});
   }
+  // A task's link to a phone-calendar event lives apart from its regular
+  // reminder: task.calendarLink {eventId, eventAt, fireAt, firedAt, by?}
+  // rings 15 minutes before the event and shows the calendar icon, while
+  // task.reminder (every 30/60 minutes, "בחר שעה") shows the alarm clock.
+  // Turning the reminder off leaves the link; "הסרה מלוח השנה" (or
+  // deleting the event) removes the link. Links show until a few hours
+  // after their event.
+  var CAL_LINK_KEEP_MS = 6 * 3600000;
+  function isCalendarLinkShown(link) {
+    return !!link && !!link.eventAt && Date.parse(link.eventAt) + CAL_LINK_KEEP_MS > Date.now();
+  }
+  function isCalendarLinkAlarmDue(link) {
+    if (!isCalendarLinkShown(link) || link.firedAt || !link.fireAt) return false;
+    var graceMs = nativeTaskAlarmPlugin ? 60 * 60000 : 60000;
+    return Date.parse(link.fireAt) + graceMs > Date.now();
+  }
+  // reminders set through the calendar before the split become links
+  function migrateCalendarReminderToLink(t) {
+    var r = t.reminder;
+    if (!r || r.calendarEventId == null) return false;
+    t.calendarLink = {
+      eventId: r.calendarEventId,
+      eventAt: r.eventAt || r.fireAt,
+      fireAt: r.fireAt,
+      firedAt: r.firedAt || null
+    };
+    if (r.by) t.calendarLink.by = r.by;
+    delete t.reminder;
+    return true;
+  }
   function pruneFinishedTaskReminders() {
     collectNativeAlarmsTurnedOff();
     if (isEditingActively()) return;
     var changed = false;
     allSheets().forEach(function (sheet) {
       (sheet.tasks || []).forEach(function (t) {
+        if (migrateCalendarReminderToLink(t)) changed = true;
+        if (t.calendarLink && !isCalendarLinkShown(t.calendarLink)) { delete t.calendarLink; changed = true; }
         if (!t.reminder || t.reminder.type !== "time") return;
         if (!isTaskReminderActive(t.reminder)) {
           delete t.reminder;
@@ -5392,6 +5438,11 @@
     allSheets().forEach(function (sheet) {
       if (sheet.ended) return;
       (sheet.tasks || []).forEach(function (t) {
+        if (migrateCalendarReminderToLink(t)) flagged = true;
+        var link = t.calendarLink;
+        if (t.status !== 2 && isCalendarLinkAlarmDue(link) && isMyTaskReminder(sheet, link)) {
+          alarms.push({ id: sheet.id + ":" + t.id + ":cal", title: sheet.name, body: t.text, at: Date.parse(link.fireAt) });
+        }
         var r = t.reminder;
         if (t.status === 2 || !isTaskReminderActive(r) || !isMyTaskReminder(sheet, r)) return;
         var entry = { id: sheet.id + ":" + t.id, title: sheet.name, body: t.text };
@@ -5732,21 +5783,18 @@
     var sheet = pick && allSheets().find(function (s) { return s.id === pick.sheetId; });
     var task = sheet && (sheet.tasks || []).find(function (t) { return t.id === pick.taskId; });
     if (!task) return;
-    var old = task.reminder;
-    if (old && old.calendarEventId && old.calendarEventId !== eventId) {
-      calPlugin.deleteEvent({ eventId: old.calendarEventId }).catch(function () {});
+    migrateCalendarReminderToLink(task);
+    var old = task.calendarLink;
+    if (old && old.eventId != null && String(old.eventId) !== String(eventId)) {
+      calPlugin.deleteEvent({ eventId: old.eventId }).catch(function () {});
     }
-    var at = new Date(calReminderFireMs(startMs));
-    task.reminder = {
-      type: "time",
-      date: calYmd(at),
-      time: calHm(at),
-      fireAt: at.toISOString(),
-      firedAt: null,
-      calendarEventId: eventId,
-      eventAt: new Date(startMs).toISOString()
+    task.calendarLink = {
+      eventId: eventId,
+      eventAt: new Date(startMs).toISOString(),
+      fireAt: new Date(calReminderFireMs(startMs)).toISOString(),
+      firedAt: null
     };
-    if (sheet.shared) task.reminder.by = myPhoneNumber;
+    if (sheet.shared) task.calendarLink.by = myPhoneNumber;
     saveData();
     closeCalendarView();
     render();
@@ -5757,16 +5805,16 @@
   // Tapping a task's calendar icon: the calendar opens on that day and the
   // reminder's event opens in the editor (or just the day, with a note, if
   // the event was removed from the phone's calendar meanwhile).
-  function openTaskCalendarEvent(reminder) {
+  function openTaskCalendarEvent(link) {
     if (!calPlugin) return;
     calState.mode = "day";
-    calState.anchor = new Date(reminder.eventAt || reminder.fireAt);
+    calState.anchor = new Date(link.eventAt);
     calView.hidden = false;
     calFitAboveFooter();
     calEnsurePermission(function () {
       calLoadCalendars().then(calLoadAndRender).then(function () {
         var occ = (calState.events || []).find(function (ev) {
-          return String(ev.eventId) === String(reminder.calendarEventId);
+          return String(ev.eventId) === String(link.eventId);
         });
         if (occ) calOpenEditor(occ);
         else showToast(tr("calEventMissingMsg"));
@@ -5779,18 +5827,16 @@
     var changed = false;
     allSheets().forEach(function (sheet) {
       (sheet.tasks || []).forEach(function (t) {
-        var r = t.reminder;
-        if (!r || r.calendarEventId == null || String(r.calendarEventId) !== String(eventId)) return;
+        if (migrateCalendarReminderToLink(t)) changed = true;
+        var link = t.calendarLink;
+        if (!link || link.eventId == null || String(link.eventId) !== String(eventId)) return;
         if (deleted) {
-          delete t.reminder;
+          delete t.calendarLink;
         } else {
-          if (r.eventAt && Date.parse(r.eventAt) === startMs) return;
-          var at = new Date(calReminderFireMs(startMs));
-          r.date = calYmd(at);
-          r.time = calHm(at);
-          r.fireAt = at.toISOString();
-          r.firedAt = null;
-          r.eventAt = new Date(startMs).toISOString();
+          if (Date.parse(link.eventAt) === startMs) return;
+          link.eventAt = new Date(startMs).toISOString();
+          link.fireAt = new Date(calReminderFireMs(startMs)).toISOString();
+          link.firedAt = null;
         }
         changed = true;
       });
@@ -6012,12 +6058,11 @@
     // icon by the task, and a ringing reminder 15 minutes before
     var linkReminder = calCopyType === "task" && !ev.allDay && start.getTime() > Date.now() && ev.eventId != null;
     if (linkReminder) {
-      var fireAt = new Date(calReminderFireMs(start.getTime()));
-      newTask.reminder = {
-        type: "time", date: calYmd(fireAt), time: calHm(fireAt), fireAt: fireAt.toISOString(),
-        firedAt: null, calendarEventId: ev.eventId, eventAt: start.toISOString()
+      newTask.calendarLink = {
+        eventId: ev.eventId, eventAt: start.toISOString(),
+        fireAt: new Date(calReminderFireMs(start.getTime())).toISOString(), firedAt: null
       };
-      if (sheet.shared) newTask.reminder.by = myPhoneNumber;
+      if (sheet.shared) newTask.calendarLink.by = myPhoneNumber;
     }
     sheet.tasks.push(newTask);
     saveData();
@@ -6595,37 +6640,42 @@
     syncTaskReminderIconsLayerBounds();
     taskReminderIconsLayer.innerHTML = "";
     entries.forEach(function (entry) {
-      var icon = document.createElement("span");
-      icon.className = "task-reminder-indicator";
-      icon.style.top = (entry.top + entry.height / 2) + "px";
-      icon.title = describeTaskReminder(entry.task.reminder);
-      var r = entry.task.reminder;
-      if (calPlugin && r.calendarEventId && r.fireAt) {
-        // set through the calendar: a calendar icon showing the reminder's
-        // day; tapping it opens that event in the calendar
-        icon.innerHTML = '<span class="cal-live-icon"><img src="tasks-calendar-app-icon-blank.webp" alt="">' +
+      var both = entry.calLink && entry.alarm;
+      if (entry.calLink) {
+        // linked to a calendar event: a calendar icon with the event's day;
+        // tapping it opens that event in the calendar
+        var link = entry.task.calendarLink;
+        var cal = document.createElement("span");
+        cal.className = "task-reminder-indicator" + (both ? " is-pair-cal" : "");
+        cal.style.top = (entry.top + entry.height / 2) + "px";
+        cal.innerHTML = '<span class="cal-live-icon"><img src="tasks-calendar-app-icon-blank.webp" alt="">' +
           '<span class="cal-live-wd"></span><span class="cal-live-day"></span></span>';
-        var liveIcon = icon.querySelector(".cal-live-icon");
-        liveIcon.dataset.at = r.eventAt || r.fireAt;
-        var at = new Date(r.eventAt || r.fireAt);
+        var liveIcon = cal.querySelector(".cal-live-icon");
+        liveIcon.dataset.at = link.eventAt;
+        var at = new Date(link.eventAt);
         liveIcon.querySelector(".cal-live-wd").textContent = at.toLocaleDateString(calLocale(), { weekday: "short" });
         liveIcon.querySelector(".cal-live-day").textContent = at.getDate();
-        icon.addEventListener("click", function (e) {
+        cal.addEventListener("click", function (e) {
           e.stopPropagation();
-          openTaskCalendarEvent(r);
+          openTaskCalendarEvent(link);
         });
+        taskReminderIconsLayer.appendChild(cal);
+      }
+      if (entry.alarm) {
+        var icon = document.createElement("span");
+        icon.className = "task-reminder-indicator" + (both ? " is-pair-alarm" : "");
+        icon.style.top = (entry.top + entry.height / 2) + "px";
+        icon.title = describeTaskReminder(entry.task.reminder);
+        icon.innerHTML = '<img src="tasks-reminder-icon.webp" alt="">';
+        if (entry.editable) {
+          icon.addEventListener("click", function (e) {
+            e.stopPropagation();
+            pendingMoveTaskId = entry.task.id;
+            openTaskReminderModal();
+          });
+        }
         taskReminderIconsLayer.appendChild(icon);
-        return;
       }
-      icon.innerHTML = '<img src="tasks-reminder-icon.webp" alt="">';
-      if (entry.editable) {
-        icon.addEventListener("click", function (e) {
-          e.stopPropagation();
-          pendingMoveTaskId = entry.task.id;
-          openTaskReminderModal();
-        });
-      }
-      taskReminderIconsLayer.appendChild(icon);
     });
     applyTaskReminderIconsScroll();
   }
@@ -6684,6 +6734,20 @@
   // Task long-press -> calendar-with-arrow button: pick the reminder's
   // moment straight on the calendar (the התראה button keeps the every
   // 30/60 minutes choice).
+  // "הסרה מלוח השנה": deletes the linked event from the phone's calendar
+  // and the link (calendar icon + its 15-minutes-before ring) from the
+  // task; a regular reminder on it stays.
+  removeFromCalendarBtn.addEventListener("click", function () {
+    var task = activeSheet().tasks.find(function (t) { return t.id === pendingMoveTaskId; });
+    closeMoveTask();
+    if (!task || !task.calendarLink || !confirm(tr("removeFromCalendarConfirm"))) return;
+    var eventId = task.calendarLink.eventId;
+    delete task.calendarLink;
+    saveData();
+    render();
+    if (calPlugin && eventId != null) calPlugin.deleteEvent({ eventId: eventId }).catch(function () {});
+    showToast(tr("removeFromCalendarMsg"));
+  });
   taskCalendarReminderBtn.addEventListener("click", function () {
     var sheet = activeSheet();
     var task = sheet.tasks.find(function (t) { return t.id === pendingMoveTaskId; });
@@ -14659,7 +14723,9 @@
       li.appendChild(actions);
       taskList.appendChild(li);
       // done tasks keep their reminder (it comes back if un-marked) but it's paused
-      if (t.status !== 2 && isTaskReminderActive(t.reminder) && isMyTaskReminder(activeSheet(), t.reminder)) reminderRowsForIconsLayer.push({ task: t, editable: rowEditable, top: li.offsetTop, height: li.offsetHeight });
+      var rowCalLink = calPlugin && isCalendarLinkShown(t.calendarLink) && isMyTaskReminder(activeSheet(), t.calendarLink);
+      var rowAlarm = isTaskReminderActive(t.reminder) && isMyTaskReminder(activeSheet(), t.reminder);
+      if (t.status !== 2 && (rowCalLink || rowAlarm)) reminderRowsForIconsLayer.push({ task: t, editable: rowEditable, top: li.offsetTop, height: li.offsetHeight, calLink: rowCalLink, alarm: rowAlarm });
 
       if (!(rowEditable && state.editingTaskId === t.id)) {
         var textOverflowPx = textLabel.scrollWidth - textEl.clientWidth;
