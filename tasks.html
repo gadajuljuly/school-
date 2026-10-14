@@ -2528,6 +2528,55 @@
     width: 100%;
     max-width: 320px;
   }
+  /* simple date picker for the native app (the WebView stopped opening its
+     own one for the invisible date inputs) */
+  .date-pick-box { max-width: 300px; padding: 14px; }
+  .date-pick-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .date-pick-title {
+    font-family: "Rubik", "Assistant", sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--ink);
+  }
+  .date-pick-nav {
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+    color: var(--ink);
+    font-size: 1.3rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+  html[dir="ltr"] .date-pick-nav { transform: scaleX(-1); }
+  .date-pick-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    margin-bottom: 12px;
+    text-align: center;
+  }
+  .date-pick-wd { font-size: 0.75rem; color: var(--ink-muted); padding: 4px 0; }
+  .date-pick-day {
+    aspect-ratio: 1;
+    border: none;
+    border-radius: 999px;
+    background: none;
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 0.95rem;
+    cursor: pointer;
+    padding: 0;
+  }
+  .date-pick-day.is-today { box-shadow: inset 0 0 0 1px var(--accent); }
+  .date-pick-day.is-selected { background: var(--accent); color: var(--accent-contrast); }
+  .date-pick-day:disabled { opacity: 0.3; cursor: default; }
   .modal-message {
     margin: 0 0 18px;
     font-size: 0.95rem;
@@ -3134,6 +3183,20 @@
         <button type="button" class="modal-btn modal-btn-no" id="shareTaskCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </form>
+  </div>
+</div>
+<div class="modal-overlay" id="datePickOverlay" hidden style="z-index:46">
+  <div class="modal-box date-pick-box">
+    <div class="date-pick-head">
+      <button type="button" class="date-pick-nav" id="datePickPrev">&#8250;</button>
+      <span class="date-pick-title" id="datePickTitle"></span>
+      <button type="button" class="date-pick-nav" id="datePickNext">&#8249;</button>
+    </div>
+    <div class="date-pick-grid" id="datePickGrid"></div>
+    <div class="modal-actions">
+      <button type="button" class="modal-btn modal-btn-primary" id="datePickTodayBtn" data-i18n="todayBtn">היום</button>
+      <button type="button" class="modal-btn modal-btn-no" id="datePickCancelBtn" data-i18n="cancelBtn">ביטול</button>
+    </div>
   </div>
 </div>
 <div id="navDebugToast" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#222;color:#fff;font-size:13px;line-height:1.4;padding:8px 12px;direction:rtl;display:none;white-space:pre-wrap;"></div>
@@ -4096,8 +4159,6 @@
     calCopyPickProject: { he: "לאיזה פרויקט להעתיק?", en: "Copy to which project?", ar: "النسخ إلى أي مشروع؟", ru: "В какой проект скопировать?" },
     calCopiedTaskMsg: { he: "האירוע הועתק כמשימה לפרויקט", en: "Event copied as a task to", ar: "تم نسخ الحدث كمهمة إلى", ru: "Событие скопировано как задача в" },
     calCopiedNoteMsg: { he: "האירוע הועתק כמזכרת לפרויקט", en: "Event copied as a note to", ar: "تم نسخ الحدث كملاحظة إلى", ru: "Событие скопировано как заметка в" },
-    calPickDatePrompt: { he: "בחרו תאריך", en: "Pick a date", ar: "اختر تاريخًا", ru: "Выберите дату" },
-    calDateOutOfRange: { he: "אי אפשר לבחור את התאריך הזה", en: "That date can't be chosen", ar: "لا يمكن اختيار هذا التاريخ", ru: "Эту дату выбрать нельзя" },
     calPickPrompt: { he: "בחרו מועד להתראה:", en: "Pick a time for the reminder:", ar: "اختر موعد التذكير:", ru: "Выберите время напоминания:" },
     calReminderSetMsg: { he: "ההתראה נקבעה ונוספה ללוח השנה", en: "Reminder set and added to the calendar", ar: "تم ضبط التذكير وإضافته إلى التقويم", ru: "Напоминание установлено и добавлено в календарь" },
     calAppName: { he: "לוח שנה", en: "Calendar", ar: "التقويم", ru: "Календарь" },
@@ -5368,10 +5429,7 @@
     hidden: {},
     loadSeq: 0,
     // set while picking a task reminder's time ({sheetId, taskId, text})
-    pick: null,
-    // set while the calendar is standing in as a date picker: the <input
-    // type="date"> to fill in (see the .date-click-area wiring below)
-    pickDateInput: null
+    pick: null
   };
   try {
     calState.mode = localStorage.getItem(CAL_MODE_KEY) || "month";
@@ -5448,11 +5506,11 @@
   // The bottom icon bar stays in view under the calendar, so the user can
   // jump straight to another screen: the calendar ends just above the bar
   // (and its divider), and tapping any of its buttons closes the calendar
-  // first. Not while picking a date - that one sits over dialogs.
+  // first.
   var notebookFooterEl = document.getElementById("notebookFooter");
   function calFitAboveFooter() {
     calView.style.bottom = "";
-    if (calView.hidden || calState.pickDateInput) return;
+    if (calView.hidden) return;
     var edge = notebookFooterEl.previousElementSibling || notebookFooterEl;
     var top = edge.getBoundingClientRect().top;
     if (notebookFooterEl.offsetHeight && top > window.innerHeight / 2 && top < window.innerHeight) {
@@ -5492,39 +5550,77 @@
 
   // The Android WebView no longer opens its own picker for the app's
   // invisible <input type="date"> overlays (tapping the date did nothing),
-  // so in the native app tapping a date opens this calendar on that month
-  // instead; tapping a day fills the input and fires its usual "change".
-  // Works without calendar access too - just without the events.
-  function openCalendarAsDatePicker(input) {
-    calState.pick = null;
-    calState.pickDateInput = input;
-    document.getElementById("calPickText").textContent = tr("calPickDatePrompt");
-    calPickBanner.hidden = false;
-    calState.mode = "month";
-    calState.anchor = input.value ? calParseYmd(input.value) : new Date();
-    calView.style.zIndex = "45"; // over any dialog the date field sits in
-    calView.hidden = false;
-    calPlugin.checkPermissions().then(function (st) {
-      if (st && st.calendar === "granted") calLoadCalendars().then(calLoadAndRender);
-      else { calState.events = []; calRender(); }
-    }, function () { calState.events = []; calRender(); });
+  // so in the native app a small month picker opens instead; picking a
+  // day fills the input and fires its usual "change". Honours min/max.
+  var datePickOverlay = document.getElementById("datePickOverlay");
+  var datePick = { input: null, month: null };
+  function openSimpleDatePicker(input) {
+    datePick.input = input;
+    var d = input.value ? calParseYmd(input.value) : new Date();
+    datePick.month = new Date(d.getFullYear(), d.getMonth(), 1);
+    renderSimpleDatePicker();
+    datePickOverlay.hidden = false;
   }
-  function calFinishDatePick(day) {
-    var input = calState.pickDateInput;
-    var value = calYmd(day);
-    if ((input.min && value < input.min) || (input.max && value > input.max)) {
-      showToast(tr("calDateOutOfRange"));
-      return;
+  function renderSimpleDatePicker() {
+    var input = datePick.input, m = datePick.month;
+    var loc = calLocale();
+    document.getElementById("datePickTitle").textContent =
+      m.toLocaleDateString(loc, { month: "long", year: "numeric" });
+    var grid = document.getElementById("datePickGrid");
+    grid.innerHTML = "";
+    var first = calWeekStart(m);
+    for (var w = 0; w < 7; w++) {
+      var h = document.createElement("span");
+      h.className = "date-pick-wd";
+      h.textContent = calAddDays(first, w).toLocaleDateString(loc, { weekday: "narrow" });
+      grid.appendChild(h);
     }
-    closeCalendarView();
-    input.value = value;
+    var today = calYmd(new Date());
+    for (var i = 0; i < m.getDay(); i++) grid.appendChild(document.createElement("span"));
+    var days = new Date(m.getFullYear(), m.getMonth() + 1, 0).getDate();
+    for (var n = 1; n <= days; n++) {
+      var ymd = calYmd(new Date(m.getFullYear(), m.getMonth(), n));
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "date-pick-day" + (ymd === today ? " is-today" : "") +
+        (ymd === input.value ? " is-selected" : "");
+      b.textContent = n;
+      b.disabled = !!((input.min && ymd < input.min) || (input.max && ymd > input.max));
+      b.addEventListener("click", finishSimpleDatePick.bind(null, ymd));
+      grid.appendChild(b);
+    }
+  }
+  function finishSimpleDatePick(ymd) {
+    var input = datePick.input;
+    datePickOverlay.hidden = true;
+    datePick.input = null;
+    if (!input || input.value === ymd) return;
+    input.value = ymd;
     input.dispatchEvent(new Event("change", { bubbles: true }));
   }
-  if (calPlugin) {
+  function shiftSimpleDatePicker(delta) {
+    datePick.month = new Date(datePick.month.getFullYear(), datePick.month.getMonth() + delta, 1);
+    renderSimpleDatePicker();
+  }
+  document.getElementById("datePickPrev").addEventListener("click", function () { shiftSimpleDatePicker(-1); });
+  document.getElementById("datePickNext").addEventListener("click", function () { shiftSimpleDatePicker(1); });
+  document.getElementById("datePickTodayBtn").addEventListener("click", function () {
+    var t = calYmd(new Date()), input = datePick.input;
+    if (input && ((input.min && t < input.min) || (input.max && t > input.max))) return;
+    finishSimpleDatePick(t);
+  });
+  document.getElementById("datePickCancelBtn").addEventListener("click", function () {
+    datePickOverlay.hidden = true;
+    datePick.input = null;
+  });
+  datePickOverlay.addEventListener("click", function (e) {
+    if (e.target === datePickOverlay) { datePickOverlay.hidden = true; datePick.input = null; }
+  });
+  if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
     document.querySelectorAll(".date-click-area input[type=date]").forEach(function (input) {
       input.addEventListener("click", function (e) {
         e.preventDefault();
-        openCalendarAsDatePicker(input);
+        openSimpleDatePicker(input);
       });
     });
   }
@@ -5556,8 +5652,6 @@
 
   function closeCalendarView() {
     calState.pick = null;
-    calState.pickDateInput = null;
-    calView.style.zIndex = "";
     calView.style.bottom = "";
     calView.style.paddingBottom = "";
     calPickBanner.hidden = true;
@@ -5646,7 +5740,6 @@
     if (calState.mode === "month") calRenderMonth();
     else if (calState.mode === "agenda") calRenderAgenda();
     else calRenderDays(calState.mode === "week" ? 7 : 1);
-    if (calState.pickDateInput) return;
     var fab = document.createElement("button");
     fab.type = "button";
     fab.className = "cal-fab";
@@ -5686,7 +5779,6 @@
   function calBindEvent(el, ev) {
     var timer = null, fired = false, sx = 0, sy = 0;
     function start(e) {
-      if (calState.pickDateInput) return;
       var p = e.touches ? e.touches[0] : e;
       sx = p.clientX; sy = p.clientY;
       fired = false;
@@ -5710,7 +5802,6 @@
     el.addEventListener("click", function (e) {
       e.stopPropagation();
       if (fired) { fired = false; return; }
-      if (calState.pickDateInput) { calFinishDatePick(calEventStart(ev)); return; }
       calOpenEditor(ev);
     });
   }
@@ -5812,7 +5903,6 @@
           cell.appendChild(more);
         }
         cell.addEventListener("click", function () {
-          if (calState.pickDateInput) { calFinishDatePick(day); return; }
           calState.anchor = day;
           calSetMode("day");
         });
@@ -5848,10 +5938,7 @@
       nu.textContent = day.getDate();
       ch.appendChild(nm);
       ch.appendChild(nu);
-      ch.addEventListener("click", function () {
-        if (calState.pickDateInput) { calFinishDatePick(day); return; }
-        if (count === 7) { calState.anchor = day; calSetMode("day"); }
-      });
+      if (count === 7) ch.addEventListener("click", function () { calState.anchor = day; calSetMode("day"); });
       head.appendChild(ch);
       var ad = document.createElement("div");
       ad.className = "cal-allday-cell";
