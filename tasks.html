@@ -4225,6 +4225,7 @@
     calCopiedNoteMsg: { he: "האירוע הועתק כמזכרת לפרויקט", en: "Event copied as a note to", ar: "تم نسخ الحدث كملاحظة إلى", ru: "Событие скопировано как заметка в" },
     calPickPrompt: { he: "בחרו מועד להתראה:", en: "Pick a time for the reminder:", ar: "اختر موعد التذكير:", ru: "Выберите время напоминания:" },
     calReminderSetMsg: { he: "ההתראה נקבעה ונוספה ללוח השנה", en: "Reminder set and added to the calendar", ar: "تم ضبط التذكير وإضافته إلى التقويم", ru: "Напоминание установлено и добавлено в календарь" },
+    calEventMissingMsg: { he: "האירוע כבר לא נמצא בלוח השנה", en: "The event is no longer in the calendar", ar: "الحدث لم يعد موجودًا في التقويم", ru: "Этого события больше нет в календаре" },
     calAppName: { he: "לוח שנה", en: "Calendar", ar: "التقويم", ru: "Календарь" },
     calToday: { he: "היום", en: "Today", ar: "اليوم", ru: "Сегодня" },
     calCalendarsTitle: { he: "יומנים", en: "Calendars", ar: "التقاويم", ru: "Календари" },
@@ -5525,7 +5526,7 @@
   function updateLiveCalendarIcons() {
     var now = new Date();
     var wd = now.toLocaleDateString(calLocale(), { weekday: "short" });
-    document.querySelectorAll(".cal-live-icon").forEach(function (el) {
+    document.querySelectorAll(".cal-live-icon:not(.task-reminder-indicator .cal-live-icon)").forEach(function (el) {
       el.querySelector(".cal-live-wd").textContent = wd;
       el.querySelector(".cal-live-day").textContent = now.getDate();
     });
@@ -5741,6 +5742,49 @@
     ensureExactAlarmPermission();
   }
 
+  // Tapping a task's calendar icon: the calendar opens on that day and the
+  // reminder's event opens in the editor (or just the day, with a note, if
+  // the event was removed from the phone's calendar meanwhile).
+  function openTaskCalendarEvent(reminder) {
+    if (!calPlugin) return;
+    calState.mode = "day";
+    calState.anchor = new Date(reminder.fireAt);
+    calView.hidden = false;
+    calFitAboveFooter();
+    calEnsurePermission(function () {
+      calLoadCalendars().then(calLoadAndRender).then(function () {
+        var occ = (calState.events || []).find(function (ev) {
+          return String(ev.eventId) === String(reminder.calendarEventId);
+        });
+        if (occ) calOpenEditor(occ);
+        else showToast(tr("calEventMissingMsg"));
+      });
+    });
+  }
+  // Editing / deleting that event in the calendar carries over to the
+  // task's reminder: a new time moves it, deleting the event removes it.
+  function calSyncTaskRemindersForEvent(eventId, startMs, deleted) {
+    var changed = false;
+    allSheets().forEach(function (sheet) {
+      (sheet.tasks || []).forEach(function (t) {
+        var r = t.reminder;
+        if (!r || r.calendarEventId == null || String(r.calendarEventId) !== String(eventId)) return;
+        if (deleted) {
+          delete t.reminder;
+        } else {
+          var at = new Date(startMs);
+          if (r.fireAt && Date.parse(r.fireAt) === startMs) return;
+          r.date = calYmd(at);
+          r.time = calHm(at);
+          r.fireAt = at.toISOString();
+          r.firedAt = null;
+        }
+        changed = true;
+      });
+    });
+    if (changed) { saveData(); render(); }
+  }
+
   function closeCalendarView() {
     calState.pick = null;
     calView.style.bottom = "";
@@ -5795,7 +5839,7 @@
     var range = calRange();
     var seq = ++calState.loadSeq;
     calRenderTitle();
-    calPlugin.listEvents({ from: range.from.getTime(), to: range.to.getTime() }).then(function (res) {
+    return calPlugin.listEvents({ from: range.from.getTime(), to: range.to.getTime() }).then(function (res) {
       if (seq !== calState.loadSeq) return;
       calState.events = ((res && res.events) || []).filter(function (ev) {
         return !calState.hidden[String(ev.calendarId)];
@@ -6359,14 +6403,17 @@
         return;
       }
       showToast(tr("calSavedMsg"));
+      if (payload.eventId != null && !allDay && start > Date.now()) calSyncTaskRemindersForEvent(payload.eventId, start, false);
       calLoadAndRender();
     }, function () { alert(tr("calSaveError")); });
   });
 
   calEvDeleteBtn.addEventListener("click", function () {
     if (!calEditing || !confirm(tr("calDeleteConfirm"))) return;
-    calPlugin.deleteEvent({ eventId: calEditing.eventId }).then(function () {
+    var deletedId = calEditing.eventId;
+    calPlugin.deleteEvent({ eventId: deletedId }).then(function () {
       calCloseEditor();
+      calSyncTaskRemindersForEvent(deletedId, 0, true);
       showToast(tr("calDeletedMsg"));
       calLoadAndRender();
     }, function () { alert(tr("calSaveError")); });
@@ -6524,8 +6571,24 @@
       var icon = document.createElement("span");
       icon.className = "task-reminder-indicator";
       icon.style.top = (entry.top + entry.height / 2) + "px";
-      icon.innerHTML = '<img src="tasks-reminder-icon.webp" alt="">';
       icon.title = describeTaskReminder(entry.task.reminder);
+      var r = entry.task.reminder;
+      if (calPlugin && r.calendarEventId && r.fireAt) {
+        // set through the calendar: a calendar icon showing the reminder's
+        // day; tapping it opens that event in the calendar
+        var at = new Date(r.fireAt);
+        icon.innerHTML = '<span class="cal-live-icon"><img src="tasks-calendar-app-icon-blank.webp" alt="">' +
+          '<span class="cal-live-wd"></span><span class="cal-live-day"></span></span>';
+        icon.querySelector(".cal-live-wd").textContent = at.toLocaleDateString(calLocale(), { weekday: "short" });
+        icon.querySelector(".cal-live-day").textContent = at.getDate();
+        icon.addEventListener("click", function (e) {
+          e.stopPropagation();
+          openTaskCalendarEvent(r);
+        });
+        taskReminderIconsLayer.appendChild(icon);
+        return;
+      }
+      icon.innerHTML = '<img src="tasks-reminder-icon.webp" alt="">';
       if (entry.editable) {
         icon.addEventListener("click", function (e) {
           e.stopPropagation();
