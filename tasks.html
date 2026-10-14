@@ -4092,6 +4092,7 @@
     taskReminderActiveEvery30: { he: "פעילה: כל חצי שעה", en: "Active: every half hour", ar: "نشط: كل نصف ساعة", ru: "Активно: каждые полчаса" },
     taskReminderActiveEveryHour: { he: "פעילה: כל שעה", en: "Active: every hour", ar: "نشط: كل ساعة", ru: "Активно: каждый час" },
     taskReminderActiveAt: { he: "פעילה: בשעה ", en: "Active: at ", ar: "نشط: الساعة ", ru: "Активно: в " },
+    contactPickFailedMsg: { he: "לא הצלחנו לפתוח את אנשי הקשר.", en: "Couldn't open your contacts.", ar: "تعذر فتح جهات الاتصال.", ru: "Не удалось открыть контакты." },
     calCopyPickProject: { he: "לאיזה פרויקט להעתיק?", en: "Copy to which project?", ar: "النسخ إلى أي مشروع؟", ru: "В какой проект скопировать?" },
     calCopiedTaskMsg: { he: "האירוע הועתק כמשימה לפרויקט", en: "Event copied as a task to", ar: "تم نسخ الحدث كمهمة إلى", ru: "Событие скопировано как задача в" },
     calCopiedNoteMsg: { he: "האירוע הועתק כמזכרת לפרויקט", en: "Event copied as a note to", ar: "تم نسخ الحدث كملاحظة إلى", ru: "Событие скопировано как заметка в" },
@@ -6755,7 +6756,14 @@
         var name = contact && contact.name && (contact.name.display || [contact.name.given, contact.name.family].filter(Boolean).join(" "));
         return { tel: tel, name: name || "" };
       })
-      .catch(function () { return null; });
+      .catch(function (err) {
+        // backing out of the picker isn't an error; anything else (most
+        // often READ_CONTACTS missing from the app's manifest) is said
+        // out loud instead of the button silently doing nothing
+        var msg = (err && err.message) || "";
+        if (!/cancel/i.test(msg)) alert(tr("contactPickFailedMsg") + (msg ? "\n" + msg : ""));
+        return null;
+      });
   }
 
   // --- Project invites: "שיתוף" on a project's tab sends a real invite to
