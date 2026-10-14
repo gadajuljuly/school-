@@ -2577,40 +2577,43 @@
   .date-pick-day.is-today { box-shadow: inset 0 0 0 1px var(--accent); }
   .date-pick-day.is-selected { background: var(--accent); color: var(--accent-contrast); }
   .date-pick-day:disabled { opacity: 0.3; cursor: default; }
-  /* task long-press menu: chat-with-curved-arrow button in the corner,
-     quotes the task in the project's chat */
-  .task-menu-box { position: relative; }
-  .task-chat-quote-btn {
-    position: absolute;
-    top: 12px;
-    inset-inline-end: 12px;
-    width: 42px;
-    height: 42px;
+  /* task long-press menu: a row of icon buttons (move, copy, reminder,
+     calendar reminder, chat quote); the curved-arrow badge marks the ones
+     that jump to another screen */
+  .task-menu-icons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .task-menu-icon {
+    position: relative;
+    width: 48px;
+    height: 48px;
     padding: 0;
     border: none;
     border-radius: 12px;
     background: none;
     cursor: pointer;
-    box-shadow: 0 3px 8px var(--shadow);
   }
-  .task-chat-quote-btn[hidden] { display: none; }
-  .task-chat-quote-btn img { width: 100%; height: 100%; display: block; border-radius: 12px; object-fit: cover; }
-  .task-chat-quote-arrow {
+  .task-menu-icon[hidden] { display: none; }
+  .task-menu-icon img { width: 100%; height: 100%; display: block; border-radius: 12px; object-fit: contain; }
+  .task-icon-arrow {
     position: absolute;
-    bottom: -6px;
-    inset-inline-start: -6px;
-    width: 22px;
-    height: 22px;
+    bottom: -5px;
+    inset-inline-start: -5px;
+    width: 20px;
+    height: 20px;
     border-radius: 999px;
     background: var(--accent);
     color: var(--accent-contrast);
-    font-size: 0.95rem;
+    font-size: 0.85rem;
     font-weight: 700;
-    line-height: 22px;
+    line-height: 20px;
     text-align: center;
     box-shadow: 0 1px 3px var(--shadow);
   }
-  .task-menu-box > .modal-message { padding-inline-end: 50px; min-height: 42px; }
   .modal-message {
     margin: 0 0 18px;
     font-size: 0.95rem;
@@ -3576,15 +3579,16 @@
   </div>
 
   <div class="modal-overlay" id="moveTaskOverlay" hidden>
-    <div class="modal-box task-menu-box" role="alertdialog" aria-modal="true">
-      <button type="button" class="task-chat-quote-btn" id="taskChatQuoteBtn" data-i18n-title="taskChatQuoteBtnTitle" title="ציטוט בצ'אט הפרויקט" hidden><img src="tasks-chat-icon.webp" alt=""><span class="task-chat-quote-arrow">&#8617;</span></button>
-      <p class="modal-message" data-i18n="moveTaskModalMessage">העברה או העתקה של המשימה</p>
-      <div class="move-task-mode">
-        <button type="button" id="moveModeMoveBtn" data-i18n="moveModeMoveBtn">העברה</button>
-        <button type="button" id="moveModeCopyBtn" data-i18n="moveModeCopyBtn">העתקה</button>
+    <div class="modal-box" role="alertdialog" aria-modal="true">
+      <p class="modal-message" data-i18n="moveTaskModalMessage">מה לעשות עם המשימה?</p>
+      <div class="task-menu-icons">
+        <button type="button" class="task-menu-icon" id="moveModeMoveBtn" data-i18n-title="moveModeMoveBtn" title="העברה"><img src="tasks-menu-move-icon.webp" alt=""></button>
+        <button type="button" class="task-menu-icon" id="moveModeCopyBtn" data-i18n-title="moveModeCopyBtn" title="העתקה"><img src="tasks-menu-copy-icon.webp" alt=""></button>
+        <button type="button" class="task-menu-icon" id="taskReminderBtn" data-i18n-title="taskReminderBtn" title="התראה"><img src="tasks-reminder-icon.webp" alt=""></button>
+        <button type="button" class="task-menu-icon" id="taskCalendarReminderBtn" data-i18n-title="calAppName" title="לוח שנה" hidden><img src="tasks-calendar-app-icon.webp" alt=""><span class="task-icon-arrow">&#8617;</span></button>
+        <button type="button" class="task-menu-icon" id="taskChatQuoteBtn" data-i18n-title="taskChatQuoteBtnTitle" title="ציטוט בצ'אט הפרויקט" hidden><img src="tasks-chat-icon.webp" alt=""><span class="task-icon-arrow">&#8617;</span></button>
       </div>
       <button type="button" class="convert-to-note-btn" id="shareTaskBtn" data-i18n="shareTaskBtn">שיתוף</button>
-      <button type="button" class="convert-to-note-btn" id="taskReminderBtn" data-i18n="taskReminderBtn">התראה</button>
       <button type="button" class="convert-to-note-btn" id="convertToNoteBtn" data-i18n="convertToNoteBtn" hidden>הפוך למזכרת</button>
       <button type="button" class="convert-to-note-btn" id="convertToTaskBtn" data-i18n="convertToTaskBtn" hidden>הפוך למשימה</button>
       <button type="button" class="convert-to-note-btn" id="transferToLogBtn" data-i18n="taskTransferToLogBtn" hidden>העברה ליומן</button>
@@ -4176,7 +4180,7 @@
     sheetActionMakeSharedBtn: { he: "הפיכה לפרויקט משותף", en: "Make into a shared project", ar: "تحويل إلى مشروع مشترك", ru: "Сделать общим проектом" },
     confirmYesBtn: { he: "כן", en: "Yes", ar: "نعم", ru: "Да" },
     confirmNoBtn: { he: "לא", en: "No", ar: "لا", ru: "Нет" },
-    moveTaskModalMessage: { he: "העברה או העתקה של המשימה", en: "Move or copy this task", ar: "نقل أو نسخ هذه المهمة", ru: "Переместить или скопировать задачу" },
+    moveTaskModalMessage: { he: "מה לעשות עם המשימה?", en: "What to do with the task?", ar: "ماذا تفعل بالمهمة؟", ru: "Что сделать с задачей?" },
     moveTaskProjectsTitle: { he: "בחירת פרויקט יעד", en: "Choose a destination project", ar: "اختيار المشروع الوجهة", ru: "Выберите проект назначения" },
     shareTaskBtn: { he: "שיתוף", en: "Share", ar: "مشاركة", ru: "Поделиться" },
     taskChatQuoteBtnTitle: { he: "ציטוט בצ'אט הפרויקט", en: "Quote in the project chat", ar: "اقتباس في دردشة المشروع", ru: "Цитировать в чате проекта" },
@@ -5124,6 +5128,7 @@
   var shareTaskBtn = document.getElementById("shareTaskBtn");
   var taskReminderBtn = document.getElementById("taskReminderBtn");
   var taskChatQuoteBtn = document.getElementById("taskChatQuoteBtn");
+  var taskCalendarReminderBtn = document.getElementById("taskCalendarReminderBtn");
   var taskReminderOverlay = document.getElementById("taskReminderOverlay");
   var taskReminderCurrentStatus = document.getElementById("taskReminderCurrentStatus");
   var taskReminderEvery30Btn = document.getElementById("taskReminderEvery30Btn");
@@ -5202,6 +5207,7 @@
     transferToLogBtn.hidden = !logEligible || !!task.logEntry;
     removeFromLogBtn.hidden = !logEligible || !task.logEntry;
     taskChatQuoteBtn.hidden = !activeSheet().shared;
+    taskCalendarReminderBtn.hidden = !calPlugin;
     moveTaskOverlay.hidden = false;
   }
   function closeMoveTask() {
@@ -6499,6 +6505,7 @@
     taskReminderCurrentStatus.hidden = !statusText;
     taskReminderCurrentStatus.textContent = statusText;
     taskReminderOffBtn.hidden = !task || !isTaskReminderActive(task.reminder);
+    taskReminderTimeToggleBtn.hidden = !!calPlugin;
     taskReminderOverlay.hidden = false;
   }
 
@@ -6539,6 +6546,15 @@
   // (openCalendarForTaskReminder). Otherwise the plain date/time fields.
   if (calPlugin) taskReminderTimeToggleBtn.setAttribute("data-i18n", "calAppName");
   taskReminderTimeToggleBtn.textContent = tr(taskReminderTimeToggleBtn.getAttribute("data-i18n"));
+  // Task long-press -> calendar-with-arrow button: pick the reminder's
+  // moment straight on the calendar (the התראה button keeps the every
+  // 30/60 minutes choice).
+  taskCalendarReminderBtn.addEventListener("click", function () {
+    var sheet = activeSheet();
+    var task = sheet.tasks.find(function (t) { return t.id === pendingMoveTaskId; });
+    closeMoveTask();
+    openCalendarForTaskReminder(sheet.id, task);
+  });
   taskReminderTimeToggleBtn.addEventListener("click", function () {
     if (calPlugin) {
       var sheet = activeSheet();
