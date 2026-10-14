@@ -2581,16 +2581,16 @@
      calendar reminder, chat quote); the curved-arrow badge marks the ones
      that jump to another screen */
   .task-menu-icons {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(3, 52px);
     justify-content: center;
-    gap: 8px;
-    margin-bottom: 14px;
+    gap: 14px 26px;
+    margin-bottom: 16px;
   }
   .task-menu-icon {
     position: relative;
-    width: 48px;
-    height: 48px;
+    width: 52px;
+    height: 52px;
     padding: 0;
     border: none;
     border-radius: 12px;
@@ -3584,11 +3584,11 @@
       <div class="task-menu-icons">
         <button type="button" class="task-menu-icon" id="moveModeMoveBtn" data-i18n-title="moveModeMoveBtn" title="העברה"><img src="tasks-menu-move-icon.webp" alt=""></button>
         <button type="button" class="task-menu-icon" id="moveModeCopyBtn" data-i18n-title="moveModeCopyBtn" title="העתקה"><img src="tasks-menu-copy-icon.webp" alt=""></button>
+        <button type="button" class="task-menu-icon" id="shareTaskBtn" data-i18n-title="shareTaskBtn" title="שיתוף"><img src="tasks-menu-share-icon.webp" alt=""></button>
         <button type="button" class="task-menu-icon" id="taskReminderBtn" data-i18n-title="taskReminderBtn" title="התראה"><img src="tasks-reminder-icon.webp" alt=""></button>
         <button type="button" class="task-menu-icon" id="taskCalendarReminderBtn" data-i18n-title="calAppName" title="לוח שנה" hidden><img src="tasks-calendar-app-icon.webp" alt=""><span class="task-icon-arrow">&#8617;</span></button>
         <button type="button" class="task-menu-icon" id="taskChatQuoteBtn" data-i18n-title="taskChatQuoteBtnTitle" title="ציטוט בצ'אט הפרויקט" hidden><img src="tasks-chat-icon.webp" alt=""><span class="task-icon-arrow">&#8617;</span></button>
       </div>
-      <button type="button" class="convert-to-note-btn" id="shareTaskBtn" data-i18n="shareTaskBtn">שיתוף</button>
       <button type="button" class="convert-to-note-btn" id="convertToNoteBtn" data-i18n="convertToNoteBtn" hidden>הפוך למזכרת</button>
       <button type="button" class="convert-to-note-btn" id="convertToTaskBtn" data-i18n="convertToTaskBtn" hidden>הפוך למשימה</button>
       <button type="button" class="convert-to-note-btn" id="transferToLogBtn" data-i18n="taskTransferToLogBtn" hidden>העברה ליומן</button>
