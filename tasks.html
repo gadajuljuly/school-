@@ -5231,6 +5231,11 @@
     removeFromLogBtn.hidden = !logEligible || !task.logEntry;
     taskChatQuoteBtn.hidden = !activeSheet().shared;
     taskCalendarReminderBtn.hidden = !calPlugin;
+    var menuCalIcon = taskCalendarReminderBtn.querySelector(".cal-live-icon");
+    var calReminder = task && task.reminder && task.reminder.calendarEventId && isTaskReminderActive(task.reminder) && task.reminder.fireAt;
+    if (calReminder) menuCalIcon.dataset.at = task.reminder.fireAt;
+    else delete menuCalIcon.dataset.at;
+    updateLiveCalendarIcons();
     moveTaskOverlay.hidden = false;
   }
   function closeMoveTask() {
@@ -5523,12 +5528,13 @@
   }
   // The calendar icons (by the date, in the task menu) show today: weekday
   // in the green band and the day number, kept current across midnight.
+  // An icon with data-at (a task's calendar reminder) shows that moment's
+  // day instead of today.
   function updateLiveCalendarIcons() {
-    var now = new Date();
-    var wd = now.toLocaleDateString(calLocale(), { weekday: "short" });
-    document.querySelectorAll(".cal-live-icon:not(.task-reminder-indicator .cal-live-icon)").forEach(function (el) {
-      el.querySelector(".cal-live-wd").textContent = wd;
-      el.querySelector(".cal-live-day").textContent = now.getDate();
+    document.querySelectorAll(".cal-live-icon").forEach(function (el) {
+      var d = el.dataset.at ? new Date(el.dataset.at) : new Date();
+      el.querySelector(".cal-live-wd").textContent = d.toLocaleDateString(calLocale(), { weekday: "short" });
+      el.querySelector(".cal-live-day").textContent = d.getDate();
     });
   }
   updateLiveCalendarIcons();
@@ -6576,11 +6582,13 @@
       if (calPlugin && r.calendarEventId && r.fireAt) {
         // set through the calendar: a calendar icon showing the reminder's
         // day; tapping it opens that event in the calendar
-        var at = new Date(r.fireAt);
         icon.innerHTML = '<span class="cal-live-icon"><img src="tasks-calendar-app-icon-blank.webp" alt="">' +
           '<span class="cal-live-wd"></span><span class="cal-live-day"></span></span>';
-        icon.querySelector(".cal-live-wd").textContent = at.toLocaleDateString(calLocale(), { weekday: "short" });
-        icon.querySelector(".cal-live-day").textContent = at.getDate();
+        var liveIcon = icon.querySelector(".cal-live-icon");
+        liveIcon.dataset.at = r.fireAt;
+        var at = new Date(r.fireAt);
+        liveIcon.querySelector(".cal-live-wd").textContent = at.toLocaleDateString(calLocale(), { weekday: "short" });
+        liveIcon.querySelector(".cal-live-day").textContent = at.getDate();
         icon.addEventListener("click", function (e) {
           e.stopPropagation();
           openTaskCalendarEvent(r);
