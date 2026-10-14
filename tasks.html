@@ -4096,6 +4096,8 @@
     calCopyPickProject: { he: "לאיזה פרויקט להעתיק?", en: "Copy to which project?", ar: "النسخ إلى أي مشروع؟", ru: "В какой проект скопировать?" },
     calCopiedTaskMsg: { he: "האירוע הועתק כמשימה לפרויקט", en: "Event copied as a task to", ar: "تم نسخ الحدث كمهمة إلى", ru: "Событие скопировано как задача в" },
     calCopiedNoteMsg: { he: "האירוע הועתק כמזכרת לפרויקט", en: "Event copied as a note to", ar: "تم نسخ الحدث كملاحظة إلى", ru: "Событие скопировано как заметка в" },
+    calPickDatePrompt: { he: "בחרו תאריך", en: "Pick a date", ar: "اختر تاريخًا", ru: "Выберите дату" },
+    calDateOutOfRange: { he: "אי אפשר לבחור את התאריך הזה", en: "That date can't be chosen", ar: "لا يمكن اختيار هذا التاريخ", ru: "Эту дату выбрать нельзя" },
     calPickPrompt: { he: "בחרו מועד להתראה:", en: "Pick a time for the reminder:", ar: "اختر موعد التذكير:", ru: "Выберите время напоминания:" },
     calReminderSetMsg: { he: "ההתראה נקבעה ונוספה ללוח השנה", en: "Reminder set and added to the calendar", ar: "تم ضبط التذكير وإضافته إلى التقويم", ru: "Напоминание установлено и добавлено в календарь" },
     calAppName: { he: "לוח שנה", en: "Calendar", ar: "التقويم", ru: "Календарь" },
@@ -5366,7 +5368,10 @@
     hidden: {},
     loadSeq: 0,
     // set while picking a task reminder's time ({sheetId, taskId, text})
-    pick: null
+    pick: null,
+    // set while the calendar is standing in as a date picker: the <input
+    // type="date"> to fill in (see the .date-click-area wiring below)
+    pickDateInput: null
   };
   try {
     calState.mode = localStorage.getItem(CAL_MODE_KEY) || "month";
@@ -5463,6 +5468,45 @@
   }
   document.getElementById("calPickCancelBtn").addEventListener("click", closeCalendarView);
 
+  // The Android WebView no longer opens its own picker for the app's
+  // invisible <input type="date"> overlays (tapping the date did nothing),
+  // so in the native app tapping a date opens this calendar on that month
+  // instead; tapping a day fills the input and fires its usual "change".
+  // Works without calendar access too - just without the events.
+  function openCalendarAsDatePicker(input) {
+    calState.pick = null;
+    calState.pickDateInput = input;
+    document.getElementById("calPickText").textContent = tr("calPickDatePrompt");
+    calPickBanner.hidden = false;
+    calState.mode = "month";
+    calState.anchor = input.value ? calParseYmd(input.value) : new Date();
+    calView.style.zIndex = "45"; // over any dialog the date field sits in
+    calView.hidden = false;
+    calPlugin.checkPermissions().then(function (st) {
+      if (st && st.calendar === "granted") calLoadCalendars().then(calLoadAndRender);
+      else { calState.events = []; calRender(); }
+    }, function () { calState.events = []; calRender(); });
+  }
+  function calFinishDatePick(day) {
+    var input = calState.pickDateInput;
+    var value = calYmd(day);
+    if ((input.min && value < input.min) || (input.max && value > input.max)) {
+      showToast(tr("calDateOutOfRange"));
+      return;
+    }
+    closeCalendarView();
+    input.value = value;
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+  if (calPlugin) {
+    document.querySelectorAll(".date-click-area input[type=date]").forEach(function (input) {
+      input.addEventListener("click", function (e) {
+        e.preventDefault();
+        openCalendarAsDatePicker(input);
+      });
+    });
+  }
+
   function calApplyPickedReminder(startMs, eventId) {
     var pick = calState.pick;
     var sheet = pick && allSheets().find(function (s) { return s.id === pick.sheetId; });
@@ -5490,6 +5534,8 @@
 
   function closeCalendarView() {
     calState.pick = null;
+    calState.pickDateInput = null;
+    calView.style.zIndex = "";
     calPickBanner.hidden = true;
     try { calState.mode = localStorage.getItem(CAL_MODE_KEY) || "month"; } catch (e) {}
     calView.hidden = true;
@@ -5576,6 +5622,7 @@
     if (calState.mode === "month") calRenderMonth();
     else if (calState.mode === "agenda") calRenderAgenda();
     else calRenderDays(calState.mode === "week" ? 7 : 1);
+    if (calState.pickDateInput) return;
     var fab = document.createElement("button");
     fab.type = "button";
     fab.className = "cal-fab";
@@ -5615,6 +5662,7 @@
   function calBindEvent(el, ev) {
     var timer = null, fired = false, sx = 0, sy = 0;
     function start(e) {
+      if (calState.pickDateInput) return;
       var p = e.touches ? e.touches[0] : e;
       sx = p.clientX; sy = p.clientY;
       fired = false;
@@ -5638,6 +5686,7 @@
     el.addEventListener("click", function (e) {
       e.stopPropagation();
       if (fired) { fired = false; return; }
+      if (calState.pickDateInput) { calFinishDatePick(calEventStart(ev)); return; }
       calOpenEditor(ev);
     });
   }
@@ -5739,6 +5788,7 @@
           cell.appendChild(more);
         }
         cell.addEventListener("click", function () {
+          if (calState.pickDateInput) { calFinishDatePick(day); return; }
           calState.anchor = day;
           calSetMode("day");
         });
@@ -5774,7 +5824,10 @@
       nu.textContent = day.getDate();
       ch.appendChild(nm);
       ch.appendChild(nu);
-      if (count === 7) ch.addEventListener("click", function () { calState.anchor = day; calSetMode("day"); });
+      ch.addEventListener("click", function () {
+        if (calState.pickDateInput) { calFinishDatePick(day); return; }
+        if (count === 7) { calState.anchor = day; calSetMode("day"); }
+      });
       head.appendChild(ch);
       var ad = document.createElement("div");
       ad.className = "cal-allday-cell";
