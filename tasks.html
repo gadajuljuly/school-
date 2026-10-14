@@ -6008,6 +6008,17 @@
     };
     if (calCopyType === "note") newTask.time = currentTimeHHMM();
     if (isHeadOfficeMode) newTask.isHeadOffice = true;
+    // a task made from a timed, upcoming event is linked to it: calendar
+    // icon by the task, and a ringing reminder 15 minutes before
+    var linkReminder = calCopyType === "task" && !ev.allDay && start.getTime() > Date.now() && ev.eventId != null;
+    if (linkReminder) {
+      var fireAt = new Date(calReminderFireMs(start.getTime()));
+      newTask.reminder = {
+        type: "time", date: calYmd(fireAt), time: calHm(fireAt), fireAt: fireAt.toISOString(),
+        firedAt: null, calendarEventId: ev.eventId, eventAt: start.toISOString()
+      };
+      if (sheet.shared) newTask.reminder.by = myPhoneNumber;
+    }
     sheet.tasks.push(newTask);
     saveData();
     if (sheet.shared && calCopyType === "task") {
@@ -6016,6 +6027,7 @@
     calCloseCopy();
     showToast(tr(calCopyType === "task" ? "calCopiedTaskMsg" : "calCopiedNoteMsg") + " " + sheet.name);
     render();
+    if (linkReminder) ensureExactAlarmPermission();
   }
   document.getElementById("calCopyTaskBtn").addEventListener("click", function () { calCopyChooseType("task"); });
   document.getElementById("calCopyNoteBtn").addEventListener("click", function () { calCopyChooseType("note"); });
@@ -6408,11 +6420,13 @@
     };
     if (calEditing) payload.eventId = calEditing.eventId;
     try { localStorage.setItem(CAL_LAST_CALENDAR_KEY, calEvCalendar.value); } catch (err) {}
-    var pickingReminder = !calEditing && !!calState.pick;
+    // picking a task's reminder: a new event, or an existing timed one the
+    // user tapped instead - either way the task gets linked to it
+    var pickingReminder = !!calState.pick && (!calEditing || (!allDay && start > Date.now()));
     calPlugin.saveEvent(payload).then(function (res) {
       calCloseEditor();
       if (pickingReminder) {
-        calApplyPickedReminder(start, res && res.eventId);
+        calApplyPickedReminder(start, (res && res.eventId != null) ? res.eventId : payload.eventId);
         return;
       }
       showToast(tr("calSavedMsg"));
