@@ -5445,10 +5445,31 @@
     return { from: ts, to: calAddDays(ts, 60) };
   }
 
+  // The bottom icon bar stays in view under the calendar, so the user can
+  // jump straight to another screen: the calendar ends just above the bar
+  // (and its divider), and tapping any of its buttons closes the calendar
+  // first. Not while picking a date - that one sits over dialogs.
+  var notebookFooterEl = document.getElementById("notebookFooter");
+  function calFitAboveFooter() {
+    calView.style.bottom = "";
+    if (calView.hidden || calState.pickDateInput) return;
+    var edge = notebookFooterEl.previousElementSibling || notebookFooterEl;
+    var top = edge.getBoundingClientRect().top;
+    if (notebookFooterEl.offsetHeight && top > window.innerHeight / 2 && top < window.innerHeight) {
+      calView.style.bottom = (window.innerHeight - top) + "px";
+      calView.style.paddingBottom = "0";
+    }
+  }
+  window.addEventListener("resize", calFitAboveFooter);
+  notebookFooterEl.addEventListener("click", function () {
+    if (!calView.hidden) closeCalendarView();
+  }, true);
+
   function openCalendarView() {
     if (!calPlugin) return;
     calState.anchor = new Date();
     calView.hidden = false;
+    calFitAboveFooter();
     calEnsurePermission(function () { calLoadCalendars().then(calLoadAndRender); });
   }
   // Task long-press -> התראה -> לוח שנה: the calendar opens on today's day
@@ -5464,6 +5485,7 @@
     calState.mode = "day";
     calState.anchor = new Date();
     calView.hidden = false;
+    calFitAboveFooter();
     calEnsurePermission(function () { calLoadCalendars().then(calLoadAndRender); });
   }
   document.getElementById("calPickCancelBtn").addEventListener("click", closeCalendarView);
@@ -5536,6 +5558,8 @@
     calState.pick = null;
     calState.pickDateInput = null;
     calView.style.zIndex = "";
+    calView.style.bottom = "";
+    calView.style.paddingBottom = "";
     calPickBanner.hidden = true;
     try { calState.mode = localStorage.getItem(CAL_MODE_KEY) || "month"; } catch (e) {}
     calView.hidden = true;
