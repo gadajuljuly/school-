@@ -5369,11 +5369,10 @@
   // rings 15 minutes before the event and shows the calendar icon, while
   // task.reminder (every 30/60 minutes, "בחר שעה") shows the alarm clock.
   // Turning the reminder off leaves the link; "הסרה מלוח השנה" (or
-  // deleting the event) removes the link. Links show until a few hours
-  // after their event.
-  var CAL_LINK_KEEP_MS = 6 * 3600000;
+  // deleting the event) removes the link. The link and its icon stay for
+  // good otherwise, past events included (and on done tasks too).
   function isCalendarLinkShown(link) {
-    return !!link && !!link.eventAt && Date.parse(link.eventAt) + CAL_LINK_KEEP_MS > Date.now();
+    return !!link && !!link.eventAt;
   }
   function isCalendarLinkAlarmDue(link) {
     if (!isCalendarLinkShown(link) || link.firedAt || !link.fireAt) return false;
@@ -5401,7 +5400,6 @@
     allSheets().forEach(function (sheet) {
       (sheet.tasks || []).forEach(function (t) {
         if (migrateCalendarReminderToLink(t)) changed = true;
-        if (t.calendarLink && !isCalendarLinkShown(t.calendarLink)) { delete t.calendarLink; changed = true; }
         if (!t.reminder || t.reminder.type !== "time") return;
         if (!isTaskReminderActive(t.reminder)) {
           delete t.reminder;
@@ -14725,7 +14723,8 @@
       // done tasks keep their reminder (it comes back if un-marked) but it's paused
       var rowCalLink = calPlugin && isCalendarLinkShown(t.calendarLink) && isMyTaskReminder(activeSheet(), t.calendarLink);
       var rowAlarm = isTaskReminderActive(t.reminder) && isMyTaskReminder(activeSheet(), t.reminder);
-      if (t.status !== 2 && (rowCalLink || rowAlarm)) reminderRowsForIconsLayer.push({ task: t, editable: rowEditable, top: li.offsetTop, height: li.offsetHeight, calLink: rowCalLink, alarm: rowAlarm });
+      if (t.status === 2) rowAlarm = false; // a done task's reminder is paused
+      if (rowCalLink || rowAlarm) reminderRowsForIconsLayer.push({ task: t, editable: rowEditable, top: li.offsetTop, height: li.offsetHeight, calLink: rowCalLink, alarm: rowAlarm });
 
       if (!(rowEditable && state.editingTaskId === t.id)) {
         var textOverflowPx = textLabel.scrollWidth - textEl.clientWidth;
