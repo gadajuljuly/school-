@@ -4224,7 +4224,7 @@
     calCopiedTaskMsg: { he: "האירוע הועתק כמשימה לפרויקט", en: "Event copied as a task to", ar: "تم نسخ الحدث كمهمة إلى", ru: "Событие скопировано как задача в" },
     calCopiedNoteMsg: { he: "האירוע הועתק כמזכרת לפרויקט", en: "Event copied as a note to", ar: "تم نسخ الحدث كملاحظة إلى", ru: "Событие скопировано как заметка в" },
     calPickPrompt: { he: "בחרו מועד להתראה:", en: "Pick a time for the reminder:", ar: "اختر موعد التذكير:", ru: "Выберите время напоминания:" },
-    calReminderSetMsg: { he: "ההתראה נקבעה ונוספה ללוח השנה", en: "Reminder set and added to the calendar", ar: "تم ضبط التذكير وإضافته إلى التقويم", ru: "Напоминание установлено и добавлено в календарь" },
+    calReminderSetMsg: { he: "נוסף ללוח השנה - התראה רבע שעה לפני", en: "Added to the calendar - reminder 15 minutes before", ar: "أضيف إلى التقويم - تذكير قبل 15 دقيقة", ru: "Добавлено в календарь - напоминание за 15 минут" },
     calEventMissingMsg: { he: "האירוע כבר לא נמצא בלוח השנה", en: "The event is no longer in the calendar", ar: "الحدث لم يعد موجودًا في التقويم", ru: "Этого события больше нет в календаре" },
     calAppName: { he: "לוח שנה", en: "Calendar", ar: "التقويم", ru: "Календарь" },
     calToday: { he: "היום", en: "Today", ar: "اليوم", ru: "Сегодня" },
@@ -5233,7 +5233,7 @@
     taskCalendarReminderBtn.hidden = !calPlugin;
     var menuCalIcon = taskCalendarReminderBtn.querySelector(".cal-live-icon");
     var calReminder = task && task.reminder && task.reminder.calendarEventId && isTaskReminderActive(task.reminder) && task.reminder.fireAt;
-    if (calReminder) menuCalIcon.dataset.at = task.reminder.fireAt;
+    if (calReminder) menuCalIcon.dataset.at = task.reminder.eventAt || task.reminder.fireAt;
     else delete menuCalIcon.dataset.at;
     updateLiveCalendarIcons();
     moveTaskOverlay.hidden = false;
@@ -5635,8 +5635,6 @@
   function openCalendarForTaskReminder(sheetId, task) {
     if (!calPlugin || !task) return;
     calState.pick = { sheetId: sheetId, taskId: task.id, text: task.text };
-    document.getElementById("calPickText").textContent = tr("calPickPrompt") + " " + task.text;
-    calPickBanner.hidden = false;
     calState.mode = "day";
     calState.anchor = new Date();
     calView.hidden = false;
@@ -5722,6 +5720,13 @@
     });
   }
 
+  // A task put in the calendar rings a quarter of an hour before its event
+  // (or at the event itself when that's already less than 15 minutes away).
+  var CAL_TASK_REMINDER_LEAD_MS = 15 * 60000;
+  function calReminderFireMs(startMs) {
+    var early = startMs - CAL_TASK_REMINDER_LEAD_MS;
+    return early > Date.now() ? early : startMs;
+  }
   function calApplyPickedReminder(startMs, eventId) {
     var pick = calState.pick;
     var sheet = pick && allSheets().find(function (s) { return s.id === pick.sheetId; });
@@ -5731,14 +5736,15 @@
     if (old && old.calendarEventId && old.calendarEventId !== eventId) {
       calPlugin.deleteEvent({ eventId: old.calendarEventId }).catch(function () {});
     }
-    var at = new Date(startMs);
+    var at = new Date(calReminderFireMs(startMs));
     task.reminder = {
       type: "time",
       date: calYmd(at),
       time: calHm(at),
       fireAt: at.toISOString(),
       firedAt: null,
-      calendarEventId: eventId
+      calendarEventId: eventId,
+      eventAt: new Date(startMs).toISOString()
     };
     if (sheet.shared) task.reminder.by = myPhoneNumber;
     saveData();
@@ -5754,7 +5760,7 @@
   function openTaskCalendarEvent(reminder) {
     if (!calPlugin) return;
     calState.mode = "day";
-    calState.anchor = new Date(reminder.fireAt);
+    calState.anchor = new Date(reminder.eventAt || reminder.fireAt);
     calView.hidden = false;
     calFitAboveFooter();
     calEnsurePermission(function () {
@@ -5778,12 +5784,13 @@
         if (deleted) {
           delete t.reminder;
         } else {
-          var at = new Date(startMs);
-          if (r.fireAt && Date.parse(r.fireAt) === startMs) return;
+          if (r.eventAt && Date.parse(r.eventAt) === startMs) return;
+          var at = new Date(calReminderFireMs(startMs));
           r.date = calYmd(at);
           r.time = calHm(at);
           r.fireAt = at.toISOString();
           r.firedAt = null;
+          r.eventAt = new Date(startMs).toISOString();
         }
         changed = true;
       });
@@ -6585,8 +6592,8 @@
         icon.innerHTML = '<span class="cal-live-icon"><img src="tasks-calendar-app-icon-blank.webp" alt="">' +
           '<span class="cal-live-wd"></span><span class="cal-live-day"></span></span>';
         var liveIcon = icon.querySelector(".cal-live-icon");
-        liveIcon.dataset.at = r.fireAt;
-        var at = new Date(r.fireAt);
+        liveIcon.dataset.at = r.eventAt || r.fireAt;
+        var at = new Date(r.eventAt || r.fireAt);
         liveIcon.querySelector(".cal-live-wd").textContent = at.toLocaleDateString(calLocale(), { weekday: "short" });
         liveIcon.querySelector(".cal-live-day").textContent = at.getDate();
         icon.addEventListener("click", function (e) {
