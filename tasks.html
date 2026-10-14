@@ -5288,6 +5288,14 @@
     var graceMs = nativeTaskAlarmPlugin ? 60 * 60000 : 60000;
     return !reminder.fireAt || Date.parse(reminder.fireAt) + graceMs > Date.now();
   }
+  // A reminder on a SHARED project's task is synced to every member, but it
+  // only rings for whoever set it: it carries their phone as "by". (Older
+  // shared reminders without "by" never rang anywhere and still don't.)
+  function isMyTaskReminder(sheet, reminder) {
+    if (!reminder) return false;
+    if (!sheet || !sheet.shared) return true;
+    return !!myPhoneNumber && reminder.by === myPhoneNumber;
+  }
   function nextOccurrenceOfTime(hhmm) {
     var parts = hhmm.split(":");
     var d = new Date();
@@ -5303,7 +5311,7 @@
       var ids = (res && res.ids) || [];
       if (!ids.length) return;
       var changed = false;
-      (data.sheets || []).forEach(function (sheet) {
+      allSheets().forEach(function (sheet) {
         (sheet.tasks || []).forEach(function (t) {
           if (t.reminder && ids.indexOf(sheet.id + ":" + t.id) !== -1) {
             delete t.reminder;
@@ -5342,7 +5350,8 @@
   // can never do. This hands it the full current set on every render (it
   // replaces whatever was scheduled before), and flags each reminder
   // nativeAlarm so send-reminders stops also pushing it to native devices.
-  // Private projects only, same as send-reminders itself.
+  // Private projects, plus the reminders this user set on shared projects'
+  // tasks (isMyTaskReminder) - send-reminders itself only sees private ones.
   var nativeTaskAlarmPlugin = (
     window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform() &&
     window.Capacitor.Plugins && window.Capacitor.Plugins.ItaskAlarm
@@ -5352,11 +5361,11 @@
     if (!nativeTaskAlarmPlugin || dataLoadBlocked || !privateDataSettled) return;
     var alarms = [];
     var flagged = false;
-    (data.sheets || []).forEach(function (sheet) {
+    allSheets().forEach(function (sheet) {
       if (sheet.ended) return;
       (sheet.tasks || []).forEach(function (t) {
         var r = t.reminder;
-        if (t.status === 2 || !isTaskReminderActive(r)) return;
+        if (t.status === 2 || !isTaskReminderActive(r) || !isMyTaskReminder(sheet, r)) return;
         var entry = { id: sheet.id + ":" + t.id, title: sheet.name, body: t.text };
         if (r.type === "time" && r.fireAt) {
           entry.at = Date.parse(r.fireAt);
@@ -5689,6 +5698,7 @@
       firedAt: null,
       calendarEventId: eventId
     };
+    if (sheet.shared) task.reminder.by = myPhoneNumber;
     saveData();
     closeCalendarView();
     render();
@@ -6525,6 +6535,7 @@
         alert(tr("taskReminderNotSupportedMsg"));
         return;
       }
+      if (activeSheet().shared) reminder.by = myPhoneNumber;
       task.reminder = reminder;
       saveData();
       closeMoveTask();
@@ -14529,7 +14540,7 @@
       li.appendChild(actions);
       taskList.appendChild(li);
       // done tasks keep their reminder (it comes back if un-marked) but it's paused
-      if (t.status !== 2 && isTaskReminderActive(t.reminder)) reminderRowsForIconsLayer.push({ task: t, editable: rowEditable, top: li.offsetTop, height: li.offsetHeight });
+      if (t.status !== 2 && isTaskReminderActive(t.reminder) && isMyTaskReminder(activeSheet(), t.reminder)) reminderRowsForIconsLayer.push({ task: t, editable: rowEditable, top: li.offsetTop, height: li.offsetHeight });
 
       if (!(rowEditable && state.editingTaskId === t.id)) {
         var textOverflowPx = textLabel.scrollWidth - textEl.clientWidth;
