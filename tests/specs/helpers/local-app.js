@@ -107,7 +107,7 @@ module.exports = { openLocalApp, longPress, addTask };
 // between this device's read and its write (window.__backend.interfere).
 const FAKE_BACKEND = () => {
   const tables = {};
-  const backend = (window.__backend = { tables, log: [], interfere: null });
+  const backend = (window.__backend = { tables, log: [], interfere: null, seq: 0 });
   const clone = (o) => JSON.parse(JSON.stringify(o));
   function from(table) {
     const st = { table, op: "select", filters: [], payload: null, single: false };
@@ -126,11 +126,15 @@ const FAKE_BACKEND = () => {
         return { data: m.map((r) => ({ id: r.id })), error: null };
       }
       if (st.op === "upsert" || st.op === "insert") {
+        const written = [];
         [].concat(st.payload).forEach((p) => {
-          const ex = rows().find((r) => r.id === p.id);
-          if (ex) Object.assign(ex, clone(p)); else rows().push(clone(p));
+          const ex = p.id != null && rows().find((r) => r.id === p.id);
+          if (ex) { Object.assign(ex, clone(p)); written.push(clone(ex)); return; }
+          const row = Object.assign({ id: "row" + (++backend.seq), created_at: new Date(Date.now() + backend.seq).toISOString(), status: "pending" }, clone(p));
+          rows().push(row);
+          written.push(clone(row));
         });
-        return { data: null, error: null };
+        return { data: written, error: null };
       }
       if (st.op === "delete") {
         tables[table] = rows().filter((r) => !match(r));

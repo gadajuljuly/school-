@@ -340,6 +340,7 @@
     projectInviteSendBtn: { he: "שליחה", en: "Send", ar: "إرسال", ru: "Отправить" },
     projectInviteNeedPhoneMsg: { he: "יש להוסיף לפחות מספר טלפון אחד", en: "Add at least one phone number", ar: "أضف رقم هاتف واحد على الأقل", ru: "Добавьте хотя бы один номер телефона" },
     projectInviteSentMsg: { he: "ההזמנה נשלחה", en: "The invite was sent", ar: "تم إرسال الدعوة", ru: "Приглашение отправлено" },
+    sharedProjectInviteMsgTemplate: { he: "{name} צירף/ה אותך לפרויקט המשותף \"{project}\" - לאשר?", en: "{name} added you to the shared project \"{project}\" - approve?", ar: "أضافك {name} إلى المشروع المشترك \"{project}\" - هل توافق؟", ru: "{name} добавил(а) вас в общий проект «{project}» - подтвердить?" },
     projectInviteReceivedMsgTemplate: { he: "קיבלת פרויקט \"{project}\" מ{name} - לאשר?", en: "You received the project \"{project}\" from {name} - approve?", ar: "استلمت المشروع \"{project}\" من {name} - هل توافق؟", ru: "Вы получили проект «{project}» от {name} - подтвердить?" },
     projectInviteApprovedMsg: { he: "הצטרפת לפרויקט", en: "You joined the project", ar: "لقد انضممت إلى المشروع", ru: "Вы присоединились к проекту" },
     projectInviteDeclinedMsg: { he: "ההזמנה נדחתה", en: "The invite was declined", ar: "تم رفض الدعوة", ru: "Приглашение отклонено" },

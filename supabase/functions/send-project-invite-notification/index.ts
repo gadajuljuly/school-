@@ -100,7 +100,8 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  let body: { targetPhone?: string; projectName?: string; senderName?: string; inviteId?: string };
+  // shared: an invite to join a live shared project (not a copy)
+  let body: { targetPhone?: string; projectName?: string; senderName?: string; inviteId?: string; shared?: boolean };
   try {
     body = await req.json();
   } catch {
@@ -126,8 +127,10 @@ Deno.serve(async (req) => {
     return jsonResponse({ sent: 0, note: "no subscriptions for this phone" });
   }
 
-  const title = "הזמנה לפרויקט";
-  const messageBody = 'קיבלת פרויקט "' + projectName + '" מ' + senderName;
+  const title = body.shared ? "הצטרפות לפרויקט משותף" : "הזמנה לפרויקט";
+  const messageBody = body.shared
+    ? senderName + ' צירף/ה אותך לפרויקט המשותף "' + projectName + '" - לאשר?'
+    : 'קיבלת פרויקט "' + projectName + '" מ' + senderName;
   const data = { projectInvite: "true", inviteId };
 
   let sent = 0;

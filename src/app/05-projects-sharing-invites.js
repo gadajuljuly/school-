@@ -1,5 +1,8 @@
+  // A shared project I was added to but haven't approved (or declined)
+  // stays out of every list - see "Shared-project invites" below.
+  var hiddenSharedProjectIds = {};
   function allSheets() {
-    return data.sheets.concat(sharedSheets);
+    return data.sheets.concat(sharedSheets.filter(function (s) { return !hiddenSharedProjectIds[s.id]; }));
   }
 
   function activeSheet() {
@@ -339,11 +342,11 @@
     if (e.target === projectInviteSendOverlay) closeProjectInviteSendModal();
   });
 
-  function sendProjectInviteNotification(targetPhone, projectName, senderName, inviteId) {
+  function sendProjectInviteNotification(targetPhone, projectName, senderName, inviteId, shared) {
     if (!supabaseClient || !supabaseClient.functions) return;
     try {
       supabaseClient.functions.invoke("send-project-invite-notification", {
-        body: { targetPhone: targetPhone, projectName: projectName, senderName: senderName, inviteId: inviteId }
+        body: { targetPhone: targetPhone, projectName: projectName, senderName: senderName, inviteId: inviteId, shared: !!shared }
       }).then(function () {}, function (err) {
         console.error("send-project-invite-notification failed:", err);
       });
@@ -420,14 +423,40 @@
   var pendingProjectInvitesQueue = [];
   var activeProjectInvite = null;
 
+  function sharedInviteProjectId(invite) {
+    return invite && invite.snapshot && invite.snapshot.sharedProjectId || null;
+  }
+  // For each shared project, only the newest invite to me counts (I may
+  // have been removed and added again).
+  function latestSharedInvites(rows) {
+    var latest = {};
+    rows.forEach(function (r) {
+      var pid = sharedInviteProjectId(r);
+      if (!pid) return;
+      var key = pid + "|" + r.invited_phone;
+      if (!latest[key] || String(r.created_at || "") > String(latest[key].created_at || "")) latest[key] = r;
+    });
+    return Object.keys(latest).map(function (k) { return latest[k]; });
+  }
   function checkPendingProjectInvites() {
-    if (!supabaseClient || !myPhoneNumber || activeProjectInvite) return;
+    if (!supabaseClient || !myPhoneNumber) return;
+    cleanUpDeclinedSharedInvites();
+    if (activeProjectInvite) return;
     try {
       supabaseClient.from("project_invites").select("*")
-        .eq("invited_phone", myPhoneNumber).eq("status", "pending")
+        .eq("invited_phone", myPhoneNumber)
         .then(function (result) {
-          if (!result || result.error || !result.data || !result.data.length) return;
-          pendingProjectInvitesQueue = result.data;
+          if (!result || result.error || !result.data) return;
+          var hidden = {};
+          latestSharedInvites(result.data).forEach(function (r) {
+            if (r.status !== "approved") hidden[sharedInviteProjectId(r)] = true;
+          });
+          var changed = JSON.stringify(hidden) !== JSON.stringify(hiddenSharedProjectIds);
+          hiddenSharedProjectIds = hidden;
+          if (changed) render();
+          var pendingShared = latestSharedInvites(result.data).filter(function (r) { return r.status === "pending"; });
+          var pendingCopies = result.data.filter(function (r) { return r.status === "pending" && !sharedInviteProjectId(r); });
+          pendingProjectInvitesQueue = pendingCopies.concat(pendingShared);
           showNextPendingProjectInvite();
         }, function () {});
     } catch (e) {}
@@ -436,7 +465,8 @@
     if (activeProjectInvite || !pendingProjectInvitesQueue.length) return;
     activeProjectInvite = pendingProjectInvitesQueue.shift();
     var senderLabel = activeProjectInvite.invited_by_name || activeProjectInvite.invited_by_phone;
-    projectInviteReceivedMessage.textContent = tr("projectInviteReceivedMsgTemplate")
+    var templateKey = sharedInviteProjectId(activeProjectInvite) ? "sharedProjectInviteMsgTemplate" : "projectInviteReceivedMsgTemplate";
+    projectInviteReceivedMessage.textContent = tr(templateKey)
       .replace("{project}", activeProjectInvite.project_name)
       .replace("{name}", senderLabel);
     projectInviteReceivedOverlay.hidden = false;
@@ -460,6 +490,18 @@
   projectInviteApproveBtn.addEventListener("click", function () {
     if (!activeProjectInvite) return;
     var invite = activeProjectInvite;
+    var sharedId = sharedInviteProjectId(invite);
+    if (sharedId) {
+      // joining a shared project I'm already listed in: just show it
+      delete hiddenSharedProjectIds[sharedId];
+      if (sharedSheets.some(function (s) { return s.id === sharedId; })) data.activeSheetId = sharedId;
+      else loadSharedSheets();
+      resolveProjectInvite(invite, "approved");
+      showToast(tr("projectInviteApprovedMsg"));
+      closeProjectInviteReceivedModal();
+      render();
+      return;
+    }
     // resolveProjectInvite()'s server update is fire-and-forget - if it
     // fails (a brief network blip), the invite row stays "pending" and
     // checkPendingProjectInvites() will surface this exact same invite
@@ -616,6 +658,53 @@
     pendingSharedEditId = null;
     pendingConvertSheetId = null;
   }
+  // ---- Shared-project invites ----
+  // Adding someone to a shared project lists their phone in its members
+  // right away (the database only lets members write to it), but their
+  // app keeps the project hidden until they approve: each new member gets
+  // a project_invites row tagged snapshot.sharedProjectId, a push, and the
+  // same approve/decline prompt as a shared copy. Declining keeps it
+  // hidden for them, and the inviter's app then takes them off the members
+  // (a member can't remove themselves - the database requires the writer
+  // to stay a member).
+  function inviteNewSharedMembers(sheetId, projectName, newPhones) {
+    if (!supabaseClient || !newPhones.length) return;
+    var sheet = sharedSheets.find(function (s) { return s.id === sheetId; });
+    var senderName = (sheet && myDisplayNameIn(sheet)) || myPhoneNumber;
+    var rows = newPhones.map(function (phone) {
+      return {
+        project_name: projectName,
+        snapshot: { sharedProjectId: sheetId },
+        invited_phone: phone,
+        invited_by_phone: myPhoneNumber,
+        invited_by_name: senderName
+      };
+    });
+    supabaseClient.from("project_invites").insert(rows).select().then(function (result) {
+      if (result && result.error) { console.error("shared project invites insert failed:", result.error); return; }
+      (result.data || []).forEach(function (row) {
+        sendProjectInviteNotification(row.invited_phone, row.project_name, row.invited_by_name, row.id, true);
+      });
+    }, function (err) { console.error("shared project invites insert failed:", err); });
+  }
+  function cleanUpDeclinedSharedInvites() {
+    if (!supabaseClient || !myPhoneNumber) return;
+    try {
+      supabaseClient.from("project_invites").select("*").eq("invited_by_phone", myPhoneNumber).then(function (result) {
+        if (!result || result.error || !result.data) return;
+        latestSharedInvites(result.data).forEach(function (r) {
+          if (r.status !== "declined") return;
+          var pid = sharedInviteProjectId(r);
+          var sheet = sharedSheets.find(function (s) { return s.id === pid; });
+          if (!sheet || (sheet.members || []).indexOf(r.invited_phone) === -1) return;
+          updateSharedProjectSettings(pid, function (current) {
+            return { name: current.name, members: current.members.filter(function (p) { return p !== r.invited_phone; }), memberNames: current.memberNames };
+          }).then(function () { render(); }, function () {});
+        });
+      }, function () {});
+    } catch (e) {}
+  }
+
   sharedProjectSaveBtn.addEventListener("click", function () {
     var name = sharedProjectNameInput.value.trim().slice(0, 40) || tr("sharedProjectDefaultName");
     var inputs = Array.prototype.slice.call(sharedProjectMembersList.querySelectorAll("input"));
@@ -632,9 +721,12 @@
       alert(tr("sharedProjectNeedMember"));
       return;
     }
+    var invitedId = null, previousMembers = [myPhoneNumber];
     if (pendingSharedEditId) {
       var existing = sharedSheets.find(function (s) { return s.id === pendingSharedEditId; });
       if (existing) {
+        invitedId = existing.id;
+        previousMembers = existing.members || [];
         existing.name = name;
         existing.members = members;
         existing.memberNames = Object.assign({}, existing.memberNames || {}, pickedNames);
@@ -668,6 +760,7 @@
         };
         data.sheets = data.sheets.filter(function (s) { return s.id !== pendingConvertSheetId; });
         sharedSheets.push(converted);
+        invitedId = converted.id;
         if (data.activeSheetId === pendingConvertSheetId) data.activeSheetId = converted.id;
       }
     } else {
@@ -687,11 +780,17 @@
         messages: []
       };
       sharedSheets.push(sheet);
+      invitedId = sheet.id;
       data.activeSheetId = sheet.id;
     }
     closeSharedProjectModal();
     saveData();
     render();
+    if (invitedId) {
+      inviteNewSharedMembers(invitedId, name, members.filter(function (p) {
+        return p !== myPhoneNumber && previousMembers.indexOf(p) === -1;
+      }));
+    }
   });
   sharedProjectCancelBtn.addEventListener("click", closeSharedProjectModal);
   sharedProjectOverlay.addEventListener("click", function (e) {
