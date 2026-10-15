@@ -8101,25 +8101,17 @@
     // a failure in chat's side work (marking read, contacts...) mustn't
     // stop the quote from being set up
     try { openChatView(); } catch (err) { console.error(err); }
-    if (state.viewMode !== "chat") return;
+    if (state.viewMode !== "chat" || activeChatSheetId !== sheet.id) return;
     if (editingChatMessageId) cancelEditingChatMessage();
     var label = tr(task.type === "note" ? "chatQuoteNoteLabel" : "chatQuoteTaskLabel");
     if (task.date) label += " · " + task.date.split("-").reverse().slice(0, 2).join("/");
     var quote = { id: "task:" + task.id, taskId: task.id, taskDate: task.date || null,
       senderName: label, text: (task.text || "").slice(0, 300) };
-    function showQuote() {
-      if (state.viewMode !== "chat" || activeChatSheetId !== sheet.id) return;
-      if (pendingChatReplyTo && pendingChatReplyTo !== quote) return; // replaced meanwhile
-      pendingChatReplyTo = quote;
-      chatReplySender.textContent = quote.senderName;
-      chatReplyText.textContent = quote.text;
-      chatReplyBar.hidden = false;
-    }
-    showQuote();
+    pendingChatReplyTo = quote;
+    chatReplySender.textContent = quote.senderName;
+    chatReplyText.textContent = quote.text;
+    chatReplyBar.hidden = false;
     chatInput.focus();
-    // again once the chat has settled (keyboard, first refresh) on phones
-    setTimeout(showQuote, 400);
-    setTimeout(showQuote, 1500);
   });
 
   // Fires an actual push notification to every other member's device (works
