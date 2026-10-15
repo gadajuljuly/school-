@@ -4,12 +4,16 @@ on:
   push:
     paths:
       - "tasks.html"
+      - "tasks.css"
+      - "tasks-app.js"
       - "tasks-sw.js"
       - "tests/**"
       - ".github/workflows/e2e-tests.yml"
   pull_request:
     paths:
       - "tasks.html"
+      - "tasks.css"
+      - "tasks-app.js"
       - "tasks-sw.js"
       - "tests/**"
       - ".github/workflows/e2e-tests.yml"
