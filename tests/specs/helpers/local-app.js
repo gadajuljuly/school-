@@ -98,3 +98,87 @@ async function addTask(page, text, type = "task") {
 }
 
 module.exports = { openLocalApp, longPress, addTask };
+
+// An in-memory stand-in for the Supabase client, installed in the page via
+// window.__itaskTestHooks().setBackendForTest. Supports the query-builder
+// chains the app uses (select/update/upsert/insert/delete + eq +
+// maybeSingle, awaited as a promise) over plain arrays of rows, logs every
+// call in window.__backend.log, and can simulate another member writing
+// between this device's read and its write (window.__backend.interfere).
+const FAKE_BACKEND = () => {
+  const tables = {};
+  const backend = (window.__backend = { tables, log: [], interfere: null });
+  const clone = (o) => JSON.parse(JSON.stringify(o));
+  function from(table) {
+    const st = { table, op: "select", filters: [], payload: null, single: false };
+    const rows = () => (tables[table] = tables[table] || []);
+    const match = (r) => st.filters.every(([c, v]) => r[c] === v);
+    function run() {
+      if (backend.interfere && backend.interfere(st, tables)) backend.interfere = null;
+      backend.log.push({ table, op: st.op, filters: st.filters.slice(), payload: st.payload && clone(st.payload) });
+      if (st.op === "select") {
+        const m = rows().filter(match).map(clone);
+        return { data: st.single ? m[0] || null : m, error: null };
+      }
+      if (st.op === "update") {
+        const m = rows().filter(match);
+        m.forEach((r) => Object.assign(r, clone(st.payload)));
+        return { data: m.map((r) => ({ id: r.id })), error: null };
+      }
+      if (st.op === "upsert" || st.op === "insert") {
+        [].concat(st.payload).forEach((p) => {
+          const ex = rows().find((r) => r.id === p.id);
+          if (ex) Object.assign(ex, clone(p)); else rows().push(clone(p));
+        });
+        return { data: null, error: null };
+      }
+      if (st.op === "delete") {
+        tables[table] = rows().filter((r) => !match(r));
+        return { data: null, error: null };
+      }
+      return { data: null, error: null };
+    }
+    const b = {
+      select() { return b; },
+      eq(c, v) { st.filters.push([c, v]); return b; },
+      neq() { return b; }, in() { return b; }, order() { return b; }, limit() { return b; },
+      contains() { return b; }, or() { return b; }, filter() { return b; }, gte() { return b; }, lte() { return b; },
+      maybeSingle() { st.single = true; return b; },
+      single() { st.single = true; return b; },
+      update(p) { st.op = "update"; st.payload = p; return b; },
+      upsert(p) { st.op = "upsert"; st.payload = p; return b; },
+      insert(p) { st.op = "insert"; st.payload = p; return b; },
+      delete() { st.op = "delete"; return b; },
+      then(res, rej) { return Promise.resolve().then(run).then(res, rej); },
+    };
+    return b;
+  }
+  backend.client = {
+    from,
+    functions: { invoke: (name, o) => { backend.log.push({ fn: name, body: o && o.body }); return Promise.resolve({ data: null, error: null }); } },
+    channel: () => { const c = { on: () => c, subscribe: () => c }; return c; },
+    removeChannel: () => {},
+  };
+};
+
+// Opens the app offline with the fake backend and one shared project.
+async function openWithSharedProject(page, { phone = "+972500000001", sheet }) {
+  await page.addInitScript(() => { window.__itaskTestHooks = (h) => { window.__hooks = h; }; });
+  await page.addInitScript(FAKE_BACKEND);
+  await openLocalApp(page);
+  await page.evaluate(({ phone, sheet }) => {
+    window.__backend.tables.shared_projects = [{
+      id: sheet.id, name: sheet.name, members: sheet.members, created_by: phone,
+      data: { tasks: sheet.tasks, reports: [], siteLogs: [], files: [], folders: null, ended: false },
+      data_version: 1, messages: [], messages_version: 1,
+    }];
+    window.__hooks.setBackendForTest(window.__backend.client, phone);
+    window.__hooks.addSharedSheetForTest(Object.assign({
+      shared: true, memberNames: {}, messages: [], reports: [], siteLogs: [], createdBy: phone,
+      _syncedData: { tasks: JSON.parse(JSON.stringify(sheet.tasks)), reports: [], siteLogs: [], ended: false, endedDate: null, logoId: null },
+    }, sheet));
+  }, { phone, sheet });
+}
+
+module.exports.FAKE_BACKEND = FAKE_BACKEND;
+module.exports.openWithSharedProject = openWithSharedProject;

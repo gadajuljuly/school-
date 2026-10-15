@@ -11562,6 +11562,12 @@
   if (typeof window.__itaskTestHooks === "function") {
     window.__itaskTestHooks({
       mergeSharedArrayByLocalChanges: mergeSharedArrayByLocalChanges,
+      // swaps in an in-memory stand-in for Supabase (tests/specs/helpers)
+      setBackendForTest: function (client, phone) {
+        supabaseClient = client;
+        myPhoneNumber = phone;
+      },
+      updateSharedSheetDataSafely: updateSharedSheetDataSafely,
       addSharedSheetForTest: function (sheet) {
         sharedSheets.push(sheet);
         data.activeSheetId = sheet.id;
