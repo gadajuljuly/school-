@@ -7094,7 +7094,10 @@
   function loadDeviceContactsIfNeeded() {
     if (!capacitorContactsAvailable || deviceContactsByPhone) return;
     var Contacts = window.Capacitor.Plugins.Contacts;
-    Contacts.getPermissions().then(function (status) {
+    // @capacitor-community/contacts v5+ calls it checkPermissions (the old
+    // getPermissions name made this fail, so chat never showed contact names)
+    var check = Contacts.checkPermissions || Contacts.getPermissions;
+    Promise.resolve().then(function () { return check.call(Contacts); }).then(function (status) {
       if (status && status.contacts === "granted") return status;
       return Contacts.requestPermissions();
     }).then(function (status) {
@@ -8095,17 +8098,28 @@
     var task = sheet && sheet.tasks.find(function (t) { return t.id === pendingMoveTaskId; });
     closeMoveTask();
     if (!task || !sheet.shared) return;
-    openChatView();
+    // a failure in chat's side work (marking read, contacts...) mustn't
+    // stop the quote from being set up
+    try { openChatView(); } catch (err) { console.error(err); }
     if (state.viewMode !== "chat") return;
     if (editingChatMessageId) cancelEditingChatMessage();
     var label = tr(task.type === "note" ? "chatQuoteNoteLabel" : "chatQuoteTaskLabel");
     if (task.date) label += " · " + task.date.split("-").reverse().slice(0, 2).join("/");
-    pendingChatReplyTo = { id: "task:" + task.id, taskId: task.id, taskDate: task.date || null,
+    var quote = { id: "task:" + task.id, taskId: task.id, taskDate: task.date || null,
       senderName: label, text: (task.text || "").slice(0, 300) };
-    chatReplySender.textContent = pendingChatReplyTo.senderName;
-    chatReplyText.textContent = pendingChatReplyTo.text;
-    chatReplyBar.hidden = false;
+    function showQuote() {
+      if (state.viewMode !== "chat" || activeChatSheetId !== sheet.id) return;
+      if (pendingChatReplyTo && pendingChatReplyTo !== quote) return; // replaced meanwhile
+      pendingChatReplyTo = quote;
+      chatReplySender.textContent = quote.senderName;
+      chatReplyText.textContent = quote.text;
+      chatReplyBar.hidden = false;
+    }
+    showQuote();
     chatInput.focus();
+    // again once the chat has settled (keyboard, first refresh) on phones
+    setTimeout(showQuote, 400);
+    setTimeout(showQuote, 1500);
   });
 
   // Fires an actual push notification to every other member's device (works
