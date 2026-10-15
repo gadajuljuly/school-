@@ -745,7 +745,9 @@
         myPhoneNumber = phone;
       },
       updateSharedSheetDataSafely: updateSharedSheetDataSafely,
+      loadMyOfficeGroups: loadMyOfficeGroups,
       addSharedSheetForTest: function (sheet) {
+        sheet.siteLogs = (sheet.siteLogs || []).map(normalizeSiteLog);
         sharedSheets.push(sheet);
         data.activeSheetId = sheet.id;
         render();

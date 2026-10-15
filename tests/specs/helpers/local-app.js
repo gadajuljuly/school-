@@ -153,8 +153,18 @@ const FAKE_BACKEND = () => {
     };
     return b;
   }
+  const ok = (data) => Promise.resolve({ data, error: null });
+  backend.uploads = [];
   backend.client = {
     from,
+    storage: {
+      from: (bucket) => ({
+        upload: (path, blob) => { backend.uploads.push({ bucket, path, size: blob && blob.size }); return ok({ path }); },
+        remove: (paths) => ok(paths),
+        createSignedUrl: (path) => ok({ signedUrl: "about:blank#" + path }),
+        getPublicUrl: (path) => ({ data: { publicUrl: "about:blank#" + path } }),
+      }),
+    },
     functions: { invoke: (name, o) => { backend.log.push({ fn: name, body: o && o.body }); return Promise.resolve({ data: null, error: null }); } },
     channel: () => { const c = { on: () => c, subscribe: () => c }; return c; },
     removeChannel: () => {},
@@ -162,22 +172,24 @@ const FAKE_BACKEND = () => {
 };
 
 // Opens the app offline with the fake backend and one shared project.
-async function openWithSharedProject(page, { phone = "+972500000001", sheet }) {
+async function openWithSharedProject(page, { phone = "+972500000001", sheet, sheets }) {
+  sheets = sheets || [sheet];
   await page.addInitScript(() => { window.__itaskTestHooks = (h) => { window.__hooks = h; }; });
   await page.addInitScript(FAKE_BACKEND);
   await openLocalApp(page);
-  await page.evaluate(({ phone, sheet }) => {
-    window.__backend.tables.shared_projects = [{
+  await page.evaluate(({ phone, sheets }) => {
+    const copy = (o) => JSON.parse(JSON.stringify(o));
+    window.__backend.tables.shared_projects = sheets.map((sheet) => ({
       id: sheet.id, name: sheet.name, members: sheet.members, created_by: phone,
-      data: { tasks: sheet.tasks, reports: [], siteLogs: [], files: [], folders: null, ended: false },
+      data: { tasks: copy(sheet.tasks || []), reports: [], siteLogs: copy(sheet.siteLogs || []), files: [], folders: null, ended: false },
       data_version: 1, messages: [], messages_version: 1,
-    }];
+    }));
     window.__hooks.setBackendForTest(window.__backend.client, phone);
-    window.__hooks.addSharedSheetForTest(Object.assign({
-      shared: true, memberNames: {}, messages: [], reports: [], siteLogs: [], createdBy: phone,
-      _syncedData: { tasks: JSON.parse(JSON.stringify(sheet.tasks)), reports: [], siteLogs: [], ended: false, endedDate: null, logoId: null },
-    }, sheet));
-  }, { phone, sheet });
+    sheets.forEach((sheet) => window.__hooks.addSharedSheetForTest(Object.assign({
+      shared: true, memberNames: {}, messages: [], reports: [], siteLogs: [], tasks: [], createdBy: phone,
+      _syncedData: { tasks: copy(sheet.tasks || []), reports: [], siteLogs: copy(sheet.siteLogs || []), ended: false, endedDate: null, logoId: null },
+    }, copy(sheet))));
+  }, { phone, sheets });
 }
 
 module.exports.FAKE_BACKEND = FAKE_BACKEND;

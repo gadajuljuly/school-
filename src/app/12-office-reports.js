@@ -565,7 +565,12 @@
   // tab (see syncHeadOfficeVirtualTasks) jump straight to one specific
   // project's procurement list on the date it was sent, instead of the
   // normal all-projects/today view this screen otherwise shows.
+  // Opened from a Head Office notification (one project's order) rather
+  // than from the combined reports screen: "back" then returns to the
+  // notifications list, not to the reports screen it never came from.
+  var officeProcurementFromNotification = false;
   function openOfficeProcurementView(filterSheetId, filterDate) {
+    officeProcurementFromNotification = !!filterSheetId;
     closeOfficeReportTypeModal();
     officeReportViewDate = filterDate || todayISO();
     renderOfficeReportDateControls();
@@ -574,7 +579,8 @@
   }
   function closeOfficeProcurementView() {
     officeProcurementView.hidden = true;
-    officeReportTypeView.hidden = false;
+    if (!officeProcurementFromNotification) officeReportTypeView.hidden = false;
+    officeProcurementFromNotification = false;
   }
   officeReportProcurementBtn.addEventListener("click", function () { openOfficeProcurementView(); });
   officeProcurementBackBtn.addEventListener("click", closeOfficeProcurementView);
