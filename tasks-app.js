@@ -149,6 +149,7 @@
     removeFromCalendarConfirm: { he: "להסיר את המשימה מלוח השנה? האירוע יימחק מלוח השנה של הטלפון", en: "Remove the task from the calendar? The event will be deleted from the phone's calendar", ar: "إزالة المهمة من التقويم؟ سيتم حذف الحدث من تقويم الهاتف", ru: "Убрать задачу из календаря? Событие будет удалено из календаря телефона" },
     removeFromCalendarMsg: { he: "הוסר מלוח השנה", en: "Removed from the calendar", ar: "أزيل من التقويم", ru: "Убрано из календаря" },
     calInviteTitle: { he: "שיתוף האירוע בלוח השנה של:", en: "Share the event to the calendar of:", ar: "مشاركة الحدث في تقويم:", ru: "Добавить событие в календарь:" },
+    calInvitePushText: { he: "{name} הוסיף/ה אותך לאירוע:", en: "{name} added you to an event:", ar: "أضافك {name} إلى حدث:", ru: "{name} добавил(а) вас в событие:" },
     calInviteNoMembers: { he: "אין עוד משתתפים בפרויקט", en: "No other members in this project", ar: "لا يوجد أعضاء آخرون في المشروع", ru: "В проекте нет других участников" },
     calInviteSentMsg: { he: "האירוע נשלח ל־{n} משתתפים", en: "Event shared with {n} members", ar: "تمت مشاركة الحدث مع {n} أعضاء", ru: "Событие отправлено участникам: {n}" },
     calInviteClearedMsg: { he: "השיתוף בוטל", en: "Sharing removed", ar: "تم إلغاء المشاركة", ru: "Общий доступ отменён" },
@@ -1879,6 +1880,7 @@
       var endMs = full.dtend || (full.dtstart + (full.durationMs || 3600000));
       return new Date(endMs).toISOString();
     }, function () { return new Date(Date.parse(link.eventAt) + 3600000).toISOString(); });
+    var before = (task.calendarInvite && task.calendarInvite.invitees) || [];
     withEnd.then(function (endAt) {
       link.endAt = endAt;
       if (invitees.length) {
@@ -1889,8 +1891,28 @@
       saveData();
       render();
       showToast(invitees.length ? tr("calInviteSentMsg").replace("{n}", invitees.length) : tr("calInviteClearedMsg"));
+      var added = invitees.filter(function (p) { return before.indexOf(p) === -1; });
+      if (added.length) notifyCalendarInvitees(sheet, task, added);
     });
   });
+
+  // A push to the newly added members only: "<name> הוסיף/ה אותך לאירוע:
+  // <task> · <day date time>"; tapping it opens that task.
+  function notifyCalendarInvitees(sheet, task, phones) {
+    if (!supabaseClient || !supabaseClient.functions) return;
+    var at = new Date(task.calendarInvite.eventAt);
+    var when = at.toLocaleDateString(calLocale(), { weekday: "short", day: "numeric", month: "numeric" }) + " " + calHm(at);
+    var text = tr("calInvitePushText").replace("{name}", resolveMemberName(sheet, myPhoneNumber)) + " " + task.text + " · " + when;
+    try {
+      supabaseClient.functions.invoke("send-chat-notification", {
+        body: {
+          kind: "calendarInvite", sheetId: sheet.id, senderPhone: myPhoneNumber,
+          senderName: resolveMemberName(sheet, myPhoneNumber), text: text,
+          recipients: phones, taskId: task.id, date: task.date
+        }
+      }).then(function () {}, function (err) { console.error("calendar invite push failed:", err); });
+    } catch (e) {}
+  }
 
   // Runs on every render: brings this phone's calendar in line with the
   // invites addressed to me on shared projects (add / move / take off).

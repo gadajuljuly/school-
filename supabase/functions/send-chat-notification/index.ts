@@ -104,7 +104,14 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  let body: { sheetId?: string; senderPhone?: string; senderName?: string; text?: string };
+  // kind "calendarInvite": a shared task's calendar event was shared with
+  // some members (recipients) - only they are notified, with the text as
+  // is, and tapping it opens that task (not the chat). Sent regardless of
+  // the chat-notifications setting, since it isn't a chat message.
+  let body: {
+    sheetId?: string; senderPhone?: string; senderName?: string; text?: string;
+    kind?: string; recipients?: string[]; taskId?: string; date?: string;
+  };
   try {
     body = await req.json();
   } catch {
@@ -126,26 +133,34 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: sheetError?.message || "project not found" }, 404);
   }
 
-  const recipients: string[] = (sheet.members || []).filter((p: string) => p !== senderPhone);
+  const isCalendarInvite = body.kind === "calendarInvite";
+  let recipients: string[] = (sheet.members || []).filter((p: string) => p !== senderPhone);
+  if (Array.isArray(body.recipients)) {
+    // only ever members of this project
+    recipients = recipients.filter((p) => body.recipients!.includes(p));
+  }
   if (!recipients.length) {
     return jsonResponse({ sent: 0, note: "no other members" });
   }
 
   const recipientIds = await Promise.all(recipients.map(phoneToUuid));
 
-  const { data: subs, error: subsError } = await supabase
+  let subsQuery = supabase
     .from("push_subscriptions")
     .select("*")
-    .in("user_id", recipientIds)
-    .eq("chat_enabled", true);
+    .in("user_id", recipientIds);
+  if (!isCalendarInvite) subsQuery = subsQuery.eq("chat_enabled", true);
+  const { data: subs, error: subsError } = await subsQuery;
 
   if (subsError) {
     return jsonResponse({ error: subsError.message }, 500);
   }
 
   const title = sheet.name;
-  const messageBody = (senderName || senderPhone) + ": " + text;
-  const data = { sheetId, chat: "true" };
+  const messageBody = isCalendarInvite ? text : (senderName || senderPhone) + ": " + text;
+  const data: Record<string, string> = isCalendarInvite
+    ? { sheetId, taskId: body.taskId || "", date: body.date || "" }
+    : { sheetId, chat: "true" };
 
   let sent = 0;
   let removed = 0;
@@ -158,7 +173,7 @@ Deno.serve(async (req) => {
       } else {
         await webpush.sendNotification(
           { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-          JSON.stringify({ title, body: messageBody, data: { sheetId, chat: true } }),
+          JSON.stringify({ title, body: messageBody, data: isCalendarInvite ? data : { sheetId, chat: true } }),
         );
       }
       sent++;

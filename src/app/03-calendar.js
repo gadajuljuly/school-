@@ -370,6 +370,7 @@
       var endMs = full.dtend || (full.dtstart + (full.durationMs || 3600000));
       return new Date(endMs).toISOString();
     }, function () { return new Date(Date.parse(link.eventAt) + 3600000).toISOString(); });
+    var before = (task.calendarInvite && task.calendarInvite.invitees) || [];
     withEnd.then(function (endAt) {
       link.endAt = endAt;
       if (invitees.length) {
@@ -380,8 +381,28 @@
       saveData();
       render();
       showToast(invitees.length ? tr("calInviteSentMsg").replace("{n}", invitees.length) : tr("calInviteClearedMsg"));
+      var added = invitees.filter(function (p) { return before.indexOf(p) === -1; });
+      if (added.length) notifyCalendarInvitees(sheet, task, added);
     });
   });
+
+  // A push to the newly added members only: "<name> הוסיף/ה אותך לאירוע:
+  // <task> · <day date time>"; tapping it opens that task.
+  function notifyCalendarInvitees(sheet, task, phones) {
+    if (!supabaseClient || !supabaseClient.functions) return;
+    var at = new Date(task.calendarInvite.eventAt);
+    var when = at.toLocaleDateString(calLocale(), { weekday: "short", day: "numeric", month: "numeric" }) + " " + calHm(at);
+    var text = tr("calInvitePushText").replace("{name}", resolveMemberName(sheet, myPhoneNumber)) + " " + task.text + " · " + when;
+    try {
+      supabaseClient.functions.invoke("send-chat-notification", {
+        body: {
+          kind: "calendarInvite", sheetId: sheet.id, senderPhone: myPhoneNumber,
+          senderName: resolveMemberName(sheet, myPhoneNumber), text: text,
+          recipients: phones, taskId: task.id, date: task.date
+        }
+      }).then(function () {}, function (err) { console.error("calendar invite push failed:", err); });
+    } catch (e) {}
+  }
 
   // Runs on every render: brings this phone's calendar in line with the
   // invites addressed to me on shared projects (add / move / take off).

@@ -48,6 +48,26 @@ test("owner: long-press the calendar icon, pick members, they're invited", async
   await expect.poll(async () => (await serverTask(page)).calendarInvite).toEqual({
     by: A, title: "סיור באתר", eventAt: EVENT_AT, endAt: END_AT, invitees: [B],
   });
+
+  // a push goes to the invited member only, and opens the task
+  const pushes = () => page.evaluate(() => window.__backend.log.filter((l) => l.fn === "send-chat-notification").map((l) => l.body));
+  await expect.poll(async () => (await pushes()).length).toBe(1);
+  const push = (await pushes())[0];
+  expect(push).toMatchObject({ kind: "calendarInvite", sheetId: "sh1", recipients: [B], taskId: "k1", date: TODAY });
+  expect(push.text).toContain("גדי");
+  expect(push.text).toContain("סיור באתר");
+
+  // adding another member later notifies only the new one
+  const box2 = await calIcon(page).boundingBox();
+  await page.mouse.move(box2.x + box2.width / 2, box2.y + box2.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(900);
+  await page.mouse.up();
+  await expect(dialog.locator(".cal-invite-row", { hasText: "דנה" }).locator("input")).toBeChecked();
+  await dialog.locator(".cal-invite-row", { hasText: "רון" }).locator("input").check();
+  await page.locator("#calInviteOkBtn").click();
+  await expect.poll(async () => (await pushes()).length).toBe(2);
+  expect((await pushes())[1].recipients).toEqual([C]);
 });
 
 test("invited member: the event goes into their phone's calendar, with icon and ring", async ({ page }) => {
