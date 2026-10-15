@@ -732,4 +732,18 @@
       }).catch(function () {});
     });
   }
+
+  // Automated tests only (tests/specs): a test page defines
+  // window.__itaskTestHooks before load to reach a few internals that have
+  // no UI of their own. Never defined in real use, so this does nothing.
+  if (typeof window.__itaskTestHooks === "function") {
+    window.__itaskTestHooks({
+      mergeSharedArrayByLocalChanges: mergeSharedArrayByLocalChanges,
+      addSharedSheetForTest: function (sheet) {
+        sharedSheets.push(sheet);
+        data.activeSheetId = sheet.id;
+        render();
+      }
+    });
+  }
 })();

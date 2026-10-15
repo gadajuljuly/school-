@@ -170,7 +170,12 @@
       render();
       return;
     }
-    ensurePushReadyForTaskReminder().then(function (ok) {
+    // The native app rings reminders itself (ItaskAlarm), so push being
+    // unavailable there (FCM registration failing...) mustn't block them.
+    var ready = nativeTaskAlarmPlugin
+      ? Promise.resolve(true).then(function (ok) { ensurePushReadyForTaskReminder(); return ok; })
+      : ensurePushReadyForTaskReminder();
+    ready.then(function (ok) {
       if (!ok) {
         alert(tr("taskReminderNotSupportedMsg"));
         return;

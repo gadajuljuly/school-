@@ -2631,7 +2631,12 @@
       render();
       return;
     }
-    ensurePushReadyForTaskReminder().then(function (ok) {
+    // The native app rings reminders itself (ItaskAlarm), so push being
+    // unavailable there (FCM registration failing...) mustn't block them.
+    var ready = nativeTaskAlarmPlugin
+      ? Promise.resolve(true).then(function (ok) { ensurePushReadyForTaskReminder(); return ok; })
+      : ensurePushReadyForTaskReminder();
+    ready.then(function (ok) {
       if (!ok) {
         alert(tr("taskReminderNotSupportedMsg"));
         return;
@@ -10445,6 +10450,7 @@
     var taskListScrollTop = taskList.scrollTop;
     taskList.innerHTML = "";
     var reminderRowsForIconsLayer = [];
+    var migratedCalendarReminders = false;
     visible.forEach(function (t) {
       var isNote = t.type === "note";
       var li = document.createElement("li");
@@ -10651,6 +10657,9 @@
       li.appendChild(actions);
       taskList.appendChild(li);
       // done tasks keep their reminder (it comes back if un-marked) but it's paused
+      // calendar-set reminders from before the split become links right
+      // away, so the first render already shows the calendar icon
+      if (migrateCalendarReminderToLink(t)) migratedCalendarReminders = true;
       var rowCalLink = calPlugin && isCalendarLinkShown(t.calendarLink) && isMyTaskReminder(activeSheet(), t.calendarLink);
       var rowAlarm = isTaskReminderActive(t.reminder) && isMyTaskReminder(activeSheet(), t.reminder);
       if (t.status === 2) rowAlarm = false; // a done task's reminder is paused
@@ -10681,6 +10690,7 @@
     });
     taskList.scrollTop = taskListScrollTop;
     renderTaskReminderIconsLayer(reminderRowsForIconsLayer);
+    if (migratedCalendarReminders) saveData();
     syncNativeTaskAlarms();
     syncNativeWidget();
 
@@ -11543,6 +11553,20 @@
         });
         reg.update().catch(function () {});
       }).catch(function () {});
+    });
+  }
+
+  // Automated tests only (tests/specs): a test page defines
+  // window.__itaskTestHooks before load to reach a few internals that have
+  // no UI of their own. Never defined in real use, so this does nothing.
+  if (typeof window.__itaskTestHooks === "function") {
+    window.__itaskTestHooks({
+      mergeSharedArrayByLocalChanges: mergeSharedArrayByLocalChanges,
+      addSharedSheetForTest: function (sheet) {
+        sharedSheets.push(sheet);
+        data.activeSheetId = sheet.id;
+        render();
+      }
     });
   }
 })();

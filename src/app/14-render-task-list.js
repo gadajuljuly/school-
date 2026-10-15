@@ -536,6 +536,7 @@
     var taskListScrollTop = taskList.scrollTop;
     taskList.innerHTML = "";
     var reminderRowsForIconsLayer = [];
+    var migratedCalendarReminders = false;
     visible.forEach(function (t) {
       var isNote = t.type === "note";
       var li = document.createElement("li");
@@ -742,6 +743,9 @@
       li.appendChild(actions);
       taskList.appendChild(li);
       // done tasks keep their reminder (it comes back if un-marked) but it's paused
+      // calendar-set reminders from before the split become links right
+      // away, so the first render already shows the calendar icon
+      if (migrateCalendarReminderToLink(t)) migratedCalendarReminders = true;
       var rowCalLink = calPlugin && isCalendarLinkShown(t.calendarLink) && isMyTaskReminder(activeSheet(), t.calendarLink);
       var rowAlarm = isTaskReminderActive(t.reminder) && isMyTaskReminder(activeSheet(), t.reminder);
       if (t.status === 2) rowAlarm = false; // a done task's reminder is paused
@@ -772,6 +776,7 @@
     });
     taskList.scrollTop = taskListScrollTop;
     renderTaskReminderIconsLayer(reminderRowsForIconsLayer);
+    if (migratedCalendarReminders) saveData();
     syncNativeTaskAlarms();
     syncNativeWidget();
 
