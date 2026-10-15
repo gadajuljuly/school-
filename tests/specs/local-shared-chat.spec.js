@@ -94,3 +94,20 @@ test("two members editing the shared task list at once: nobody's change is lost"
   // and this device now shows the other member's task too
   await expect(page.locator("#taskList li.task", { hasText: "משימה של חבר" })).toBeVisible();
 });
+
+test("in the Android app, tapping a file someone sent opens the phone's share sheet with it", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheet: SHEET, native: true });
+  await page.evaluate(() => {
+    const row = window.__backend.tables.shared_projects[0];
+    row.messages = [{ id: "f1", phone: "+972500000002", type: "file", fileUrl: location.origin + "/tasks-icon-192.png",
+      fileName: "תוכנית.pdf", fileType: "application/pdf", fileSize: 1234, ts: Date.now(), readBy: ["+972500000002"] }];
+  });
+  await page.locator("#chatBtn").click();
+  const file = page.locator(".chat-bubble-file", { hasText: "תוכנית.pdf" });
+  await expect(file).toBeVisible();
+  await file.click();
+  await expect.poll(() => page.evaluate(() => (window.__native.shared || []).length)).toBe(1);
+  const shared = (await page.evaluate(() => window.__native.shared))[0];
+  expect(shared.files).toEqual(["file:///cache/תוכנית.pdf"]);
+  expect((await page.evaluate(() => window.__native.files))[0].size).toBeGreaterThan(100);
+});

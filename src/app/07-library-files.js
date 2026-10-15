@@ -477,7 +477,12 @@
       var fileLongPressFired = false;
       item.addEventListener("click", function () {
         if (fileLongPressFired) { fileLongPressFired = false; return; }
-        resolveFileUrl(entry.path).then(function (url) { window.open(url, "_blank"); }).catch(function () {
+        resolveFileUrl(entry.path).then(function (url) {
+          // in the Android app window.open of a file link does nothing -
+          // hand the file to the phone's share sheet (open / save) instead
+          if (capacitorShareAvailable) downloadChatFile(url, entry.name, entry.type);
+          else window.open(url, "_blank");
+        }).catch(function () {
           alert(tr("libraryUploadError"));
         });
       });

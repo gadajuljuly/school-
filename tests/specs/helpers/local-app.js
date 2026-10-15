@@ -29,6 +29,12 @@ const NATIVE_FAKE = () => {
         canScheduleExact: () => ok({ value: true }),
         openExactAlarmSettings: () => ok(),
       },
+      Filesystem: {
+        writeFile: ({ path, data }) => { (native.files = native.files || []).push({ path, size: (data || "").length }); return ok({ uri: "file:///cache/" + path }); },
+      },
+      Share: {
+        share: (o) => { (native.shared = native.shared || []).push(o); return ok({}); },
+      },
       ItaskCalendar: {
         checkPermissions: () => ok({ calendar: "granted" }),
         requestPermissions: () => ok({ calendar: "granted" }),

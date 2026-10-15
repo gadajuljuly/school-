@@ -211,7 +211,7 @@
           var imgEl = document.createElement("img");
           imgEl.src = m.fileUrl;
           imgEl.alt = m.fileName || "";
-          imgEl.addEventListener("click", function () { window.open(m.fileUrl, "_blank"); });
+          imgEl.addEventListener("click", function () { openChatFile(m); });
           textEl.appendChild(imgEl);
         } else {
           textEl.className = "chat-bubble-file";
@@ -230,6 +230,9 @@
           fileSizeEl.textContent = formatFileSize(m.fileSize);
           fileInfo.appendChild(fileSizeEl);
           textEl.appendChild(fileInfo);
+          // tapping the file itself opens it (not only the ⬇ button)
+          textEl.style.cursor = "pointer";
+          textEl.addEventListener("click", function () { openChatFile(m); });
         }
         var downloadBtn = document.createElement("button");
         downloadBtn.type = "button";
@@ -238,7 +241,7 @@
         downloadBtn.title = tr("libraryAddBtnTitle");
         downloadBtn.addEventListener("click", function (e) {
           e.stopPropagation();
-          downloadChatFile(m.fileUrl, m.fileName);
+          downloadChatFile(m.fileUrl, m.fileName, m.fileType);
         });
         textEl.appendChild(downloadBtn);
       } else {
@@ -275,12 +278,32 @@
     updateChatScrollButton();
   }
 
-  function downloadChatFile(url, fileName) {
+  // Opening/saving a file someone sent in the chat. Inside the Android app
+  // a browser-style download (and window.open of the file link) does
+  // nothing, so there the file is fetched and handed to the phone's share
+  // sheet - open it in a viewer, save it to Files/Drive, or send it on.
+  function downloadChatFile(url, fileName, fileType) {
+    if (capacitorShareAvailable) {
+      showToast(tr("chatFileOpeningMsg"));
+      fetch(url).then(function (res) {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.blob();
+      }).then(function (blob) {
+        attemptShare(blob, fileName || "file", fileType || blob.type);
+      }).catch(function () {
+        alert(tr("chatFileOpenError"));
+      });
+      return;
+    }
     fetch(url).then(function (res) { return res.blob(); }).then(function (blob) {
       downloadBlob(blob, fileName || "file");
     }).catch(function () {
       window.open(url, "_blank");
     });
+  }
+  function openChatFile(m) {
+    if (capacitorShareAvailable) { downloadChatFile(m.fileUrl, m.fileName, m.fileType); return; }
+    window.open(m.fileUrl, "_blank");
   }
 
   function refreshActiveChat() {

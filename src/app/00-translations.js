@@ -148,6 +148,8 @@
     removeFromCalendarConfirm: { he: "להסיר את המשימה מלוח השנה? האירוע יימחק מלוח השנה של הטלפון", en: "Remove the task from the calendar? The event will be deleted from the phone's calendar", ar: "إزالة المهمة من التقويم؟ سيتم حذف الحدث من تقويم الهاتف", ru: "Убрать задачу из календаря? Событие будет удалено из календаря телефона" },
     removeFromCalendarMsg: { he: "הוסר מלוח השנה", en: "Removed from the calendar", ar: "أزيل من التقويم", ru: "Убрано из календаря" },
     calInviteTitle: { he: "שיתוף האירוע בלוח השנה של:", en: "Share the event to the calendar of:", ar: "مشاركة الحدث في تقويم:", ru: "Добавить событие в календарь:" },
+    chatFileOpeningMsg: { he: "פותח את הקובץ...", en: "Opening the file...", ar: "جارٍ فتح الملف...", ru: "Открываю файл..." },
+    chatFileOpenError: { he: "לא הצלחנו לפתוח את הקובץ - נסו שוב", en: "Couldn't open the file - try again", ar: "تعذر فتح الملف - حاول مرة أخرى", ru: "Не удалось открыть файл - попробуйте ещё раз" },
     calInvitePushText: { he: "{name} הוסיף/ה אותך לאירוע:", en: "{name} added you to an event:", ar: "أضافك {name} إلى حدث:", ru: "{name} добавил(а) вас в событие:" },
     calInviteNoMembers: { he: "אין עוד משתתפים בפרויקט", en: "No other members in this project", ar: "لا يوجد أعضاء آخرون في المشروع", ru: "В проекте нет других участников" },
     calInviteSentMsg: { he: "האירוע נשלח ל־{n} משתתפים", en: "Event shared with {n} members", ar: "تمت مشاركة الحدث مع {n} أعضاء", ru: "Событие отправлено участникам: {n}" },

@@ -149,6 +149,8 @@
     removeFromCalendarConfirm: { he: "להסיר את המשימה מלוח השנה? האירוע יימחק מלוח השנה של הטלפון", en: "Remove the task from the calendar? The event will be deleted from the phone's calendar", ar: "إزالة المهمة من التقويم؟ سيتم حذف الحدث من تقويم الهاتف", ru: "Убрать задачу из календаря? Событие будет удалено из календаря телефона" },
     removeFromCalendarMsg: { he: "הוסר מלוח השנה", en: "Removed from the calendar", ar: "أزيل من التقويم", ru: "Убрано из календаря" },
     calInviteTitle: { he: "שיתוף האירוע בלוח השנה של:", en: "Share the event to the calendar of:", ar: "مشاركة الحدث في تقويم:", ru: "Добавить событие в календарь:" },
+    chatFileOpeningMsg: { he: "פותח את הקובץ...", en: "Opening the file...", ar: "جارٍ فتح الملف...", ru: "Открываю файл..." },
+    chatFileOpenError: { he: "לא הצלחנו לפתוח את הקובץ - נסו שוב", en: "Couldn't open the file - try again", ar: "تعذر فتح الملف - حاول مرة أخرى", ru: "Не удалось открыть файл - попробуйте ещё раз" },
     calInvitePushText: { he: "{name} הוסיף/ה אותך לאירוע:", en: "{name} added you to an event:", ar: "أضافك {name} إلى حدث:", ru: "{name} добавил(а) вас в событие:" },
     calInviteNoMembers: { he: "אין עוד משתתפים בפרויקט", en: "No other members in this project", ar: "لا يوجد أعضاء آخرون في المشروع", ru: "В проекте нет других участников" },
     calInviteSentMsg: { he: "האירוע נשלח ל־{n} משתתפים", en: "Event shared with {n} members", ar: "تمت مشاركة الحدث مع {n} أعضاء", ru: "Событие отправлено участникам: {n}" },
@@ -4174,7 +4176,7 @@
           var imgEl = document.createElement("img");
           imgEl.src = m.fileUrl;
           imgEl.alt = m.fileName || "";
-          imgEl.addEventListener("click", function () { window.open(m.fileUrl, "_blank"); });
+          imgEl.addEventListener("click", function () { openChatFile(m); });
           textEl.appendChild(imgEl);
         } else {
           textEl.className = "chat-bubble-file";
@@ -4193,6 +4195,9 @@
           fileSizeEl.textContent = formatFileSize(m.fileSize);
           fileInfo.appendChild(fileSizeEl);
           textEl.appendChild(fileInfo);
+          // tapping the file itself opens it (not only the ⬇ button)
+          textEl.style.cursor = "pointer";
+          textEl.addEventListener("click", function () { openChatFile(m); });
         }
         var downloadBtn = document.createElement("button");
         downloadBtn.type = "button";
@@ -4201,7 +4206,7 @@
         downloadBtn.title = tr("libraryAddBtnTitle");
         downloadBtn.addEventListener("click", function (e) {
           e.stopPropagation();
-          downloadChatFile(m.fileUrl, m.fileName);
+          downloadChatFile(m.fileUrl, m.fileName, m.fileType);
         });
         textEl.appendChild(downloadBtn);
       } else {
@@ -4238,12 +4243,32 @@
     updateChatScrollButton();
   }
 
-  function downloadChatFile(url, fileName) {
+  // Opening/saving a file someone sent in the chat. Inside the Android app
+  // a browser-style download (and window.open of the file link) does
+  // nothing, so there the file is fetched and handed to the phone's share
+  // sheet - open it in a viewer, save it to Files/Drive, or send it on.
+  function downloadChatFile(url, fileName, fileType) {
+    if (capacitorShareAvailable) {
+      showToast(tr("chatFileOpeningMsg"));
+      fetch(url).then(function (res) {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.blob();
+      }).then(function (blob) {
+        attemptShare(blob, fileName || "file", fileType || blob.type);
+      }).catch(function () {
+        alert(tr("chatFileOpenError"));
+      });
+      return;
+    }
     fetch(url).then(function (res) { return res.blob(); }).then(function (blob) {
       downloadBlob(blob, fileName || "file");
     }).catch(function () {
       window.open(url, "_blank");
     });
+  }
+  function openChatFile(m) {
+    if (capacitorShareAvailable) { downloadChatFile(m.fileUrl, m.fileName, m.fileType); return; }
+    window.open(m.fileUrl, "_blank");
   }
 
   function refreshActiveChat() {
@@ -5366,7 +5391,12 @@
       var fileLongPressFired = false;
       item.addEventListener("click", function () {
         if (fileLongPressFired) { fileLongPressFired = false; return; }
-        resolveFileUrl(entry.path).then(function (url) { window.open(url, "_blank"); }).catch(function () {
+        resolveFileUrl(entry.path).then(function (url) {
+          // in the Android app window.open of a file link does nothing -
+          // hand the file to the phone's share sheet (open / save) instead
+          if (capacitorShareAvailable) downloadChatFile(url, entry.name, entry.type);
+          else window.open(url, "_blank");
+        }).catch(function () {
           alert(tr("libraryUploadError"));
         });
       });
