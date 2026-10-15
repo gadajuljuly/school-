@@ -2,9 +2,10 @@
   "name": "itask-e2e-tests",
   "private": true,
   "version": "1.0.0",
-  "description": "Playwright end-to-end tests for tasks.html, run in CI (GitHub Actions) since this app talks to live Firebase Auth/Supabase and can't be tested from a network-restricted sandbox.",
+  "description": "Playwright tests for tasks.html. specs/local-*.spec.js run fully offline (no backend, fake native bridge) - run them before every push: npm run test:local. The others talk to live Firebase/Supabase and run in CI.",
   "scripts": {
-    "test": "playwright test"
+    "test": "playwright test",
+    "test:local": "playwright test specs/local-"
   },
   "devDependencies": {
     "@playwright/test": "1.56.1",
