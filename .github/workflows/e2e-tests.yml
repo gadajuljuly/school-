@@ -24,7 +24,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  playwright:
+  # Fully offline: no backend, fake Android bridge (tests/specs/local-*),
+  # plus the login-screen smoke test. These must always pass.
+  offline:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -45,14 +47,47 @@ jobs:
         working-directory: tests
         run: npx playwright install --with-deps chromium
 
-      - name: Run tests
+      - name: Run offline tests
         working-directory: tests
-        run: npx playwright test
+        run: npx playwright test specs/local- specs/smoke
 
       - name: Upload report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: playwright-report-offline
+          path: tests/playwright-report
+          retention-days: 7
+
+  # Signs in with a Firebase test number against the live Firebase/Supabase.
+  # Kept separate: it depends on Google accepting the CI runner (it has been
+  # failing with auth/network-request-failed from GitHub's runners).
+  live-login:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install test dependencies
+        working-directory: tests
+        run: npm install
+
+      - name: Install Playwright browsers
+        working-directory: tests
+        run: npx playwright install --with-deps chromium
+
+      - name: Run live sign-in test
+        working-directory: tests
+        run: npx playwright test specs/login-and-task
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-live
           path: tests/playwright-report
           retention-days: 7
