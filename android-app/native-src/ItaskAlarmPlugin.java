@@ -1,5 +1,6 @@
 package com.gadajuljuly.itask;
 
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
@@ -10,7 +11,9 @@ import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import androidx.core.content.FileProvider;
 import androidx.core.content.pm.ShortcutManagerCompat;
+import java.io.File;
 import java.util.Collections;
 import org.json.JSONArray;
 
@@ -118,6 +121,29 @@ public class ItaskAlarmPlugin extends Plugin {
         JSObject result = new JSObject();
         result.put("value", TaskAlarmScheduler.canScheduleExact(getContext()));
         call.resolve(result);
+    }
+
+    // Opens a file the page saved to the app's cache (Filesystem.writeFile,
+    // directory CACHE - its file:// uri) in the phone's own viewer for that
+    // type (PDF reader, gallery, Word...), through Capacitor's FileProvider.
+    @PluginMethod
+    public void openFile(PluginCall call) {
+        String path = call.getString("path");
+        String mime = call.getString("mimeType");
+        if (path == null) { call.reject("no path"); return; }
+        try {
+            File file = new File(Uri.parse(path).getPath());
+            Uri uri = FileProvider.getUriForFile(getContext(), getContext().getPackageName() + ".fileprovider", file);
+            Intent intent = new Intent(Intent.ACTION_VIEW)
+                    .setDataAndType(uri, mime != null && !mime.isEmpty() ? mime : "*/*")
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(intent);
+            call.resolve();
+        } catch (ActivityNotFoundException e) {
+            call.reject("no app", "NO_APP");
+        } catch (Exception e) {
+            call.reject(e.getMessage());
+        }
     }
 
     @PluginMethod

@@ -95,19 +95,49 @@ test("two members editing the shared task list at once: nobody's change is lost"
   await expect(page.locator("#taskList li.task", { hasText: "משימה של חבר" })).toBeVisible();
 });
 
-test("in the Android app, tapping a file someone sent opens the phone's share sheet with it", async ({ page }) => {
+const sendFileMessage = (page, m) => page.evaluate((m) => {
+  const row = window.__backend.tables.shared_projects[0];
+  row.messages = [Object.assign({ id: "f1", phone: "+972500000002", type: "file", fileUrl: location.origin + "/tasks-icon-192.png",
+    fileSize: 1234, ts: Date.now(), readBy: ["+972500000002"] }, m)];
+}, m);
+
+test("in the Android app, tapping a file someone sent opens it in the phone's viewer", async ({ page }) => {
   await openWithSharedProject(page, { phone: ME, sheet: SHEET, native: true });
-  await page.evaluate(() => {
-    const row = window.__backend.tables.shared_projects[0];
-    row.messages = [{ id: "f1", phone: "+972500000002", type: "file", fileUrl: location.origin + "/tasks-icon-192.png",
-      fileName: "תוכנית.pdf", fileType: "application/pdf", fileSize: 1234, ts: Date.now(), readBy: ["+972500000002"] }];
-  });
+  await sendFileMessage(page, { fileName: "תוכנית.pdf", fileType: "application/pdf" });
   await page.locator("#chatBtn").click();
   const file = page.locator(".chat-bubble-file", { hasText: "תוכנית.pdf" });
-  await expect(file).toBeVisible();
   await file.click();
-  await expect.poll(() => page.evaluate(() => (window.__native.shared || []).length)).toBe(1);
-  const shared = (await page.evaluate(() => window.__native.shared))[0];
-  expect(shared.files).toEqual(["file:///cache/תוכנית.pdf"]);
+  await expect.poll(() => page.evaluate(() => (window.__native.opened || []).length)).toBe(1);
+  expect((await page.evaluate(() => window.__native.opened))[0]).toEqual({ path: "file:///cache/תוכנית.pdf", mimeType: "application/pdf" });
   expect((await page.evaluate(() => window.__native.files))[0].size).toBeGreaterThan(100);
+  expect(await page.evaluate(() => (window.__native.shared || []).length)).toBe(0);
+});
+
+test("an image someone sent opens full-screen inside the app", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheet: SHEET, native: true });
+  await sendFileMessage(page, { fileName: "אתר.jpg", fileType: "image/png" });
+  await page.locator("#chatBtn").click();
+  await page.locator(".chat-bubble-image img").click();
+  await expect(page.locator("#imageViewerOverlay")).toBeVisible();
+  await expect(page.locator("#imageViewerImg")).toHaveAttribute("src", /tasks-icon-192\.png$/);
+  await page.locator("#imageViewerOverlay").click();
+  await expect(page.locator("#imageViewerOverlay")).toBeHidden();
+});
+
+test("⬇ on a chat file saves a copy in the project's library, folder 'הורדות'", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheet: SHEET });
+  await sendFileMessage(page, { fileName: "תוכנית.pdf", fileType: "application/pdf" });
+  await page.locator("#chatBtn").click();
+  await page.locator(".chat-bubble-download-btn").click();
+  await expect.poll(async () => {
+    const folders = (await page.evaluate(() => window.__backend.tables.shared_projects[0].data.folders)) || [];
+    const dl = folders.find((f) => f.key === "downloads");
+    return dl && dl.files.map((f) => f.name);
+  }).toEqual(["תוכנית.pdf"]);
+  const up = await page.evaluate(() => window.__backend.uploads);
+  expect(up).toEqual([expect.objectContaining({ path: expect.stringMatching(/^sh1\/.+\.pdf$/) })]);
+  // it shows up in the library under "הורדות"
+  await page.locator("#libraryBtn").click();
+  await page.locator("#libraryFoldersGrid .library-item", { hasText: "הורדות" }).click();
+  await expect(page.locator("#libraryGrid")).toContainText("תוכנית.pdf");
 });

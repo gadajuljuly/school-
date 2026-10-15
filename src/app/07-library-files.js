@@ -41,7 +41,8 @@
     general: "libraryFolderGeneral",
     procurementOrders: "libraryFolderProcurementOrders",
     attendanceReports: "libraryFolderAttendanceReports",
-    toolsReports: "libraryFolderToolsReports"
+    toolsReports: "libraryFolderToolsReports",
+    downloads: "libraryFolderDownloads"
   };
 
   function buildDefaultLibraryFolders(legacyFiles) {
@@ -480,8 +481,7 @@
         resolveFileUrl(entry.path).then(function (url) {
           // in the Android app window.open of a file link does nothing -
           // hand the file to the phone's share sheet (open / save) instead
-          if (capacitorShareAvailable) downloadChatFile(url, entry.name, entry.type);
-          else window.open(url, "_blank");
+          openFileUrl(url, entry.name, entry.type);
         }).catch(function () {
           alert(tr("libraryUploadError"));
         });

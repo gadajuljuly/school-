@@ -241,7 +241,7 @@
         downloadBtn.title = tr("libraryAddBtnTitle");
         downloadBtn.addEventListener("click", function (e) {
           e.stopPropagation();
-          downloadChatFile(m.fileUrl, m.fileName, m.fileType);
+          saveChatFileToLibrary(activeChatSheetId, m);
         });
         textEl.appendChild(downloadBtn);
       } else {
@@ -278,32 +278,105 @@
     updateChatScrollButton();
   }
 
-  // Opening/saving a file someone sent in the chat. Inside the Android app
-  // a browser-style download (and window.open of the file link) does
-  // nothing, so there the file is fetched and handed to the phone's share
-  // sheet - open it in a viewer, save it to Files/Drive, or send it on.
-  function downloadChatFile(url, fileName, fileType) {
-    if (capacitorShareAvailable) {
-      showToast(tr("chatFileOpeningMsg"));
-      fetch(url).then(function (res) {
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        return res.blob();
-      }).then(function (blob) {
-        attemptShare(blob, fileName || "file", fileType || blob.type);
+  // Opening a file (from the chat or the library). Images open in the
+  // app's own full-screen viewer. Inside the Android app any other file is
+  // saved to the app's cache and opened in the phone's own viewer for its
+  // type (ItaskAlarm.openFile, app version 19+); an older app, or a phone
+  // with no app for that type, gets the share sheet instead. In a browser
+  // the link opens in a new tab.
+  function fetchFileBlob(url) {
+    return fetch(url).then(function (res) {
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return res.blob();
+    });
+  }
+  function openFileUrl(url, fileName, fileType) {
+    if (/^image\//.test(fileType || "")) { openImageViewer(url, fileName); return; }
+    if (!capacitorShareAvailable) { window.open(url, "_blank"); return; }
+    showToast(tr("chatFileOpeningMsg"));
+    var name = sanitizeFileName(fileName || "file");
+    fetchFileBlob(url).then(function (blob) {
+      var type = fileType || blob.type;
+      var canOpen = nativeTaskAlarmPlugin && typeof nativeTaskAlarmPlugin.openFile === "function";
+      if (!canOpen) { attemptShare(blob, name, type); return; }
+      return blobToBase64(blob).then(function (base64) {
+        return window.Capacitor.Plugins.Filesystem.writeFile({ path: name, data: base64, directory: "CACHE" });
+      }).then(function (written) {
+        return nativeTaskAlarmPlugin.openFile({ path: written.uri, mimeType: type });
       }).catch(function () {
-        alert(tr("chatFileOpenError"));
+        attemptShare(blob, name, type);
       });
-      return;
-    }
-    fetch(url).then(function (res) { return res.blob(); }).then(function (blob) {
-      downloadBlob(blob, fileName || "file");
     }).catch(function () {
-      window.open(url, "_blank");
+      alert(tr("chatFileOpenError"));
     });
   }
   function openChatFile(m) {
-    if (capacitorShareAvailable) { downloadChatFile(m.fileUrl, m.fileName, m.fileType); return; }
-    window.open(m.fileUrl, "_blank");
+    openFileUrl(m.fileUrl, m.fileName, m.fileType);
+  }
+
+  var imageViewerOverlay = document.getElementById("imageViewerOverlay");
+  var imageViewerImg = document.getElementById("imageViewerImg");
+  function openImageViewer(url, name) {
+    imageViewerImg.src = url;
+    imageViewerImg.alt = name || "";
+    imageViewerOverlay.hidden = false;
+  }
+  function closeImageViewer() {
+    imageViewerOverlay.hidden = true;
+    imageViewerImg.removeAttribute("src");
+  }
+  imageViewerOverlay.addEventListener("click", closeImageViewer);
+
+  // ⬇ on a chat file: a copy goes into this project's library, in its
+  // "הורדות" folder (created on first use).
+  function ensureKeyedLibraryFolder(sheet, key) {
+    var isIt = function (f) { return f.key === key; };
+    return new Promise(function (resolve) {
+      ensureLibraryFolders(sheet, function (folders) {
+        var existing = folders.find(isIt);
+        if (existing) { resolve(existing.id); return; }
+        var newId = uid();
+        if (sheet.shared) {
+          applySharedLibraryFolders(sheet.id, function (liveFolders) {
+            if (liveFolders.some(isIt)) return liveFolders;
+            return liveFolders.concat([{ id: newId, key: key, name: null, files: [] }]);
+          }).then(function (updated) {
+            var folder = updated.find(isIt);
+            resolve(folder ? folder.id : newId);
+          });
+        } else {
+          var liveSheet = data.sheets.find(function (s) { return s.id === sheet.id; });
+          if (!liveSheet.folders) liveSheet.folders = folders;
+          var folder = liveSheet.folders.find(isIt);
+          if (!folder) {
+            folder = { id: newId, key: key, name: null, files: [] };
+            liveSheet.folders.push(folder);
+            saveData();
+          }
+          resolve(folder.id);
+        }
+      });
+    });
+  }
+  function saveChatFileToLibrary(sheetId, m) {
+    var sheet = sharedSheets.find(function (s) { return s.id === sheetId; });
+    if (!sheet || !supabaseClient) return;
+    var fileName = m.fileName || "file";
+    showToast(tr("chatFileSavingMsg"));
+    fetchFileBlob(m.fileUrl).then(function (blob) {
+      return ensureKeyedLibraryFolder(sheet, "downloads").then(function (folderId) {
+        var path = sheet.id + "/" + folderId + "/" + uid() + "-" + safeStorageFileName(fileName);
+        return supabaseClient.storage.from(LIBRARY_BUCKET).upload(path, blob, { contentType: m.fileType || blob.type }).then(function (result) {
+          if (result.error) throw result.error;
+          var entry = { id: uid(), name: fileName, path: path, type: m.fileType || blob.type || "", size: blob.size || 0, uploadedAt: Date.now() };
+          return addFileToLibraryFolder(sheet, folderId, entry);
+        });
+      });
+    }).then(function () {
+      showToast(tr("chatFileSavedToLibraryMsg"));
+    }, function () {
+      alert(tr("chatFileSaveError"));
+    });
   }
 
   function refreshActiveChat() {

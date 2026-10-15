@@ -35,7 +35,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<link rel="stylesheet" href="tasks.css?v=3eb58b7212">
+<link rel="stylesheet" href="tasks.css?v=5b9b94b50a">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -137,6 +137,10 @@
       </div>
     </form>
   </div>
+</div>
+<div class="image-viewer" id="imageViewerOverlay" hidden>
+  <img id="imageViewerImg" alt="">
+  <button type="button" class="image-viewer-close" data-i18n-title="cancelBtn" title="סגירה">&#10005;</button>
 </div>
 <div class="modal-overlay" id="calInviteOverlay" hidden style="z-index:41">
   <div class="modal-box" role="alertdialog" aria-modal="true">
@@ -984,6 +988,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=fbb516d165"></script>
+<script src="tasks-app.js?v=bb9a8f5cea"></script>
 </body>
 </html>

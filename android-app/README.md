@@ -228,4 +228,10 @@ The one-time edits from the sections above (`AndroidManifest.xml`,
   hands the text to the page (launch view "share"), which opens an
   add-task dialog with the text, a project and a date.
 
+- **Opening files** (version 19+): `ItaskAlarmPlugin.openFile({path, mimeType})`
+  opens a file the page wrote to the app's cache (Filesystem, directory
+  CACHE) in the phone's own viewer for that type, through Capacitor's
+  FileProvider (`${applicationId}.fileprovider`, already in the Capacitor
+  template's manifest). Older app versions fall back to the share sheet.
+
 Both need the manifest additions in `native-src/AndroidManifest-additions.xml`.
