@@ -1,3 +1,4 @@
+// GENERATED from src/app/*.js by tools/build-app.js - edit those files, not this one.
 (function () {
   var TRANSLATIONS = {
     authSubtitle: { he: "התחברו כדי לראות את המשימות שלכם", en: "Log in to see your tasks", ar: "سجّل الدخول لرؤية مهامك", ru: "Войдите, чтобы увидеть свои задачи" },
