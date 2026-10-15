@@ -4781,6 +4781,14 @@
     : null;
   if (firebaseAuth) {
     firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(function () {});
+    // Ask the browser/WebView to keep this site's storage (where the sign-in
+    // lives) instead of treating it as evictable cache when space runs low -
+    // a tester was once sent back to the sign-in screen for no visible reason.
+    if (navigator.storage && navigator.storage.persist) {
+      navigator.storage.persisted().then(function (already) {
+        if (!already) return navigator.storage.persist();
+      }).catch(function () {});
+    }
     // Opt-in only (?e2e=1), never on for real users: automated test runners
     // (GitHub Actions, etc.) run from datacenter IPs that Google's invisible
     // reCAPTCHA routinely blocks regardless of using a Firebase test phone
@@ -15358,6 +15366,9 @@
   }
 
   function showApp(phoneNumber, rowId) {
+    try {
+      if (phoneNumber) localStorage.setItem(LAST_PHONE_KEY, "0" + String(phoneNumber).replace(/^\+972/, ""));
+    } catch (e) {}
     SUPABASE_ROW_ID = rowId;
     myPhoneNumber = phoneNumber;
     loadChatReadState();
@@ -15376,10 +15387,16 @@
     startPeriodicBackup();
   }
 
+  // The last number signed in on this device, so being asked to sign in
+  // again only needs the code, not retyping the number.
+  var LAST_PHONE_KEY = "itask-last-phone";
   function showAuthGate() {
     appRoot.hidden = true;
     authGate.hidden = false;
     hideSplash();
+    var last = null;
+    try { last = localStorage.getItem(LAST_PHONE_KEY); } catch (e) {}
+    if (last && !authPhone.value) authPhone.value = last;
   }
 
   function showAuthError(msg) {
