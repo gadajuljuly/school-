@@ -730,8 +730,9 @@
     taskCalendarReminderBtn.hidden = !calPlugin;
     var menuCalIcon = taskCalendarReminderBtn.querySelector(".cal-live-icon");
     if (task) migrateCalendarReminderToLink(task);
-    var menuLink = calPlugin && task && isCalendarLinkShown(task.calendarLink) && isMyTaskReminder(activeSheet(), task.calendarLink);
-    if (menuLink) menuCalIcon.dataset.at = task.calendarLink.eventAt;
+    var myLink = task ? getMyCalendarLink(activeSheet(), task) : null;
+    var menuLink = calPlugin && isCalendarLinkShown(myLink);
+    if (menuLink) menuCalIcon.dataset.at = myLink.eventAt;
     else delete menuCalIcon.dataset.at;
     removeFromCalendarBtn.hidden = !menuLink;
     updateLiveCalendarIcons();

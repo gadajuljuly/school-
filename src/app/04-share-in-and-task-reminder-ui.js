@@ -104,8 +104,9 @@
       var both = entry.calLink && entry.alarm;
       if (entry.calLink) {
         // linked to a calendar event: a calendar icon with the event's day;
-        // tapping it opens that event in the calendar
-        var link = entry.task.calendarLink;
+        // tapping it opens that event in the calendar; on a shared project,
+        // a long-press on an event of my own shares it with other members
+        var link = getMyCalendarLink(activeSheet(), entry.task);
         var cal = document.createElement("span");
         cal.className = "task-reminder-indicator" + (both ? " is-pair-cal" : "");
         cal.style.top = (entry.top + entry.height / 2) + "px";
@@ -116,8 +117,28 @@
         var at = new Date(link.eventAt);
         liveIcon.querySelector(".cal-live-wd").textContent = at.toLocaleDateString(calLocale(), { weekday: "short" });
         liveIcon.querySelector(".cal-live-day").textContent = at.getDate();
+        var calPressFired = false;
+        if (activeSheet().shared && !link.fromInvite) {
+          var calPressTimer = null;
+          var calPressStart = function () {
+            calPressFired = false;
+            clearTimeout(calPressTimer);
+            calPressTimer = setTimeout(function () {
+              calPressFired = true;
+              openCalendarInviteModal(activeSheet(), entry.task);
+            }, 600);
+          };
+          var calPressEnd = function () { clearTimeout(calPressTimer); };
+          cal.addEventListener("mousedown", calPressStart);
+          cal.addEventListener("touchstart", calPressStart, { passive: true });
+          ["mouseup", "mouseleave", "touchend", "touchmove", "touchcancel"].forEach(function (ev) {
+            cal.addEventListener(ev, calPressEnd);
+          });
+          cal.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+        }
         cal.addEventListener("click", function (e) {
           e.stopPropagation();
+          if (calPressFired) { calPressFired = false; return; }
           openTaskCalendarEvent(link);
         });
         taskReminderIconsLayer.appendChild(cal);
@@ -204,11 +225,13 @@
   // and the link (calendar icon + its 15-minutes-before ring) from the
   // task; a regular reminder on it stays.
   removeFromCalendarBtn.addEventListener("click", function () {
-    var task = activeSheet().tasks.find(function (t) { return t.id === pendingMoveTaskId; });
+    var sheet = activeSheet();
+    var task = sheet.tasks.find(function (t) { return t.id === pendingMoveTaskId; });
     closeMoveTask();
-    if (!task || !task.calendarLink || !confirm(tr("removeFromCalendarConfirm"))) return;
-    var eventId = task.calendarLink.eventId;
-    delete task.calendarLink;
+    var link = task && getMyCalendarLink(sheet, task);
+    if (!link || !confirm(tr("removeFromCalendarConfirm"))) return;
+    var eventId = link.eventId;
+    removeMyCalendarLink(sheet, task, link);
     saveData();
     render();
     if (calPlugin && eventId != null) calPlugin.deleteEvent({ eventId: eventId }).catch(function () {});

@@ -37,8 +37,9 @@
       var changed = false;
       allSheets().forEach(function (sheet) {
         (sheet.tasks || []).forEach(function (t) {
-          if (t.calendarLink && !t.calendarLink.firedAt && ids.indexOf(sheet.id + ":" + t.id + ":cal") !== -1) {
-            t.calendarLink.firedAt = new Date().toISOString();
+          var calLink = getMyCalendarLink(sheet, t);
+          if (calLink && !calLink.firedAt && ids.indexOf(sheet.id + ":" + t.id + ":cal") !== -1) {
+            calLink.firedAt = new Date().toISOString();
             changed = true;
           }
           if (t.reminder && ids.indexOf(sheet.id + ":" + t.id) !== -1) {
@@ -59,6 +60,48 @@
   // good otherwise, past events included (and on done tasks too).
   function isCalendarLinkShown(link) {
     return !!link && !!link.eventAt;
+  }
+  // On a SHARED project's task every member has their own link (their own
+  // phone's event), in task.calendarLinks[phone]; a member who removed an
+  // event they were invited to keeps a {removed: true} marker there so it
+  // isn't added back. Private projects use the single task.calendarLink.
+  // (A shared task's older single calendarLink {by} still counts for "by".)
+  function getMyCalendarLink(sheet, t) {
+    if (sheet && sheet.shared) {
+      var mine = t.calendarLinks && myPhoneNumber ? t.calendarLinks[myPhoneNumber] : null;
+      if (mine) return mine.removed ? null : mine;
+      return t.calendarLink && isMyTaskReminder(sheet, t.calendarLink) ? t.calendarLink : null;
+    }
+    return t.calendarLink || null;
+  }
+  // Taking my link off a task: an event I was invited to leaves a
+  // "removed" marker (so the invite doesn't add it back); for an event I
+  // shared with others, the invite goes too, which takes it off their
+  // phones as well.
+  function removeMyCalendarLink(sheet, t, link) {
+    var inv = t.calendarInvite;
+    if (inv && inv.by === myPhoneNumber) delete t.calendarInvite;
+    if (link && link.fromInvite) setMyCalendarLink(sheet, t, { removed: true, eventAt: link.eventAt });
+    else setMyCalendarLink(sheet, t, null);
+  }
+  // My shared event moved: everyone I invited follows.
+  function calMoveMyInvite(t, startMs, endAt) {
+    var inv = t.calendarInvite;
+    if (!inv || inv.by !== myPhoneNumber) return;
+    inv.eventAt = new Date(startMs).toISOString();
+    if (endAt) inv.endAt = endAt;
+    inv.title = t.text;
+  }
+  function setMyCalendarLink(sheet, t, link) {
+    if (sheet && sheet.shared) {
+      if (t.calendarLink && isMyTaskReminder(sheet, t.calendarLink)) delete t.calendarLink;
+      if (!myPhoneNumber) return;
+      var links = Object.assign({}, t.calendarLinks);
+      if (link) links[myPhoneNumber] = link; else delete links[myPhoneNumber];
+      if (Object.keys(links).length) t.calendarLinks = links; else delete t.calendarLinks;
+      return;
+    }
+    if (link) t.calendarLink = link; else delete t.calendarLink;
   }
   function isCalendarLinkAlarmDue(link) {
     if (!isCalendarLinkShown(link) || link.firedAt || !link.fireAt) return false;
@@ -123,8 +166,8 @@
       if (sheet.ended) return;
       (sheet.tasks || []).forEach(function (t) {
         if (migrateCalendarReminderToLink(t)) flagged = true;
-        var link = t.calendarLink;
-        if (t.status !== 2 && isCalendarLinkAlarmDue(link) && isMyTaskReminder(sheet, link)) {
+        var link = getMyCalendarLink(sheet, t);
+        if (t.status !== 2 && isCalendarLinkAlarmDue(link)) {
           alarms.push({ id: sheet.id + ":" + t.id + ":cal", title: sheet.name, body: t.text, at: Date.parse(link.fireAt) });
         }
         var r = t.reminder;

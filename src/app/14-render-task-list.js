@@ -746,7 +746,7 @@
       // calendar-set reminders from before the split become links right
       // away, so the first render already shows the calendar icon
       if (migrateCalendarReminderToLink(t)) migratedCalendarReminders = true;
-      var rowCalLink = calPlugin && isCalendarLinkShown(t.calendarLink) && isMyTaskReminder(activeSheet(), t.calendarLink);
+      var rowCalLink = calPlugin && isCalendarLinkShown(getMyCalendarLink(activeSheet(), t));
       var rowAlarm = isTaskReminderActive(t.reminder) && isMyTaskReminder(activeSheet(), t.reminder);
       if (t.status === 2) rowAlarm = false; // a done task's reminder is paused
       if (rowCalLink || rowAlarm) reminderRowsForIconsLayer.push({ task: t, editable: rowEditable, top: li.offsetTop, height: li.offsetHeight, calLink: rowCalLink, alarm: rowAlarm });
@@ -778,6 +778,7 @@
     renderTaskReminderIconsLayer(reminderRowsForIconsLayer);
     if (migratedCalendarReminders) saveData();
     syncNativeTaskAlarms();
+    processCalendarInvites();
     syncNativeWidget();
 
     sheetTitle.textContent = activeSheet().name;

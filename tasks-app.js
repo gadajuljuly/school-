@@ -148,6 +148,10 @@
     removeFromCalendarBtn: { he: "הסרה מלוח השנה", en: "Remove from calendar", ar: "إزالة من التقويم", ru: "Убрать из календаря" },
     removeFromCalendarConfirm: { he: "להסיר את המשימה מלוח השנה? האירוע יימחק מלוח השנה של הטלפון", en: "Remove the task from the calendar? The event will be deleted from the phone's calendar", ar: "إزالة المهمة من التقويم؟ سيتم حذف الحدث من تقويم الهاتف", ru: "Убрать задачу из календаря? Событие будет удалено из календаря телефона" },
     removeFromCalendarMsg: { he: "הוסר מלוח השנה", en: "Removed from the calendar", ar: "أزيل من التقويم", ru: "Убрано из календаря" },
+    calInviteTitle: { he: "שיתוף האירוע בלוח השנה של:", en: "Share the event to the calendar of:", ar: "مشاركة الحدث في تقويم:", ru: "Добавить событие в календарь:" },
+    calInviteNoMembers: { he: "אין עוד משתתפים בפרויקט", en: "No other members in this project", ar: "لا يوجد أعضاء آخرون في المشروع", ru: "В проекте нет других участников" },
+    calInviteSentMsg: { he: "האירוע נשלח ל־{n} משתתפים", en: "Event shared with {n} members", ar: "تمت مشاركة الحدث مع {n} أعضاء", ru: "Событие отправлено участникам: {n}" },
+    calInviteClearedMsg: { he: "השיתוף בוטל", en: "Sharing removed", ar: "تم إلغاء المشاركة", ru: "Общий доступ отменён" },
     calEventMissingMsg: { he: "האירוע כבר לא נמצא בלוח השנה", en: "The event is no longer in the calendar", ar: "الحدث لم يعد موجودًا في التقويم", ru: "Этого события больше нет в календаре" },
     calAppName: { he: "לוח שנה", en: "Calendar", ar: "التقويم", ru: "Календарь" },
     calToday: { he: "היום", en: "Today", ar: "اليوم", ru: "Сегодня" },
@@ -1165,8 +1169,9 @@
     taskCalendarReminderBtn.hidden = !calPlugin;
     var menuCalIcon = taskCalendarReminderBtn.querySelector(".cal-live-icon");
     if (task) migrateCalendarReminderToLink(task);
-    var menuLink = calPlugin && task && isCalendarLinkShown(task.calendarLink) && isMyTaskReminder(activeSheet(), task.calendarLink);
-    if (menuLink) menuCalIcon.dataset.at = task.calendarLink.eventAt;
+    var myLink = task ? getMyCalendarLink(activeSheet(), task) : null;
+    var menuLink = calPlugin && isCalendarLinkShown(myLink);
+    if (menuLink) menuCalIcon.dataset.at = myLink.eventAt;
     else delete menuCalIcon.dataset.at;
     removeFromCalendarBtn.hidden = !menuLink;
     updateLiveCalendarIcons();
@@ -1275,8 +1280,9 @@
       var changed = false;
       allSheets().forEach(function (sheet) {
         (sheet.tasks || []).forEach(function (t) {
-          if (t.calendarLink && !t.calendarLink.firedAt && ids.indexOf(sheet.id + ":" + t.id + ":cal") !== -1) {
-            t.calendarLink.firedAt = new Date().toISOString();
+          var calLink = getMyCalendarLink(sheet, t);
+          if (calLink && !calLink.firedAt && ids.indexOf(sheet.id + ":" + t.id + ":cal") !== -1) {
+            calLink.firedAt = new Date().toISOString();
             changed = true;
           }
           if (t.reminder && ids.indexOf(sheet.id + ":" + t.id) !== -1) {
@@ -1297,6 +1303,48 @@
   // good otherwise, past events included (and on done tasks too).
   function isCalendarLinkShown(link) {
     return !!link && !!link.eventAt;
+  }
+  // On a SHARED project's task every member has their own link (their own
+  // phone's event), in task.calendarLinks[phone]; a member who removed an
+  // event they were invited to keeps a {removed: true} marker there so it
+  // isn't added back. Private projects use the single task.calendarLink.
+  // (A shared task's older single calendarLink {by} still counts for "by".)
+  function getMyCalendarLink(sheet, t) {
+    if (sheet && sheet.shared) {
+      var mine = t.calendarLinks && myPhoneNumber ? t.calendarLinks[myPhoneNumber] : null;
+      if (mine) return mine.removed ? null : mine;
+      return t.calendarLink && isMyTaskReminder(sheet, t.calendarLink) ? t.calendarLink : null;
+    }
+    return t.calendarLink || null;
+  }
+  // Taking my link off a task: an event I was invited to leaves a
+  // "removed" marker (so the invite doesn't add it back); for an event I
+  // shared with others, the invite goes too, which takes it off their
+  // phones as well.
+  function removeMyCalendarLink(sheet, t, link) {
+    var inv = t.calendarInvite;
+    if (inv && inv.by === myPhoneNumber) delete t.calendarInvite;
+    if (link && link.fromInvite) setMyCalendarLink(sheet, t, { removed: true, eventAt: link.eventAt });
+    else setMyCalendarLink(sheet, t, null);
+  }
+  // My shared event moved: everyone I invited follows.
+  function calMoveMyInvite(t, startMs, endAt) {
+    var inv = t.calendarInvite;
+    if (!inv || inv.by !== myPhoneNumber) return;
+    inv.eventAt = new Date(startMs).toISOString();
+    if (endAt) inv.endAt = endAt;
+    inv.title = t.text;
+  }
+  function setMyCalendarLink(sheet, t, link) {
+    if (sheet && sheet.shared) {
+      if (t.calendarLink && isMyTaskReminder(sheet, t.calendarLink)) delete t.calendarLink;
+      if (!myPhoneNumber) return;
+      var links = Object.assign({}, t.calendarLinks);
+      if (link) links[myPhoneNumber] = link; else delete links[myPhoneNumber];
+      if (Object.keys(links).length) t.calendarLinks = links; else delete t.calendarLinks;
+      return;
+    }
+    if (link) t.calendarLink = link; else delete t.calendarLink;
   }
   function isCalendarLinkAlarmDue(link) {
     if (!isCalendarLinkShown(link) || link.firedAt || !link.fireAt) return false;
@@ -1361,8 +1409,8 @@
       if (sheet.ended) return;
       (sheet.tasks || []).forEach(function (t) {
         if (migrateCalendarReminderToLink(t)) flagged = true;
-        var link = t.calendarLink;
-        if (t.status !== 2 && isCalendarLinkAlarmDue(link) && isMyTaskReminder(sheet, link)) {
+        var link = getMyCalendarLink(sheet, t);
+        if (t.status !== 2 && isCalendarLinkAlarmDue(link)) {
           alarms.push({ id: sheet.id + ":" + t.id + ":cal", title: sheet.name, body: t.text, at: Date.parse(link.fireAt) });
         }
         var r = t.reminder;
@@ -1700,23 +1748,25 @@
     var early = startMs - CAL_TASK_REMINDER_LEAD_MS;
     return early > Date.now() ? early : startMs;
   }
-  function calApplyPickedReminder(startMs, eventId) {
+  function calApplyPickedReminder(startMs, eventId, endMs) {
     var pick = calState.pick;
     var sheet = pick && allSheets().find(function (s) { return s.id === pick.sheetId; });
     var task = sheet && (sheet.tasks || []).find(function (t) { return t.id === pick.taskId; });
     if (!task) return;
     migrateCalendarReminderToLink(task);
-    var old = task.calendarLink;
+    var old = getMyCalendarLink(sheet, task);
     if (old && old.eventId != null && String(old.eventId) !== String(eventId)) {
       calPlugin.deleteEvent({ eventId: old.eventId }).catch(function () {});
     }
-    task.calendarLink = {
+    var endAt = new Date(endMs || startMs + 3600000).toISOString();
+    setMyCalendarLink(sheet, task, {
       eventId: eventId,
       eventAt: new Date(startMs).toISOString(),
+      endAt: endAt,
       fireAt: new Date(calReminderFireMs(startMs)).toISOString(),
       firedAt: null
-    };
-    if (sheet.shared) task.calendarLink.by = myPhoneNumber;
+    });
+    calMoveMyInvite(task, startMs, endAt);
     saveData();
     closeCalendarView();
     render();
@@ -1745,25 +1795,174 @@
   }
   // Editing / deleting that event in the calendar carries over to the
   // task's reminder: a new time moves it, deleting the event removes it.
-  function calSyncTaskRemindersForEvent(eventId, startMs, deleted) {
+  // For the member who invited others (calendarInvite.by), the change
+  // carries over to everyone invited: a new time moves their copies,
+  // deleting it removes them.
+  function calSyncTaskRemindersForEvent(eventId, startMs, deleted, endMs) {
     var changed = false;
     allSheets().forEach(function (sheet) {
       (sheet.tasks || []).forEach(function (t) {
         if (migrateCalendarReminderToLink(t)) changed = true;
-        var link = t.calendarLink;
+        var link = getMyCalendarLink(sheet, t);
         if (!link || link.eventId == null || String(link.eventId) !== String(eventId)) return;
         if (deleted) {
-          delete t.calendarLink;
+          removeMyCalendarLink(sheet, t, link);
         } else {
-          if (Date.parse(link.eventAt) === startMs) return;
+          var endAt = endMs ? new Date(endMs).toISOString() : link.endAt;
+          if (Date.parse(link.eventAt) === startMs && link.endAt === endAt) return;
           link.eventAt = new Date(startMs).toISOString();
+          link.endAt = endAt;
           link.fireAt = new Date(calReminderFireMs(startMs)).toISOString();
           link.firedAt = null;
+          calMoveMyInvite(t, startMs, endAt);
         }
         changed = true;
       });
     });
     if (changed) { saveData(); render(); }
+  }
+
+  // ---- sharing a task's calendar event with project members ----
+  // Long-press on a shared task's calendar icon (my own event) -> pick
+  // members -> task.calendarInvite {by, title, eventAt, endAt, invitees}.
+  // Each invited member's app then adds the same event to THEIR phone's
+  // calendar (processCalendarInvites below) and gets the calendar icon and
+  // the 15-minutes-before ring on that task too. Unticking someone, or the
+  // owner removing the event, takes it off their phone again.
+  var calInviteOverlay = document.getElementById("calInviteOverlay");
+  var calInviteList = document.getElementById("calInviteList");
+  var calInviteTarget = null;
+  function openCalendarInviteModal(sheet, task) {
+    var link = getMyCalendarLink(sheet, task);
+    if (!sheet || !sheet.shared || !link) return;
+    calInviteTarget = { sheetId: sheet.id, taskId: task.id };
+    var current = (task.calendarInvite && task.calendarInvite.invitees) || [];
+    calInviteList.innerHTML = "";
+    var others = (sheet.members || []).filter(function (p) { return p && p !== myPhoneNumber; });
+    if (!others.length) {
+      var none = document.createElement("div");
+      none.className = "move-task-empty";
+      none.textContent = tr("calInviteNoMembers");
+      calInviteList.appendChild(none);
+    }
+    others.forEach(function (phone) {
+      var row = document.createElement("label");
+      row.className = "cal-invite-row";
+      var box = document.createElement("input");
+      box.type = "checkbox";
+      box.value = phone;
+      box.checked = current.indexOf(phone) !== -1;
+      var name = document.createElement("span");
+      name.textContent = resolveMemberName(sheet, phone);
+      row.appendChild(box);
+      row.appendChild(name);
+      calInviteList.appendChild(row);
+    });
+    document.getElementById("calInviteTaskText").textContent = task.text;
+    calInviteOverlay.hidden = false;
+  }
+  function closeCalendarInviteModal() {
+    calInviteOverlay.hidden = true;
+    calInviteTarget = null;
+  }
+  document.getElementById("calInviteCancelBtn").addEventListener("click", closeCalendarInviteModal);
+  calInviteOverlay.addEventListener("click", function (e) { if (e.target === calInviteOverlay) closeCalendarInviteModal(); });
+  document.getElementById("calInviteOkBtn").addEventListener("click", function () {
+    var target = calInviteTarget;
+    var invitees = Array.prototype.slice.call(calInviteList.querySelectorAll("input:checked")).map(function (b) { return b.value; });
+    closeCalendarInviteModal();
+    var sheet = target && sharedSheets.find(function (s) { return s.id === target.sheetId; });
+    var task = sheet && sheet.tasks.find(function (t) { return t.id === target.taskId; });
+    var link = task && getMyCalendarLink(sheet, task);
+    if (!link) return;
+    var withEnd = link.endAt ? Promise.resolve(link.endAt) : calPlugin.getEvent({ eventId: link.eventId }).then(function (full) {
+      var endMs = full.dtend || (full.dtstart + (full.durationMs || 3600000));
+      return new Date(endMs).toISOString();
+    }, function () { return new Date(Date.parse(link.eventAt) + 3600000).toISOString(); });
+    withEnd.then(function (endAt) {
+      link.endAt = endAt;
+      if (invitees.length) {
+        task.calendarInvite = { by: myPhoneNumber, title: task.text, eventAt: link.eventAt, endAt: endAt, invitees: invitees };
+      } else {
+        delete task.calendarInvite;
+      }
+      saveData();
+      render();
+      showToast(invitees.length ? tr("calInviteSentMsg").replace("{n}", invitees.length) : tr("calInviteClearedMsg"));
+    });
+  });
+
+  // Runs on every render: brings this phone's calendar in line with the
+  // invites addressed to me on shared projects (add / move / take off).
+  var calInviteBusy = {};
+  var calInvitePermissionAsked = false;
+  function calInviteCalendarId() {
+    return calPlugin.checkPermissions().then(function (st) {
+      if (st && st.calendar === "granted") return true;
+      if (calInvitePermissionAsked) return false;
+      calInvitePermissionAsked = true;
+      return calPlugin.requestPermissions({ permissions: ["calendar"] }).then(function (st2) {
+        return !!(st2 && st2.calendar === "granted");
+      });
+    }).then(function (granted) {
+      if (!granted) return null;
+      return calPlugin.listCalendars().then(function (res) {
+        var writable = ((res && res.calendars) || []).filter(function (c) { return c.writable; });
+        var last = null;
+        try { last = localStorage.getItem(CAL_LAST_CALENDAR_KEY); } catch (e) {}
+        var pick = writable.find(function (c) { return String(c.id) === last; }) ||
+          writable.find(function (c) { return c.primary; }) || writable[0];
+        return pick ? pick.id : null;
+      });
+    });
+  }
+  function processCalendarInvites() {
+    if (!calPlugin || !myPhoneNumber || dataLoadBlocked) return;
+    sharedSheets.forEach(function (sheet) {
+      if (sheet.ended) return;
+      (sheet.tasks || []).forEach(function (t) {
+        var key = sheet.id + ":" + t.id;
+        if (calInviteBusy[key]) return;
+        var inv = t.calendarInvite;
+        var mine = t.calendarLinks ? t.calendarLinks[myPhoneNumber] : null;
+        var invited = inv && inv.by !== myPhoneNumber && (inv.invitees || []).indexOf(myPhoneNumber) !== -1;
+        if (invited) {
+          if (mine && (mine.removed || (mine.eventAt === inv.eventAt && mine.endAt === inv.endAt))) return;
+          calInviteBusy[key] = true;
+          calInviteCalendarId().then(function (calendarId) {
+            if (calendarId == null) return;
+            var start = Date.parse(inv.eventAt);
+            var payload = {
+              calendarId: calendarId, title: inv.title || t.text, allDay: false,
+              start: start, end: Date.parse(inv.endAt) || start + 3600000,
+              rrule: "", reminderMinutes: -1, location: "", description: sheet.name
+            };
+            if (mine && mine.eventId != null) payload.eventId = mine.eventId;
+            return calPlugin.saveEvent(payload).then(function (res) {
+              var live = sheet.tasks.find(function (x) { return x.id === t.id; }) || t;
+              setMyCalendarLink(sheet, live, {
+                eventId: (res && res.eventId != null) ? res.eventId : payload.eventId,
+                eventAt: inv.eventAt, endAt: inv.endAt,
+                fireAt: new Date(calReminderFireMs(start)).toISOString(), firedAt: null,
+                fromInvite: true
+              });
+              saveData();
+              render();
+            });
+          }).catch(function () {}).then(function () { delete calInviteBusy[key]; });
+        } else if (mine && mine.fromInvite) {
+          // no longer invited (unticked, or the owner removed the event)
+          calInviteBusy[key] = true;
+          var gone = mine.eventId != null ? calPlugin.deleteEvent({ eventId: mine.eventId }).catch(function () {}) : Promise.resolve();
+          gone.then(function () {
+            var live = sheet.tasks.find(function (x) { return x.id === t.id; }) || t;
+            setMyCalendarLink(sheet, live, null);
+            saveData();
+            render();
+          }).then(function () { delete calInviteBusy[key]; });
+        }
+      });
+    });
   }
 
   function closeCalendarView() {
@@ -1980,11 +2179,10 @@
     // icon by the task, and a ringing reminder 15 minutes before
     var linkReminder = calCopyType === "task" && !ev.allDay && start.getTime() > Date.now() && ev.eventId != null;
     if (linkReminder) {
-      newTask.calendarLink = {
-        eventId: ev.eventId, eventAt: start.toISOString(),
+      setMyCalendarLink(sheet, newTask, {
+        eventId: ev.eventId, eventAt: start.toISOString(), endAt: new Date(calEventEnd(ev)).toISOString(),
         fireAt: new Date(calReminderFireMs(start.getTime())).toISOString(), firedAt: null
-      };
-      if (sheet.shared) newTask.calendarLink.by = myPhoneNumber;
+      });
     }
     sheet.tasks.push(newTask);
     saveData();
@@ -2393,11 +2591,11 @@
     calPlugin.saveEvent(payload).then(function (res) {
       calCloseEditor();
       if (pickingReminder) {
-        calApplyPickedReminder(start, (res && res.eventId != null) ? res.eventId : payload.eventId);
+        calApplyPickedReminder(start, (res && res.eventId != null) ? res.eventId : payload.eventId, end);
         return;
       }
       showToast(tr("calSavedMsg"));
-      if (payload.eventId != null && !allDay && start > Date.now()) calSyncTaskRemindersForEvent(payload.eventId, start, false);
+      if (payload.eventId != null && !allDay && start > Date.now()) calSyncTaskRemindersForEvent(payload.eventId, start, false, end);
       calLoadAndRender();
     }, function () { alert(tr("calSaveError")); });
   });
@@ -2565,8 +2763,9 @@
       var both = entry.calLink && entry.alarm;
       if (entry.calLink) {
         // linked to a calendar event: a calendar icon with the event's day;
-        // tapping it opens that event in the calendar
-        var link = entry.task.calendarLink;
+        // tapping it opens that event in the calendar; on a shared project,
+        // a long-press on an event of my own shares it with other members
+        var link = getMyCalendarLink(activeSheet(), entry.task);
         var cal = document.createElement("span");
         cal.className = "task-reminder-indicator" + (both ? " is-pair-cal" : "");
         cal.style.top = (entry.top + entry.height / 2) + "px";
@@ -2577,8 +2776,28 @@
         var at = new Date(link.eventAt);
         liveIcon.querySelector(".cal-live-wd").textContent = at.toLocaleDateString(calLocale(), { weekday: "short" });
         liveIcon.querySelector(".cal-live-day").textContent = at.getDate();
+        var calPressFired = false;
+        if (activeSheet().shared && !link.fromInvite) {
+          var calPressTimer = null;
+          var calPressStart = function () {
+            calPressFired = false;
+            clearTimeout(calPressTimer);
+            calPressTimer = setTimeout(function () {
+              calPressFired = true;
+              openCalendarInviteModal(activeSheet(), entry.task);
+            }, 600);
+          };
+          var calPressEnd = function () { clearTimeout(calPressTimer); };
+          cal.addEventListener("mousedown", calPressStart);
+          cal.addEventListener("touchstart", calPressStart, { passive: true });
+          ["mouseup", "mouseleave", "touchend", "touchmove", "touchcancel"].forEach(function (ev) {
+            cal.addEventListener(ev, calPressEnd);
+          });
+          cal.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+        }
         cal.addEventListener("click", function (e) {
           e.stopPropagation();
+          if (calPressFired) { calPressFired = false; return; }
           openTaskCalendarEvent(link);
         });
         taskReminderIconsLayer.appendChild(cal);
@@ -2665,11 +2884,13 @@
   // and the link (calendar icon + its 15-minutes-before ring) from the
   // task; a regular reminder on it stays.
   removeFromCalendarBtn.addEventListener("click", function () {
-    var task = activeSheet().tasks.find(function (t) { return t.id === pendingMoveTaskId; });
+    var sheet = activeSheet();
+    var task = sheet.tasks.find(function (t) { return t.id === pendingMoveTaskId; });
     closeMoveTask();
-    if (!task || !task.calendarLink || !confirm(tr("removeFromCalendarConfirm"))) return;
-    var eventId = task.calendarLink.eventId;
-    delete task.calendarLink;
+    var link = task && getMyCalendarLink(sheet, task);
+    if (!link || !confirm(tr("removeFromCalendarConfirm"))) return;
+    var eventId = link.eventId;
+    removeMyCalendarLink(sheet, task, link);
     saveData();
     render();
     if (calPlugin && eventId != null) calPlugin.deleteEvent({ eventId: eventId }).catch(function () {});
@@ -10666,7 +10887,7 @@
       // calendar-set reminders from before the split become links right
       // away, so the first render already shows the calendar icon
       if (migrateCalendarReminderToLink(t)) migratedCalendarReminders = true;
-      var rowCalLink = calPlugin && isCalendarLinkShown(t.calendarLink) && isMyTaskReminder(activeSheet(), t.calendarLink);
+      var rowCalLink = calPlugin && isCalendarLinkShown(getMyCalendarLink(activeSheet(), t));
       var rowAlarm = isTaskReminderActive(t.reminder) && isMyTaskReminder(activeSheet(), t.reminder);
       if (t.status === 2) rowAlarm = false; // a done task's reminder is paused
       if (rowCalLink || rowAlarm) reminderRowsForIconsLayer.push({ task: t, editable: rowEditable, top: li.offsetTop, height: li.offsetHeight, calLink: rowCalLink, alarm: rowAlarm });
@@ -10698,6 +10919,7 @@
     renderTaskReminderIconsLayer(reminderRowsForIconsLayer);
     if (migratedCalendarReminders) saveData();
     syncNativeTaskAlarms();
+    processCalendarInvites();
     syncNativeWidget();
 
     sheetTitle.textContent = activeSheet().name;
@@ -11575,6 +11797,15 @@
       },
       updateSharedSheetDataSafely: updateSharedSheetDataSafely,
       loadMyOfficeGroups: loadMyOfficeGroups,
+      // another member's change to a shared task arriving (as a refresh would)
+      updateSharedTaskForTest: function (sheetId, taskId, mutate) {
+        var sheet = sharedSheets.find(function (s) { return s.id === sheetId; });
+        var task = sheet && sheet.tasks.find(function (t) { return t.id === taskId; });
+        if (!task) return;
+        mutate(task);
+        sheet._syncedData = JSON.parse(JSON.stringify(Object.assign({}, sheet._syncedData, { tasks: sheet.tasks })));
+        render();
+      },
       addSharedSheetForTest: function (sheet) {
         sheet.siteLogs = (sheet.siteLogs || []).map(normalizeSiteLog);
         sharedSheets.push(sheet);

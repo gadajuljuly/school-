@@ -2612,6 +2612,26 @@
     text-align: center;
     box-shadow: 0 1px 3px var(--shadow);
   }
+  .cal-invite-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 50vh;
+    overflow-y: auto;
+    margin-bottom: 14px;
+  }
+  .cal-invite-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    background: var(--paper-alt);
+    font-size: 0.92rem;
+    cursor: pointer;
+  }
+  .cal-invite-row input { width: 18px; height: 18px; margin: 0; flex: none; }
   .modal-message {
     margin: 0 0 18px;
     font-size: 0.95rem;

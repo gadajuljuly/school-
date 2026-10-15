@@ -746,6 +746,15 @@
       },
       updateSharedSheetDataSafely: updateSharedSheetDataSafely,
       loadMyOfficeGroups: loadMyOfficeGroups,
+      // another member's change to a shared task arriving (as a refresh would)
+      updateSharedTaskForTest: function (sheetId, taskId, mutate) {
+        var sheet = sharedSheets.find(function (s) { return s.id === sheetId; });
+        var task = sheet && sheet.tasks.find(function (t) { return t.id === taskId; });
+        if (!task) return;
+        mutate(task);
+        sheet._syncedData = JSON.parse(JSON.stringify(Object.assign({}, sheet._syncedData, { tasks: sheet.tasks })));
+        render();
+      },
       addSharedSheetForTest: function (sheet) {
         sheet.siteLogs = (sheet.siteLogs || []).map(normalizeSiteLog);
         sharedSheets.push(sheet);

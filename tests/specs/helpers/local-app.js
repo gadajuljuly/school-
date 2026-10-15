@@ -172,11 +172,11 @@ const FAKE_BACKEND = () => {
 };
 
 // Opens the app offline with the fake backend and one shared project.
-async function openWithSharedProject(page, { phone = "+972500000001", sheet, sheets }) {
+async function openWithSharedProject(page, { phone = "+972500000001", sheet, sheets, native = false }) {
   sheets = sheets || [sheet];
   await page.addInitScript(() => { window.__itaskTestHooks = (h) => { window.__hooks = h; }; });
   await page.addInitScript(FAKE_BACKEND);
-  await openLocalApp(page);
+  await openLocalApp(page, { native });
   await page.evaluate(({ phone, sheets }) => {
     const copy = (o) => JSON.parse(JSON.stringify(o));
     window.__backend.tables.shared_projects = sheets.map((sheet) => ({

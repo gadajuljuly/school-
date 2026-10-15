@@ -35,7 +35,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<link rel="stylesheet" href="tasks.css?v=3b06f7318b">
+<link rel="stylesheet" href="tasks.css?v=3eb58b7212">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -136,6 +136,17 @@
         <button type="button" class="modal-btn modal-btn-no" id="shareTaskCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </form>
+  </div>
+</div>
+<div class="modal-overlay" id="calInviteOverlay" hidden style="z-index:41">
+  <div class="modal-box" role="alertdialog" aria-modal="true">
+    <p class="modal-message" data-i18n="calInviteTitle">שיתוף האירוע בלוח השנה של:</p>
+    <p class="modal-submessage" id="calInviteTaskText"></p>
+    <div class="cal-invite-list" id="calInviteList"></div>
+    <div class="modal-actions">
+      <button type="button" class="modal-btn modal-btn-yes" id="calInviteOkBtn" data-i18n="confirmBtn">אישור</button>
+      <button type="button" class="modal-btn modal-btn-no" id="calInviteCancelBtn" data-i18n="cancelBtn">ביטול</button>
+    </div>
   </div>
 </div>
 <div class="modal-overlay" id="datePickOverlay" hidden style="z-index:46">
@@ -973,6 +984,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=533e061437"></script>
+<script src="tasks-app.js?v=639ee94c63"></script>
 </body>
 </html>
