@@ -152,3 +152,28 @@ test("an old calendar-set reminder is converted to a calendar link", async ({ pa
     expect.objectContaining({ id: "s1:t1:cal", at: when.ms - 15 * 60000 }),
   ]);
 });
+
+test("in the calendar, events linked to a task stand out in ITASK's colour", async ({ page }) => {
+  const when = inDays(1, 10, 0);
+  const today = inDays(0, 0, 0).date;
+  await openLocalApp(page, {
+    native: true,
+    data: { activeSheetId: "s1", sheets: [{ id: "s1", name: "פרויקט", reports: [], files: [], tasks: [{
+      id: "t1", text: "סיור", status: 0, type: "task", date: today, createdAt: 1,
+      calendarLink: { eventId: 100, eventAt: new Date(when.ms).toISOString(), fireAt: new Date(when.ms - 900000).toISOString(), firedAt: null },
+    }] }] },
+  });
+  await page.evaluate((ms) => {
+    window.__native.events[100] = { id: 100, title: "סיור", start: ms, end: ms + 3600000, calendarId: 1 };
+    window.__native.events[101] = { id: 101, title: "רופא", start: ms + 7200000, end: ms + 10800000, calendarId: 1 };
+  }, when.ms);
+  // the task's calendar icon opens that day
+  await iconsLayer(page).locator(".task-reminder-indicator").click();
+  await page.locator("#calEvCancelBtn").click();
+  const linked = page.locator(".cal-event-block", { hasText: "סיור" });
+  const other = page.locator(".cal-event-block", { hasText: "רופא" });
+  await expect(linked).toHaveClass(/cal-itask/);
+  await expect(linked).toHaveCSS("background-color", "rgb(201, 81, 44)");
+  await expect(other).not.toHaveClass(/cal-itask/);
+  await expect(other).not.toHaveCSS("background-color", "rgb(201, 81, 44)");
+});

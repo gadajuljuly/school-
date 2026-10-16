@@ -2080,7 +2080,26 @@
     });
   }
 
+  // Events linked to an ITASK task (a task put in the calendar, or an event
+  // turned into a task) show in the app's own terracotta with a gold edge,
+  // apart from the rest of the phone's events.
+  var CAL_ITASK_COLOR = "#c9512c";
+  var calLinkedEventIds = {};
+  function calCollectLinkedEventIds() {
+    var ids = {};
+    allSheets().forEach(function (sheet) {
+      (sheet.tasks || []).forEach(function (t) {
+        var link = getMyCalendarLink(sheet, t);
+        if (link && link.eventId != null) ids[String(link.eventId)] = true;
+      });
+    });
+    calLinkedEventIds = ids;
+  }
+  function calIsItaskEvent(ev) { return !!calLinkedEventIds[String(ev.eventId)]; }
+  function calEventColor(ev) { return calIsItaskEvent(ev) ? CAL_ITASK_COLOR : calColor(ev.color); }
+
   function calRender() {
+    calCollectLinkedEventIds();
     calRenderTitle();
     calBody.innerHTML = "";
     if (calState.mode === "month") calRenderMonth();
@@ -2111,8 +2130,8 @@
   // calendar - a timed event gets a coloured dot, an all-day one a bar.
   function calChip(ev) {
     var chip = document.createElement("span");
-    var color = calColor(ev.color);
-    chip.className = "cal-chip" + (ev.allDay ? "" : " timed");
+    var color = calEventColor(ev);
+    chip.className = "cal-chip" + (ev.allDay ? "" : " timed") + (calIsItaskEvent(ev) ? " cal-itask" : "");
     if (ev.allDay) chip.style.background = color;
     else chip.style.setProperty("--chip-color", color);
     chip.textContent = ev.title || tr("calNoTitle");
@@ -2331,8 +2350,8 @@
       });
       calLayoutTimed(calEventsOn(day).filter(function (ev) { return !ev.allDay; }), day).forEach(function (item) {
         var block = document.createElement("div");
-        block.className = "cal-event-block";
-        block.style.background = calColor(item.ev.color);
+        block.className = "cal-event-block" + (calIsItaskEvent(item.ev) ? " cal-itask" : "");
+        block.style.background = calEventColor(item.ev);
         block.style.top = item.top + "px";
         block.style.height = Math.max(item.height, 18) + "px";
         block.style.insetInlineStart = (item.lane / item.lanes * 100) + "%";
@@ -2400,7 +2419,8 @@
         row.className = "cal-agenda-item";
         var dot = document.createElement("span");
         dot.className = "cal-agenda-dot";
-        dot.style.background = calColor(ev.color);
+        dot.style.background = calEventColor(ev);
+        if (calIsItaskEvent(ev)) row.classList.add("cal-itask");
         var time = document.createElement("span");
         time.className = "cal-agenda-time";
         time.dir = "ltr";

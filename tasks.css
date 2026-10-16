@@ -2612,6 +2612,11 @@
     text-align: center;
     box-shadow: 0 1px 3px var(--shadow);
   }
+  /* calendar events linked to an ITASK task */
+  .cal-event-block.cal-itask { box-shadow: inset 3px 0 0 #d4a017; font-weight: 700; }
+  html[dir="rtl"] .cal-event-block.cal-itask { box-shadow: inset -3px 0 0 #d4a017; }
+  .cal-chip.cal-itask { font-weight: 700; }
+  .cal-agenda-item.cal-itask .cal-agenda-dot { box-shadow: 0 0 0 2px #d4a017; }
   .image-viewer {
     position: fixed;
     inset: 0;
