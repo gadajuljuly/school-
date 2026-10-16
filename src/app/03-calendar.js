@@ -279,8 +279,12 @@
         var occ = (calState.events || []).find(function (ev) {
           return String(ev.eventId) === String(link.eventId);
         });
-        if (occ) calOpenEditor(occ);
-        else showToast(tr("calEventMissingMsg"));
+        if (occ) { calOpenEditor(occ); return; }
+        // not on its day any more: deleted, or moved in the phone's own
+        // calendar app - check now, and drop or follow the link
+        calVerifyLinks(true).then(function (result) {
+          showToast(tr(result.removed ? "calEventGoneRemovedMsg" : "calEventMissingMsg"));
+        });
       });
     });
   }
@@ -475,6 +479,72 @@
         }
       });
     });
+  }
+
+  // Events deleted (or moved) straight in the phone's calendar app never
+  // tell ITASK. So, every couple of minutes while the app is in use (and
+  // right away when an icon leads nowhere), each of my links is checked:
+  // still on its day -> fine; found elsewhere -> the link follows it;
+  // gone -> the link (calendar icon + its ring) is removed. Instances are
+  // used rather than the event row itself, since a deleted event's row can
+  // linger, flagged deleted, until the account syncs. Only with calendar
+  // access already granted - never asks.
+  var CAL_VERIFY_EVERY_MS = 2 * 60000;
+  var calVerifyLastAt = 0;
+  var calVerifyRunning = null;
+  function calInstancesAround(ms) {
+    var dayMs = 86400000;
+    return calPlugin.listEvents({ from: ms - dayMs, to: ms + dayMs }).then(function (res) {
+      return (res && res.events) || [];
+    });
+  }
+  function calVerifyLinks(force) {
+    if (!calPlugin) return Promise.resolve({ removed: 0 });
+    if (calVerifyRunning) return calVerifyRunning;
+    if (!force && Date.now() - calVerifyLastAt < CAL_VERIFY_EVERY_MS) return Promise.resolve({ removed: 0 });
+    calVerifyLastAt = Date.now();
+    var removed = 0, changed = false;
+    calVerifyRunning = calPlugin.checkPermissions().then(function (st) {
+      if (!st || st.calendar !== "granted") return;
+      var checks = [];
+      allSheets().forEach(function (sheet) {
+        (sheet.tasks || []).forEach(function (t) {
+          var link = getMyCalendarLink(sheet, t);
+          if (!link || link.eventId == null || !link.eventAt) return;
+          var id = String(link.eventId);
+          var hasIt = function (evs) { return evs.find(function (ev) { return String(ev.eventId) === id; }); };
+          checks.push(calInstancesAround(Date.parse(link.eventAt)).then(function (evs) {
+            if (hasIt(evs)) return;
+            return calPlugin.getEvent({ eventId: link.eventId }).then(function (full) {
+              return calInstancesAround(full.dtstart).then(function (evs2) {
+                var occ = hasIt(evs2);
+                if (!occ) return "gone";
+                // moved in the phone's calendar: follow it
+                var startMs = occ.allDay ? calEventStart(occ).getTime() : occ.begin;
+                link.eventAt = new Date(startMs).toISOString();
+                link.endAt = new Date(occ.end).toISOString();
+                link.fireAt = new Date(calReminderFireMs(startMs)).toISOString();
+                link.firedAt = null;
+                calMoveMyInvite(t, startMs, link.endAt);
+                changed = true;
+              });
+            }, function () { return "gone"; }).then(function (verdict) {
+              if (verdict !== "gone") return;
+              var live = (sheet.tasks || []).find(function (x) { return x.id === t.id; }) || t;
+              removeMyCalendarLink(sheet, live, getMyCalendarLink(sheet, live));
+              removed++;
+              changed = true;
+            });
+          }).catch(function () {}));
+        });
+      });
+      return Promise.all(checks);
+    }).catch(function () {}).then(function () {
+      calVerifyRunning = null;
+      if (changed) { saveData(); render(); }
+      return { removed: removed };
+    });
+    return calVerifyRunning;
   }
 
   function closeCalendarView() {

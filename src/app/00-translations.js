@@ -160,6 +160,7 @@
     calInviteNoMembers: { he: "אין עוד משתתפים בפרויקט", en: "No other members in this project", ar: "لا يوجد أعضاء آخرون في المشروع", ru: "В проекте нет других участников" },
     calInviteSentMsg: { he: "האירוע נשלח ל־{n} משתתפים", en: "Event shared with {n} members", ar: "تمت مشاركة الحدث مع {n} أعضاء", ru: "Событие отправлено участникам: {n}" },
     calInviteClearedMsg: { he: "השיתוף בוטל", en: "Sharing removed", ar: "تم إلغاء المشاركة", ru: "Общий доступ отменён" },
+    calEventGoneRemovedMsg: { he: "האירוע נמחק מלוח השנה, ולכן הוסר גם מהמשימה", en: "The event was deleted from the calendar, so it was removed from the task too", ar: "حُذف الحدث من التقويم، لذا أزيل من المهمة أيضًا", ru: "Событие удалено из календаря, поэтому убрано и из задачи" },
     calEventMissingMsg: { he: "האירוע כבר לא נמצא בלוח השנה", en: "The event is no longer in the calendar", ar: "الحدث لم يعد موجودًا في التقويم", ru: "Этого события больше нет в календаре" },
     calAppName: { he: "לוח שנה", en: "Calendar", ar: "التقويم", ru: "Календарь" },
     calToday: { he: "היום", en: "Today", ar: "اليوم", ru: "Сегодня" },

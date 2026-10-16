@@ -27,7 +27,7 @@ const calIcon = (page) => page.locator("#taskReminderIconsLayer .task-reminder-i
 
 test("owner: long-press the calendar icon, pick members, they're invited", async ({ page }) => {
   await openWithSharedProject(page, {
-    phone: A, native: true,
+    phone: A, native: true, calendarEvents: [{ id: 100, title: "סיור באתר", start: start.getTime(), end: end.getTime() }],
     sheet: sheetWith({ calendarLinks: { [A]: { eventId: 100, eventAt: EVENT_AT, endAt: END_AT, fireAt: EVENT_AT, firedAt: null } } }),
   });
   await expect(calIcon(page)).toHaveCount(1);
@@ -153,7 +153,7 @@ test("invited member who removes it from their calendar doesn't get it back", as
 
 test("owner removing the event withdraws the invite from everyone", async ({ page }) => {
   await openWithSharedProject(page, {
-    phone: A, native: true,
+    phone: A, native: true, calendarEvents: [{ id: 100, title: "סיור באתר", start: start.getTime(), end: end.getTime() }],
     sheet: sheetWith({
       calendarLinks: { [A]: { eventId: 100, eventAt: EVENT_AT, endAt: END_AT, fireAt: EVENT_AT, firedAt: null } },
       calendarInvite: { by: A, title: "סיור באתר", eventAt: EVENT_AT, endAt: END_AT, invitees: [B, C] },

@@ -60,7 +60,7 @@ const NATIVE_FAKE = () => {
   };
 };
 
-async function openLocalApp(page, { native = false, data = null } = {}) {
+async function openLocalApp(page, { native = false, data = null, calendarEvents = null } = {}) {
   page.on("pageerror", (err) => console.log(`[pageerror] ${err}`));
   // only the app's own files - no Supabase, Firebase or CDNs
   await page.route("**/*", (route) => {
@@ -69,6 +69,12 @@ async function openLocalApp(page, { native = false, data = null } = {}) {
     return route.abort();
   });
   if (native) await page.addInitScript(NATIVE_FAKE);
+  // events already in the fake phone calendar: [{id, title, start, end}]
+  if (native && calendarEvents) {
+    await page.addInitScript((evs) => {
+      evs.forEach((e) => { window.__native.events[e.id] = Object.assign({ calendarId: 1 }, e); });
+    }, calendarEvents);
+  }
   if (data) {
     await page.addInitScript((d) => {
       if (!sessionStorage.getItem("__seeded")) {
@@ -183,11 +189,11 @@ const FAKE_BACKEND = () => {
 };
 
 // Opens the app offline with the fake backend and one shared project.
-async function openWithSharedProject(page, { phone = "+972500000001", sheet, sheets, native = false }) {
+async function openWithSharedProject(page, { phone = "+972500000001", sheet, sheets, native = false, calendarEvents = null }) {
   sheets = sheets || [sheet];
   await page.addInitScript(() => { window.__itaskTestHooks = (h) => { window.__hooks = h; }; });
   await page.addInitScript(FAKE_BACKEND);
-  await openLocalApp(page, { native });
+  await openLocalApp(page, { native, calendarEvents });
   await page.evaluate(({ phone, sheets }) => {
     const copy = (o) => JSON.parse(JSON.stringify(o));
     window.__backend.tables.shared_projects = sheets.map((sheet) => ({

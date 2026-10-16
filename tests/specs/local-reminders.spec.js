@@ -136,6 +136,7 @@ test("an old calendar-set reminder is converted to a calendar link", async ({ pa
   const today = inDays(0, 0, 0).date;
   await openLocalApp(page, {
     native: true,
+    calendarEvents: [{ id: 55, title: "ישן", start: when.ms, end: when.ms + 3600000 }],
     data: {
       activeSheetId: "s1",
       sheets: [{ id: "s1", name: "פרויקט", tasks: [{
@@ -158,15 +159,15 @@ test("in the calendar, events linked to a task stand out in ITASK's colour", asy
   const today = inDays(0, 0, 0).date;
   await openLocalApp(page, {
     native: true,
+    calendarEvents: [
+      { id: 100, title: "סיור", start: when.ms, end: when.ms + 3600000 },
+      { id: 101, title: "רופא", start: when.ms + 7200000, end: when.ms + 10800000 },
+    ],
     data: { activeSheetId: "s1", sheets: [{ id: "s1", name: "פרויקט", reports: [], files: [], tasks: [{
       id: "t1", text: "סיור", status: 0, type: "task", date: today, createdAt: 1,
       calendarLink: { eventId: 100, eventAt: new Date(when.ms).toISOString(), fireAt: new Date(when.ms - 900000).toISOString(), firedAt: null },
     }] }] },
   });
-  await page.evaluate((ms) => {
-    window.__native.events[100] = { id: 100, title: "סיור", start: ms, end: ms + 3600000, calendarId: 1 };
-    window.__native.events[101] = { id: 101, title: "רופא", start: ms + 7200000, end: ms + 10800000, calendarId: 1 };
-  }, when.ms);
   // the task's calendar icon opens that day
   await iconsLayer(page).locator(".task-reminder-indicator").click();
   await page.locator("#calEvCancelBtn").click();
@@ -176,4 +177,24 @@ test("in the calendar, events linked to a task stand out in ITASK's colour", asy
   await expect(linked).toHaveCSS("background-color", "rgb(201, 81, 44)");
   await expect(other).not.toHaveClass(/cal-itask/);
   await expect(other).not.toHaveCSS("background-color", "rgb(201, 81, 44)");
+});
+
+test("a task's calendar link follows its event: moved in the phone's calendar, or deleted there", async ({ page }) => {
+  const when = inDays(1, 10, 0);
+  const moved = inDays(3, 14, 0);
+  const today = inDays(0, 0, 0).date;
+  const linked = (id, text) => ({
+    id, text, status: 0, type: "task", date: today, createdAt: 1,
+    calendarLink: { eventId: id === "t1" ? 100 : 200, eventAt: new Date(when.ms).toISOString(), fireAt: new Date(when.ms - 900000).toISOString(), firedAt: null },
+  });
+  await openLocalApp(page, {
+    native: true,
+    // event 100 was moved to another day; event 200 was deleted
+    calendarEvents: [{ id: 100, title: "סיור", start: moved.ms, end: moved.ms + 3600000 }],
+    data: { activeSheetId: "s1", sheets: [{ id: "s1", name: "פרויקט", reports: [], files: [], tasks: [linked("t1", "סיור"), linked("t2", "ישיבה")] }] },
+  });
+  // (the app checks its links against the phone calendar on its own)
+  await expect(calendarIcon(page)).toHaveCount(1); // only the moved one is left
+  await expect(calendarIcon(page).locator(".cal-live-day")).toHaveText(String(new Date(moved.ms).getDate()));
+  await expect.poll(() => alarms(page)).toEqual([expect.objectContaining({ id: "s1:t1:cal", at: moved.ms - 15 * 60000 })]);
 });

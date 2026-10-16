@@ -790,6 +790,7 @@
     if (migratedCalendarReminders) saveData();
     syncNativeTaskAlarms();
     processCalendarInvites();
+    if (!dataLoadBlocked) calVerifyLinks(false);
     syncNativeWidget();
 
     sheetTitle.textContent = activeSheet().name;

@@ -747,6 +747,7 @@
       updateSharedSheetDataSafely: updateSharedSheetDataSafely,
       loadMyOfficeGroups: loadMyOfficeGroups,
       checkPendingProjectInvites: checkPendingProjectInvites,
+      verifyCalendarLinks: function () { return calVerifyLinks(true); },
       // another member's change to a shared task arriving (as a refresh would)
       updateSharedTaskForTest: function (sheetId, taskId, mutate) {
         var sheet = sharedSheets.find(function (s) { return s.id === sheetId; });
