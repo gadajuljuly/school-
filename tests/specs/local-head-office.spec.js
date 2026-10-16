@@ -102,3 +102,26 @@ test("a sent procurement order shows up as a Head Office notification, opens the
   await page.locator(".sheet-tab", { hasText: "הזמנות רכש" }).click();
   await expect(note).toHaveCount(0);
 });
+
+test("Head Office 'הזנת נתונים': six folders, each a list of names that's kept", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheet: project("p1", "בניין A") });
+  await expect(page.locator("#officeDataBtn")).toBeHidden(); // only in Head Office mode
+  await becomeHeadOffice(page);
+  await page.locator("#officeDataBtn").click();
+  const folders = page.locator("#officeDataFolders .library-item-name");
+  await expect(folders).toHaveText(["מהנדסים", "מנהלי עבודה", "פועלים", "מפעילים", "צוותים", "מודדים"]);
+
+  await page.locator("#officeDataFolders .library-item", { hasText: "מודדים" }).click();
+  await expect(page.locator("#officeDataTitle")).toHaveText("מודדים");
+  await page.locator("#officeDataList .site-log-add-btn").click();
+  await page.locator("#officeDataList .site-log-add-input").fill("יוסי מדידות");
+  await page.locator("#officeDataList .site-log-add-input").press("Enter");
+  await expect(page.locator("#officeDataList .site-log-entry", { hasText: "יוסי מדידות" })).toBeVisible();
+
+  await page.locator("#officeDataBackBtn").click(); // back to the folders
+  await expect(page.locator("#officeDataFolders .library-item", { hasText: "מודדים" })).toContainText("(1)");
+  const saved = await page.evaluate(() => JSON.parse(Object.entries(localStorage).find(([k]) => k.startsWith("daily-tasks-sheets-v1"))[1]).officeDirectory);
+  expect(saved.surveyors.map((e) => e.name)).toEqual(["יוסי מדידות"]);
+  await page.locator("#officeDataBackBtn").click(); // and out
+  await expect(page.locator("#officeDataView")).toBeHidden();
+});

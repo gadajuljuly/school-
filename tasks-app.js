@@ -151,6 +151,13 @@
     calInviteTitle: { he: "שיתוף האירוע בלוח השנה של:", en: "Share the event to the calendar of:", ar: "مشاركة الحدث في تقويم:", ru: "Добавить событие в календарь:" },
     chatFileOpeningMsg: { he: "פותח את הקובץ...", en: "Opening the file...", ar: "جارٍ فتح الملف...", ru: "Открываю файл..." },
     chatFileSavingMsg: { he: "שומר בספריית הפרויקט...", en: "Saving to the project library...", ar: "جارٍ الحفظ في مكتبة المشروع...", ru: "Сохраняю в библиотеку проекта..." },
+    officeDataTitle: { he: "הזנת נתונים", en: "Data entry", ar: "إدخال البيانات", ru: "Ввод данных" },
+    officeDataEngineers: { he: "מהנדסים", en: "Engineers", ar: "المهندسون", ru: "Инженеры" },
+    officeDataForemen: { he: "מנהלי עבודה", en: "Foremen", ar: "مديرو العمل", ru: "Прорабы" },
+    officeDataWorkers: { he: "פועלים", en: "Workers", ar: "العمال", ru: "Рабочие" },
+    officeDataOperators: { he: "מפעילים", en: "Operators", ar: "المشغلون", ru: "Операторы" },
+    officeDataCrews: { he: "צוותים", en: "Crews", ar: "الطواقم", ru: "Бригады" },
+    officeDataSurveyors: { he: "מודדים", en: "Surveyors", ar: "المساحون", ru: "Геодезисты" },
     chatSaveFolderTitle: { he: "לאיזו תיקייה בספרייה לשמור?", en: "Save to which library folder?", ar: "في أي مجلد في المكتبة تريد الحفظ؟", ru: "В какую папку библиотеки сохранить?" },
     chatFileSavedToFolderMsg: { he: "נשמר בספריית הפרויקט › {folder}", en: "Saved to the project library › {folder}", ar: "تم الحفظ في مكتبة المشروع › {folder}", ru: "Сохранено в библиотеке проекта › {folder}" },
     chatFileSavedToLibraryMsg: { he: "נשמר בספריית הפרויקט › הורדות", en: "Saved to the project library › Downloads", ar: "تم الحفظ في مكتبة المشروع › التنزيلات", ru: "Сохранено в библиотеке проекта › Загрузки" },
@@ -9044,6 +9051,80 @@
   // than from the combined reports screen: "back" then returns to the
   // notifications list, not to the reports screen it never came from.
   var officeProcurementFromNotification = false;
+  // ---- Head Office "הזנת נתונים" ----
+  // Six folders (engineers, foremen, workers, operators, crews,
+  // surveyors), each a list of names kept with this account's own data
+  // (data.officeDirectory[key]).
+  var OFFICE_DATA_FOLDERS = [
+    { key: "engineers", label: "officeDataEngineers" },
+    { key: "foremen", label: "officeDataForemen" },
+    { key: "workers", label: "officeDataWorkers" },
+    { key: "operators", label: "officeDataOperators" },
+    { key: "crews", label: "officeDataCrews" },
+    { key: "surveyors", label: "officeDataSurveyors" }
+  ];
+  var officeDataBtn = document.getElementById("officeDataBtn");
+  var officeDataView = document.getElementById("officeDataView");
+  var officeDataTitleEl = document.getElementById("officeDataTitle");
+  var officeDataFoldersEl = document.getElementById("officeDataFolders");
+  var officeDataListEl = document.getElementById("officeDataList");
+  var officeDataOpenKey = null;
+  function officeDirectory() {
+    if (!data.officeDirectory) data.officeDirectory = {};
+    return data.officeDirectory;
+  }
+  function renderOfficeDataFolders() {
+    officeDataOpenKey = null;
+    officeDataTitleEl.textContent = tr("officeDataTitle");
+    officeDataListEl.hidden = true;
+    officeDataFoldersEl.hidden = false;
+    officeDataFoldersEl.innerHTML = "";
+    OFFICE_DATA_FOLDERS.forEach(function (f) {
+      var item = document.createElement("div");
+      item.className = "library-item";
+      item.dataset.key = f.key;
+      var thumb = document.createElement("div");
+      thumb.className = "library-item-thumb";
+      thumb.textContent = "📁";
+      var name = document.createElement("div");
+      name.className = "library-item-name";
+      var count = (officeDirectory()[f.key] || []).length;
+      name.textContent = tr(f.label) + (count ? " (" + count + ")" : "");
+      item.appendChild(thumb);
+      item.appendChild(name);
+      item.addEventListener("click", function () { openOfficeDataFolder(f); });
+      officeDataFoldersEl.appendChild(item);
+    });
+  }
+  function openOfficeDataFolder(f) {
+    officeDataOpenKey = f.key;
+    officeDataTitleEl.textContent = tr(f.label);
+    officeDataFoldersEl.hidden = true;
+    officeDataListEl.hidden = false;
+    var rerender = function () { openOfficeDataFolder(f); };
+    renderSiteLogNameList(officeDataListEl, function () {
+      return officeDirectory()[f.key] || [];
+    }, function (name) {
+      var dir = officeDirectory();
+      var entry = { id: uid(), name: name };
+      dir[f.key] = (dir[f.key] || []).concat([entry]);
+      return entry;
+    }, function (id) {
+      var dir = officeDirectory();
+      dir[f.key] = (dir[f.key] || []).filter(function (e) { return e.id !== id; });
+    }, rerender);
+  }
+  officeDataBtn.addEventListener("click", function () {
+    state.menuOpen = false;
+    renderOfficeDataFolders();
+    officeDataView.hidden = false;
+    render();
+  });
+  document.getElementById("officeDataBackBtn").addEventListener("click", function () {
+    if (officeDataOpenKey) { renderOfficeDataFolders(); return; }
+    officeDataView.hidden = true;
+  });
+
   function openOfficeProcurementView(filterSheetId, filterDate) {
     officeProcurementFromNotification = !!filterSheetId;
     closeOfficeReportTypeModal();
@@ -10871,6 +10952,7 @@
     // combining every shared project at once (see officeReportsBtn below).
     calendarFabBtn.hidden = isHeadOfficeMode;
     officeReportsBtn.hidden = !isHeadOfficeMode;
+    officeDataBtn.hidden = !isHeadOfficeMode;
     reportFabBtn.hidden = isHeadOfficeMode;
 
     var STATUS_LABEL = { 0: tr("statusPartial"), 1: tr("statusDone"), 2: tr("statusReset") };

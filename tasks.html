@@ -35,7 +35,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<link rel="stylesheet" href="tasks.css?v=2d3f661fe2">
+<link rel="stylesheet" href="tasks.css?v=51dac00195">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -411,6 +411,9 @@
       <button type="button" class="tasks-fab calendar-fab" id="officeReportsBtn" data-i18n-title="officeReportsBtnTitle" title="דוחות מרוכזים" hidden>
         <img src="tasks-office-reports-icon.webp" alt="">
       </button>
+      <button type="button" class="tasks-fab calendar-fab" id="officeDataBtn" data-i18n-title="officeDataTitle" title="הזנת נתונים" hidden>
+        <img src="tasks-data-entry-icon.webp" alt="">
+      </button>
       <button type="button" class="report-fab" id="reportFabBtn" data-i18n-title="reportsBtnTitle" title="דוחות פגישות וסיורים">
         <img src="tasks-report-icon.webp" alt="">
       </button>
@@ -603,6 +606,15 @@
         <div class="library-item-name" data-i18n="siteLogTools">כלים</div>
       </div>
     </div>
+  </div>
+
+  <div class="report-view" id="officeDataView" hidden>
+    <div class="report-head">
+      <button type="button" class="report-back-btn" id="officeDataBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
+      <div class="report-head-title" id="officeDataTitle" data-i18n="officeDataTitle">הזנת נתונים</div>
+    </div>
+    <div class="library-grid" id="officeDataFolders"></div>
+    <div class="office-data-list" id="officeDataList" hidden></div>
   </div>
 
   <div class="report-view" id="officeReportOptionsView" hidden>
@@ -997,6 +1009,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=f533568cde"></script>
+<script src="tasks-app.js?v=790d6be5ac"></script>
 </body>
 </html>

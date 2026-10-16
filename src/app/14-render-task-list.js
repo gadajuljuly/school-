@@ -415,6 +415,7 @@
     // combining every shared project at once (see officeReportsBtn below).
     calendarFabBtn.hidden = isHeadOfficeMode;
     officeReportsBtn.hidden = !isHeadOfficeMode;
+    officeDataBtn.hidden = !isHeadOfficeMode;
     reportFabBtn.hidden = isHeadOfficeMode;
 
     var STATUS_LABEL = { 0: tr("statusPartial"), 1: tr("statusDone"), 2: tr("statusReset") };
