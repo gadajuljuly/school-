@@ -151,6 +151,8 @@
     calInviteTitle: { he: "שיתוף האירוע בלוח השנה של:", en: "Share the event to the calendar of:", ar: "مشاركة الحدث في تقويم:", ru: "Добавить событие в календарь:" },
     chatFileOpeningMsg: { he: "פותח את הקובץ...", en: "Opening the file...", ar: "جارٍ فتح الملف...", ru: "Открываю файл..." },
     chatFileSavingMsg: { he: "שומר בספריית הפרויקט...", en: "Saving to the project library...", ar: "جارٍ الحفظ في مكتبة المشروع...", ru: "Сохраняю в библиотеку проекта..." },
+    chatSaveFolderTitle: { he: "לאיזו תיקייה בספרייה לשמור?", en: "Save to which library folder?", ar: "في أي مجلد في المكتبة تريد الحفظ؟", ru: "В какую папку библиотеки сохранить?" },
+    chatFileSavedToFolderMsg: { he: "נשמר בספריית הפרויקט › {folder}", en: "Saved to the project library › {folder}", ar: "تم الحفظ في مكتبة المشروع › {folder}", ru: "Сохранено в библиотеке проекта › {folder}" },
     chatFileSavedToLibraryMsg: { he: "נשמר בספריית הפרויקט › הורדות", en: "Saved to the project library › Downloads", ar: "تم الحفظ في مكتبة المشروع › التنزيلات", ru: "Сохранено в библиотеке проекта › Загрузки" },
     chatFileSaveError: { he: "לא הצלחנו לשמור את הקובץ - נסו שוב", en: "Couldn't save the file - try again", ar: "تعذر حفظ الملف - حاول مرة أخرى", ru: "Не удалось сохранить файл - попробуйте ещё раз" },
     libraryFolderDownloads: { he: "הורדות", en: "Downloads", ar: "التنزيلات", ru: "Загрузки" },
@@ -4296,53 +4298,44 @@
   }
   imageViewerOverlay.addEventListener("click", closeImageViewer);
 
-  // ⬇ on a chat file: a copy goes into this project's library, in its
-  // "הורדות" folder (created on first use).
-  function ensureKeyedLibraryFolder(sheet, key) {
-    var isIt = function (f) { return f.key === key; };
-    return new Promise(function (resolve) {
-      ensureLibraryFolders(sheet, function (folders) {
-        var existing = folders.find(isIt);
-        if (existing) { resolve(existing.id); return; }
-        var newId = uid();
-        if (sheet.shared) {
-          applySharedLibraryFolders(sheet.id, function (liveFolders) {
-            if (liveFolders.some(isIt)) return liveFolders;
-            return liveFolders.concat([{ id: newId, key: key, name: null, files: [] }]);
-          }).then(function (updated) {
-            var folder = updated.find(isIt);
-            resolve(folder ? folder.id : newId);
-          });
-        } else {
-          var liveSheet = data.sheets.find(function (s) { return s.id === sheet.id; });
-          if (!liveSheet.folders) liveSheet.folders = folders;
-          var folder = liveSheet.folders.find(isIt);
-          if (!folder) {
-            folder = { id: newId, key: key, name: null, files: [] };
-            liveSheet.folders.push(folder);
-            saveData();
-          }
-          resolve(folder.id);
-        }
-      });
-    });
-  }
+  // ⬇ asks which of the project's library folders to save into ("הורדות"
+  // first, then the rest), then files a copy there.
+  var chatSaveFolderOverlay = document.getElementById("chatSaveFolderOverlay");
+  var chatSaveFolderList = document.getElementById("chatSaveFolderList");
   function saveChatFileToLibrary(sheetId, m) {
     var sheet = sharedSheets.find(function (s) { return s.id === sheetId; });
     if (!sheet || !supabaseClient) return;
+    ensureLibraryFolders(sheet, function (folders) {
+      chatSaveFolderList.innerHTML = "";
+      var ordered = folders.filter(function (f) { return f.key === "downloads"; })
+        .concat(folders.filter(function (f) { return f.key !== "downloads"; }));
+      ordered.forEach(function (folder) {
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.textContent = "📁 " + folderDisplayName(folder);
+        btn.addEventListener("click", function () {
+          chatSaveFolderOverlay.hidden = true;
+          saveChatFileToFolder(sheet, m, folder);
+        });
+        chatSaveFolderList.appendChild(btn);
+      });
+      chatSaveFolderOverlay.hidden = false;
+    });
+  }
+  document.getElementById("chatSaveFolderCancelBtn").addEventListener("click", function () { chatSaveFolderOverlay.hidden = true; });
+  chatSaveFolderOverlay.addEventListener("click", function (e) { if (e.target === chatSaveFolderOverlay) chatSaveFolderOverlay.hidden = true; });
+  function saveChatFileToFolder(sheet, m, folder) {
     var fileName = m.fileName || "file";
     showToast(tr("chatFileSavingMsg"));
     fetchFileBlob(m.fileUrl).then(function (blob) {
-      return ensureKeyedLibraryFolder(sheet, "downloads").then(function (folderId) {
-        var path = sheet.id + "/" + folderId + "/" + uid() + "-" + safeStorageFileName(fileName);
-        return supabaseClient.storage.from(LIBRARY_BUCKET).upload(path, blob, { contentType: m.fileType || blob.type }).then(function (result) {
-          if (result.error) throw result.error;
-          var entry = { id: uid(), name: fileName, path: path, type: m.fileType || blob.type || "", size: blob.size || 0, uploadedAt: Date.now() };
-          return addFileToLibraryFolder(sheet, folderId, entry);
-        });
+      var path = sheet.id + "/" + folder.id + "/" + uid() + "-" + safeStorageFileName(fileName);
+      return supabaseClient.storage.from(LIBRARY_BUCKET).upload(path, blob, { contentType: m.fileType || blob.type }).then(function (result) {
+        if (result.error) throw result.error;
+        var entry = { id: uid(), name: fileName, path: path, type: m.fileType || blob.type || "", size: blob.size || 0, uploadedAt: Date.now() };
+        return addFileToLibraryFolder(sheet, folder.id, entry);
       });
     }).then(function () {
-      showToast(tr("chatFileSavedToLibraryMsg"));
+      showToast(tr("chatFileSavedToFolderMsg").replace("{folder}", folderDisplayName(folder)));
     }, function () {
       alert(tr("chatFileSaveError"));
     });
@@ -5023,7 +5016,9 @@
   var activeLibrarySheetId = null;
   var activeLibraryFolderId = null;
 
-  var DEFAULT_LIBRARY_FOLDER_KEYS = ["plans", "photos", "diaries", "reports", "procurementOrders", "attendanceReports", "toolsReports"];
+  // Built-in folders: present in every project (added to older ones on the
+  // next library open) and can't be deleted.
+  var DEFAULT_LIBRARY_FOLDER_KEYS = ["plans", "photos", "diaries", "reports", "procurementOrders", "attendanceReports", "toolsReports", "downloads"];
   var LIBRARY_FOLDER_KEY_LABELS = {
     plans: "libraryFolderPlans",
     photos: "libraryFolderPhotos",

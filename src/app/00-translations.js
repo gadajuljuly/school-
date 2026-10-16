@@ -150,6 +150,8 @@
     calInviteTitle: { he: "שיתוף האירוע בלוח השנה של:", en: "Share the event to the calendar of:", ar: "مشاركة الحدث في تقويم:", ru: "Добавить событие в календарь:" },
     chatFileOpeningMsg: { he: "פותח את הקובץ...", en: "Opening the file...", ar: "جارٍ فتح الملف...", ru: "Открываю файл..." },
     chatFileSavingMsg: { he: "שומר בספריית הפרויקט...", en: "Saving to the project library...", ar: "جارٍ الحفظ في مكتبة المشروع...", ru: "Сохраняю в библиотеку проекта..." },
+    chatSaveFolderTitle: { he: "לאיזו תיקייה בספרייה לשמור?", en: "Save to which library folder?", ar: "في أي مجلد في المكتبة تريد الحفظ؟", ru: "В какую папку библиотеки сохранить?" },
+    chatFileSavedToFolderMsg: { he: "נשמר בספריית הפרויקט › {folder}", en: "Saved to the project library › {folder}", ar: "تم الحفظ في مكتبة المشروع › {folder}", ru: "Сохранено в библиотеке проекта › {folder}" },
     chatFileSavedToLibraryMsg: { he: "נשמר בספריית הפרויקט › הורדות", en: "Saved to the project library › Downloads", ar: "تم الحفظ في مكتبة المشروع › التنزيلات", ru: "Сохранено в библиотеке проекта › Загрузки" },
     chatFileSaveError: { he: "לא הצלחנו לשמור את הקובץ - נסו שוב", en: "Couldn't save the file - try again", ar: "تعذر حفظ الملف - حاول مرة أخرى", ru: "Не удалось сохранить файл - попробуйте ещё раз" },
     libraryFolderDownloads: { he: "הורדות", en: "Downloads", ar: "التنزيلات", ru: "Загрузки" },

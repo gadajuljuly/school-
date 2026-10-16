@@ -124,20 +124,31 @@ test("an image someone sent opens full-screen inside the app", async ({ page }) 
   await expect(page.locator("#imageViewerOverlay")).toBeHidden();
 });
 
-test("⬇ on a chat file saves a copy in the project's library, folder 'הורדות'", async ({ page }) => {
+test("⬇ on a chat file asks which library folder, then saves a copy there", async ({ page }) => {
   await openWithSharedProject(page, { phone: ME, sheet: SHEET });
   await sendFileMessage(page, { fileName: "תוכנית.pdf", fileType: "application/pdf" });
   await page.locator("#chatBtn").click();
   await page.locator(".chat-bubble-download-btn").click();
-  await expect.poll(async () => {
+  const picker = page.locator("#chatSaveFolderOverlay");
+  await expect(picker).toBeVisible();
+  await expect(picker.locator("#chatSaveFolderList button").first()).toContainText("הורדות");
+  await picker.locator("#chatSaveFolderList button", { hasText: "תוכניות" }).click();
+  await expect(picker).toBeHidden();
+  const filesIn = async (key) => {
     const folders = (await page.evaluate(() => window.__backend.tables.shared_projects[0].data.folders)) || [];
-    const dl = folders.find((f) => f.key === "downloads");
-    return dl && dl.files.map((f) => f.name);
-  }).toEqual(["תוכנית.pdf"]);
+    const f = folders.find((x) => x.key === key);
+    return f && f.files.map((x) => x.name);
+  };
+  await expect.poll(() => filesIn("plans")).toEqual(["תוכנית.pdf"]);
+  expect(await filesIn("downloads")).toEqual([]);
   const up = await page.evaluate(() => window.__backend.uploads);
   expect(up).toEqual([expect.objectContaining({ path: expect.stringMatching(/^sh1\/.+\.pdf$/) })]);
-  // it shows up in the library under "הורדות"
+});
+
+test("'הורדות' is a built-in library folder that can't be deleted", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheet: SHEET });
   await page.locator("#libraryBtn").click();
-  await page.locator("#libraryFoldersGrid .library-item", { hasText: "הורדות" }).click();
-  await expect(page.locator("#libraryGrid")).toContainText("תוכנית.pdf");
+  const dl = page.locator("#libraryFoldersGrid .library-item", { hasText: "הורדות" });
+  await expect(dl).toBeVisible();
+  await expect(dl.locator(".library-item-delete")).toHaveCount(0);
 });

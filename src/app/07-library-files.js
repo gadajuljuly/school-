@@ -32,7 +32,9 @@
   var activeLibrarySheetId = null;
   var activeLibraryFolderId = null;
 
-  var DEFAULT_LIBRARY_FOLDER_KEYS = ["plans", "photos", "diaries", "reports", "procurementOrders", "attendanceReports", "toolsReports"];
+  // Built-in folders: present in every project (added to older ones on the
+  // next library open) and can't be deleted.
+  var DEFAULT_LIBRARY_FOLDER_KEYS = ["plans", "photos", "diaries", "reports", "procurementOrders", "attendanceReports", "toolsReports", "downloads"];
   var LIBRARY_FOLDER_KEY_LABELS = {
     plans: "libraryFolderPlans",
     photos: "libraryFolderPhotos",
