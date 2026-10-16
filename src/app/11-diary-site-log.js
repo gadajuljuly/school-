@@ -636,7 +636,10 @@
   // site-log category (attendance columns, contractors, ...): renders the
   // existing entries plus a + that turns into a text input, committing a
   // new entry and putting a fresh + below it once you start typing.
-  function renderSiteLogNameList(container, getEntries, addEntry, removeEntry, rerender) {
+  // getSuggestions (optional): names offered while typing - Head Office's
+  // "הזנת נתונים" lists for this column, minus names already entered.
+  var siteLogSuggestSeq = 0;
+  function renderSiteLogNameList(container, getEntries, addEntry, removeEntry, rerender, getSuggestions) {
     container.innerHTML = "";
 
     function buildRow(entry) {
@@ -677,6 +680,20 @@
       input.type = "text";
       input.className = "site-log-add-input";
       input.maxLength = 60;
+      var suggestions = getSuggestions ? getSuggestions() : [];
+      if (suggestions.length) {
+        var taken = getEntries().map(function (e) { return e.name; });
+        var listEl = document.createElement("datalist");
+        listEl.id = "siteLogSuggest" + (++siteLogSuggestSeq);
+        suggestions.forEach(function (name) {
+          if (taken.indexOf(name) !== -1) return;
+          var opt = document.createElement("option");
+          opt.value = name;
+          listEl.appendChild(opt);
+        });
+        container.appendChild(listEl);
+        input.setAttribute("list", listEl.id);
+      }
       container.replaceChild(input, addBtn);
       input.focus();
       var committed = false;
@@ -739,7 +756,8 @@
         var log = findSiteLog(activeSheet(), activeSiteLogDate);
         if (log) log.attendance[colKey] = log.attendance[colKey].filter(function (e) { return e.id !== id; });
       },
-      renderSiteLogAttendanceColumns
+      renderSiteLogAttendanceColumns,
+      function () { return officeDirectoryNames(activeSheet(), ATTENDANCE_TO_OFFICE_FOLDER[colKey]); }
     );
 
     col.appendChild(body);
@@ -897,7 +915,8 @@
         var log = findSiteLog(activeSheet(), activeSiteLogDate);
         if (log) log.contractors = log.contractors.filter(function (e) { return e.id !== id; });
       },
-      renderSiteLogContractorsList
+      renderSiteLogContractorsList,
+      function () { return officeDirectoryNames(activeSheet(), "crews"); }
     );
   }
 

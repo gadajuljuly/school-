@@ -125,3 +125,51 @@ test("Head Office 'הזנת נתונים': six folders, each a list of names tha
   await page.locator("#officeDataBackBtn").click(); // and out
   await expect(page.locator("#officeDataView")).toBeHidden();
 });
+
+test("Head Office's lists reach its projects, and stay there when members save", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheet: Object.assign(project("p1", "בניין A"), {
+    tasks: [{ id: "k1", text: "משימה", status: 0, type: "task", date: TODAY, createdAt: 1 }],
+  }) });
+  await becomeHeadOffice(page);
+  await page.locator("#officeDataBtn").click();
+  await page.locator("#officeDataFolders .library-item", { hasText: "פועלים" }).click();
+  await page.locator("#officeDataList .site-log-add-btn").click();
+  await page.locator("#officeDataList .site-log-add-input").fill("משה כהן");
+  await page.locator("#officeDataList .site-log-add-input").press("Enter");
+  const serverDir = () => page.evaluate(() => window.__backend.tables.shared_projects[0].data.officeDirectory);
+  await expect.poll(async () => ((await serverDir()) || {}).workers?.map((e) => e.name)).toEqual(["משה כהן"]);
+
+  // a member's later save of the project keeps the lists
+  await page.locator("#officeDataBackBtn").click();
+  await page.locator("#officeDataBackBtn").click();
+  await page.locator("#headOfficeIconBtn").click(); // back to normal mode
+  await page.locator(".sheet-tab", { hasText: "בניין A" }).click();
+  await page.locator("#taskList li.task", { hasText: "משימה" }).click();
+  await expect.poll(async () => (await page.evaluate(() => window.__backend.tables.shared_projects[0].data.tasks[0].status))).toBe(1);
+  expect(((await serverDir()) || {}).workers.map((e) => e.name)).toEqual(["משה כהן"]);
+});
+
+test("in a project's diary, Head Office's lists are suggested while typing a name", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheet: Object.assign(project("p1", "בניין A"), {
+    officeDirectory: { workers: [{ id: "a", name: "משה כהן" }, { id: "b", name: "רון לוי" }], crews: [{ id: "c", name: "צוות אלפא" }] },
+  }) });
+  await page.locator("#calendarFabBtn").click();
+  await page.locator("#siteLogAttendanceBtn").click();
+  const workers = page.locator("#siteLogAttendanceColumns .site-log-col").nth(2);
+  await workers.locator(".site-log-add-btn").click();
+  const input = workers.locator(".site-log-add-input");
+  const listId = await input.getAttribute("list");
+  expect(listId).toBeTruthy();
+  await expect(page.locator(`#${listId} option`)).toHaveCount(2);
+  expect(await page.locator(`#${listId} option`).evaluateAll((os) => os.map((o) => o.value))).toEqual(["משה כהן", "רון לוי"]);
+  // a column without a list gets no suggestions
+  const consultants = page.locator("#siteLogAttendanceColumns .site-log-col").nth(4);
+  await consultants.locator(".site-log-add-btn").click();
+  expect(await consultants.locator(".site-log-add-input").getAttribute("list")).toBeNull();
+
+  await page.locator("#siteLogAttendanceBackBtn").click();
+  await page.locator("#siteLogContractorsBtn").click();
+  await page.locator("#siteLogContractorsList .site-log-add-btn").click();
+  const cid = await page.locator("#siteLogContractorsList .site-log-add-input").getAttribute("list");
+  expect(await page.locator(`#${cid} option`).evaluateAll((os) => os.map((o) => o.value))).toEqual(["צוות אלפא"]);
+});

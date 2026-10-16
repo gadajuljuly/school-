@@ -218,6 +218,7 @@
       files: d.files || [],
       siteLogs: siteLogs,
       folders: d.folders || null,
+      officeDirectory: d.officeDirectory || null,
       ended: ended,
       endedDate: endedDate,
       logoId: logoId,

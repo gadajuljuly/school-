@@ -591,6 +591,37 @@
     if (!data.officeDirectory) data.officeDirectory = {};
     return data.officeDirectory;
   }
+  // Which list feeds which diary field: attendance columns, and צוותים ->
+  // the contractors (קבלנים) list.
+  var ATTENDANCE_TO_OFFICE_FOLDER = {
+    engineer: "engineers", foreman: "foremen", workers: "workers",
+    operators: "operators", surveyor: "surveyors"
+  };
+  function officeDirectoryNames(sheet, key) {
+    var dir = sheet && (sheet.officeDirectory || (!sheet.shared && data.officeDirectory));
+    return key && dir && dir[key] ? dir[key].map(function (e) { return e.name; }) : [];
+  }
+  // Head Office hands its lists to every project it watches
+  // (data.officeDirectory there), so whoever fills a project's diary gets
+  // them as suggestions. Only projects whose copy differs are written.
+  var officeDirectoryPublishTimer = null;
+  function publishOfficeDirectory() {
+    clearTimeout(officeDirectoryPublishTimer);
+    officeDirectoryPublishTimer = setTimeout(function () {
+      if (!isHeadOfficeMode || !supabaseClient) return;
+      var dir = JSON.parse(JSON.stringify(officeDirectory()));
+      var json = JSON.stringify(dir);
+      officeReportSheets().forEach(function (sheet) {
+        if (JSON.stringify(sheet.officeDirectory || {}) === json) return;
+        updateSharedSheetDataSafely(sheet.id, function (current) {
+          return Object.assign({}, current, { officeDirectory: dir });
+        }).then(function () {
+          var live = sharedSheets.find(function (s) { return s.id === sheet.id; });
+          if (live) live.officeDirectory = dir;
+        }, function () {});
+      });
+    }, 800);
+  }
   function renderOfficeDataFolders() {
     officeDataOpenKey = null;
     officeDataTitleEl.textContent = tr("officeDataTitle");
@@ -626,14 +657,17 @@
       var dir = officeDirectory();
       var entry = { id: uid(), name: name };
       dir[f.key] = (dir[f.key] || []).concat([entry]);
+      publishOfficeDirectory();
       return entry;
     }, function (id) {
       var dir = officeDirectory();
       dir[f.key] = (dir[f.key] || []).filter(function (e) { return e.id !== id; });
+      publishOfficeDirectory();
     }, rerender);
   }
   officeDataBtn.addEventListener("click", function () {
     state.menuOpen = false;
+    publishOfficeDirectory(); // projects added since the last change get the lists too
     renderOfficeDataFolders();
     officeDataView.hidden = false;
     render();

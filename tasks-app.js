@@ -5275,6 +5275,11 @@
       var currentData = (row && row.data) || {};
       var currentVersion = (row && row.data_version) || 1;
       var newData = mutateFn(currentData);
+      // keep fields this writer doesn't know about (e.g. officeDirectory,
+      // written by Head Office) instead of dropping them
+      Object.keys(currentData).forEach(function (k) {
+        if (!(k in newData)) newData[k] = currentData[k];
+      });
       return supabaseClient.from(SHARED_TABLE)
         .update({ data: newData, data_version: currentVersion + 1, updated_at: new Date().toISOString() })
         .eq("id", sheetId).eq("data_version", currentVersion)
@@ -7613,7 +7618,10 @@
   // site-log category (attendance columns, contractors, ...): renders the
   // existing entries plus a + that turns into a text input, committing a
   // new entry and putting a fresh + below it once you start typing.
-  function renderSiteLogNameList(container, getEntries, addEntry, removeEntry, rerender) {
+  // getSuggestions (optional): names offered while typing - Head Office's
+  // "הזנת נתונים" lists for this column, minus names already entered.
+  var siteLogSuggestSeq = 0;
+  function renderSiteLogNameList(container, getEntries, addEntry, removeEntry, rerender, getSuggestions) {
     container.innerHTML = "";
 
     function buildRow(entry) {
@@ -7654,6 +7662,20 @@
       input.type = "text";
       input.className = "site-log-add-input";
       input.maxLength = 60;
+      var suggestions = getSuggestions ? getSuggestions() : [];
+      if (suggestions.length) {
+        var taken = getEntries().map(function (e) { return e.name; });
+        var listEl = document.createElement("datalist");
+        listEl.id = "siteLogSuggest" + (++siteLogSuggestSeq);
+        suggestions.forEach(function (name) {
+          if (taken.indexOf(name) !== -1) return;
+          var opt = document.createElement("option");
+          opt.value = name;
+          listEl.appendChild(opt);
+        });
+        container.appendChild(listEl);
+        input.setAttribute("list", listEl.id);
+      }
       container.replaceChild(input, addBtn);
       input.focus();
       var committed = false;
@@ -7716,7 +7738,8 @@
         var log = findSiteLog(activeSheet(), activeSiteLogDate);
         if (log) log.attendance[colKey] = log.attendance[colKey].filter(function (e) { return e.id !== id; });
       },
-      renderSiteLogAttendanceColumns
+      renderSiteLogAttendanceColumns,
+      function () { return officeDirectoryNames(activeSheet(), ATTENDANCE_TO_OFFICE_FOLDER[colKey]); }
     );
 
     col.appendChild(body);
@@ -7874,7 +7897,8 @@
         var log = findSiteLog(activeSheet(), activeSiteLogDate);
         if (log) log.contractors = log.contractors.filter(function (e) { return e.id !== id; });
       },
-      renderSiteLogContractorsList
+      renderSiteLogContractorsList,
+      function () { return officeDirectoryNames(activeSheet(), "crews"); }
     );
   }
 
@@ -9073,6 +9097,37 @@
     if (!data.officeDirectory) data.officeDirectory = {};
     return data.officeDirectory;
   }
+  // Which list feeds which diary field: attendance columns, and צוותים ->
+  // the contractors (קבלנים) list.
+  var ATTENDANCE_TO_OFFICE_FOLDER = {
+    engineer: "engineers", foreman: "foremen", workers: "workers",
+    operators: "operators", surveyor: "surveyors"
+  };
+  function officeDirectoryNames(sheet, key) {
+    var dir = sheet && (sheet.officeDirectory || (!sheet.shared && data.officeDirectory));
+    return key && dir && dir[key] ? dir[key].map(function (e) { return e.name; }) : [];
+  }
+  // Head Office hands its lists to every project it watches
+  // (data.officeDirectory there), so whoever fills a project's diary gets
+  // them as suggestions. Only projects whose copy differs are written.
+  var officeDirectoryPublishTimer = null;
+  function publishOfficeDirectory() {
+    clearTimeout(officeDirectoryPublishTimer);
+    officeDirectoryPublishTimer = setTimeout(function () {
+      if (!isHeadOfficeMode || !supabaseClient) return;
+      var dir = JSON.parse(JSON.stringify(officeDirectory()));
+      var json = JSON.stringify(dir);
+      officeReportSheets().forEach(function (sheet) {
+        if (JSON.stringify(sheet.officeDirectory || {}) === json) return;
+        updateSharedSheetDataSafely(sheet.id, function (current) {
+          return Object.assign({}, current, { officeDirectory: dir });
+        }).then(function () {
+          var live = sharedSheets.find(function (s) { return s.id === sheet.id; });
+          if (live) live.officeDirectory = dir;
+        }, function () {});
+      });
+    }, 800);
+  }
   function renderOfficeDataFolders() {
     officeDataOpenKey = null;
     officeDataTitleEl.textContent = tr("officeDataTitle");
@@ -9108,14 +9163,17 @@
       var dir = officeDirectory();
       var entry = { id: uid(), name: name };
       dir[f.key] = (dir[f.key] || []).concat([entry]);
+      publishOfficeDirectory();
       return entry;
     }, function (id) {
       var dir = officeDirectory();
       dir[f.key] = (dir[f.key] || []).filter(function (e) { return e.id !== id; });
+      publishOfficeDirectory();
     }, rerender);
   }
   officeDataBtn.addEventListener("click", function () {
     state.menuOpen = false;
+    publishOfficeDirectory(); // projects added since the last change get the lists too
     renderOfficeDataFolders();
     officeDataView.hidden = false;
     render();
@@ -11678,6 +11736,7 @@
       files: d.files || [],
       siteLogs: siteLogs,
       folders: d.folders || null,
+      officeDirectory: d.officeDirectory || null,
       ended: ended,
       endedDate: endedDate,
       logoId: logoId,

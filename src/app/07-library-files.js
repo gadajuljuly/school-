@@ -193,6 +193,11 @@
       var currentData = (row && row.data) || {};
       var currentVersion = (row && row.data_version) || 1;
       var newData = mutateFn(currentData);
+      // keep fields this writer doesn't know about (e.g. officeDirectory,
+      // written by Head Office) instead of dropping them
+      Object.keys(currentData).forEach(function (k) {
+        if (!(k in newData)) newData[k] = currentData[k];
+      });
       return supabaseClient.from(SHARED_TABLE)
         .update({ data: newData, data_version: currentVersion + 1, updated_at: new Date().toISOString() })
         .eq("id", sheetId).eq("data_version", currentVersion)
