@@ -25,3 +25,11 @@ test("a note is added as a note, not a task", async ({ page }) => {
   await row.click();
   await expect(row).not.toHaveClass(/partial|done/);
 });
+
+test("project tabs are in alphabetical order (numbers as numbers)", async ({ page }) => {
+  const sheet = (id, name) => ({ id, name, tasks: [], reports: [], files: [] });
+  await openLocalApp(page, { data: { activeSheetId: "s1", sheets: [
+    sheet("s1", "גשר"), sheet("s2", "אולם"), sheet("s3", "פרויקט 10"), sheet("s4", "בניין"), sheet("s5", "פרויקט 2"),
+  ] } });
+  await expect(page.locator("#sheetsBarPrivate .sheet-tab:not(.add-sheet-tab)")).toHaveText([/אולם/, /בניין/, /גשר/, /פרויקט 2/, /פרויקט 10/]);
+});

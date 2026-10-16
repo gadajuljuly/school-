@@ -10372,12 +10372,23 @@
   // exact same tab bar/task list.
   var viewingArchive = false;
   var lastActiveSheetIdBeforeArchive = null;
+  // Tabs (and swiping between them) go in alphabetical order of the
+  // project names, by the rules of the app's current language (numbers
+  // in names compare as numbers: "פרויקט 2" before "פרויקט 10"); Head
+  // Office's own tab stays first, and private projects come before shared
+  // ones (they're two rows of tabs; swiping goes through both in turn).
+  function compareSheetNames(a, b) {
+    if (a.id === HEAD_OFFICE_SHEET_ID) return -1;
+    if (b.id === HEAD_OFFICE_SHEET_ID) return 1;
+    if (!!a.shared !== !!b.shared) return a.shared ? 1 : -1; // private row, then shared
+    return String(a.name || "").localeCompare(String(b.name || ""), calLocale(), { numeric: true, sensitivity: "base" });
+  }
   function visibleSheets() {
     return allSheets().filter(function (s) {
       if (s.id === HEAD_OFFICE_SHEET_ID) return isHeadOfficeMode && !viewingArchive;
       if (isHeadOfficeMode && !s.shared) return false;
       return !!s.ended === viewingArchive;
-    });
+    }).sort(compareSheetNames);
   }
   // An ended project's task view is a record of how things stood the day it
   // ended - it's pinned to (and can never browse past) sheet.endedDate. Every
