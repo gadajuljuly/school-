@@ -152,6 +152,9 @@
     chatFileOpeningMsg: { he: "פותח את הקובץ...", en: "Opening the file...", ar: "جارٍ فتح الملف...", ru: "Открываю файл..." },
     chatFileSavingMsg: { he: "שומר בספריית הפרויקט...", en: "Saving to the project library...", ar: "جارٍ الحفظ في مكتبة المشروع...", ru: "Сохраняю в библиотеку проекта..." },
     officeDataTitle: { he: "הזנת נתונים", en: "Data entry", ar: "إدخال البيانات", ru: "Ввод данных" },
+    officeDataNameLabel: { he: "שם", en: "Name", ar: "الاسم", ru: "Имя" },
+    officeDataIdLabel: { he: "ת\"ז (לא חובה)", en: "ID no. (optional)", ar: "رقم الهوية (اختياري)", ru: "№ удостов. (необяз.)" },
+    officeDataIdShort: { he: "ת\"ז", en: "ID", ar: "هوية", ru: "ID" },
     officeDataEngineers: { he: "מהנדסים", en: "Engineers", ar: "المهندسون", ru: "Инженеры" },
     officeDataForemen: { he: "מנהלי עבודה", en: "Foremen", ar: "مديرو العمل", ru: "Прорабы" },
     officeDataWorkers: { he: "פועלים", en: "Workers", ar: "العمال", ru: "Рабочие" },
@@ -9156,20 +9159,93 @@
     officeDataTitleEl.textContent = tr(f.label);
     officeDataFoldersEl.hidden = true;
     officeDataListEl.hidden = false;
-    var rerender = function () { openOfficeDataFolder(f); };
-    renderSiteLogNameList(officeDataListEl, function () {
-      return officeDirectory()[f.key] || [];
-    }, function (name) {
+    renderOfficeDataEntries(f);
+  }
+  // Each person: a name and an optional ID number (ת"ז). "+" opens two
+  // labelled fields side by side; ✓ (or Enter) adds the person.
+  function renderOfficeDataEntries(f) {
+    officeDataListEl.innerHTML = "";
+    var entries = officeDirectory()[f.key] || [];
+    entries.forEach(function (entry) {
+      var row = document.createElement("div");
+      row.className = "site-log-entry office-data-entry";
+      var text = document.createElement("span");
+      var nameEl = document.createElement("span");
+      nameEl.className = "office-data-name";
+      nameEl.textContent = entry.name;
+      text.appendChild(nameEl);
+      if (entry.idNumber) {
+        var idEl = document.createElement("span");
+        idEl.className = "office-data-idnum";
+        idEl.textContent = tr("officeDataIdShort") + " " + entry.idNumber;
+        text.appendChild(idEl);
+      }
+      row.appendChild(text);
+      var removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "site-log-entry-remove";
+      removeBtn.textContent = "✕";
+      removeBtn.addEventListener("click", function () {
+        var dir = officeDirectory();
+        dir[f.key] = (dir[f.key] || []).filter(function (e) { return e.id !== entry.id; });
+        saveData();
+        publishOfficeDirectory();
+        renderOfficeDataEntries(f);
+      });
+      row.appendChild(removeBtn);
+      officeDataListEl.appendChild(row);
+    });
+
+    var addBtn = document.createElement("button");
+    addBtn.type = "button";
+    addBtn.className = "site-log-add-btn";
+    addBtn.innerHTML = '<img src="tasks-plus-icon.webp" alt="+">';
+    addBtn.addEventListener("click", function () { showOfficeDataForm(f, addBtn); });
+    officeDataListEl.appendChild(addBtn);
+  }
+  function showOfficeDataForm(f, addBtn) {
+    var form = document.createElement("form");
+    form.className = "office-data-form";
+    function field(labelKey, extraClass) {
+      var wrap = document.createElement("label");
+      wrap.className = "office-data-field " + extraClass;
+      var cap = document.createElement("span");
+      cap.className = "office-data-field-label";
+      cap.textContent = tr(labelKey);
+      var input = document.createElement("input");
+      input.type = "text";
+      input.className = "auth-input";
+      wrap.appendChild(cap);
+      wrap.appendChild(input);
+      form.appendChild(wrap);
+      return input;
+    }
+    var nameInput = field("officeDataNameLabel", "office-data-field-name");
+    nameInput.maxLength = 60;
+    nameInput.required = true;
+    var idInput = field("officeDataIdLabel", "office-data-field-id");
+    idInput.maxLength = 12;
+    idInput.inputMode = "numeric";
+    var ok = document.createElement("button");
+    ok.type = "submit";
+    ok.className = "office-data-ok";
+    ok.textContent = "✓";
+    form.appendChild(ok);
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var name = nameInput.value.trim();
+      if (!name) { nameInput.focus(); return; }
       var dir = officeDirectory();
       var entry = { id: uid(), name: name };
+      var idNumber = idInput.value.replace(/\D/g, "");
+      if (idNumber) entry.idNumber = idNumber;
       dir[f.key] = (dir[f.key] || []).concat([entry]);
+      saveData();
       publishOfficeDirectory();
-      return entry;
-    }, function (id) {
-      var dir = officeDirectory();
-      dir[f.key] = (dir[f.key] || []).filter(function (e) { return e.id !== id; });
-      publishOfficeDirectory();
-    }, rerender);
+      renderOfficeDataEntries(f);
+    });
+    officeDataListEl.replaceChild(form, addBtn);
+    nameInput.focus();
   }
   officeDataBtn.addEventListener("click", function () {
     state.menuOpen = false;

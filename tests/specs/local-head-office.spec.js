@@ -117,16 +117,31 @@ test("Head Office 'הזנת נתונים': six folders, each a list of names tha
   await expect(page.locator("#officeDataFolders")).toBeHidden();
   await expect(page.locator("#officeDataList .site-log-add-btn")).toBeInViewport();
   await page.locator("#officeDataList .site-log-add-btn").click();
-  await page.locator("#officeDataList .site-log-add-input").fill("יוסי מדידות");
-  await page.locator("#officeDataList .site-log-add-input").press("Enter");
-  await expect(page.locator("#officeDataList .site-log-entry", { hasText: "יוסי מדידות" })).toBeVisible();
+  // two labelled fields side by side: name, and an optional ID number
+  const nameField = page.locator(".office-data-field-name");
+  const idField = page.locator(".office-data-field-id");
+  await expect(nameField.locator(".office-data-field-label")).toHaveText("שם");
+  await expect(idField.locator(".office-data-field-label")).toHaveText('ת"ז (לא חובה)');
+  const nb = await nameField.locator("input").boundingBox(), ib = await idField.locator("input").boundingBox();
+  expect(Math.abs(nb.y - ib.y)).toBeLessThan(5); // side by side
+  await nameField.locator("input").fill("יוסי מדידות");
+  await idField.locator("input").fill("012345678");
+  await page.locator(".office-data-ok").click();
+  const row = page.locator("#officeDataList .office-data-entry", { hasText: "יוסי מדידות" });
+  await expect(row).toBeVisible();
+  await expect(row).toContainText("012345678");
+  // the ID is optional
+  await page.locator("#officeDataList .site-log-add-btn").click();
+  await page.locator(".office-data-field-name input").fill("דני");
+  await page.locator(".office-data-field-name input").press("Enter");
+  await expect(page.locator("#officeDataList .office-data-entry", { hasText: "דני" })).toBeVisible();
 
   await page.locator("#officeDataBackBtn").click(); // back to the folders
   await expect(page.locator("#officeDataFolders")).toBeVisible();
   await expect(page.locator("#officeDataList")).toBeHidden();
-  await expect(page.locator("#officeDataFolders .library-item", { hasText: "מודדים" })).toContainText("(1)");
+  await expect(page.locator("#officeDataFolders .library-item", { hasText: "מודדים" })).toContainText("(2)");
   const saved = await page.evaluate(() => JSON.parse(Object.entries(localStorage).find(([k]) => k.startsWith("daily-tasks-sheets-v1"))[1]).officeDirectory);
-  expect(saved.surveyors.map((e) => e.name)).toEqual(["יוסי מדידות"]);
+  expect(saved.surveyors.map((e) => [e.name, e.idNumber || null])).toEqual([["יוסי מדידות", "012345678"], ["דני", null]]);
   await page.locator("#officeDataBackBtn").click(); // and out
   await expect(page.locator("#officeDataView")).toBeHidden();
 });
@@ -139,8 +154,8 @@ test("Head Office's lists reach its projects, and stay there when members save",
   await page.locator("#officeDataBtn").click();
   await page.locator("#officeDataFolders .library-item", { hasText: "פועלים" }).click();
   await page.locator("#officeDataList .site-log-add-btn").click();
-  await page.locator("#officeDataList .site-log-add-input").fill("משה כהן");
-  await page.locator("#officeDataList .site-log-add-input").press("Enter");
+  await page.locator(".office-data-field-name input").fill("משה כהן");
+  await page.locator(".office-data-ok").click();
   const serverDir = () => page.evaluate(() => window.__backend.tables.shared_projects[0].data.officeDirectory);
   await expect.poll(async () => ((await serverDir()) || {}).workers?.map((e) => e.name)).toEqual(["משה כהן"]);
 
