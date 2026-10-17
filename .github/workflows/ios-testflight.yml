@@ -1,0 +1,162 @@
+# Builds the ITASK iPhone app on a GitHub macOS runner and uploads it to
+# TestFlight. Manual only: Actions -> "iOS TestFlight" -> Run workflow.
+#
+# Needed repository secrets (Settings -> Secrets and variables -> Actions):
+#   APPLE_TEAM_ID              10-character Team ID (developer.apple.com -> Membership)
+#   ASC_KEY_ID                 App Store Connect API key ID
+#   ASC_ISSUER_ID              App Store Connect API issuer ID
+#   ASC_KEY_P8                 full text of the AuthKey_XXXX.p8 file
+#   GOOGLE_SERVICE_INFO_PLIST  optional - full text of Firebase's iOS
+#                              GoogleService-Info.plist; without it the app
+#                              is built without push notifications
+name: iOS TestFlight
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version shown to users (e.g. 1.0)"
+        required: true
+        default: "1.0"
+
+jobs:
+  testflight:
+    runs-on: macos-15
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: ios-app
+    env:
+      HAS_PUSH: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Check secrets
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          missing=""
+          for name in APPLE_TEAM_ID ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8; do
+            [ -n "${!name}" ] || missing="$missing $name"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository secrets:$missing (see ios-app/README.md)"
+            exit 1
+          fi
+
+      - name: Install packages
+        run: |
+          npm install
+          # The Firebase messaging plugin crashes on launch without a
+          # GoogleService-Info.plist, so leave it out of push-less builds.
+          if [ "$HAS_PUSH" != "true" ]; then
+            npm uninstall @capacitor-firebase/messaging firebase
+          fi
+
+      - name: Generate the Xcode project
+        env:
+          GOOGLE_SERVICE_INFO_PLIST: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}
+        run: |
+          npx cap add ios
+          npx capacitor-assets generate --ios
+          if [ "$HAS_PUSH" = "true" ]; then
+            printf '%s' "$GOOGLE_SERVICE_INFO_PLIST" > ios/App/App/GoogleService-Info.plist
+            python3 ci/patch_ios_project.py . --push
+          else
+            python3 ci/patch_ios_project.py .
+          fi
+          npx cap sync ios
+
+      - name: Configure the app target (signing, version, Firebase file)
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          MARKETING_VERSION: ${{ inputs.version }}
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: |
+          gem list -i xcodeproj >/dev/null || gem install xcodeproj --no-document
+          # Set on the App target only - passing these to xcodebuild would
+          # also apply them to every CocoaPods library target.
+          ruby -e '
+            require "xcodeproj"
+            project = Xcodeproj::Project.open("ios/App/App.xcodeproj")
+            target = project.targets.find { |t| t.name == "App" }
+            target.build_configurations.each do |config|
+              s = config.build_settings
+              s["DEVELOPMENT_TEAM"] = ENV["APPLE_TEAM_ID"]
+              s["CODE_SIGN_STYLE"] = "Automatic"
+              s["CODE_SIGN_IDENTITY"] = "Apple Development"
+              s["CODE_SIGN_ENTITLEMENTS"] = "App/App.entitlements"
+              s["MARKETING_VERSION"] = ENV["MARKETING_VERSION"]
+              s["CURRENT_PROJECT_VERSION"] = ENV["BUILD_NUMBER"]
+            end
+            if ENV["HAS_PUSH"] == "true"
+              group = project.main_group["App"]
+              unless group.files.any? { |f| f.path == "GoogleService-Info.plist" }
+                ref = group.new_reference("GoogleService-Info.plist")
+                target.resources_build_phase.add_file_reference(ref)
+              end
+            end
+            project.save'
+          grep -q "PRODUCT_BUNDLE_IDENTIFIER = com.gadajuljuly.itask;" ios/App/App.xcodeproj/project.pbxproj
+
+      - name: Write the App Store Connect key
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: printf '%s' "$ASC_KEY_P8" > "$RUNNER_TEMP/AuthKey_$ASC_KEY_ID.p8"
+
+      - name: Archive
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          xcodebuild archive \
+            -workspace ios/App/App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -archivePath "$RUNNER_TEMP/ITASK.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/AuthKey_$ASC_KEY_ID.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+
+      - name: Upload to TestFlight
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>$APPLE_TEAM_ID</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict>
+          </plist>
+          PLIST
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/ITASK.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/AuthKey_$ASC_KEY_ID.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+          echo "Uploaded build ${{ inputs.version }} (${{ github.run_number }}) - it appears in TestFlight after Apple finishes processing (5-30 min)." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove the key
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8

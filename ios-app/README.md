@@ -12,6 +12,38 @@ when this wrapper project itself changes (a new native plugin); an
 ordinary website update is picked up automatically since the app just
 loads the live URL.
 
+## Building without a Mac (GitHub Actions -> TestFlight)
+
+`.github/workflows/ios-testflight.yml` does everything below on a GitHub
+macOS runner and uploads the result straight to TestFlight - no Mac
+needed. It regenerates `ios-app/ios` from scratch each run (that folder is
+never committed) and applies `ci/patch_ios_project.py` (permission texts,
+push entitlement, Firebase hooks).
+
+One-time setup:
+
+1. **Apple Developer Program** membership (\$99/year, developer.apple.com).
+2. **Register the bundle ID**: developer.apple.com -> Certificates,
+   Identifiers & Profiles -> Identifiers -> + -> App IDs -> explicit
+   `com.gadajuljuly.itask`, tick **Push Notifications**.
+3. **Create the app** in App Store Connect -> Apps -> + -> New App
+   (iOS, bundle ID `com.gadajuljuly.itask`, SKU e.g. `itask`).
+4. **API key**: App Store Connect -> Users and Access -> Integrations ->
+   App Store Connect API -> Team Keys -> + (access: **Admin**). Note the
+   Key ID and Issuer ID, download the `.p8` (only downloadable once).
+5. **GitHub secrets** (repo Settings -> Secrets and variables -> Actions):
+   `APPLE_TEAM_ID`, `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8` (the whole
+   `.p8` text) and, for push, `GOOGLE_SERVICE_INFO_PLIST` (the whole
+   Firebase iOS plist text - see "Push notifications" below for getting
+   it and the APNs key). Without that last one the app builds without push.
+
+Each release: GitHub -> Actions -> **iOS TestFlight** -> Run workflow,
+enter the version (e.g. `1.0`). The build number is the run number, so it
+always increases. The build appears in TestFlight after Apple's
+processing (5-30 minutes); add testers there.
+
+## Building on a Mac
+
 **Everything below requires a Mac with Xcode installed** (Xcode only runs
 on macOS - there's no Windows equivalent, unlike Android Studio). Building
 for a real iPhone (not just the Simulator) and submitting to the App Store
