@@ -2620,6 +2620,8 @@
   /* Head Office "הזנת נתונים": a name list inside each folder */
   .office-data-list { padding: 12px 16px; overflow-y: auto; }
   .office-data-list[hidden] { display: none; }
+  /* .library-grid's display:grid would otherwise override [hidden] */
+  .library-grid[hidden] { display: none; }
   .image-viewer {
     position: fixed;
     inset: 0;

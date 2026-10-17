@@ -113,12 +113,17 @@ test("Head Office 'הזנת נתונים': six folders, each a list of names tha
 
   await page.locator("#officeDataFolders .library-item", { hasText: "מודדים" }).click();
   await expect(page.locator("#officeDataTitle")).toHaveText("מודדים");
+  // the folders give way to the list (on screen, not below them)
+  await expect(page.locator("#officeDataFolders")).toBeHidden();
+  await expect(page.locator("#officeDataList .site-log-add-btn")).toBeInViewport();
   await page.locator("#officeDataList .site-log-add-btn").click();
   await page.locator("#officeDataList .site-log-add-input").fill("יוסי מדידות");
   await page.locator("#officeDataList .site-log-add-input").press("Enter");
   await expect(page.locator("#officeDataList .site-log-entry", { hasText: "יוסי מדידות" })).toBeVisible();
 
   await page.locator("#officeDataBackBtn").click(); // back to the folders
+  await expect(page.locator("#officeDataFolders")).toBeVisible();
+  await expect(page.locator("#officeDataList")).toBeHidden();
   await expect(page.locator("#officeDataFolders .library-item", { hasText: "מודדים" })).toContainText("(1)");
   const saved = await page.evaluate(() => JSON.parse(Object.entries(localStorage).find(([k]) => k.startsWith("daily-tasks-sheets-v1"))[1]).officeDirectory);
   expect(saved.surveyors.map((e) => e.name)).toEqual(["יוסי מדידות"]);
