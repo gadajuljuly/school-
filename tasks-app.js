@@ -236,6 +236,13 @@
     voiceAgainBtn: { he: "שוב 🎤", en: "Again 🎤", ar: "مرة أخرى 🎤", ru: "Ещё раз 🎤" },
     voiceAddedMsg: { he: "נוסף", en: "Added", ar: "تمت الإضافة", ru: "Добавлено" },
     voiceAddedReminderMsg: { he: "נוסף עם תזכורת", en: "Added with a reminder", ar: "تمت الإضافة مع تذكير", ru: "Добавлено с напоминанием" },
+    voiceAiLabel: { he: "בינה מלאכותית בטלפון (Gemini Nano)", en: "On-phone AI (Gemini Nano)", ar: "ذكاء اصطناعي في الهاتف (Gemini Nano)", ru: "ИИ в телефоне (Gemini Nano)" },
+    voiceAiAvailable: { he: "פעיל", en: "ready", ar: "جاهز", ru: "готов" },
+    voiceAiDownloading: { he: "מוריד את המודל...", en: "downloading the model...", ar: "جارٍ تنزيل النموذج...", ru: "загрузка модели..." },
+    voiceAiUnavailable: { he: "לא זמין בטלפון הזה", en: "not available on this phone", ar: "غير متوفر في هذا الهاتف", ru: "недоступен на этом телефоне" },
+    voiceAiFailed: { he: "ההורדה נכשלה, ינסה שוב בפעם הבאה", en: "download failed, will retry next time", ar: "فشل التنزيل، ستتم المحاولة لاحقاً", ru: "загрузка не удалась, повторим позже" },
+    voiceBySourceAi: { he: "הובן ע\"י Gemini Nano", en: "Understood by Gemini Nano", ar: "فهمه Gemini Nano", ru: "Распознано Gemini Nano" },
+    voiceBySourceRules: { he: "הובן ע\"י המנתח המובנה", en: "Understood by the built-in parser", ar: "فهمه المحلل المدمج", ru: "Распознано встроенным анализатором" },
     voiceDoneMsg: { he: "סומן כבוצע", en: "Marked as done", ar: "تم التحديد كمنجز", ru: "Отмечено выполненной" },
     shareTaskTitle: { he: "הוספת משימה", en: "Add a task", ar: "إضافة مهمة", ru: "Добавить задачу" },
     shareTaskProject: { he: "פרויקט", en: "Project", ar: "المشروع", ru: "Проект" },
@@ -11918,8 +11925,46 @@
       byAi: true
     };
   }
+  // The model's on/off switch (in the voice dialog) and its state:
+  // available / downloadable / downloading / unavailable / failed. A
+  // downloadable model is fetched once, in the background (AICore keeps it).
+  var VOICE_AI_PREF_KEY = "itask-voice-ai";
+  var voiceAiState = "unknown";
+  var voiceAiProgress = null;
+  function voiceAiEnabled() {
+    try { return localStorage.getItem(VOICE_AI_PREF_KEY) !== "off"; } catch (e) { return true; }
+  }
+  function startVoiceAiDownload() {
+    if (voiceAiState === "downloading") return;
+    voiceAiState = "downloading";
+    voiceAiProgress = null;
+    renderVoiceAiRow();
+    voiceAiPlugin.download().then(function () {
+      voiceAiState = "available";
+      renderVoiceAiRow();
+    }).catch(function () {
+      voiceAiState = "failed";
+      renderVoiceAiRow();
+    });
+  }
+  function refreshVoiceAiStatus() {
+    if (!voiceAiPlugin) return;
+    voiceAiPlugin.available().then(function (res) {
+      if (voiceAiState === "downloading") return;
+      voiceAiState = (res && res.status) || (res && res.available ? "available" : "unavailable");
+      if (voiceAiState === "downloadable" && voiceAiEnabled()) startVoiceAiDownload();
+      renderVoiceAiRow();
+    }).catch(function () {});
+  }
+  if (voiceAiPlugin && voiceAiPlugin.addListener) {
+    voiceAiPlugin.addListener("downloadProgress", function (d) {
+      voiceAiProgress = d && d.total ? Math.round(d.bytes * 100 / d.total) : null;
+      renderVoiceAiRow();
+    });
+  }
+
   function voiceAiParse(text, sheets) {
-    if (!voiceAiPlugin) return Promise.resolve(null);
+    if (!voiceAiPlugin || !voiceAiEnabled()) return Promise.resolve(null);
     var ask = voiceAiPlugin.available().then(function (res) {
       if (!res || !res.available) return null;
       return voiceAiPlugin.generate({ prompt: voiceAiPrompt(text, sheets) }).then(function (out) {
@@ -11980,6 +12025,10 @@
   var voiceReminderRow = document.getElementById("voiceReminderRow");
   var voiceReminderTime = document.getElementById("voiceReminderTime");
   var voiceSaveBtn = document.getElementById("voiceSaveBtn");
+  var voiceSource = document.getElementById("voiceSource");
+  var voiceAiRow = document.getElementById("voiceAiRow");
+  var voiceAiToggle = document.getElementById("voiceAiToggle");
+  var voiceAiStatus = document.getElementById("voiceAiStatus");
   var voiceItemTexts = [];
   var voiceDoneQuery = "";
 
@@ -12007,6 +12056,18 @@
       });
     });
     return best && best.sheet;
+  }
+
+  function renderVoiceAiRow() {
+    voiceAiRow.hidden = !voiceAiPlugin;
+    if (!voiceAiPlugin) return;
+    voiceAiToggle.checked = voiceAiEnabled();
+    var status = {
+      available: "voiceAiAvailable", downloading: "voiceAiDownloading", downloadable: "voiceAiDownloading",
+      failed: "voiceAiFailed", unavailable: "voiceAiUnavailable"
+    }[voiceAiState];
+    voiceAiStatus.textContent = tr("voiceAiLabel") + (status ? " - " + tr(status) : "") +
+      (voiceAiState === "downloading" && voiceAiProgress != null ? " " + voiceAiProgress + "%" : "");
   }
 
   function renderVoiceItems() {
@@ -12073,6 +12134,8 @@
 
   function showVoiceCommand(heard, cmd) {
     voiceListeningRow.hidden = true;
+    voiceSource.hidden = !voiceAiPlugin;
+    voiceSource.textContent = tr(cmd.byAi ? "voiceBySourceAi" : "voiceBySourceRules");
     voiceHeard.textContent = tr("voiceHeardPrefix") + " " + heard;
     voiceHeard.hidden = false;
     var sheets = voiceTargetSheets();
@@ -12107,7 +12170,10 @@
     voiceHeard.hidden = true;
     voiceResult.hidden = true;
     voiceSaveBtn.hidden = true;
+    voiceSource.hidden = true;
     voiceOverlay.hidden = false;
+    renderVoiceAiRow();
+    refreshVoiceAiStatus();
     voiceListen().then(function (heard) {
       if (token !== voiceListenToken) return;
       heard = (heard || "").trim();
@@ -12189,6 +12255,10 @@
   }
 
   voiceBtn.addEventListener("click", startVoiceCommand);
+  voiceAiToggle.addEventListener("change", function () {
+    try { localStorage.setItem(VOICE_AI_PREF_KEY, voiceAiToggle.checked ? "on" : "off"); } catch (e) {}
+    if (voiceAiToggle.checked && voiceAiState === "downloadable") startVoiceAiDownload();
+  });
   voiceAction.addEventListener("change", function () {
     if (voiceAction.value !== "done" && !voiceItemTexts.length) voiceItemTexts = [voiceDoneQuery];
     renderVoiceItems();

@@ -93,12 +93,12 @@ test("\"סמן בוצע\" finds the open task the words fit, in whichever projec
   expect(tasks.find((t) => t.id === "t1").status).toBe(0);
 });
 
-test("an on-device model's answer is used when the phone has one", async ({ page }) => {
+test("an on-device model's answer is used when the phone has one, and can be switched off", async ({ page }) => {
   await openLocalApp(page, { native: true, data: DATA });
   // init scripts run in the order added, so this one lands after NATIVE_FAKE
   await page.addInitScript(() => {
     window.Capacitor.Plugins.ItaskAI = {
-      available: () => Promise.resolve({ available: true }),
+      available: () => Promise.resolve({ available: true, status: "available" }),
       generate: ({ prompt }) => {
         window.__aiPrompt = prompt;
         return Promise.resolve({ text: "```json\n{\"action\":\"note\",\"items\":[\"לבדוק את המשאבה\"],\"project\":\"חולון – בניין B\",\"date\":null,\"time\":null}\n```" });
@@ -107,11 +107,47 @@ test("an on-device model's answer is used when the phone has one", async ({ page
   });
   await page.reload();
   await page.locator("#appRoot").waitFor({ state: "visible" });
-  await say(page, "משהו שהמנתח לא היה מבין");
+  await say(page, "תזכיר לי מחר בעשר להזמין בטון");
   await expect(page.locator("#voiceAction")).toHaveValue("note");
   await expect(page.locator("#voiceProject")).toHaveValue("h");
   await expect(page.locator(".voice-item-input")).toHaveValue("לבדוק את המשאבה");
+  await expect(page.locator("#voiceSource")).toHaveText(/Gemini Nano/);
+  await expect(page.locator("#voiceAiStatus")).toContainText("פעיל");
   expect(await page.evaluate(() => window.__aiPrompt)).toContain("רמת גן");
+
+  // switched off -> the built-in parser, and it stays off
+  await page.locator("#voiceAiToggle").uncheck();
+  await page.locator("#voiceCancelBtn").click();
+  await say(page, "תזכיר לי מחר בעשר להזמין בטון");
+  await expect(page.locator("#voiceSource")).toHaveText(/המנתח/);
+  await expect(page.locator(".voice-item-input")).toHaveValue("להזמין בטון");
+  await expect(page.locator("#voiceReminderTime")).toHaveValue("10:00");
+});
+
+test("a model the phone can download is fetched in the background, meanwhile the parser answers", async ({ page }) => {
+  await openLocalApp(page, { native: true, data: DATA });
+  await page.addInitScript(() => {
+    let listener = null;
+    window.__aiDownloads = 0;
+    window.Capacitor.Plugins.ItaskAI = {
+      available: () => Promise.resolve({ available: false, status: "downloadable" }),
+      addListener: (name, fn) => { listener = fn; return Promise.resolve({ remove() {} }); },
+      download: () => {
+        window.__aiDownloads++;
+        listener({ bytes: 50, total: 200 });
+        return new Promise(() => {});
+      },
+      generate: () => Promise.reject(new Error("not yet")),
+    };
+  });
+  await page.reload();
+  await page.locator("#appRoot").waitFor({ state: "visible" });
+  await say(page, "להזמין בטון");
+  await expect(page.locator("#voiceAiStatus")).toContainText("מוריד את המודל... 25%");
+  await expect(page.locator("#voiceSource")).toHaveText(/המנתח/);
+  await page.locator("#voiceCancelBtn").click();
+  await say(page, "להזמין בטון");
+  expect(await page.evaluate(() => window.__aiDownloads)).toBe(1);
 });
 
 test("the microphone is hidden where there's no speech recognizer", async ({ page }) => {

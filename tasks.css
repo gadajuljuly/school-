@@ -3207,3 +3207,5 @@
   .voice-item-row input, .voice-reminder-row input { flex: 1; min-width: 0; }
   .voice-item-del { flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line, #ccc); background: transparent; color: var(--ink-muted); cursor: pointer; padding: 0; }
   .voice-empty { margin: 0; font-size: 0.85rem; color: var(--ink-muted); }
+  .voice-source { margin: 0; font-size: 0.78rem; color: var(--ink-muted); }
+  .voice-ai-row { font-size: 0.8rem; }

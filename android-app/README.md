@@ -148,6 +148,21 @@ voice / "Offline speech recognition"). The text is turned into a command by
 `src/app/14b-voice-commands.js`, offline; an on-device model plugin
 (`ItaskAI`, `available()` + `generate({prompt})`) is used first when present.
 
+### Gemini Nano (optional, version 21+)
+
+`native-src-ai/ItaskAIPlugin.kt` is that model plugin: Gemini Nano
+through Android AICore (ML Kit GenAI Prompt API,
+`com.google.mlkit:genai-prompt`), on phones that have AICore and Android
+12+ (e.g. recent Pixel / Galaxy flagships). It is Kotlin, so adding it
+needs a few one-time project edits - `enable-gemini-nano.bat` (run after
+`prepare-android.bat`) makes them: the Kotlin Gradle plugin, the ML Kit
+dependency, a `tools:overrideLibrary` for its Android-12 minimum (the plugin
+checks the version itself, so older phones keep working without it), and
+`registerPlugin(ItaskAIPlugin.class)` in `MainActivity.java`. From then on
+`prepare-android.bat` keeps the `.kt` file updated. The voice dialog shows
+the model's state, downloads it once in the background, says which of the
+two understood each command, and has an on/off switch.
+
 ## Sharing PDFs/files (reports, site logs, library files)
 
 The Android System WebView this app runs in doesn't implement
