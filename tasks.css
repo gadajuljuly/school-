@@ -3193,3 +3193,17 @@
   .cal-cal-swatch { flex: none; width: 14px; height: 14px; border-radius: 4px; }
   .cal-cal-name { flex: 1; min-width: 0; }
   .cal-cal-account { font-size: 0.75rem; color: var(--ink-muted); }
+
+  /* Voice commands (src/app/14b-voice-commands.js) */
+  .add-row button.add-btn.voice-btn { background: transparent; color: var(--accent); }
+  .add-row button.add-btn.voice-btn svg { width: 20px; height: 20px; }
+  .add-row button.add-btn[hidden] { display: none; }
+  #voiceResult, #voiceDateRow, #voiceReminderRow, #voiceItems { display: flex; flex-direction: column; gap: 8px; }
+  .voice-listening { display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--ink); font-size: 0.95rem; padding: 6px 0; }
+  .voice-pulse { width: 14px; height: 14px; border-radius: 50%; background: #d93025; animation: voice-pulse 1.1s ease-in-out infinite; flex-shrink: 0; }
+  @keyframes voice-pulse { 0%, 100% { transform: scale(0.7); opacity: 0.6; } 50% { transform: scale(1.15); opacity: 1; } }
+  .voice-heard { margin: 0; font-size: 0.82rem; color: var(--ink-muted); }
+  .voice-item-row, .voice-reminder-row { display: flex; gap: 6px; align-items: center; }
+  .voice-item-row input, .voice-reminder-row input { flex: 1; min-width: 0; }
+  .voice-item-del { flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line, #ccc); background: transparent; color: var(--ink-muted); cursor: pointer; padding: 0; }
+  .voice-empty { margin: 0; font-size: 0.85rem; color: var(--ink-muted); }

@@ -135,6 +135,19 @@ change with no way to opt back into the old behavior. The fix is
 overrides. After changing the color here, `npm install` + `npx cap sync
 android` + rebuild.
 
+## Voice commands
+
+The microphone by the new-task field uses
+`@capacitor-community/speech-recognition` (Android's own speech
+recognizer, Hebrew `he-IL` / Arabic `ar-IL`). `npm install` + `npx cap sync
+android` (both in `prepare-android.bat`) is all it needs - the plugin's own
+manifest adds `RECORD_AUDIO` and the `RecognitionService` query, and Android
+asks for the microphone permission the first time. Recognition works
+offline once the language is downloaded on the phone (Settings → Google →
+voice / "Offline speech recognition"). The text is turned into a command by
+`src/app/14b-voice-commands.js`, offline; an on-device model plugin
+(`ItaskAI`, `available()` + `generate({prompt})`) is used first when present.
+
 ## Sharing PDFs/files (reports, site logs, library files)
 
 The Android System WebView this app runs in doesn't implement

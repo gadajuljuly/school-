@@ -3,8 +3,9 @@
 every CI build by `npx cap add ios`) for ITASK:
 
 - Info.plist: the usage descriptions iOS requires before the app may touch
-  contacts, the camera, photos or the microphone (the site uses all four -
-  contact picker, report/diary photos, voice messages; without them iOS
+  contacts, the camera, photos, the microphone or speech recognition (the
+  site uses them all - contact picker, report/diary photos, voice
+  messages, voice commands; without them iOS
   kills the app the moment it asks), Hebrew as the development region, and
   ITSAppUsesNonExemptEncryption=false (no export-compliance prompt per
   build).
@@ -35,7 +36,8 @@ info.update({
     "NSCameraUsageDescription": "ITASK משתמשת במצלמה לצילום תמונות לדוחות וליומן העבודה.",
     "NSPhotoLibraryUsageDescription": "ITASK משתמשת בתמונות כדי לצרף אותן לדוחות, ליומן ולצ'אט.",
     "NSPhotoLibraryAddUsageDescription": "ITASK שומרת קבצים ותמונות שבחרת לשמור.",
-    "NSMicrophoneUsageDescription": "ITASK משתמשת במיקרופון להקלטת הודעות קוליות בצ'אט.",
+    "NSMicrophoneUsageDescription": "ITASK משתמשת במיקרופון להקלטת הודעות קוליות בצ'אט ולפקודות קוליות.",
+    "NSSpeechRecognitionUsageDescription": "ITASK הופכת פקודות קוליות לטקסט כדי להוסיף משימות ותזכורות.",
 })
 
 if push:

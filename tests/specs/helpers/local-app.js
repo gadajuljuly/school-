@@ -1,8 +1,8 @@
 // Runs tasks.html with no backend at all (Supabase/Firebase/CDNs blocked,
 // so the app falls back to its local-only mode) and, optionally, with a
 // fake Capacitor bridge standing in for the Android app's native plugins:
-// ItaskAlarm (alarm-clock reminders, widget) and ItaskCalendar (the phone's
-// calendar, kept in memory). The fakes record every call in
+// ItaskAlarm (alarm-clock reminders, widget), ItaskCalendar (the phone's
+// calendar, kept in memory) and SpeechRecognition (voice commands). The fakes record every call in
 // window.__native so tests can check what the app asked the phone to do.
 // Fully deterministic and offline - runs the same locally and in CI.
 
@@ -35,6 +35,12 @@ const NATIVE_FAKE = () => {
       },
       Share: {
         share: (o) => { (native.shared = native.shared || []).push(o); return ok({}); },
+      },
+      // the phone's speech recognizer: "hears" window.__voiceSay
+      SpeechRecognition: {
+        requestPermissions: () => ok({ speechRecognition: "granted" }),
+        start: (o) => { (native.speech = native.speech || []).push(o); return ok({ matches: [window.__voiceSay || ""] }); },
+        stop: () => ok(),
       },
       ItaskCalendar: {
         checkPermissions: () => ok({ calendar: "granted" }),
