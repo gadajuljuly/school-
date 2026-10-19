@@ -35,7 +35,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<link rel="stylesheet" href="tasks.css?v=cdfb8055c5">
+<link rel="stylesheet" href="tasks.css?v=048f701396">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -121,6 +121,28 @@
       <button type="button" class="modal-btn modal-btn-no" id="calCopyCancelBtn" data-i18n="cancelBtn">ביטול</button>
     </div>
   </div>
+</div>
+<div class="modal-overlay" id="scanOverlay" hidden>
+  <div class="modal-box cal-editor-box">
+    <div class="cal-form">
+      <p class="modal-message" data-i18n="scanTitle">סריקת מסמך</p>
+      <div class="scan-pages" id="scanPages"></div>
+      <p class="scan-empty" id="scanEmpty" data-i18n="scanEmpty">עדיין אין עמודים. צלם את העמוד הראשון.</p>
+      <div class="cal-form-row">
+        <button type="button" class="modal-btn modal-btn-primary" id="scanCaptureBtn" data-i18n="scanCaptureBtn">📷 צילום עמוד</button>
+        <button type="button" class="modal-btn" id="scanGalleryBtn" data-i18n="scanGalleryBtn">🖼 מהגלריה</button>
+      </div>
+      <label class="cal-form-check"><input type="checkbox" id="scanDocMode" checked><span data-i18n="scanDocMode">מצב מסמך (רקע לבן, טקסט חד)</span></label>
+      <label data-i18n="scanNameLabel">שם הקובץ</label>
+      <input type="text" id="scanName" maxlength="80">
+      <div class="modal-actions">
+        <button type="button" class="modal-btn modal-btn-primary" id="scanSaveBtn" data-i18n="scanSaveBtn" disabled>שמירה כ-PDF</button>
+        <button type="button" class="modal-btn modal-btn-no" id="scanCancelBtn" data-i18n="cancelBtn">ביטול</button>
+      </div>
+    </div>
+  </div>
+  <input type="file" accept="image/*" capture="environment" id="scanCameraInput" hidden>
+  <input type="file" accept="image/*" multiple id="scanGalleryInput" hidden>
 </div>
 <div class="modal-overlay" id="shareTaskOverlay" hidden style="z-index:41">
   <div class="modal-box cal-editor-box">
@@ -406,6 +428,7 @@
       </div>
       <div id="libraryFoldersView" hidden>
         <button type="button" class="report-share-btn" id="libraryAddFolderBtn" data-i18n-title="libraryAddFolderBtnTitle" title="הוספת תיקייה">&#10133;</button>
+        <button type="button" class="report-share-btn" id="libraryScanBtn" data-i18n-title="scanBtnTitle" title="סריקת מסמך"><img src="tasks-scan-icon.webp" alt=""></button>
         <div class="library-grid" id="libraryFoldersGrid"></div>
       </div>
       <div id="chatView" hidden>
@@ -1047,6 +1070,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=2c2c8d8b34"></script>
+<script src="tasks-app.js?v=3b77d5d181"></script>
 </body>
 </html>
