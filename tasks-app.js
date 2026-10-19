@@ -257,6 +257,20 @@
     scanSavingMsg: { he: "יוצר PDF ושומר...", en: "Creating the PDF and saving...", ar: "جارٍ إنشاء PDF وحفظه...", ru: "Создаём PDF и сохраняем..." },
     scanSavedMsg: { he: "נשמר בספרייה › {folder}", en: "Saved to the library › {folder}", ar: "تم الحفظ في المكتبة › {folder}", ru: "Сохранено в библиотеке › {folder}" },
     scanSaveError: { he: "השמירה נכשלה. בדוק את החיבור לאינטרנט ונסה שוב.", en: "Saving failed. Check the internet connection and try again.", ar: "فشل الحفظ. تحقق من الاتصال بالإنترنت وحاول مجدداً.", ru: "Не удалось сохранить. Проверьте интернет и попробуйте снова." },
+    scanEditTitle: { he: "עריכת העמוד", en: "Edit page", ar: "تعديل الصفحة", ru: "Редактировать страницу" },
+    scanCrop: { he: "✂ חיתוך", en: "✂ Crop", ar: "✂ قص", ru: "✂ Обрезка" },
+    scanRotateLeft: { he: "סיבוב שמאלה", en: "Rotate left", ar: "تدوير لليسار", ru: "Повернуть влево" },
+    scanRotateRight: { he: "סיבוב ימינה", en: "Rotate right", ar: "تدوير لليمين", ru: "Повернуть вправо" },
+    scanFilter: { he: "🎨 מסנן", en: "🎨 Filter", ar: "🎨 فلتر", ru: "🎨 Фильтр" },
+    scanLight: { he: "☀ בהירות", en: "☀ Brightness", ar: "☀ السطوع", ru: "☀ Яркость" },
+    scanCropHint: { he: "גרור את הפינות לקצוות הדף", en: "Drag the corners to the page edges", ar: "اسحب الزوايا إلى حواف الصفحة", ru: "Перетащите углы к краям листа" },
+    scanCropReset: { he: "כל התמונה", en: "Whole photo", ar: "الصورة كاملة", ru: "Всё фото" },
+    scanFilterDoc: { he: "מסמך", en: "Document", ar: "مستند", ru: "Документ" },
+    scanFilterColor: { he: "מקורי", en: "Original", ar: "الأصلي", ru: "Оригинал" },
+    scanFilterGray: { he: "אפור", en: "Grey", ar: "رمادي", ru: "Серый" },
+    scanFilterVivid: { he: "צבע משופר", en: "Enhanced colour", ar: "ألوان محسّنة", ru: "Яркие цвета" },
+    scanEditDone: { he: "אישור", en: "Done", ar: "تأكيد", ru: "Готово" },
+    scanDeletePage: { he: "מחיקת עמוד", en: "Delete page", ar: "حذف الصفحة", ru: "Удалить страницу" },
     scanDiscardConfirm: { he: "לבטל את הסריקה? העמודים שצולמו יימחקו.", en: "Discard this scan? The pages taken will be lost.", ar: "إلغاء المسح؟ ستُحذف الصفحات الملتقطة.", ru: "Отменить сканирование? Снятые страницы будут удалены." },
     shareTaskTitle: { he: "הוספת משימה", en: "Add a task", ar: "إضافة مهمة", ru: "Добавить задачу" },
     shareTaskProject: { he: "פרויקט", en: "Project", ar: "المشروع", ru: "Проект" },
@@ -5859,7 +5873,7 @@
   var scanNameInput = document.getElementById("scanName");
   var scanSaveBtn = document.getElementById("scanSaveBtn");
   var SCAN_MAX_SIDE = 2000;
-  // { canvas (camera image, scaled down), rotation (0/90/180/270) }
+  // see scanNewPage
   var scanPages = [];
 
   function scanLoadImage(file) {
@@ -5947,20 +5961,120 @@
     return canvas;
   }
 
-  // A page as it goes into the PDF: rotated, and cleaned up in document mode.
-  function scanRenderPage(page) {
-    var src = page.canvas;
-    var turned = page.rotation % 180 !== 0;
+  // ---- a page's edits: { quad (the page's 4 corners in the photo, 0..1,
+  // clockwise from top-left; null = the whole photo), rotation, filter
+  // (doc / color / gray / vivid), brightness (-60..60) } ----
+  function scanNewPage(canvas) {
+    return { canvas: canvas, quad: null, rotation: 0, filter: scanDocMode.checked ? "doc" : "color", brightness: 0, out: null };
+  }
+  function scanEdits(page) {
+    return { quad: page.quad && page.quad.map(function (p) { return { x: p.x, y: p.y }; }),
+      rotation: page.rotation, filter: page.filter, brightness: page.brightness };
+  }
+
+  // The photo's quad straightened into a rectangle (perspective-corrected:
+  // a page shot at an angle comes out square), bilinear sampling.
+  function scanWarp(src, quad) {
+    var sw = src.width, sh = src.height;
+    var P = quad.map(function (p) { return { x: p.x * sw, y: p.y * sh }; });
+    var dist = function (a, b) { return Math.hypot(a.x - b.x, a.y - b.y); };
+    var W = Math.max(dist(P[0], P[1]), dist(P[3], P[2]));
+    var H = Math.max(dist(P[0], P[3]), dist(P[1], P[2]));
+    var k = Math.min(1, SCAN_MAX_SIDE / Math.max(W, H));
+    W = Math.max(1, Math.round(W * k)); H = Math.max(1, Math.round(H * k));
+    // unit square -> quad (Heckbert's projective mapping)
+    var x0 = P[0].x, y0 = P[0].y, x1 = P[1].x, y1 = P[1].y, x2 = P[2].x, y2 = P[2].y, x3 = P[3].x, y3 = P[3].y;
+    var dx1 = x1 - x2, dx2 = x3 - x2, dx3 = x0 - x1 + x2 - x3;
+    var dy1 = y1 - y2, dy2 = y3 - y2, dy3 = y0 - y1 + y2 - y3;
+    var g = 0, h = 0;
+    if (Math.abs(dx3) > 1e-9 || Math.abs(dy3) > 1e-9) {
+      var det = dx1 * dy2 - dx2 * dy1 || 1e-9;
+      g = (dx3 * dy2 - dx2 * dy3) / det;
+      h = (dx1 * dy3 - dx3 * dy1) / det;
+    }
+    var a = x1 - x0 + g * x1, b = x3 - x0 + h * x3, c = x0;
+    var d = y1 - y0 + g * y1, e = y3 - y0 + h * y3, f = y0;
+    var sdata = src.getContext("2d").getImageData(0, 0, sw, sh).data;
+    var out = document.createElement("canvas");
+    out.width = W; out.height = H;
+    var octx = out.getContext("2d");
+    var oimg = octx.createImageData(W, H);
+    var od = oimg.data;
+    for (var j = 0; j < H; j++) {
+      var t = (j + 0.5) / H;
+      for (var i = 0; i < W; i++) {
+        var u = (i + 0.5) / W;
+        var z = g * u + h * t + 1;
+        var sx = (a * u + b * t + c) / z - 0.5, sy = (d * u + e * t + f) / z - 0.5;
+        var ix = Math.floor(sx), iy = Math.floor(sy), fx = sx - ix, fy = sy - iy;
+        if (ix < 0) { ix = 0; fx = 0; } else if (ix >= sw - 1) { ix = sw - 2; fx = 1; }
+        if (iy < 0) { iy = 0; fy = 0; } else if (iy >= sh - 1) { iy = sh - 2; fy = 1; }
+        if (sw < 2) { ix = 0; fx = 0; }
+        if (sh < 2) { iy = 0; fy = 0; }
+        var p00 = (iy * sw + ix) * 4, p10 = p00 + 4, p01 = p00 + sw * 4, p11 = p01 + 4;
+        var o = (j * W + i) * 4;
+        for (var ch = 0; ch < 3; ch++) {
+          od[o + ch] = (sdata[p00 + ch] * (1 - fx) + sdata[p10 + ch] * fx) * (1 - fy) +
+                       (sdata[p01 + ch] * (1 - fx) + sdata[p11 + ch] * fx) * fy;
+        }
+        od[o + 3] = 255;
+      }
+    }
+    octx.putImageData(oimg, 0, 0);
+    return out;
+  }
+
+  function scanRotate(src, rotation) {
+    if (!rotation) return src;
+    var turned = rotation % 180 !== 0;
     var c = document.createElement("canvas");
     c.width = turned ? src.height : src.width;
     c.height = turned ? src.width : src.height;
     var ctx = c.getContext("2d");
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, c.width, c.height);
     ctx.translate(c.width / 2, c.height / 2);
-    ctx.rotate(page.rotation * Math.PI / 180);
+    ctx.rotate(rotation * Math.PI / 180);
     ctx.drawImage(src, -src.width / 2, -src.height / 2);
-    return scanDocMode.checked ? scanEnhance(c) : c;
+    return c;
+  }
+
+  function scanFilter(c, filter, brightness) {
+    if (filter === "doc") scanEnhance(c);
+    if (filter === "color" && !brightness) return c;
+    var ctx = c.getContext("2d");
+    var img = ctx.getImageData(0, 0, c.width, c.height);
+    var px = img.data;
+    var add = brightness * 2;
+    for (var i = 0; i < px.length; i += 4) {
+      var r = px[i], g = px[i + 1], b = px[i + 2];
+      if (filter === "gray") {
+        r = g = b = (r * 299 + g * 587 + b * 114) / 1000;
+      } else if (filter === "vivid") {
+        var l = (r * 299 + g * 587 + b * 114) / 1000;
+        r = l + (r - l) * 1.35; g = l + (g - l) * 1.35; b = l + (b - l) * 1.35;
+        r = (r - 128) * 1.25 + 140; g = (g - 128) * 1.25 + 140; b = (b - 128) * 1.25 + 140;
+      }
+      px[i] = r + add; px[i + 1] = g + add; px[i + 2] = b + add;
+    }
+    ctx.putImageData(img, 0, 0);
+    return c;
+  }
+
+  // The photo with a page's edits applied - what the PDF gets.
+  function scanApplyEdits(src, edits) {
+    var c;
+    if (edits.quad) {
+      c = scanWarp(src, edits.quad);
+    } else {
+      // a copy - the filters write into it
+      c = document.createElement("canvas");
+      c.width = src.width; c.height = src.height;
+      c.getContext("2d").drawImage(src, 0, 0);
+    }
+    return scanFilter(scanRotate(c, edits.rotation), edits.filter, edits.brightness);
+  }
+  function scanRenderPage(page) {
+    if (!page.out) page.out = scanApplyEdits(page.canvas, scanEdits(page));
+    return page.out;
   }
 
   function renderScanPages() {
@@ -5970,6 +6084,7 @@
     scanPages.forEach(function (page, i) {
       var item = document.createElement("div");
       item.className = "scan-page";
+      item.title = tr("scanEditTitle");
       var shown = scanRenderPage(page);
       var thumb = document.createElement("canvas");
       var s = 160 / Math.max(shown.width, shown.height);
@@ -5977,26 +6092,22 @@
       thumb.height = Math.max(1, Math.round(shown.height * s));
       thumb.getContext("2d").drawImage(shown, 0, 0, thumb.width, thumb.height);
       item.appendChild(thumb);
+      item.addEventListener("click", function () { openScanEditor(i); });
       var num = document.createElement("span");
       num.className = "scan-page-num";
       num.textContent = String(i + 1);
       item.appendChild(num);
-      var rot = document.createElement("button");
-      rot.type = "button";
-      rot.className = "scan-page-btn scan-page-rotate";
-      rot.textContent = "↻";
-      rot.title = tr("scanRotate");
-      rot.addEventListener("click", function () {
-        page.rotation = (page.rotation + 90) % 360;
-        renderScanPages();
-      });
-      item.appendChild(rot);
+      var edit = document.createElement("span");
+      edit.className = "scan-page-btn scan-page-rotate scan-page-edit";
+      edit.textContent = "✎";
+      item.appendChild(edit);
       var del = document.createElement("button");
       del.type = "button";
       del.className = "scan-page-btn scan-page-del";
       del.textContent = "✕";
       del.title = tr("deleteBtn");
-      del.addEventListener("click", function () {
+      del.addEventListener("click", function (e) {
+        e.stopPropagation();
         scanPages.splice(i, 1);
         renderScanPages();
       });
@@ -6004,6 +6115,154 @@
       scanPagesEl.appendChild(item);
     });
   }
+
+  // ---- the page editor --------------------------------------------------
+  var scanEditor = document.getElementById("scanEditor");
+  var scanEditorStage = document.getElementById("scanEditorStage");
+  var scanEditorCanvas = document.getElementById("scanEditorCanvas");
+  var scanEditorPoly = document.getElementById("scanEditorPoly");
+  var scanEditorSvg = document.getElementById("scanEditorQuad");
+  var scanEditorHandles = Array.prototype.slice.call(document.querySelectorAll(".scan-handle"));
+  var scanBrightness = document.getElementById("scanBrightness");
+  var scanEditIndex = -1;
+  var scanEditState = null;
+  var scanEditMode = "crop";
+  var scanEditPreviewSrc = null;
+  var SCAN_FULL_QUAD = [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }];
+
+  function openScanEditor(index) {
+    var page = scanPages[index];
+    if (!page) return;
+    scanEditIndex = index;
+    scanEditState = scanEdits(page);
+    if (!scanEditState.quad) scanEditState.quad = SCAN_FULL_QUAD.map(function (p) { return { x: p.x, y: p.y }; });
+    // a smaller copy keeps the live preview quick
+    var k = Math.min(1, 900 / Math.max(page.canvas.width, page.canvas.height));
+    scanEditPreviewSrc = document.createElement("canvas");
+    scanEditPreviewSrc.width = Math.max(1, Math.round(page.canvas.width * k));
+    scanEditPreviewSrc.height = Math.max(1, Math.round(page.canvas.height * k));
+    scanEditPreviewSrc.getContext("2d").drawImage(page.canvas, 0, 0, scanEditPreviewSrc.width, scanEditPreviewSrc.height);
+    scanBrightness.value = String(scanEditState.brightness);
+    scanEditor.hidden = false;
+    setScanEditMode("crop");
+  }
+  function closeScanEditor() {
+    scanEditor.hidden = true;
+    scanEditIndex = -1;
+    scanEditState = null;
+    scanEditPreviewSrc = null;
+  }
+  function isFullQuad(q) {
+    return q.every(function (p, i) { return Math.abs(p.x - SCAN_FULL_QUAD[i].x) < 0.002 && Math.abs(p.y - SCAN_FULL_QUAD[i].y) < 0.002; });
+  }
+
+  function setScanEditMode(mode) {
+    scanEditMode = mode;
+    document.querySelectorAll(".scan-editor-tab").forEach(function (b) {
+      b.classList.toggle("active", b.getAttribute("data-mode") === mode);
+    });
+    document.getElementById("scanEditorCropBar").hidden = mode !== "crop";
+    document.getElementById("scanEditorFilterBar").hidden = mode !== "filter";
+    document.getElementById("scanEditorLightBar").hidden = mode !== "light";
+    document.querySelectorAll(".scan-filter-btn").forEach(function (b) {
+      b.classList.toggle("active", b.getAttribute("data-filter") === scanEditState.filter);
+    });
+    drawScanEditor();
+  }
+
+  // Crop mode shows the photo itself with the 4 corners; the other modes
+  // show the result.
+  function drawScanEditor() {
+    if (!scanEditState) return;
+    var crop = scanEditMode === "crop";
+    var shown = crop ? scanEditPreviewSrc : scanApplyEdits(scanEditPreviewSrc, scanEditState);
+    scanEditorCanvas.width = shown.width;
+    scanEditorCanvas.height = shown.height;
+    scanEditorCanvas.getContext("2d").drawImage(shown, 0, 0);
+    scanEditorSvg.style.display = crop ? "" : "none";
+    scanEditorHandles.forEach(function (h) { h.hidden = !crop; });
+    if (crop) placeScanHandles();
+  }
+  function placeScanHandles() {
+    var stage = scanEditorStage.getBoundingClientRect();
+    var r = scanEditorCanvas.getBoundingClientRect();
+    var ox = r.left - stage.left, oy = r.top - stage.top;
+    scanEditorSvg.setAttribute("width", stage.width);
+    scanEditorSvg.setAttribute("height", stage.height);
+    var pts = scanEditState.quad.map(function (p) { return { x: ox + p.x * r.width, y: oy + p.y * r.height }; });
+    scanEditorPoly.setAttribute("points", pts.map(function (p) { return p.x + "," + p.y; }).join(" "));
+    scanEditorHandles.forEach(function (h, i) {
+      h.style.left = pts[i].x + "px";
+      h.style.top = pts[i].y + "px";
+    });
+  }
+  scanEditorHandles.forEach(function (h, i) {
+    h.addEventListener("pointerdown", function (e) {
+      e.preventDefault();
+      h.setPointerCapture(e.pointerId);
+      var move = function (ev) {
+        var r = scanEditorCanvas.getBoundingClientRect();
+        scanEditState.quad[i] = {
+          x: Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width)),
+          y: Math.min(1, Math.max(0, (ev.clientY - r.top) / r.height))
+        };
+        placeScanHandles();
+      };
+      var up = function () {
+        h.removeEventListener("pointermove", move);
+        h.removeEventListener("pointerup", up);
+        h.removeEventListener("pointercancel", up);
+      };
+      h.addEventListener("pointermove", move);
+      h.addEventListener("pointerup", up);
+      h.addEventListener("pointercancel", up);
+    });
+  });
+  window.addEventListener("resize", function () { if (!scanEditor.hidden && scanEditMode === "crop") placeScanHandles(); });
+
+  document.querySelectorAll(".scan-editor-tab[data-mode]").forEach(function (b) {
+    b.addEventListener("click", function () { setScanEditMode(b.getAttribute("data-mode")); });
+  });
+  document.getElementById("scanRotateLeftBtn").addEventListener("click", function () {
+    scanEditState.rotation = (scanEditState.rotation + 270) % 360;
+    if (scanEditMode === "crop") setScanEditMode("filter"); else drawScanEditor();
+  });
+  document.getElementById("scanRotateRightBtn").addEventListener("click", function () {
+    scanEditState.rotation = (scanEditState.rotation + 90) % 360;
+    if (scanEditMode === "crop") setScanEditMode("filter"); else drawScanEditor();
+  });
+  document.getElementById("scanCropResetBtn").addEventListener("click", function () {
+    scanEditState.quad = SCAN_FULL_QUAD.map(function (p) { return { x: p.x, y: p.y }; });
+    placeScanHandles();
+  });
+  document.querySelectorAll(".scan-filter-btn").forEach(function (b) {
+    b.addEventListener("click", function () {
+      scanEditState.filter = b.getAttribute("data-filter");
+      setScanEditMode("filter");
+    });
+  });
+  scanBrightness.addEventListener("input", function () {
+    scanEditState.brightness = parseInt(scanBrightness.value, 10) || 0;
+    drawScanEditor();
+  });
+  document.getElementById("scanEditDoneBtn").addEventListener("click", function () {
+    var page = scanPages[scanEditIndex];
+    if (page) {
+      page.quad = isFullQuad(scanEditState.quad) ? null : scanEditState.quad;
+      page.rotation = scanEditState.rotation;
+      page.filter = scanEditState.filter;
+      page.brightness = scanEditState.brightness;
+      page.out = null;
+    }
+    closeScanEditor();
+    renderScanPages();
+  });
+  document.getElementById("scanEditCancelBtn").addEventListener("click", closeScanEditor);
+  document.getElementById("scanEditDeleteBtn").addEventListener("click", function () {
+    if (scanEditIndex >= 0) scanPages.splice(scanEditIndex, 1);
+    closeScanEditor();
+    renderScanPages();
+  });
 
   function scanDefaultName() {
     var d = new Date();
@@ -6022,15 +6281,19 @@
     scanPages = [];
   }
 
-  function addScanFiles(files) {
+  function addScanFiles(files, edit) {
     var list = Array.prototype.slice.call(files || []).filter(function (f) { return /^image\//.test(f.type || "image/"); });
     return list.reduce(function (p, file) {
       return p.then(function () {
         return scanLoadImage(file).then(function (canvas) {
-          scanPages.push({ canvas: canvas, rotation: 0 });
+          scanPages.push(scanNewPage(canvas));
         }, function () {});
       });
-    }, Promise.resolve()).then(renderScanPages);
+    }, Promise.resolve()).then(function () {
+      renderScanPages();
+      // straight from the camera -> straight into the editor
+      if (edit && list.length) openScanEditor(scanPages.length - 1);
+    });
   }
 
   function buildScanPdf() {
@@ -6097,11 +6360,15 @@
   document.getElementById("scanGalleryBtn").addEventListener("click", function () { scanGalleryInput.click(); });
   [scanCameraInput, scanGalleryInput].forEach(function (input) {
     input.addEventListener("change", function () {
-      addScanFiles(input.files);
+      addScanFiles(input.files, input === scanCameraInput);
       input.value = "";
     });
   });
-  scanDocMode.addEventListener("change", renderScanPages);
+  // the switch sets every page's filter (each can still be changed in the editor)
+  scanDocMode.addEventListener("change", function () {
+    scanPages.forEach(function (p) { p.filter = scanDocMode.checked ? "doc" : "color"; p.out = null; });
+    renderScanPages();
+  });
   scanSaveBtn.addEventListener("click", pickScanFolder);
   document.getElementById("scanCancelBtn").addEventListener("click", function () {
     if (scanPages.length) askConfirm(tr("scanDiscardConfirm"), closeScanOverlay);

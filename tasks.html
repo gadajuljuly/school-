@@ -35,7 +35,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<link rel="stylesheet" href="tasks.css?v=17621a3a9f">
+<link rel="stylesheet" href="tasks.css?v=554dc7d504">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -142,6 +142,40 @@
     </div>
   </div>
   <input type="file" accept="image/*" capture="environment" id="scanCameraInput" hidden>
+  <div class="scan-editor" id="scanEditor" hidden>
+    <div class="scan-editor-stage" id="scanEditorStage">
+      <canvas id="scanEditorCanvas"></canvas>
+      <svg class="scan-editor-quad" id="scanEditorQuad"><polygon id="scanEditorPoly"></polygon></svg>
+      <div class="scan-handle"></div><div class="scan-handle"></div><div class="scan-handle"></div><div class="scan-handle"></div>
+    </div>
+    <div class="scan-editor-tools">
+      <div class="scan-editor-tabs">
+        <button type="button" class="scan-editor-tab" data-mode="crop" data-i18n="scanCrop">✂ חיתוך</button>
+        <button type="button" class="scan-editor-tab" id="scanRotateLeftBtn" data-i18n-title="scanRotateLeft" title="סיבוב שמאלה">⟲</button>
+        <button type="button" class="scan-editor-tab" id="scanRotateRightBtn" data-i18n-title="scanRotateRight" title="סיבוב ימינה">⟳</button>
+        <button type="button" class="scan-editor-tab" data-mode="filter" data-i18n="scanFilter">🎨 מסנן</button>
+        <button type="button" class="scan-editor-tab" data-mode="light" data-i18n="scanLight">☀ בהירות</button>
+      </div>
+      <div class="scan-editor-bar" id="scanEditorCropBar">
+        <span data-i18n="scanCropHint">גרור את הפינות לקצוות הדף</span>
+        <button type="button" class="scan-editor-small" id="scanCropResetBtn" data-i18n="scanCropReset">כל התמונה</button>
+      </div>
+      <div class="scan-editor-bar" id="scanEditorFilterBar" hidden>
+        <button type="button" class="scan-filter-btn" data-filter="doc" data-i18n="scanFilterDoc">מסמך</button>
+        <button type="button" class="scan-filter-btn" data-filter="color" data-i18n="scanFilterColor">מקורי</button>
+        <button type="button" class="scan-filter-btn" data-filter="gray" data-i18n="scanFilterGray">אפור</button>
+        <button type="button" class="scan-filter-btn" data-filter="vivid" data-i18n="scanFilterVivid">צבע משופר</button>
+      </div>
+      <div class="scan-editor-bar" id="scanEditorLightBar" hidden>
+        <span>☀</span><input type="range" id="scanBrightness" min="-60" max="60" step="2" value="0">
+      </div>
+      <div class="scan-editor-actions">
+        <button type="button" class="modal-btn modal-btn-primary" id="scanEditDoneBtn" data-i18n="scanEditDone">אישור</button>
+        <button type="button" class="modal-btn" id="scanEditDeleteBtn" data-i18n="scanDeletePage">מחיקת עמוד</button>
+        <button type="button" class="modal-btn modal-btn-no" id="scanEditCancelBtn" data-i18n="cancelBtn">ביטול</button>
+      </div>
+    </div>
+  </div>
   <input type="file" accept="image/*" multiple id="scanGalleryInput" hidden>
 </div>
 <div class="modal-overlay" id="shareTaskOverlay" hidden style="z-index:41">
@@ -1070,6 +1104,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=3b77d5d181"></script>
+<script src="tasks-app.js?v=2473eb1833"></script>
 </body>
 </html>

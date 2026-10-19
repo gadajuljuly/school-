@@ -22,7 +22,24 @@ async function pagePhoto(page, w, h) {
   return Buffer.from(b64, "base64");
 }
 
-test("scan: photograph pages, clean them up, save one PDF into a chosen folder", async ({ page }) => {
+// a white sheet (100,150)-(500,750) with text lines on a dark table, 600x900
+async function sheetOnTable(page) {
+  const b64 = await page.evaluate(() => {
+    const c = document.createElement("canvas");
+    c.width = 600; c.height = 900;
+    const ctx = c.getContext("2d");
+    ctx.fillStyle = "#2a2622"; ctx.fillRect(0, 0, 600, 900);
+    ctx.fillStyle = "#e8e4da"; ctx.fillRect(100, 150, 400, 600);
+    ctx.fillStyle = "#333";
+    for (let y = 190; y < 720; y += 40) ctx.fillRect(130, y, 340, 6);
+    return c.toDataURL("image/jpeg", 0.92).split(",")[1];
+  });
+  return Buffer.from(b64, "base64");
+}
+
+test("scan: photograph pages, edit them, save one PDF into a chosen folder", async ({ page }) => {
+  // (crop, rotate, filter and brightness in the editor that opens after each photo)
+  // save one PDF into a chosen folder", async ({ page }) => {
   await openWithSharedProject(page, { phone: ME, sheet: { id: "p1", name: "בניין A", members: [ME], tasks: [] } });
   await page.locator("#libraryBtn").click();
   const scanBtn = page.locator("#libraryScanBtn");
@@ -37,20 +54,54 @@ test("scan: photograph pages, clean them up, save one PDF into a chosen folder",
   await expect(page.locator("#scanSaveBtn")).toBeDisabled();
   await expect(page.locator("#scanName")).toHaveValue(/^סריקה \d\d-\d\d-\d{4} \d\d-\d\d$/);
 
-  await page.locator("#scanCameraInput").setInputFiles({ name: "p1.jpg", mimeType: "image/jpeg", buffer: await pagePhoto(page, 600, 800) });
+  // a page shot on a dark table: the editor opens, the corners are dragged
+  // onto the sheet -> only the sheet is kept
+  await page.locator("#scanCameraInput").setInputFiles({ name: "p1.jpg", mimeType: "image/jpeg", buffer: await sheetOnTable(page) });
+  await expect(page.locator("#scanEditor")).toBeVisible();
+  await expect(page.locator(".scan-handle").first()).toBeVisible();
+  const box = await page.locator("#scanEditorCanvas").boundingBox();
+  const targets = [[100, 150], [500, 150], [500, 750], [100, 750]]; // the sheet, in a 600x900 photo
+  for (let i = 0; i < 4; i++) {
+    const h = await page.locator(".scan-handle").nth(i).boundingBox();
+    await page.mouse.move(h.x + h.width / 2, h.y + h.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + targets[i][0] / 600 * box.width, box.y + targets[i][1] / 900 * box.height, { steps: 4 });
+    await page.mouse.up();
+  }
+  await page.locator("#scanEditDoneBtn").click();
+  await expect(page.locator("#scanEditor")).toBeHidden();
+  await expect(page.locator(".scan-page")).toHaveCount(1);
+  const first = await page.locator(".scan-page canvas").first().evaluate((c) => {
+    const d = c.getContext("2d").getImageData(0, 0, c.width, c.height).data;
+    let dark = 0; for (let i = 0; i < d.length; i += 4) if (d[i] < 60) dark++;
+    return { ratio: c.width / c.height, darkShare: dark / (c.width * c.height) };
+  });
+  expect(first.ratio).toBeGreaterThan(0.6); expect(first.ratio).toBeLessThan(0.73); // 400x600, not 600x900
+  expect(first.darkShare).toBeLessThan(0.2); // the dark table is gone
+
+  // a landscape page: rotated and set to grey in the editor
   await page.locator("#scanCameraInput").setInputFiles({ name: "p2.jpg", mimeType: "image/jpeg", buffer: await pagePhoto(page, 800, 600) });
+  await expect(page.locator("#scanEditor")).toBeVisible();
+  await page.locator("#scanRotateRightBtn").click();
+  await page.locator(".scan-filter-btn[data-filter=gray]").click();
+  await expect(page.locator(".scan-filter-btn[data-filter=gray]")).toHaveClass(/active/);
+  await page.locator(".scan-editor-tab[data-mode=light]").click();
+  await page.locator("#scanBrightness").fill("20");
+  await page.locator("#scanEditDoneBtn").click();
+  const second = await page.locator(".scan-page canvas").nth(1).evaluate((c) => c.height > c.width);
+  expect(second).toBe(true);
+
+  // from the gallery: no editor; tapping the page opens it, ✕ drops it
   await page.locator("#scanGalleryInput").setInputFiles({ name: "p3.jpg", mimeType: "image/jpeg", buffer: await pagePhoto(page, 600, 800) });
   await expect(page.locator(".scan-page")).toHaveCount(3);
+  await expect(page.locator("#scanEditor")).toBeHidden();
   await expect(page.locator("#scanSaveBtn")).toBeEnabled();
-
   // document mode: the grey paper comes out white
-  const corner = await page.locator(".scan-page canvas").first().evaluate((c) => Array.from(c.getContext("2d").getImageData(2, 2, 1, 1).data));
+  const corner = await page.locator(".scan-page canvas").nth(2).evaluate((c) => Array.from(c.getContext("2d").getImageData(2, 2, 1, 1).data));
   expect(corner[0]).toBeGreaterThan(245);
-
-  // rotate the landscape page, drop the third
-  await page.locator(".scan-page").nth(1).locator(".scan-page-rotate").click();
-  const rotated = await page.locator(".scan-page canvas").nth(1).evaluate((c) => c.height > c.width);
-  expect(rotated).toBe(true);
+  await page.locator(".scan-page").nth(2).click();
+  await expect(page.locator("#scanEditor")).toBeVisible();
+  await page.locator("#scanEditCancelBtn").click();
   await page.locator(".scan-page").nth(2).locator(".scan-page-del").click();
   await expect(page.locator(".scan-page")).toHaveCount(2);
 
@@ -75,6 +126,7 @@ test("scan: ביטול with pages asks first", async ({ page }) => {
   await page.locator("#libraryBtn").click();
   await page.locator("#libraryScanBtn").click();
   await page.locator("#scanCameraInput").setInputFiles({ name: "p1.jpg", mimeType: "image/jpeg", buffer: await pagePhoto(page, 300, 400) });
+  await page.locator("#scanEditDoneBtn").click();
   await expect(page.locator(".scan-page")).toHaveCount(1);
   await page.locator("#scanCancelBtn").click();
   await expect(page.locator("#confirmOverlay")).toBeVisible();
