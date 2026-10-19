@@ -807,8 +807,9 @@
     height: 36px;
     z-index: 1;
   }
-  /* סריקת מסמך - the mirror of the add-folder button, on the right */
-  #libraryFoldersView #libraryScanBtn { left: auto; right: 22px; overflow: hidden; padding: 2px; }
+  /* סריקת מסמך - the mirror of the add-folder button, on the right, kept
+     clear of the red margin line (.ruled-body::before, right:39px) */
+  #libraryFoldersView #libraryScanBtn { left: auto; right: 50px; overflow: hidden; padding: 2px; }
   #libraryScanBtn img { width: 100%; height: 100%; object-fit: contain; display: block; }
   #libraryFoldersView .library-grid {
     flex: none;
