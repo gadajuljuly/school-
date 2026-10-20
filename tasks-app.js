@@ -11521,12 +11521,14 @@
     if (e.target === addTypeOverlay) closeAddTypeModal();
   });
 
+  // A typed line is always a task; it becomes a note (מזכרת) from the
+  // long-press menu ("הפוך למזכרת").
   addForm.addEventListener("submit", function (e) {
     e.preventDefault();
     var text = taskInput.value.trim();
     if (!text) return;
     pendingNewTaskText = text;
-    addTypeOverlay.hidden = false;
+    addPendingTask("task");
   });
 
   function cycleStatus(id, inSheet) {

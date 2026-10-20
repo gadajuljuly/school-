@@ -18,9 +18,14 @@ test("add a task, cycle its status, and it survives a reload", async ({ page }) 
   await expect(page.locator("#taskList li.task", { hasText: "לקנות ברזל" })).toHaveClass(/done/);
 });
 
-test("a note is added as a note, not a task", async ({ page }) => {
+test("a typed line is a task right away; the long-press menu turns it into a note", async ({ page }) => {
   await openLocalApp(page);
-  const row = await addTask(page, "להתקשר לקבלן", "note");
+  await page.locator("#taskInput").fill("להתקשר לקבלן");
+  await page.locator("#addForm button[type=submit]").click();
+  // no "משימה / מזכרת" question
+  await expect(page.locator("#addTypeOverlay")).toBeHidden();
+  await expect(page.locator("#taskInput")).toHaveValue("");
+  const row = await addTask(page, "להתקשר לספק", "note");
   // tapping a note doesn't mark it like a task
   await row.click();
   await expect(row).not.toHaveClass(/partial|done/);

@@ -106,13 +106,18 @@ async function longPress(page, locator, ms = 1300) {
   await page.mouse.up();
 }
 
+// A typed line is added as a task; a note is made from it with the
+// long-press menu's "הפוך למזכרת".
 async function addTask(page, text, type = "task") {
   await page.locator("#taskInput").fill(text);
   await page.locator("#addForm button[type=submit]").click();
-  // "איך להוסיף את השורה?" - משימה / מזכרת
-  await page.locator(type === "note" ? "#addTypeNoteBtn" : "#addTypeTaskBtn").click();
   const row = page.locator("#taskList li.task", { hasText: text });
   await row.waitFor();
+  if (type === "note") {
+    await longPress(page, row);
+    await page.locator("#convertToNoteBtn").click();
+    await page.locator("#moveTaskOverlay").waitFor({ state: "hidden" });
+  }
   return row;
 }
 
