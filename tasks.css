@@ -700,8 +700,10 @@
     flex: 0 1 auto;
     min-height: 0;
     overflow-y: auto;
-    --diary-icon: clamp(30px, calc((100vh - 470px) / 3), 98px);
-    --diary-icon: clamp(30px, calc((100dvh - 470px) / 3), 98px);
+    /* 6 icons in 2 rows of 3 (with "מתוכנן מול ביצוע"), so up to half the
+       free height each, and 3 must fit across a phone */
+    --diary-icon: clamp(30px, min(calc((100vh - 470px) / 2), 25vw - 14px), 92px);
+    --diary-icon: clamp(30px, min(calc((100dvh - 470px) / 2), 25vw - 14px), 92px);
   }
   /* The diary icons sit inline on the tasks page now (below the tabs/
      header, above the footer), unlike the other places this same grid
@@ -712,7 +714,7 @@
      (.ruled-body::before, at right:39px) instead of running through it. */
   #diaryView .site-log-categories-grid {
     /* columns stay wide enough for the labels even when the icons shrink */
-    grid-template-columns: repeat(2, max(72px, var(--diary-icon)));
+    grid-template-columns: repeat(3, max(72px, var(--diary-icon)));
     gap: 8px;
     padding: 0 26px 2px 10px;
     margin-top: -12px;
@@ -727,7 +729,6 @@
      that box) must be capped back to a single column's width - without
      this it blows up to roughly double size. */
   #diaryView #siteLogProcurementBtn {
-    grid-column: 1 / -1;
     justify-self: center;
     width: max(72px, var(--diary-icon));
   }
@@ -3301,3 +3302,32 @@
   /* 7 footer icons: a little smaller so there's air between them on phones */
   .notebook-footer > button { width: 42px; height: 42px; flex-shrink: 0; }
   .task-plan-badge { width: 16px; height: 16px; object-fit: contain; vertical-align: -3px; margin-left: 4px; flex-shrink: 0; }
+  .wp-chart { position: relative; }
+  .wp-deps { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 1; overflow: visible; }
+  .wp-postpone-btn { align-self: flex-start; }
+  .wp-postpone-btn[hidden], .wp-postpone-row[hidden], #workPlanCopyWeekBtn[hidden] { display: none; }
+  .wp-postpone-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.85rem; padding: 6px 8px; background: var(--paper-alt); border-radius: 8px; }
+  .wp-postpone-row input[type="number"] { width: 64px; }
+  .wp-diary-list { display: flex; flex-direction: column; gap: 8px; padding: 6px 12px 16px; }
+  .wp-diary-row { border: 1px solid var(--rule); border-radius: 10px; background: #fff; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
+  .wp-diary-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .wp-diary-name { display: flex; flex-direction: column; min-width: 0; }
+  .wp-diary-name small { color: var(--ink-muted); font-size: 0.75rem; }
+  .wp-diary-name .wp-diary-late { color: var(--danger); font-weight: 700; }
+  .wp-diary-marks { display: flex; gap: 6px; flex-shrink: 0; }
+  .wp-diary-mark { width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid var(--rule); background: var(--paper); font-size: 1.05rem; font-weight: 700; color: var(--ink-muted); cursor: pointer; padding: 0; }
+  .wp-diary-mark.on.wp-diary-done { background: var(--report-green); border-color: var(--report-green); color: #fff; }
+  .wp-diary-mark.on.wp-diary-partial { background: var(--medium); border-color: var(--medium); color: #fff; }
+  .wp-diary-mark.on.wp-diary-not { background: var(--danger); border-color: var(--danger); color: #fff; }
+  .wp-diary-reason { border: 1px solid var(--rule); border-radius: 8px; padding: 6px 8px; font: inherit; font-size: 0.85rem; }
+  .wp-pdf-result-done { color: #2e7a4c; font-weight: 700; }
+  .wp-pdf-result-partial { color: #a8701a; font-weight: 700; }
+  .wp-pdf-result-not { color: #b6473f; font-weight: 700; }
+  .wp-pdf-summary { font-weight: 700; font-size: 1rem; margin: 10px 0; }
+  #workPlanNotifMenuSection .cal-form-check { font-size: 0.85rem; padding: 2px 0; }
+  /* "מתוכנן מול ביצוע" - the longest label: two lines instead of "..." */
+  #diaryView #siteLogPlanBtn .library-item-name { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.1; text-align: center; }
+  /* its artwork fills its square more than the others' - matched */
+  #diaryView #siteLogPlanBtn .library-item-thumb img { transform: scale(0.84); }
+  /* the activity editor is taller than a small phone - it scrolls */
+  #workPlanEditOverlay .modal-box { max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); overflow-y: auto; }

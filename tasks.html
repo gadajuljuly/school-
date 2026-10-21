@@ -35,7 +35,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<link rel="stylesheet" href="tasks.css?v=3e4a2709e1">
+<link rel="stylesheet" href="tasks.css?v=e7be2e7998">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -138,6 +138,8 @@
       </div>
       <label data-i18n="workPlanBy">מבצע</label>
       <input type="text" id="wpBy" list="wpByList" maxlength="80" autocomplete="off">
+      <label data-i18n="workPlanAfter">מתחילה אחרי</label>
+      <select id="wpAfter"></select>
       <datalist id="wpByList"></datalist>
       <label data-i18n="workPlanStatus">מצב</label>
       <div class="wp-statuses">
@@ -149,6 +151,14 @@
       <input type="range" id="wpProgress" min="0" max="100" step="5" value="0">
       <label data-i18n="workPlanNote">הערה</label>
       <textarea id="wpNote" maxlength="500"></textarea>
+      <button type="button" class="wp-small-btn wp-postpone-btn" id="wpPostponeBtn" data-i18n="workPlanPostpone">⏩ דחייה</button>
+      <div class="wp-postpone-row" id="wpPostponeRow" hidden>
+        <span data-i18n="workPlanPostponeBy">לדחות ב-</span>
+        <input type="number" id="wpPostponeDays" min="1" max="365" value="1">
+        <span data-i18n="workPlanDays">ימים</span>
+        <label class="cal-form-check"><input type="checkbox" id="wpPostponeFollowing"><span data-i18n="workPlanPostponeFollowing">גם את הפעילויות שאחריה</span></label>
+        <button type="button" class="wp-small-btn" id="wpPostponeApplyBtn" data-i18n="workPlanPostponeApply">דחה</button>
+      </div>
       <label class="cal-form-check"><input type="checkbox" id="wpShowInTasks" checked><span data-i18n="workPlanShowInTasks">להציג כמשימה ברשימת היום בימי הביצוע</span></label>
       <div class="modal-actions">
         <button type="submit" class="modal-btn modal-btn-primary" data-i18n="workPlanSave">שמירה</button>
@@ -393,6 +403,11 @@
             </select>
             <p class="reminder-status" id="reminderStatus" hidden></p>
           </div>
+          <div class="menu-section" id="workPlanNotifMenuSection">
+            <div class="menu-label" data-i18n="workPlanNotifLabel">התראות תוכנית עבודה</div>
+            <label class="cal-form-check"><input type="checkbox" id="wpNotifyLateToggle" checked><span data-i18n="workPlanNotifLate">פעילות באיחור</span></label>
+            <label class="cal-form-check"><input type="checkbox" id="wpNotifyStartToggle" checked><span data-i18n="workPlanNotifStart">פעילות שמתחילה מחר</span></label>
+          </div>
           <div class="menu-section" id="chatNotifMenuSection">
             <div class="menu-label" data-i18n="menuLabelChatNotif">התראות הודעות צ'אט</div>
             <select id="chatNotifSelect" class="reminder-select">
@@ -490,6 +505,10 @@
           <div class="library-item" id="siteLogProcurementBtn">
             <div class="library-item-thumb"><img src="tasks-procurement-icon.webp" alt=""></div>
             <div class="library-item-name" data-i18n="siteLogProcurement">רכש</div>
+          </div>
+          <div class="library-item" id="siteLogPlanBtn">
+            <div class="library-item-thumb"><img src="tasks-work-plan-icon.webp" alt=""></div>
+            <div class="library-item-name" data-i18n="workPlanPlannedVsDone">מתוכנן מול ביצוע</div>
           </div>
         </div>
         <div class="diary-actions-fixed">
@@ -965,6 +984,7 @@
       </div>
       <button type="button" class="wp-small-btn" id="workPlanTodayBtn" data-i18n="workPlanToday">היום</button>
       <button type="button" class="wp-small-btn" id="workPlanPdfBtn">PDF</button>
+      <button type="button" class="wp-small-btn" id="workPlanCopyWeekBtn" data-i18n="workPlanCopyWeek" hidden>העתק לשבוע הבא</button>
     </div>
     <div class="wp-nav" id="workPlanNav">
       <button type="button" class="wp-arrow" id="workPlanPrevBtn" aria-label="prev">&#8250;</button>
@@ -1080,6 +1100,18 @@
     <button type="button" class="site-log-copy-prev-btn" id="siteLogToolsOrderBtn" data-i18n="siteLogToolsOrderBtn">שגר דוח כלים</button>
   </div>
 
+  <div class="report-view" id="siteLogPlanView" hidden>
+    <div class="report-head">
+      <button type="button" class="report-back-btn" id="siteLogPlanBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
+      <div class="report-head-title">
+        <div class="site-log-header-project" id="siteLogPlanProjectName"></div>
+        <div data-i18n="workPlanPlannedVsDone">מתוכנן מול ביצוע</div>
+      </div>
+    </div>
+    <div class="site-log-list-wrap">
+      <div class="wp-diary-list" id="siteLogPlanList"></div>
+    </div>
+  </div>
   <div class="report-view" id="siteLogContractorsView" hidden>
     <div class="report-head">
       <button type="button" class="report-back-btn" id="siteLogContractorsBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
@@ -1183,6 +1215,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=5179801e31"></script>
+<script src="tasks-app.js?v=8cc29635d7"></script>
 </body>
 </html>

@@ -143,6 +143,7 @@
     if (!Array.isArray(log.contractors)) log.contractors = [];
     if (!Array.isArray(log.works)) log.works = [];
     if (!Array.isArray(log.procurement)) log.procurement = [];
+    if (!Array.isArray(log.planned)) log.planned = [];
     log.procurement.forEach(function (row) {
       if (typeof row.item !== "string") row.item = "";
       if (typeof row.quantity !== "string") row.quantity = "";

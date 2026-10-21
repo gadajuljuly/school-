@@ -24,7 +24,9 @@ import org.json.JSONObject;
 // presses "כבה" or "נודניק". "כבה" (or swiping it away) turns the
 // reminder off for good: it's unscheduled here and queued for tasks.html
 // to remove from the task (takeTurnedOff).
-// Each alarm is {id, title, body, at (epoch ms), repeatMinutes?, snooze?}.
+// Each alarm is {id, title, body, at (epoch ms), repeatMinutes?, snooze?, quiet?}.
+// quiet (work-plan notices): an ordinary notification instead of ringing,
+// opening the app on the work plan.
 public final class TaskAlarmScheduler {
     static final String ACTION_FIRE = "com.gadajuljuly.itask.ALARM_FIRE";
     static final String ACTION_STOP = "com.gadajuljuly.itask.ALARM_STOP";
@@ -89,7 +91,8 @@ public final class TaskAlarmScheduler {
             JSONObject a = alarms.optJSONObject(i);
             if (a == null) continue;
             if (!id.equals(a.optString("id"))) { next.put(a); continue; }
-            showRinging(c, id, a.optString("title"), a.optString("body"));
+            if (a.optBoolean("quiet")) showQuiet(c, id, a.optString("title"), a.optString("body"));
+            else showRinging(c, id, a.optString("title"), a.optString("body"));
             markFired(c, id, a.optLong("at", 0));
             long repeatMinutes = a.optLong("repeatMinutes", 0);
             if (repeatMinutes > 0) {
@@ -282,6 +285,33 @@ public final class TaskAlarmScheduler {
                 .build();
         n.flags |= Notification.FLAG_INSISTENT;
         c.getSystemService(NotificationManager.class).notify(id.hashCode(), n);
+    }
+
+    private static final String QUIET_CHANNEL_ID = "work_plan_notices";
+
+    private static void showQuiet(Context c, String id, String title, String body) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                c.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        NotificationManager nm = c.getSystemService(NotificationManager.class);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && nm.getNotificationChannel(QUIET_CHANNEL_ID) == null) {
+            NotificationChannel channel = new NotificationChannel(QUIET_CHANNEL_ID, "תוכנית עבודה",
+                    NotificationManager.IMPORTANCE_DEFAULT);
+            channel.setDescription("פעילויות באיחור ופעילויות שמתחילות מחר");
+            nm.createNotificationChannel(channel);
+        }
+        PendingIntent open = PendingIntent.getActivity(c, id.hashCode(), ItaskAlarmPlugin.openAppIntent(c, "workplan"),
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        Notification n = new NotificationCompat.Builder(c, QUIET_CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.ic_menu_my_calendar)
+                .setContentTitle(title)
+                .setContentText(body)
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(body))
+                .setContentIntent(open)
+                .setAutoCancel(true)
+                .build();
+        nm.notify(id.hashCode(), n);
     }
 
     private static void ensureChannel(Context c) {

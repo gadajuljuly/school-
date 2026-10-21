@@ -175,6 +175,8 @@
         if (to >= 0 && from <= range.days - 1) {
           var cls = wpClass(item);
           var bar = wpEl("div", "wp-bar wp-" + cls);
+          bar.setAttribute("data-id", item.id);
+          if (item.after) bar.setAttribute("data-after", item.after);
           bar.style.right = (from * dayW + 1) + "px";
           bar.style.width = Math.max(4, (to - from + 1) * dayW - 2) + "px";
           if (item.progress > 0 && item.status !== "done") {
@@ -214,7 +216,11 @@
     var any = groups.some(function (g) { return g.items.length; });
     workPlanEmpty.hidden = any;
     workPlanChart.hidden = !any;
-    if (any) wpBuildChart(workPlanChart, groups, range, workPlanChart.clientWidth || window.innerWidth, false);
+    if (any) {
+      wpBuildChart(workPlanChart, groups, range, workPlanChart.clientWidth || window.innerWidth, false);
+      wpDrawDependencies(workPlanChart);
+    }
+    document.getElementById("workPlanCopyWeekBtn").hidden = wpState.zoom !== "week";
   }
   function refreshWorkPlanIfOpen() {
     if (!workPlanView.hidden && !wpEditing) renderWorkPlan();
@@ -274,6 +280,8 @@
     wpBy.value = copy.by || "";
     wpNote.value = copy.note || "";
     wpShowInTasks.checked = copy.showInTasks !== false;
+    document.getElementById("wpPostponeRow").hidden = true;
+    document.getElementById("wpPostponeBtn").hidden = isNew;
     wpSetStatus(copy.status || "todo");
     wpSetProgress(copy.progress || 0);
     // Head Office adding: which project
@@ -290,6 +298,7 @@
     }
     var peopleSheet = allSheets().find(function (s) { return s.id === wpEditing.sheetId; });
     if (peopleSheet) wpFillPeople(peopleSheet);
+    wpFillAfterOptions(peopleSheet, copy);
     wpDeleteBtn.hidden = isNew;
     document.getElementById("workPlanEditTitle").textContent = tr(isNew ? "workPlanAddTitle" : "workPlanEditTitle");
     wpEditOverlay.hidden = false;
@@ -344,11 +353,13 @@
       progress: wpEditStatus === "done" ? 100 : progress,
       note: wpNote.value.trim(),
       showInTasks: wpShowInTasks.checked,
+      after: wpAfter.value || null,
       updatedBy: myPhoneNumber || null,
       updatedAt: Date.now()
     });
     saveWorkPlanItem(sheet, item, false);
     closeWorkPlanEditor();
+    wpCascadeDependents(sheet, item);
   });
   wpDeleteBtn.addEventListener("click", function () {
     if (!wpEditing) return;
@@ -368,6 +379,7 @@
     wpEditing.sheetId = wpProject.value;
     var s = allSheets().find(function (x) { return x.id === wpProject.value; });
     if (s) wpFillPeople(s);
+    wpFillAfterOptions(s, wpEditing.item);
   });
   document.querySelectorAll(".wp-status").forEach(function (b) {
     b.addEventListener("click", function () {
@@ -411,6 +423,7 @@
       document.body.appendChild(wrap);
       var collapsedBefore = wpState.collapsed;
       wpBuildChart(chart, groups, range, 1052, true);
+      wpDrawDependencies(chart);
       wpState.collapsed = collapsedBefore;
       return window.html2canvas(wrap, { scale: 2, backgroundColor: "#ffffff" }).then(function (canvas) {
         document.body.removeChild(wrap);

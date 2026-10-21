@@ -187,6 +187,7 @@
       });
     });
     if (flagged) saveData();
+    alarms = alarms.concat(workPlanNativeAlarms());
     var json = JSON.stringify(alarms);
     if (json === lastNativeTaskAlarmsJson) return;
     lastNativeTaskAlarmsJson = json;
@@ -217,6 +218,7 @@
   // notification. ("focus", from app versions before 15, just opens the app.)
   function openLaunchView(view, text) {
     if (view === "share") { openShareTaskModal(text); return; }
+    if (view === "workplan") { openWorkPlan(); return; }
     if (!view || view.indexOf("task|") !== 0) return;
     var parts = view.split("|");
     closeMoveTask();

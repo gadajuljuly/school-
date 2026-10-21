@@ -809,6 +809,7 @@
     if (!dataLoadBlocked) calVerifyLinks(false);
     syncNativeWidget();
     refreshWorkPlanIfOpen();
+    if (privateDataSettled) maybeShowWorkPlanLateToast();
 
     sheetTitle.textContent = activeSheet().name;
     renderSheetTitleLogo();

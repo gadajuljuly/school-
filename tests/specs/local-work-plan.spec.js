@@ -207,3 +207,92 @@ test("voice: 'תוסיף לתוכנית ... מיום ... עד ..., צוות ...'
   await expect.poll(async () => (await serverPlan(page, "p1")).map((x) => [x.name, x.start, x.end, x.by]))
     .toEqual([["יציקת תקרה קומה 3", iso(1), iso(2), "צוות טפסנות"]]);
 });
+
+// ---- stage 3 ----
+
+const PLAN3 = () => [
+  { id: "w1", name: "קירות מרתף", start: iso(-3), end: iso(0), by: "צוות טפסנות", status: "prog", progress: 40 },
+  { id: "w2", name: "איטום", start: iso(1), end: iso(3), by: "קבלן איטום", status: "todo", progress: 0, after: "w1" },
+  { id: "w3", name: "חשמל", start: iso(-10), end: iso(-2), by: "", status: "prog", progress: 50 }, // late
+];
+
+test("diary: planned vs done - marking updates the plan, the reason is kept, the PDF shows it", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [], workPlan: PLAN3() }] });
+  await page.locator("#calendarFabBtn").click();
+  await page.locator("#siteLogPlanBtn").click();
+  const rows = page.locator(".wp-diary-row");
+  await expect(rows).toHaveCount(2); // today's + the late one; איטום starts tomorrow
+  await expect(rows.filter({ hasText: "חשמל" })).toContainText("באיחור");
+  await rows.filter({ hasText: "קירות מרתף" }).locator(".wp-diary-mark[data-result=done]").click();
+  await rows.filter({ hasText: "חשמל" }).locator(".wp-diary-mark[data-result=not]").click();
+  await rows.filter({ hasText: "חשמל" }).locator(".wp-diary-reason").fill("לא הגיע ספק");
+  await rows.filter({ hasText: "חשמל" }).locator(".wp-diary-reason").blur();
+  await expect.poll(async () => (await serverPlan(page, "p1")).find((x) => x.id === "w1").status).toBe("done");
+  await page.locator("#siteLogPlanBackBtn").click();
+  await page.locator("#siteLogPreviewBtn").click();
+  const preview = page.locator("#siteLogPreviewContent");
+  await expect(preview).toContainText("מתוכנן מול ביצוע");
+  await expect(preview).toContainText("לא הגיע ספק");
+  await expect(preview).toContainText("✓ בוצע");
+});
+
+test("copy a week, postpone with what follows, and a dependency moves its follower", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [], workPlan: PLAN3() }] });
+  await page.locator("#workPlanBtn").click();
+  // the arrow from קירות to איטום
+  await expect(page.locator("#workPlanChart .wp-deps path[marker-end]")).toHaveCount(1);
+
+  // postpone קירות by 2 days -> איטום (starts after it) is offered to move too
+  await page.locator("#workPlanChart .wp-row", { hasText: "קירות מרתף" }).click();
+  await expect(page.locator("#wpAfter")).toHaveValue("");
+  await page.locator("#wpPostponeBtn").click();
+  await page.locator("#wpPostponeDays").fill("2");
+  await page.locator("#wpPostponeApplyBtn").click();
+  await expect(page.locator("#confirmOverlay")).toContainText("איטום");
+  await page.locator("#confirmYesBtn").click();
+  await expect.poll(async () => {
+    const plan = await serverPlan(page, "p1");
+    const w1 = plan.find((x) => x.id === "w1"), w2 = plan.find((x) => x.id === "w2");
+    return [w1.start, w1.end, w2.start, w2.end];
+  }).toEqual([iso(-1), iso(2), iso(3), iso(5)]);
+
+  // copy this week to the next
+  await page.locator(".wp-zoom[data-zoom=week]").click();
+  await page.locator("#workPlanCopyWeekBtn").click();
+  await page.locator("#confirmYesBtn").click();
+  await expect.poll(async () => (await serverPlan(page, "p1")).length).toBeGreaterThan(3);
+  const copies = (await serverPlan(page, "p1")).filter((x) => !["w1", "w2", "w3"].includes(x.id));
+  expect(copies.every((x) => x.status === "todo" && x.progress === 0)).toBe(true);
+  const w1copy = copies.find((x) => x.name === "קירות מרתף");
+  expect(w1copy.start).toBe(iso(6));
+});
+
+test("a new activity set to start after another starts the day after it", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [], workPlan: PLAN3() }] });
+  await page.locator("#workPlanBtn").click();
+  await page.locator("#workPlanAddBtn").click();
+  await page.locator("#wpName").fill("ריצוף");
+  await page.locator("#wpAfter").selectOption({ label: "איטום" });
+  await expect(page.locator("#wpStart")).toHaveValue(iso(4));
+  await page.locator("#workPlanEditForm button[type=submit]").click();
+  await expect.poll(async () => (await serverPlan(page, "p1")).find((x) => x.name === "ריצוף")).toMatchObject({ start: iso(4), after: "w2" });
+});
+
+test("phone notices: late the next morning, starting the afternoon before - quiet; switchable", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, native: true, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [], workPlan: PLAN3() }] });
+  const planAlarms = () => page.evaluate(() => window.__native.alarms.filter((a) => /^plan-/.test(a.id)));
+  // w2 starts tomorrow: its notice is today at 16:00 - only while that's ahead
+  const startToo = new Date().getHours() < 16;
+  const expected = ["plan-late:p1:w1", "plan-late:p1:w2"].concat(startToo ? ["plan-start:p1:w2"] : []).sort();
+  await expect.poll(async () => (await planAlarms()).map((a) => a.id).sort()).toEqual(expected);
+  const alarms = await planAlarms();
+  expect(alarms.every((a) => a.quiet === true)).toBe(true);
+  const late = alarms.find((a) => a.id === "plan-late:p1:w1");
+  expect(new Date(late.at).getHours()).toBe(8);
+  expect(late.body).toContain("קירות מרתף");
+  if (startToo) expect(new Date(alarms.find((a) => a.id === "plan-start:p1:w2").at).getHours()).toBe(16);
+  // the late one already past is in the app: a toast once a day
+  // switching "late" off in the menu drops those
+  await page.evaluate(() => { const el = document.getElementById("wpNotifyLateToggle"); el.checked = false; el.dispatchEvent(new Event("change")); });
+  await expect.poll(async () => (await planAlarms()).map((a) => a.id)).toEqual(startToo ? ["plan-start:p1:w2"] : []);
+});

@@ -29,6 +29,7 @@ const NATIVE_FAKE = () => {
         canScheduleExact: () => ok({ value: true }),
         openExactAlarmSettings: () => ok(),
         openFile: (o) => { (native.opened = native.opened || []).push(o); return ok(); },
+        features: () => ok({ quietAlarms: true }),
       },
       Filesystem: {
         writeFile: ({ path, data }) => { (native.files = native.files || []).push({ path, size: (data || "").length }); return ok({ uri: "file:///cache/" + path }); },

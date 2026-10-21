@@ -996,6 +996,8 @@
       doc.appendChild(worksFrame);
     }
 
+    appendPlannedPdfSection(doc, log);
+
     if (filledProcurement(log).length) {
       var procurementHeading = document.createElement("div");
       procurementHeading.className = "pdf-doc-section-heading";

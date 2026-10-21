@@ -592,9 +592,12 @@
   }
   function buildSiteLogPeriodicPdfElement(sheet, logs) {
     var wrap = document.createElement("div");
+    // first: how much of the work plan got done, and why not
+    var summary = logs.length && buildPlannedSummaryElement(sheet, logs, logs[0].date, logs[logs.length - 1].date);
+    if (summary) wrap.appendChild(summary);
     logs.forEach(function (log, index) {
       var docEl = buildSiteLogGeneralPdfElement(sheet, log, log.number);
-      if (index > 0) docEl.classList.add("pdf-doc-periodic-section");
+      if (index > 0 || summary) docEl.classList.add("pdf-doc-periodic-section");
       wrap.appendChild(docEl);
     });
     return wrap;

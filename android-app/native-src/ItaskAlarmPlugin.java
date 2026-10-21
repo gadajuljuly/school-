@@ -90,6 +90,15 @@ public class ItaskAlarmPlugin extends Plugin {
         call.resolve(result);
     }
 
+    // What this build of the app can do, for the page to check before
+    // relying on it (version 22+: quiet work-plan notices).
+    @PluginMethod
+    public void features(PluginCall call) {
+        JSObject result = new JSObject();
+        result.put("quietAlarms", true);
+        call.resolve(result);
+    }
+
     @PluginMethod
     public void setWidgetData(PluginCall call) {
         ItaskWidgetProvider.saveAndRefresh(getContext(), call.getData().toString());
