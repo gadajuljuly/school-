@@ -29,6 +29,7 @@
   var wpProject = document.getElementById("wpProject");
   var wpProjectRow = document.getElementById("wpProjectRow");
   var wpDeleteBtn = document.getElementById("wpDeleteBtn");
+  var wpShowInTasks = document.getElementById("wpShowInTasks");
   var WP_NAME_W = 112;
   var wpState = { sheetId: null, zoom: "month", anchor: todayISO(), collapsed: {} };
   var wpEditing = null; // { sheetId, item (a copy), isNew }
@@ -230,6 +231,7 @@
   }
   function closeWorkPlan() {
     workPlanView.hidden = true;
+    render(); // the day's tasks follow the plan's changes
   }
 
   // ---- adding / editing an activity --------------------------------------
@@ -271,6 +273,7 @@
     wpEnd.value = copy.end;
     wpBy.value = copy.by || "";
     wpNote.value = copy.note || "";
+    wpShowInTasks.checked = copy.showInTasks !== false;
     wpSetStatus(copy.status || "todo");
     wpSetProgress(copy.progress || 0);
     // Head Office adding: which project
@@ -340,6 +343,7 @@
       status: wpEditStatus,
       progress: wpEditStatus === "done" ? 100 : progress,
       note: wpNote.value.trim(),
+      showInTasks: wpShowInTasks.checked,
       updatedBy: myPhoneNumber || null,
       updatedAt: Date.now()
     });
@@ -460,3 +464,130 @@
     renderWorkPlan();
   });
   window.addEventListener("resize", refreshWorkPlanIfOpen);
+
+  // ---- the plan in the daily task list -----------------------------------
+  // Every activity shown in tasks (showInTasks, on by default) has one
+  // linked task, id "plan-<activity id>" - the same on every member's
+  // device, so two devices creating it at once merge into one. It's dated
+  // the activity's start day and then carried from day to day by the usual
+  // rollover while open; its text and status follow the plan, and tapping
+  // it (cycleStatus) or renaming it updates the plan in turn.
+  var WP_TASK_STATUS = { todo: 0, prog: 1, done: 2 };
+  var WP_STATUS_FROM_TASK = ["todo", "prog", "done"];
+  function wpTaskId(item) { return "plan-" + item.id; }
+  function wpItemOf(sheet, task) {
+    return task && task.planItemId ? (sheet.workPlan || []).find(function (x) { return x.id === task.planItemId; }) : null;
+  }
+
+  function syncWorkPlanTasks() {
+    if (dataLoadBlocked) return;
+    var today = todayISO();
+    var changed = false;
+    allSheets().forEach(function (sheet) {
+      if (sheet.id === HEAD_OFFICE_SHEET_ID || sheet.ended || !Array.isArray(sheet.tasks)) return;
+      var plan = sheet.workPlan || [];
+      if (!plan.length && !sheet.tasks.some(function (t) { return t.planItemId; })) return;
+      var byId = {};
+      plan.forEach(function (it) { byId[it.id] = it; });
+      var linked = {};
+      var detach = [];
+      sheet.tasks = sheet.tasks.filter(function (t) {
+        if (!t.planItemId) return true;
+        var item = byId[t.planItemId];
+        if (!item || item.showInTasks === false) { changed = true; return false; }
+        if (t.type === "note") {
+          // turned into a note: it's the user's own line now
+          delete t.planItemId;
+          detach.push(item);
+          changed = true;
+          return true;
+        }
+        linked[item.id] = true;
+        var st = WP_TASK_STATUS[item.status] || 0;
+        if (t.text !== item.name) { t.text = item.name; changed = true; }
+        if (t.status !== st) { t.status = st; changed = true; }
+        if (st !== 2) {
+          var want = item.start > today ? item.start : (t.date !== today ? today : t.date);
+          if (t.date !== want) { t.date = want; changed = true; }
+        }
+        return true;
+      });
+      plan.forEach(function (item) {
+        if (linked[item.id] || item.showInTasks === false || item.status === "done") return;
+        if (sheet.tasks.some(function (t) { return t.id === wpTaskId(item); })) return;
+        sheet.tasks.push({
+          id: wpTaskId(item), text: item.name, status: WP_TASK_STATUS[item.status] || 0, urgent: false,
+          type: "task", date: item.start > today ? item.start : today, createdAt: Date.now(), planItemId: item.id
+        });
+        changed = true;
+      });
+      detach.forEach(function (item) {
+        saveWorkPlanItem(sheet, Object.assign({}, item, { showInTasks: false }), false);
+      });
+    });
+    if (changed) saveData();
+  }
+
+  // The task side changed -> the activity follows.
+  function workPlanTaskStatusChanged(sheet, task) {
+    var item = wpItemOf(sheet, task);
+    if (!item) return;
+    var status = WP_STATUS_FROM_TASK[task.status] || "todo";
+    if (item.status === status) return;
+    saveWorkPlanItem(sheet, Object.assign({}, item, {
+      status: status,
+      progress: status === "done" ? 100 : status === "todo" ? 0 : (item.progress || 0),
+      updatedBy: myPhoneNumber || null,
+      updatedAt: Date.now()
+    }), false);
+  }
+  function workPlanTaskRenamed(sheet, task) {
+    var item = wpItemOf(sheet, task);
+    if (!item || item.name === task.text) return;
+    saveWorkPlanItem(sheet, Object.assign({}, item, { name: task.text, updatedBy: myPhoneNumber || null, updatedAt: Date.now() }), false);
+  }
+  // Deleted or moved away from the task list: the activity stays in the
+  // plan, it just isn't shown as a task any more.
+  function workPlanTaskRemoved(sheet, task) {
+    var item = wpItemOf(sheet, task);
+    if (!item) return;
+    saveWorkPlanItem(sheet, Object.assign({}, item, { showInTasks: false, updatedAt: Date.now() }), false);
+  }
+  function openWorkPlanItem(sheet, task) {
+    var item = wpItemOf(sheet, task);
+    if (!item) return;
+    openWorkPlan();
+    openWorkPlanEditor(sheet, item);
+  }
+  taskWorkPlanBtn.addEventListener("click", function () {
+    var sheet = activeSheet();
+    var task = sheet.tasks.find(function (t) { return t.id === pendingMoveTaskId; });
+    closeMoveTask();
+    openWorkPlanItem(sheet, task);
+  });
+
+  // Head Office's mirror of a project's activity (planRef) tapped or ticked.
+  function workPlanRefStatusChanged(task) {
+    var sheet = allSheets().find(function (s) { return s.id === task.planRef.sheetId; });
+    var item = sheet && (sheet.workPlan || []).find(function (x) { return x.id === task.planRef.itemId; });
+    if (!item) return;
+    var status = WP_STATUS_FROM_TASK[task.status] || "todo";
+    if (item.status === status) return;
+    saveWorkPlanItem(sheet, Object.assign({}, item, {
+      status: status,
+      progress: status === "done" ? 100 : status === "todo" ? 0 : (item.progress || 0),
+      updatedBy: myPhoneNumber || null,
+      updatedAt: Date.now()
+    }), false);
+  }
+  function openHeadOfficeNotificationTarget(task) {
+    if (task.planRef) {
+      var sheet = allSheets().find(function (s) { return s.id === task.planRef.sheetId; });
+      var item = sheet && (sheet.workPlan || []).find(function (x) { return x.id === task.planRef.itemId; });
+      if (!item) return;
+      openWorkPlan();
+      openWorkPlanEditor(sheet, item);
+      return;
+    }
+    openOfficeProcurementView(task.targetSheetId, task.targetDate);
+  }

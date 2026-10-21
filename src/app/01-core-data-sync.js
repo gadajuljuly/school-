@@ -662,6 +662,7 @@
   var taskReminderOffBtn = document.getElementById("taskReminderOffBtn");
   var taskReminderCancelBtn = document.getElementById("taskReminderCancelBtn");
   var convertToNoteBtn = document.getElementById("convertToNoteBtn");
+  var taskWorkPlanBtn = document.getElementById("taskWorkPlanBtn");
   var convertToTaskBtn = document.getElementById("convertToTaskBtn");
   var transferToLogBtn = document.getElementById("transferToLogBtn");
   var removeFromLogBtn = document.getElementById("removeFromLogBtn");
@@ -690,6 +691,12 @@
       });
     } else {
       sourceSheet.tasks.splice(idx, 1);
+      // a work-plan activity's task moved elsewhere is just a task there
+      if (task.planItemId) {
+        workPlanTaskRemoved(sourceSheet, task);
+        task = Object.assign({}, task, { id: uid() });
+        delete task.planItemId;
+      }
       targetSheet.tasks.push(task);
     }
     saveData();
@@ -724,6 +731,7 @@
     var task = activeSheet().tasks.find(function (t) { return t.id === taskId; });
     convertToNoteBtn.hidden = !task || task.type === "note";
     convertToTaskBtn.hidden = !task || task.type !== "note";
+    taskWorkPlanBtn.hidden = !task || !task.planItemId;
     var logEligible = task && task.type === "task" && task.status === 2;
     transferToLogBtn.hidden = !logEligible || !!task.logEntry;
     removeFromLogBtn.hidden = !logEligible || !task.logEntry;

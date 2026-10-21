@@ -104,9 +104,12 @@
   // reminderTime }. Offline rules for Hebrew (and the common Arabic
   // words); whatever isn't recognized as a command, project, date or time
   // stays the task's text.
-  function parseVoiceCommand(rawText, sheets, nowMs) {
+  function parseVoiceCommand(rawText, sheets, nowMs, opts) {
+    opts = opts || {};
+    if (!opts.plan && VOICE_PLAN_RE.test(" " + rawText + " ")) return parseVoicePlan(rawText, sheets, nowMs, opts);
     var now = new Date(nowMs || Date.now());
-    var text = " " + String(rawText || "").replace(/[״]/g, "\"").replace(/[–—]/g, "-").replace(/\s+/g, " ").trim() + " ";
+    // commas set apart, so "שלישי," still reads as a word
+    var text = " " + String(rawText || "").replace(/[״]/g, "\"").replace(/[–—]/g, "-").replace(/\s*([,،])\s*/g, " $1 ").replace(/\s+/g, " ").trim() + " ";
     var result = { action: "task", items: [], sheetId: null, date: null, reminderTime: null };
     var reminderIntent = false, plural = false, dateFound = false;
     var reminderAt = null;
@@ -158,23 +161,23 @@
       reminderAt = new Date(now.getTime() + mins * 60000);
       dateFound = true;
     });
-    take(/(\s)(?:ה)?(?:יום\s+)?(מחרתיים|היום|מחר|بعد بكرة|بعد بكره|اليوم|بكرة|بكره|غدا|غداً|بكرا)(?=\s)/g, function (m, sp, w) {
+    take(/(\s)(?:מ)?(?:ה)?(?:יום\s+)?(מחרתיים|היום|מחר|بعد بكرة|بعد بكره|اليوم|بكرة|بكره|غدا|غداً|بكرا)(?=\s)/g, function (m, sp, w) {
       var d = new Date(now);
       if (/מחרתיים|بعد/.test(w)) d.setDate(d.getDate() + 2);
       else if (/מחר|بكر|غد/.test(w)) d.setDate(d.getDate() + 1);
       result.date = voiceYmd(d);
       dateFound = true;
     });
-    take(new RegExp("(\\s)(?:ב|ל)?(?:יום\\s+)?(" + voiceAlt(VOICE_WEEKDAYS) + ")(?:\\s+(?:הבא|הקרוב|القادم|الجاي))?(?=\\s)", "g"), function (m, sp, w) {
+    take(new RegExp("(\\s)(?:ב|ל|מ)?(?:יום\\s+)?(" + voiceAlt(VOICE_WEEKDAYS) + ")(?:\\s+(?:הבא|הקרוב|القادم|الجاي))?(?=\\s)", "g"), function (m, sp, w) {
       // "שני"/"שלישי"... alone are also numbers/words - need "יום" or "ב"
-      if (!/יום|^\s*ב|ال/.test(m)) return false;
+      if (!/יום|^\s*ב|ال/.test(m) && !opts.bareWeekday) return false;
       var d = new Date(now);
       var diff = (VOICE_WEEKDAYS[w] - d.getDay() + 7) % 7 || 7;
       d.setDate(d.getDate() + diff);
       result.date = voiceYmd(d);
       dateFound = true;
     });
-    take(new RegExp("(\\s)(?:ב-?|ל-?)?(\\d{1,2})(?:[./](\\d{1,2})(?:[./](\\d{2,4}))?|\\s+(?:ב|ל)(" + voiceAlt(VOICE_HE_MONTHS) + "|חודש))(?=\\s)", "g"), function (m, sp, day, mon, yr, monName) {
+    take(new RegExp("(\\s)(?:ב-?|ל-?|מה-?|מ-?|ה-?)?(\\d{1,2})(?:[./](\\d{1,2})(?:[./](\\d{2,4}))?|\\s+(?:ב|ל)(" + voiceAlt(VOICE_HE_MONTHS) + "|חודש))(?=\\s)", "g"), function (m, sp, day, mon, yr, monName) {
       var dd = parseInt(day, 10);
       var mm = mon ? parseInt(mon, 10) : (monName && monName !== "חודש" ? VOICE_HE_MONTHS[monName] : now.getMonth() + 1);
       if (dd < 1 || dd > 31 || mm < 1 || mm > 12) return false;
@@ -268,6 +271,63 @@
         voiceYmd(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1));
     }
     return result;
+  }
+
+  // "תוסיף לתוכנית העבודה יציקת תקרה קומה 3 מיום ראשון עד שלישי, צוות
+  // טפסנות" -> { action: "plan", items, sheetId, date (start), endDate, by }.
+  // The part before "עד" is parsed as usual (its date is the start), the
+  // part after it gives the end; "למשך שבוע" works too. Who carries it out:
+  // a name from the project's lists, or a trailing "צוות/קבלן ...".
+  var VOICE_PLAN_RE = /\s(?:ל|ב)?(?:תוכנית|תכנית)(?:\s+ה?עבודה)?(?=\s)|\sלגאנט(?=\s)|\s(?:لخطة|خطة)\s+العمل(?=\s)/;
+  function parseVoicePlan(rawText, sheets, nowMs, opts) {
+    var text = " " + String(rawText || "").replace(/\s+/g, " ").trim() + " ";
+    text = text.replace(new RegExp(VOICE_PLAN_RE.source, "g"), " ");
+    var days = null;
+    text = text.replace(/\sלמשך\s+(שבוע|שבועיים|יומיים|חודש|(\S+)\s+(ימים|שבועות))(?=\s)/, function (m, what, n, unit) {
+      var count = voiceNumber(n);
+      days = { "שבוע": 7, "שבועיים": 14, "יומיים": 2, "חודש": 30 }[what] || (count ? count * (unit === "שבועות" ? 7 : 1) : null);
+      return " ";
+    });
+    var split = text.match(/^(.*?)\s(?:ו)?(?:עד|حتى|لغاية)\s+(?:ל|ה)?-?(.*)$/);
+    var left = split ? split[1] : text;
+    var res = parseVoiceCommand(left, sheets, nowMs, { plan: true });
+    var rest = res.items.join(", ");
+    var endDate = null;
+    var start = res.date || voiceYmd(new Date(nowMs || Date.now()));
+    if (split) {
+      var right = parseVoiceCommand(" " + split[2] + " ", [], nowMs, { plan: true, bareWeekday: true });
+      // "מיום ראשון עד שלישי": the Tuesday after that Sunday
+      if (right.date && right.date < start) {
+        right = parseVoiceCommand(" " + split[2] + " ", [], new Date(start + "T12:00").getTime(), { plan: true, bareWeekday: true });
+      }
+      endDate = right.date;
+      if (right.items.length) rest = (rest ? rest + ", " : "") + right.items.join(", ");
+    }
+    if (!endDate && days) {
+      var e = new Date(start + "T12:00"); e.setDate(e.getDate() + days - 1);
+      endDate = voiceYmd(e);
+    }
+    var by = "";
+    (opts.people || []).slice().sort(function (a, b) { return b.length - a.length; }).some(function (name) {
+      var at = name && rest.indexOf(name);
+      if (!name || at === -1) return false;
+      by = name;
+      rest = (rest.slice(0, at) + rest.slice(at + name.length));
+      return true;
+    });
+    if (!by) {
+      rest = rest.replace(/(?:^|,\s*|\s)((?:צוות|קבלן|קבלני|חברת|فرقة|مقاول)\s+[^,]+)$/, function (m, who) { by = who.trim(); return ""; });
+    }
+    rest = rest.replace(/\s*,\s*/g, ", ").replace(/^[\s,:-]+|[\s,:-]+$/g, "").replace(/^(?:את|ש)\s+/, "");
+    return {
+      action: "plan",
+      items: rest ? [rest.replace(/,\s*/g, " ")] : [],
+      sheetId: res.sheetId,
+      date: start,
+      endDate: endDate && endDate >= start ? endDate : start,
+      by: by,
+      reminderTime: null
+    };
   }
 
   // The on-device model (ItaskAI - Gemini Nano on Android phones that have
@@ -404,6 +464,9 @@
   var voiceDateRow = document.getElementById("voiceDateRow");
   var voiceReminderRow = document.getElementById("voiceReminderRow");
   var voiceReminderTime = document.getElementById("voiceReminderTime");
+  var voicePlanRows = document.getElementById("voicePlanRows");
+  var voiceEndDate = document.getElementById("voiceEndDate");
+  var voiceBy = document.getElementById("voiceBy");
   var voiceSaveBtn = document.getElementById("voiceSaveBtn");
   var voiceSource = document.getElementById("voiceSource");
   var voiceAiRow = document.getElementById("voiceAiRow");
@@ -453,8 +516,10 @@
   function renderVoiceItems() {
     voiceItems.innerHTML = "";
     var done = voiceAction.value === "done";
+    var plan = voiceAction.value === "plan";
     voiceDateRow.hidden = done;
-    voiceReminderRow.hidden = done;
+    voiceReminderRow.hidden = done || plan;
+    voicePlanRows.hidden = !plan;
     if (done) {
       var sheet = allSheets().find(function (s) { return s.id === voiceProject.value; });
       var tasks = sheet ? voiceOpenTasks(sheet).slice() : [];
@@ -533,11 +598,15 @@
     }
     if (!sheetId && sheets.some(function (s) { return s.id === data.activeSheetId; })) sheetId = data.activeSheetId;
     if (sheetId) voiceProject.value = sheetId;
+    var peopleSheet = allSheets().find(function (s) { return s.id === voiceProject.value; });
+    if (peopleSheet) wpFillPeople(peopleSheet);
     voiceAction.value = cmd.action;
     voiceItemTexts = cmd.action === "done" ? [] : (cmd.items.length ? cmd.items.slice() : [cmd.reminderTime ? tr("voiceReminderDefault") : ""]);
     voiceDoneQuery = cmd.items.join(" ");
     voiceDate.value = cmd.date || (state.viewDate >= todayISO() ? state.viewDate : todayISO());
     voiceReminderTime.value = cmd.reminderTime || "";
+    voiceEndDate.value = cmd.endDate || voiceDate.value;
+    voiceBy.value = cmd.by || "";
     voiceResult.hidden = false;
     voiceSaveBtn.hidden = false;
     renderVoiceItems();
@@ -563,14 +632,26 @@
       }
       voiceListeningText.textContent = tr("voiceThinking");
       var sheets = voiceTargetSheets();
-      return voiceAiParse(heard, sheets).then(function (aiCmd) {
+      var opts = { people: voicePeople() };
+      // the model isn't asked about work-plan activities (date ranges) - the
+      // rules handle those
+      var ai = VOICE_PLAN_RE.test(" " + heard + " ") ? Promise.resolve(null) : voiceAiParse(heard, sheets);
+      return ai.then(function (aiCmd) {
         if (token !== voiceListenToken) return;
-        showVoiceCommand(heard, aiCmd || parseVoiceCommand(heard, sheets));
+        showVoiceCommand(heard, aiCmd || parseVoiceCommand(heard, sheets, null, opts));
       });
     }).catch(function (err) {
       if (token !== voiceListenToken) return;
       voiceListeningText.textContent = tr(err && err.message === "permission" ? "voicePermissionMsg" : "voiceNoSpeech");
     });
+  }
+
+  function voicePeople() {
+    var names = [];
+    voiceTargetSheets().forEach(function (s) {
+      wpPeopleSuggestions(s).forEach(function (n) { if (names.indexOf(n) === -1) names.push(n); });
+    });
+    return names;
   }
 
   function closeVoiceOverlay() {
@@ -587,6 +668,7 @@
       var task = sel && sheet.tasks.find(function (t) { return t.id === sel.value; });
       if (!task) return;
       task.status = 2;
+      if (task.planItemId) workPlanTaskStatusChanged(sheet, task);
       saveData();
       if (sheet.shared) sendChatSystemMessage(sheet.id, "done", task.text, myPhoneNumber);
       closeVoiceOverlay();
@@ -596,6 +678,20 @@
     }
     var texts = voiceItemTexts.map(function (s) { return s.replace(/\s+/g, " ").trim(); }).filter(Boolean);
     if (!texts.length) return;
+    if (voiceAction.value === "plan") {
+      var start = voiceDate.value || todayISO();
+      var end = voiceEndDate.value && voiceEndDate.value >= start ? voiceEndDate.value : start;
+      texts.forEach(function (name) {
+        saveWorkPlanItem(sheet, {
+          id: uid(), name: name, start: start, end: end, by: voiceBy.value.replace(/\s+/g, " ").trim(),
+          status: "todo", progress: 0, note: "", showInTasks: true, updatedBy: myPhoneNumber || null, updatedAt: Date.now()
+        }, false);
+      });
+      closeVoiceOverlay();
+      render();
+      showToast(tr("voicePlanAddedMsg"));
+      return;
+    }
     var type = voiceAction.value === "note" ? "note" : "task";
     var date = voiceDate.value || todayISO();
     var reminder = null;

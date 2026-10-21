@@ -73,6 +73,31 @@
         }
       });
     });
+    // Work-plan activities under way (or late) in every project, mirroring
+    // their status; one finished today stays until tomorrow.
+    officeReportSheets().forEach(function (s) {
+      (s.workPlan || []).forEach(function (item) {
+        if (item.start > today) return;
+        if (item.status === "done" && !(item.updatedAt && wpIso(new Date(item.updatedAt)) === today)) return;
+        var taskId = "ho-plan-" + s.id + "-" + item.id;
+        if (dismissed.indexOf(taskId) !== -1) return;
+        seenIds[taskId] = true;
+        var text = s.name + ": " + item.name;
+        var st = WP_TASK_STATUS[item.status] || 0;
+        var t = sheet.tasks.find(function (x) { return x.id === taskId; });
+        if (!t) {
+          sheet.tasks.push({
+            id: taskId, text: text, status: st, urgent: false, type: "task", date: today,
+            createdAt: Date.now(), headOfficeVirtual: true, planRef: { sheetId: s.id, itemId: item.id }
+          });
+          changed = true;
+        } else {
+          if (t.text !== text) { t.text = text; changed = true; }
+          if (t.status !== st) { t.status = st; changed = true; }
+          if (st !== 2 && t.date < today) { t.date = today; changed = true; }
+        }
+      });
+    });
     var before = sheet.tasks.length;
     sheet.tasks = sheet.tasks.filter(function (t) { return !t.headOfficeVirtual || seenIds[t.id]; });
     if (sheet.tasks.length !== before) changed = true;

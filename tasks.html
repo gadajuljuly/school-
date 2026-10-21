@@ -35,7 +35,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<link rel="stylesheet" href="tasks.css?v=e7d0e64027">
+<link rel="stylesheet" href="tasks.css?v=3e4a2709e1">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -149,6 +149,7 @@
       <input type="range" id="wpProgress" min="0" max="100" step="5" value="0">
       <label data-i18n="workPlanNote">הערה</label>
       <textarea id="wpNote" maxlength="500"></textarea>
+      <label class="cal-form-check"><input type="checkbox" id="wpShowInTasks" checked><span data-i18n="workPlanShowInTasks">להציג כמשימה ברשימת היום בימי הביצוע</span></label>
       <div class="modal-actions">
         <button type="submit" class="modal-btn modal-btn-primary" data-i18n="workPlanSave">שמירה</button>
         <button type="button" class="modal-btn modal-btn-danger" id="wpDeleteBtn" data-i18n="deleteBtn">מחיקה</button>
@@ -240,6 +241,7 @@
           <option value="task" data-i18n="voiceActionTask">משימה חדשה</option>
           <option value="note" data-i18n="voiceActionNote">מזכרת חדשה</option>
           <option value="done" data-i18n="voiceActionDone">סימון בוצע</option>
+          <option value="plan" data-i18n="voiceActionPlan">פעילות בתוכנית העבודה</option>
         </select>
         <div id="voiceItems"></div>
         <label data-i18n="shareTaskProject">פרויקט</label>
@@ -247,6 +249,12 @@
         <div id="voiceDateRow">
           <label data-i18n="shareTaskDate">תאריך</label>
           <input type="date" id="voiceDate">
+        </div>
+        <div id="voicePlanRows" hidden>
+          <label data-i18n="workPlanTo">עד תאריך</label>
+          <input type="date" id="voiceEndDate">
+          <label data-i18n="workPlanBy">מבצע</label>
+          <input type="text" id="voiceBy" list="wpByList" maxlength="80" autocomplete="off">
         </div>
         <div id="voiceReminderRow">
           <label data-i18n="voiceReminderLabel">תזכורת בשעה (לא חובה)</label>
@@ -663,6 +671,7 @@
         <button type="button" class="task-menu-icon" id="shareTaskBtn" data-i18n-title="shareTaskBtn" title="שיתוף"><img src="tasks-menu-share-icon.webp" alt=""></button>
         <button type="button" class="task-menu-icon" id="taskReminderBtn" data-i18n-title="taskReminderBtn" title="התראה"><img src="tasks-reminder-icon.webp" alt=""></button>
         <button type="button" class="task-menu-icon" id="taskCalendarReminderBtn" data-i18n-title="calAppName" title="לוח שנה" hidden><span class="cal-live-icon"><img src="tasks-calendar-app-icon-blank.webp" alt=""><span class="cal-live-wd"></span><span class="cal-live-day"></span></span><span class="task-icon-arrow">&#8617;</span></button>
+        <button type="button" class="task-menu-icon" id="taskWorkPlanBtn" data-i18n-title="workPlanOpenItem" title="פתיחה בתוכנית העבודה" hidden><img src="tasks-work-plan-icon.webp" alt=""></button>
         <button type="button" class="task-menu-icon" id="taskChatQuoteBtn" data-i18n-title="taskChatQuoteBtnTitle" title="ציטוט בצ'אט הפרויקט" hidden><img src="tasks-chat-icon.webp" alt=""><span class="task-icon-arrow">&#8617;</span></button>
       </div>
       <button type="button" class="convert-to-note-btn" id="removeFromCalendarBtn" data-i18n="removeFromCalendarBtn" hidden>הסרה מלוח השנה</button>
@@ -1174,6 +1183,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=536b7f09a5"></script>
+<script src="tasks-app.js?v=5179801e31"></script>
 </body>
 </html>

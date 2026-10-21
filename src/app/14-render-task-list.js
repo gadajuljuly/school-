@@ -295,6 +295,8 @@
     if (t) {
       var wasDone = t.status === 2;
       t.status = (t.status + 1) % 3;
+      if (t.planItemId) workPlanTaskStatusChanged(sheet, t);
+      if (t.planRef) workPlanRefStatusChanged(t);
       saveData();
       if (sheet.shared && t.type === "task" && wasDone !== (t.status === 2)) {
         sendChatSystemMessage(sheet.id, t.status === 2 ? "done" : "undone", t.text, myPhoneNumber);
@@ -333,6 +335,7 @@
     var sheet = activeSheet();
     var t = sheet.tasks.find(function (x) { return x.id === id; });
     sheet.tasks = sheet.tasks.filter(function (x) { return x.id !== id; });
+    if (t && t.planItemId) workPlanTaskRemoved(sheet, t);
     saveData();
     if (sheet.shared && t && t.type === "task") {
       sendChatSystemMessage(sheet.id, "deleted", t.text, myPhoneNumber);
@@ -354,6 +357,7 @@
     var trimmed = value.trim();
     if (t && trimmed) {
       t.text = trimmed.slice(0, 200);
+      if (t.planItemId) workPlanTaskRenamed(activeSheet(), t);
     }
     state.editingTaskId = null;
     saveData();
@@ -385,6 +389,7 @@
   var chatWasActiveLastRender = false;
   function render() {
     appLoadingOverlay.hidden = true;
+    syncWorkPlanTasks();
     clearTimeout(longPressTimer);
     if (chatWasActiveLastRender && state.viewMode !== "chat") teardownChatView();
     chatWasActiveLastRender = state.viewMode === "chat";
@@ -600,7 +605,7 @@
         // date, with the same purchased-marking circles as the regular
         // combined procurement report.
         li.addEventListener("click", function () {
-          openOfficeProcurementView(t.targetSheetId, t.targetDate);
+          openHeadOfficeNotificationTarget(t);
         });
       }
 
@@ -671,6 +676,14 @@
         textEl = document.createElement("span");
         textEl.className = "task-text";
         textEl.title = t.text;
+        if (t.planItemId || t.planRef) {
+          // from the work plan
+          var planBadge = document.createElement("img");
+          planBadge.className = "task-plan-badge";
+          planBadge.src = "tasks-work-plan-icon.webp";
+          planBadge.alt = "";
+          textEl.appendChild(planBadge);
+        }
         var textLabel = document.createElement("span");
         textLabel.className = "task-text-label";
         textLabel.textContent = t.text;
@@ -717,7 +730,7 @@
           textEl.addEventListener("click", function (e) {
             e.stopPropagation();
             if (textLongPressFired) { textLongPressFired = false; return; }
-            openOfficeProcurementView(t.targetSheetId, t.targetDate);
+            openHeadOfficeNotificationTarget(t);
           });
         }
       }
