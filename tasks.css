@@ -253,8 +253,9 @@
   .notebook-footer {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 6px 20px 9px; /* thickness reduced 5mm then increased back 1mm from the original 12px/18px */
+    /* the free width shared equally - between the icons and at both ends */
+    justify-content: space-evenly;
+    padding: 6px 4px 9px; /* thickness reduced 5mm then increased back 1mm from the original 12px/18px */
     flex-shrink: 0;
     border-radius: 0 0 10px 10px;
   }
@@ -3297,3 +3298,5 @@
   .wp-chart-pdf .wp-name { width: 112px; }
   .wp-head-week { min-height: 36px; }
   .wp-head-week .wp-day { top: 3px; white-space: pre-line; line-height: 1.2; font-weight: 700; }
+  /* 7 footer icons: a little smaller so there's air between them on phones */
+  .notebook-footer > button { width: 42px; height: 42px; flex-shrink: 0; }
