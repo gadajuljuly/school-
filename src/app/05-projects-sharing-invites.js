@@ -750,6 +750,7 @@
           files: privateSheet.files || [],
           folders: privateSheet.folders || null,
           siteLogs: privateSheet.siteLogs || [],
+          workPlan: privateSheet.workPlan || [],
           ended: privateSheet.ended || false,
           endedDate: privateSheet.endedDate || null,
           logoId: privateSheet.logoId || null,

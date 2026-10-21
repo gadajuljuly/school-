@@ -219,6 +219,7 @@
       siteLogs: siteLogs,
       folders: d.folders || null,
       officeDirectory: d.officeDirectory || null,
+      workPlan: d.workPlan || [],
       ended: ended,
       endedDate: endedDate,
       logoId: logoId,

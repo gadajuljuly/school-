@@ -35,7 +35,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<link rel="stylesheet" href="tasks.css?v=554dc7d504">
+<link rel="stylesheet" href="tasks.css?v=eec2196e6e">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -120,6 +120,41 @@
     <div class="modal-actions">
       <button type="button" class="modal-btn modal-btn-no" id="calCopyCancelBtn" data-i18n="cancelBtn">ביטול</button>
     </div>
+  </div>
+</div>
+<div class="modal-overlay" id="workPlanEditOverlay" hidden>
+  <div class="modal-box cal-editor-box">
+    <form class="cal-form" id="workPlanEditForm">
+      <p class="modal-message" id="workPlanEditTitle"></p>
+      <div id="wpProjectRow" class="wp-field">
+        <label data-i18n="shareTaskProject">פרויקט</label>
+        <select id="wpProject"></select>
+      </div>
+      <label data-i18n="workPlanName">שם הפעילות</label>
+      <input type="text" id="wpName" maxlength="120" required>
+      <div class="cal-form-row">
+        <div class="wp-field"><label data-i18n="workPlanFrom">מתאריך</label><input type="date" id="wpStart" required></div>
+        <div class="wp-field"><label data-i18n="workPlanTo">עד תאריך</label><input type="date" id="wpEnd" required></div>
+      </div>
+      <label data-i18n="workPlanBy">מבצע</label>
+      <input type="text" id="wpBy" list="wpByList" maxlength="80" autocomplete="off">
+      <datalist id="wpByList"></datalist>
+      <label data-i18n="workPlanStatus">מצב</label>
+      <div class="wp-statuses">
+        <button type="button" class="wp-status" data-status="todo" data-i18n="workPlanStatusTodo">טרם התחיל</button>
+        <button type="button" class="wp-status" data-status="prog" data-i18n="workPlanStatusProg">בביצוע</button>
+        <button type="button" class="wp-status" data-status="done" data-i18n="workPlanStatusDone">הושלם</button>
+      </div>
+      <label id="wpProgressLabel"></label>
+      <input type="range" id="wpProgress" min="0" max="100" step="5" value="0">
+      <label data-i18n="workPlanNote">הערה</label>
+      <textarea id="wpNote" maxlength="500"></textarea>
+      <div class="modal-actions">
+        <button type="submit" class="modal-btn modal-btn-primary" data-i18n="workPlanSave">שמירה</button>
+        <button type="button" class="modal-btn modal-btn-danger" id="wpDeleteBtn" data-i18n="deleteBtn">מחיקה</button>
+        <button type="button" class="modal-btn modal-btn-no" id="wpCancelBtn" data-i18n="cancelBtn">ביטול</button>
+      </div>
+    </form>
   </div>
 </div>
 <div class="modal-overlay" id="scanOverlay" hidden>
@@ -508,6 +543,9 @@
       </button>
       <button type="button" class="tasks-fab calendar-fab" id="officeDataBtn" data-i18n-title="officeDataTitle" title="הזנת נתונים" hidden>
         <img src="tasks-data-entry-icon.webp" alt="">
+      </button>
+      <button type="button" class="tasks-fab calendar-fab" id="workPlanBtn" data-i18n-title="workPlanTitle" title="תוכנית עבודה">
+        <img src="tasks-work-plan-icon.webp" alt="">
       </button>
       <button type="button" class="report-fab" id="reportFabBtn" data-i18n-title="reportsBtnTitle" title="דוחות פגישות וסיורים">
         <img src="tasks-report-icon.webp" alt="">
@@ -904,6 +942,38 @@
     </div>
   </div>
 
+  <div class="report-view" id="workPlanView" hidden>
+    <div class="report-head">
+      <button type="button" class="report-back-btn" id="workPlanBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
+      <div class="report-head-title" id="workPlanTitle"></div>
+      <button type="button" class="report-share-btn" id="workPlanAddBtn" data-i18n-title="workPlanAddTitle" title="הוספת פעילות">&#10133;</button>
+    </div>
+    <div class="wp-controls">
+      <div class="wp-seg">
+        <button type="button" class="wp-zoom" data-zoom="week" data-i18n="workPlanWeek">שבוע</button>
+        <button type="button" class="wp-zoom" data-zoom="month" data-i18n="workPlanMonth">חודש</button>
+        <button type="button" class="wp-zoom" data-zoom="all" data-i18n="workPlanAll">הכל</button>
+      </div>
+      <button type="button" class="wp-small-btn" id="workPlanTodayBtn" data-i18n="workPlanToday">היום</button>
+      <button type="button" class="wp-small-btn" id="workPlanPdfBtn">PDF</button>
+    </div>
+    <div class="wp-nav" id="workPlanNav">
+      <button type="button" class="wp-arrow" id="workPlanPrevBtn" aria-label="prev">&#8250;</button>
+      <span id="workPlanRangeLabel"></span>
+      <button type="button" class="wp-arrow" id="workPlanNextBtn" aria-label="next">&#8249;</button>
+    </div>
+    <div class="wp-late-banner" id="workPlanLateBanner" hidden></div>
+    <div class="wp-chart" id="workPlanChart"></div>
+    <p class="wp-empty" id="workPlanEmpty" data-i18n="workPlanEmpty" hidden>עדיין אין פעילויות. לחץ ➕ כדי להוסיף.</p>
+    <div class="wp-legend">
+      <span><b class="wp-done"></b><span data-i18n="workPlanStatusDone">הושלם</span></span>
+      <span><b class="wp-prog"></b><span data-i18n="workPlanStatusProg">בביצוע</span></span>
+      <span><b class="wp-late-b"></b><span data-i18n="workPlanStatusLate">באיחור</span></span>
+      <span><b class="wp-todo"></b><span data-i18n="workPlanStatusTodo">טרם התחיל</span></span>
+      <span><b class="wp-today-b"></b><span data-i18n="workPlanToday">היום</span></span>
+    </div>
+  </div>
+
   <div class="report-view" id="libraryView" hidden>
     <div class="report-head">
       <button type="button" class="report-back-btn" id="libraryBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
@@ -1104,6 +1174,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=159d791507"></script>
+<script src="tasks-app.js?v=536b7f09a5"></script>
 </body>
 </html>

@@ -360,7 +360,8 @@
           name: sheet.name,
           data: {
             tasks: sheet.tasks || [], reports: sheet.reports || [], files: [], folders: sheet.folders || null,
-            siteLogs: sheet.siteLogs || [], ended: sheet.ended || false, endedDate: sheet.endedDate || null, logoId: sheet.logoId || null
+            siteLogs: sheet.siteLogs || [], ended: sheet.ended || false, endedDate: sheet.endedDate || null, logoId: sheet.logoId || null,
+            workPlan: sheet.workPlan || []
           },
           data_version: 1,
           members: sheet.members || [],

@@ -795,6 +795,7 @@
     processCalendarInvites();
     if (!dataLoadBlocked) calVerifyLinks(false);
     syncNativeWidget();
+    refreshWorkPlanIfOpen();
 
     sheetTitle.textContent = activeSheet().name;
     renderSheetTitleLogo();
