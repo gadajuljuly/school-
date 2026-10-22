@@ -360,8 +360,15 @@
           var toStart = link.type === "FS" || link.type === "SS";
           var x1 = (fromStart ? p.right : p.left) + ox, y1 = p.top + p.height / 2 + oy;
           var x2 = (toStart ? s.right : s.left) + ox, y2 = s.top + s.height / 2 + oy;
-          var out1 = fromStart ? 6 : -6, out2 = toStart ? 6 : -6;
-          lines.push("M" + x1 + "," + y1 + " H" + (x1 + out1) + " V" + y2 + " H" + (x2 + out2 / 1.5));
+          var out1 = fromStart ? 6 : -6;
+          // the last stretch always comes from outside the bar into its
+          // edge, so the head points at it: out of the first bar, over to
+          // the gap just above (or below) the second, across to 12px off
+          // its edge, down, and in
+          var dir = toStart ? 1 : -1;
+          var ymid = y2 > y1 ? y2 - 15 : y2 + 15;
+          lines.push("M" + x1 + "," + y1 + " H" + (x1 + out1) + " V" + ymid + " H" + (x2 + 12 * dir) +
+            " V" + y2 + " H" + (x2 + 2 * dir));
         });
       });
     });
