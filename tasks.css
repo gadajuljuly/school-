@@ -7,6 +7,10 @@
     --ink: #2c2a24;
     --ink-muted: #918a78;
     --accent: #35618f;
+    /* the work plan's colours = the icons' own green and terracotta red
+       (in progress: the app's blue, --accent) */
+    --plan-green: #3c543a;
+    --plan-red: #c05023;
     --accent-contrast: #fdfbf5;
     --danger: #b6473f;
     --high: #c0392b;
@@ -3277,17 +3281,17 @@
   .wp-day-today { color: #e0703a; font-weight: 700; }
   .wp-bar { position: absolute; top: 9px; height: 22px; border-radius: 5px; overflow: hidden; display: flex; align-items: center; padding: 0 5px; color: #fff; font-size: 0.7rem; font-weight: 700; white-space: nowrap; z-index: 1; }
   /* the done part of a bar (from its start, the right in RTL): green */
-  .wp-fill { position: absolute; top: 0; bottom: 0; right: 0; background: var(--report-green); }
+  .wp-fill { position: absolute; top: 0; bottom: 0; right: 0; background: var(--plan-green); }
   .wp-bar-text { position: relative; overflow: hidden; text-overflow: ellipsis; }
-  .wp-done { background: var(--report-green); }
+  .wp-done { background: var(--plan-green); }
   .wp-prog { background: var(--accent); }
-  .wp-late { background: var(--danger); }
+  .wp-late { background: var(--plan-red); }
   .wp-todo { background: #b9b2a2; color: #3f3a30; }
   .wp-group { position: sticky; right: 0; display: flex; justify-content: space-between; padding: 6px 10px; background: var(--paper-alt); font-weight: 700; font-size: 0.85rem; border-bottom: 1px solid var(--rule); cursor: pointer; }
   .wp-group em { font-style: normal; color: var(--danger); font-size: 0.8rem; }
   .wp-legend { display: flex; flex-wrap: wrap; gap: 6px 12px; justify-content: center; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); font-size: 0.75rem; color: var(--ink-muted); border-top: 1px solid var(--rule); flex-shrink: 0; }
   .wp-legend b { display: inline-block; width: 12px; height: 8px; border-radius: 2px; margin-left: 4px; vertical-align: middle; }
-  .wp-legend .wp-late-b { background: var(--danger); }
+  .wp-legend .wp-late-b { background: var(--plan-red); }
   .wp-legend .wp-today-b { background: #e0703a; width: 3px; }
   .wp-statuses { display: flex; gap: 6px; flex-wrap: wrap; }
   .wp-status { border: 1px solid var(--rule); background: #fff; color: var(--ink); border-radius: 14px; padding: 5px 12px; font: inherit; font-size: 0.85rem; cursor: pointer; }
@@ -3317,13 +3321,13 @@
   .wp-diary-name .wp-diary-late { color: var(--danger); font-weight: 700; }
   .wp-diary-marks { display: flex; gap: 6px; flex-shrink: 0; }
   .wp-diary-mark { width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid var(--rule); background: var(--paper); font-size: 1.05rem; font-weight: 700; color: var(--ink-muted); cursor: pointer; padding: 0; }
-  .wp-diary-mark.on.wp-diary-done { background: var(--report-green); border-color: var(--report-green); color: #fff; }
+  .wp-diary-mark.on.wp-diary-done { background: var(--plan-green); border-color: var(--plan-green); color: #fff; }
   .wp-diary-mark.on.wp-diary-partial { background: var(--medium); border-color: var(--medium); color: #fff; }
-  .wp-diary-mark.on.wp-diary-not { background: var(--danger); border-color: var(--danger); color: #fff; }
+  .wp-diary-mark.on.wp-diary-not { background: var(--plan-red); border-color: var(--plan-red); color: #fff; }
   .wp-diary-reason { border: 1px solid var(--rule); border-radius: 8px; padding: 6px 8px; font: inherit; font-size: 0.85rem; }
-  .wp-pdf-result-done { color: #2e7a4c; font-weight: 700; }
+  .wp-pdf-result-done { color: var(--plan-green); font-weight: 700; }
   .wp-pdf-result-partial { color: #a8701a; font-weight: 700; }
-  .wp-pdf-result-not { color: #b6473f; font-weight: 700; }
+  .wp-pdf-result-not { color: var(--plan-red); font-weight: 700; }
   .wp-pdf-summary { font-weight: 700; font-size: 1rem; margin: 10px 0; }
   #workPlanNotifMenuSection .cal-form-check { font-size: 0.85rem; padding: 2px 0; }
   /* "מתוכנן מול ביצוע" - the longest label: two lines instead of "..." */
