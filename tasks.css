@@ -3352,12 +3352,14 @@
   #wpLinksList[hidden] { display: none; }
   /* the % sits on the green done part: white, with a soft shadow for the sand part */
   .wp-prog .wp-bar-text { color: #fff; text-shadow: 0 0 3px rgba(0, 0, 0, 0.6); }
-  /* dd/mm over each bar's start (right, RTL) and end (left) */
-  .wp-date { position: absolute; top: 0; font-size: 0.56rem; line-height: 9px; color: var(--ink-muted); white-space: nowrap; pointer-events: none; z-index: 1; direction: ltr; }
-  .wp-date-end { transform: translateX(100%); }
-  .wp-date-below { top: 31px; }
-  /* who carries it out, inside the bar: bold black on a light label */
-  .wp-bar { gap: 4px; }
-  .wp-bar-text { flex-shrink: 0; }
-  .wp-bar-name { flex-shrink: 1; min-width: 0; }
-  .wp-bar-by { position: relative; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; background: rgba(255, 255, 255, 0.88); color: #000; font-weight: 800; font-size: 0.66rem; line-height: 15px; padding: 0 4px; border-radius: 3px; }
+  /* The bar in two layers: top third light - who carries it out and the
+     dates; lower two thirds - the status colour, done part, % done. */
+  .wp-row { min-height: 46px; }
+  .wp-head-row { min-height: 28px; }
+  .wp-bar { top: 6px; height: 34px; padding: 1px; flex-direction: column; align-items: stretch; gap: 0; }
+  .wp-bar-top { flex: 0 0 11px; display: flex; align-items: center; justify-content: space-between; gap: 3px; padding: 0 3px; background: #fdfaf2; border-radius: 4px 4px 0 0; color: #000; font-size: 0.56rem; line-height: 11px; font-weight: 700; overflow: hidden; }
+  .wp-bar-top .wp-bar-by { flex: 1 1 auto; min-width: 0; text-align: center; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .wp-bar-date { flex: none; direction: ltr; font-weight: 600; color: #333; font-size: 0.52rem; }
+  .wp-bar-main { position: relative; flex: 1; display: flex; align-items: center; gap: 4px; padding: 0 4px; overflow: hidden; border-radius: 0 0 4px 4px; }
+  .wp-bar-text { flex-shrink: 0; position: relative; }
+  .wp-bar-name { flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }

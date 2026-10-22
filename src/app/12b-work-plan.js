@@ -181,33 +181,34 @@
           var barWidth = Math.max(4, (to - from + 1) * dayW - 2);
           bar.style.right = barRight + "px";
           bar.style.width = barWidth + "px";
-          // the start date over the bar's start (right), the end date over
-          // its end (left; under it when the bar is too short for both) -
-          // each only when that day is on screen
-          if (wpDiff(range.start, item.start) === from) {
-            var startLabel = wpEl("span", "wp-date wp-date-start", isoToDisplay(item.start));
-            startLabel.style.right = barRight + "px";
-            t.appendChild(startLabel);
-          }
-          if (wpDiff(range.start, item.end) === to) {
-            var endLabel = wpEl("span", "wp-date wp-date-end" + (barWidth < 64 ? " wp-date-below" : ""), isoToDisplay(item.end));
-            endLabel.style.right = (barRight + barWidth) + "px";
-            t.appendChild(endLabel);
-          }
+          // Two layers along the whole bar: the top third (light) holds who
+          // carries it out and the start/end dates (each only when that day
+          // is on screen, and only what fits); the lower two thirds are the
+          // status colour with the done part in green and the % done.
+          var top = wpEl("div", "wp-bar-top");
+          var startShown = wpDiff(range.start, item.start) === from;
+          var endShown = wpDiff(range.start, item.end) === to;
+          // the name first; the dates (~24px each) only where they fit beside it
+          var nameW = item.by ? item.by.length * 4.8 + 8 : 0;
+          var dateRoom = barWidth - nameW - 8;
+          var showStart = startShown && dateRoom >= 24;
+          if (showStart) dateRoom -= 26;
+          var showEnd = endShown && dateRoom >= 24;
+          if (showStart) top.appendChild(wpEl("span", "wp-bar-date", isoToDisplay(item.start)));
+          top.appendChild(wpEl("span", "wp-bar-by", barWidth >= 22 ? item.by || "" : ""));
+          if (showEnd) top.appendChild(wpEl("span", "wp-bar-date", isoToDisplay(item.end)));
+          bar.appendChild(top);
+          var main = wpEl("div", "wp-bar-main");
           if (item.progress > 0 && item.status !== "done") {
             var fill = wpEl("span", "wp-fill");
             fill.style.width = item.progress + "%";
-            bar.appendChild(fill);
+            main.appendChild(fill);
           }
-          // inside the bar, from its start: the % done, (in the week view the
-          // name,) and who carries it out - in black on a light label, so
-          // it reads on every bar colour. Only what fits: a sliver of
-          // "...%" says nothing.
           var pct = item.progress > 0 && item.status !== "done" ? item.progress + "%" : "";
           var room = barWidth;
-          if (pct && room >= 32) { bar.appendChild(wpEl("span", "wp-bar-text", pct)); room -= 34; }
-          if (wpState.zoom === "week" && room >= 40) { bar.appendChild(wpEl("span", "wp-bar-text wp-bar-name", item.name)); room -= 60; }
-          if (item.by && room >= 30) bar.appendChild(wpEl("span", "wp-bar-by", item.by));
+          if (pct && room >= 30) { main.appendChild(wpEl("span", "wp-bar-text", pct)); room -= 34; }
+          if (wpState.zoom === "week" && room >= 40) main.appendChild(wpEl("span", "wp-bar-text wp-bar-name", item.name));
+          bar.appendChild(main);
           t.appendChild(bar);
         }
         row.appendChild(t);
