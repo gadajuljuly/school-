@@ -9,7 +9,7 @@
     --accent: #35618f;
     /* the work plan's colours: the green of the library icon's left book, the
        icons' terracotta red
-       (in progress: the app's blue, --accent) */
+       (not started: the app's blue, --accent) */
     --plan-green: #52774f;
     --plan-red: #c05023;
     --accent-contrast: #fdfbf5;
@@ -3285,9 +3285,10 @@
   .wp-fill { position: absolute; top: 0; bottom: 0; right: 0; background: var(--plan-green); }
   .wp-bar-text { position: relative; overflow: hidden; text-overflow: ellipsis; }
   .wp-done { background: var(--plan-green); }
-  .wp-prog { background: var(--accent); }
+  /* in progress: sand; not started yet: the app's blue */
+  .wp-prog { background: #b9b2a2; color: #3f3a30; }
   .wp-late { background: var(--plan-red); }
-  .wp-todo { background: #b9b2a2; color: #3f3a30; }
+  .wp-todo { background: var(--accent); color: #fff; }
   .wp-group { position: sticky; right: 0; display: flex; justify-content: space-between; padding: 6px 10px; background: var(--paper-alt); font-weight: 700; font-size: 0.85rem; border-bottom: 1px solid var(--rule); cursor: pointer; }
   .wp-group em { font-style: normal; color: var(--danger); font-size: 0.8rem; }
   .wp-legend { display: flex; flex-wrap: wrap; gap: 6px 12px; justify-content: center; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); font-size: 0.75rem; color: var(--ink-muted); border-top: 1px solid var(--rule); flex-shrink: 0; }
@@ -3349,3 +3350,5 @@
   .wp-link-type small { color: var(--ink-muted); font-size: 0.78rem; }
   .wp-link-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 0.82rem; }
   #wpLinksList[hidden] { display: none; }
+  /* the % sits on the green done part: white, with a soft shadow for the sand part */
+  .wp-prog .wp-bar-text { color: #fff; text-shadow: 0 0 3px rgba(0, 0, 0, 0.6); }
