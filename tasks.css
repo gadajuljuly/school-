@@ -3276,7 +3276,8 @@
   .wp-day { position: absolute; top: 7px; font-size: 0.68rem; color: var(--ink-muted); white-space: nowrap; text-align: center; }
   .wp-day-today { color: #e0703a; font-weight: 700; }
   .wp-bar { position: absolute; top: 9px; height: 22px; border-radius: 5px; overflow: hidden; display: flex; align-items: center; padding: 0 5px; color: #fff; font-size: 0.7rem; font-weight: 700; white-space: nowrap; z-index: 1; }
-  .wp-fill { position: absolute; top: 0; bottom: 0; right: 0; background: rgba(255, 255, 255, 0.3); }
+  /* the done part of a bar (from its start, the right in RTL): green */
+  .wp-fill { position: absolute; top: 0; bottom: 0; right: 0; background: var(--report-green); }
   .wp-bar-text { position: relative; overflow: hidden; text-overflow: ellipsis; }
   .wp-done { background: var(--report-green); }
   .wp-prog { background: var(--accent); }
