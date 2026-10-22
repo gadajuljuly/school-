@@ -10986,6 +10986,9 @@
     });
   }
 
+  // Clearly different from each other and from the bars' own colours.
+  var WP_LINK_COLORS = ["#7b3fa0", "#0f7c86", "#d4881a", "#c2185b", "#2e4fb8", "#6b8e23", "#8d5524", "#e0457b"];
+
   // Arrows for every link, from the right end of one bar to the right end
   // of the other (RTL: a bar's start is its right edge, its end the left).
   function wpDrawDependencies(host, groups) {
@@ -11026,8 +11029,14 @@
     svg.setAttribute("class", "wp-deps");
     svg.setAttribute("width", host.scrollWidth);
     svg.setAttribute("height", host.scrollHeight);
-    svg.innerHTML = '<defs><marker id="wpArrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#5b6b7d"/></marker></defs>' +
-      lines.map(function (d) { return '<path d="' + d + '" fill="none" stroke="#5b6b7d" stroke-width="1.4" marker-end="url(#wpArrow)"/>'; }).join("");
+    // each link its own colour (and matching head), so crossing or
+    // overlapping lines can be told apart
+    var colors = lines.map(function (d, i) { return WP_LINK_COLORS[i % WP_LINK_COLORS.length]; });
+    svg.innerHTML = "<defs>" + WP_LINK_COLORS.map(function (c, i) {
+      return '<marker id="wpArrow' + i + '" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="' + c + '"/></marker>';
+    }).join("") + "</defs>" + lines.map(function (d, i) {
+      return '<path d="' + d + '" fill="none" stroke="' + colors[i] + '" stroke-width="1.6" marker-end="url(#wpArrow' + (i % WP_LINK_COLORS.length) + ')"/>';
+    }).join("");
     host.appendChild(svg);
   }
 
