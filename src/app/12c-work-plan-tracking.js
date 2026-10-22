@@ -351,6 +351,7 @@
     var hostBox = host.getBoundingClientRect();
     var ox = host.scrollLeft - hostBox.left, oy = host.scrollTop - hostBox.top;
     var lines = [];
+    var fromCount = {};
     (groups || []).forEach(function (g) {
       g.items.forEach(function (item) {
         var d = bars[item.id];
@@ -361,17 +362,27 @@
           var p = pb.getBoundingClientRect(), s = d.getBoundingClientRect();
           var fromStart = link.type === "SS" || link.type === "SF";
           var toStart = link.type === "FS" || link.type === "SS";
-          var x1 = (fromStart ? p.right : p.left) + ox, y1 = p.top + p.height / 2 + oy;
-          var x2 = (toStart ? s.right : s.left) + ox, y2 = s.top + s.height / 2 + oy;
-          var out1 = fromStart ? 6 : -6;
-          // the last stretch always comes from outside the bar into its
-          // edge, so the head points at it: out of the first bar, over to
-          // the gap just above (or below) the second, across to 12px off
-          // its edge, down, and in
-          var dir = toStart ? 1 : -1;
-          var ymid = y2 > y1 ? y2 - 15 : y2 + 15;
-          lines.push("M" + x1 + "," + y1 + " H" + (x1 + out1) + " V" + ymid + " H" + (x2 + 12 * dir) +
-            " V" + y2 + " H" + (x2 + 2 * dir));
+          // a few px apart for each further line leaving the same activity
+          var k = fromCount[link.from] = (fromCount[link.from] || 0) + 1;
+          var shift = (k - 1) * 5;
+          // leaves from under (or over) the first bar, at its end or start,
+          // drops straight to the second bar's row and comes into its edge
+          // from outside, head pointing at it
+          var x1 = (fromStart ? p.right - 5 - shift : p.left + 5 + shift) + ox;
+          var down = s.top >= p.bottom;
+          var y1 = (down ? p.bottom : p.top) + oy;
+          var x2 = (toStart ? s.right : s.left) + ox;
+          var y2 = s.top + s.height * 2 / 3 + oy;
+          var dir = toStart ? 1 : -1; // which side of the edge is "outside"
+          var path;
+          if ((x1 - x2) * dir > 10) {
+            path = "M" + x1 + "," + y1 + " V" + y2 + " H" + (x2 + 2 * dir);
+          } else {
+            // the edge faces away: round it through the gap above/below it
+            var yGap = (down ? s.top - 4 : s.bottom + 4) + oy;
+            path = "M" + x1 + "," + y1 + " V" + yGap + " H" + (x2 + (12 + shift) * dir) + " V" + y2 + " H" + (x2 + 2 * dir);
+          }
+          lines.push(path);
         });
       });
     });
@@ -384,10 +395,13 @@
     // each link its own colour (and matching head), so crossing or
     // overlapping lines can be told apart
     var colors = lines.map(function (d, i) { return WP_LINK_COLORS[i % WP_LINK_COLORS.length]; });
+    // a white outline under each line keeps it clear of the bars and grid
     svg.innerHTML = "<defs>" + WP_LINK_COLORS.map(function (c, i) {
-      return '<marker id="wpArrow' + i + '" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="' + c + '"/></marker>';
-    }).join("") + "</defs>" + lines.map(function (d, i) {
-      return '<path d="' + d + '" fill="none" stroke="' + colors[i] + '" stroke-width="1.6" marker-end="url(#wpArrow' + (i % WP_LINK_COLORS.length) + ')"/>';
+      return '<marker id="wpArrow' + i + '" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L5,2.5 L0,5 z" fill="' + c + '"/></marker>';
+    }).join("") + "</defs>" + lines.map(function (d) {
+      return '<path d="' + d + '" fill="none" stroke="#fff" stroke-width="4.5" stroke-linejoin="round" opacity="0.9"/>';
+    }).join("") + lines.map(function (d, i) {
+      return '<path d="' + d + '" fill="none" stroke="' + colors[i] + '" stroke-width="2" stroke-linejoin="round" marker-end="url(#wpArrow' + (i % WP_LINK_COLORS.length) + ')"/>';
     }).join("");
     host.appendChild(svg);
   }
