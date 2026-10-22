@@ -7,9 +7,10 @@
     --ink: #2c2a24;
     --ink-muted: #918a78;
     --accent: #35618f;
-    /* the work plan's colours = the icons' own green and terracotta red
+    /* the work plan's colours: the green of the library icon's left book, the
+       icons' terracotta red
        (in progress: the app's blue, --accent) */
-    --plan-green: #3c543a;
+    --plan-green: #3d6143;
     --plan-red: #c05023;
     --accent-contrast: #fdfbf5;
     --danger: #b6473f;
