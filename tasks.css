@@ -3352,3 +3352,7 @@
   #wpLinksList[hidden] { display: none; }
   /* the % sits on the green done part: white, with a soft shadow for the sand part */
   .wp-prog .wp-bar-text { color: #fff; text-shadow: 0 0 3px rgba(0, 0, 0, 0.6); }
+  /* dd/mm over each bar's start (right, RTL) and end (left) */
+  .wp-date { position: absolute; top: 0; font-size: 0.56rem; line-height: 9px; color: var(--ink-muted); white-space: nowrap; pointer-events: none; z-index: 1; direction: ltr; }
+  .wp-date-end { transform: translateX(100%); }
+  .wp-date-below { top: 31px; }

@@ -10155,8 +10155,23 @@
           var bar = wpEl("div", "wp-bar wp-" + cls + (wpLinkFrom && wpLinkFrom.itemId === item.id ? " wp-linking" : ""));
           bar.setAttribute("data-id", item.id);
           if (!forPdf) wpBindBarLongPress(bar, g.sheet, item);
-          bar.style.right = (from * dayW + 1) + "px";
-          bar.style.width = Math.max(4, (to - from + 1) * dayW - 2) + "px";
+          var barRight = from * dayW + 1;
+          var barWidth = Math.max(4, (to - from + 1) * dayW - 2);
+          bar.style.right = barRight + "px";
+          bar.style.width = barWidth + "px";
+          // the start date over the bar's start (right), the end date over
+          // its end (left; under it when the bar is too short for both) -
+          // each only when that day is on screen
+          if (wpDiff(range.start, item.start) === from) {
+            var startLabel = wpEl("span", "wp-date wp-date-start", isoToDisplay(item.start));
+            startLabel.style.right = barRight + "px";
+            t.appendChild(startLabel);
+          }
+          if (wpDiff(range.start, item.end) === to) {
+            var endLabel = wpEl("span", "wp-date wp-date-end" + (barWidth < 64 ? " wp-date-below" : ""), isoToDisplay(item.end));
+            endLabel.style.right = (barRight + barWidth) + "px";
+            t.appendChild(endLabel);
+          }
           if (item.progress > 0 && item.status !== "done") {
             var fill = wpEl("span", "wp-fill");
             fill.style.width = item.progress + "%";
