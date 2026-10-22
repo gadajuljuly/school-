@@ -377,7 +377,9 @@
       btn.classList.remove("fab-active");
     });
     var active;
-    if (state.viewMode === "chat") active = chatBtn;
+    workPlanBtn.classList.remove("fab-active");
+    if (!workPlanView.hidden) active = workPlanBtn;
+    else if (state.viewMode === "chat") active = chatBtn;
     else if (state.viewMode === "library" || !libraryView.hidden) active = libraryBtn;
     else if (viewingArchive) active = archiveBtn;
     else if (state.viewMode === "reports") active = reportFabBtn;

@@ -10190,8 +10190,26 @@
     wpState.anchor = todayISO();
     workPlanTitle.textContent = wpState.sheetId ? tr("workPlanTitle") + " – " + sheet.name : tr("workPlanOfficeTitle");
     workPlanView.hidden = false;
+    wpFitAboveFooter();
+    updateActiveFabHighlight();
     renderWorkPlan();
   }
+  // The bottom icon bar stays in view under the plan (as under the
+  // calendar): the plan ends just above it, and tapping any of its buttons
+  // closes the plan first.
+  function wpFitAboveFooter() {
+    workPlanView.style.bottom = "";
+    if (workPlanView.hidden) return;
+    var edge = notebookFooterEl.previousElementSibling || notebookFooterEl;
+    var top = edge.getBoundingClientRect().top;
+    if (notebookFooterEl.offsetHeight && top > window.innerHeight / 2 && top < window.innerHeight) {
+      workPlanView.style.bottom = (window.innerHeight - top) + "px";
+    }
+  }
+  window.addEventListener("resize", wpFitAboveFooter);
+  notebookFooterEl.addEventListener("click", function () {
+    if (!workPlanView.hidden) closeWorkPlan();
+  }, true);
   function closeWorkPlan() {
     workPlanView.hidden = true;
     render(); // the day's tasks follow the plan's changes
@@ -12757,7 +12775,9 @@
       btn.classList.remove("fab-active");
     });
     var active;
-    if (state.viewMode === "chat") active = chatBtn;
+    workPlanBtn.classList.remove("fab-active");
+    if (!workPlanView.hidden) active = workPlanBtn;
+    else if (state.viewMode === "chat") active = chatBtn;
     else if (state.viewMode === "library" || !libraryView.hidden) active = libraryBtn;
     else if (viewingArchive) active = archiveBtn;
     else if (state.viewMode === "reports") active = reportFabBtn;
