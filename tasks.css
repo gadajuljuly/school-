@@ -3356,3 +3356,8 @@
   .wp-date { position: absolute; top: 0; font-size: 0.56rem; line-height: 9px; color: var(--ink-muted); white-space: nowrap; pointer-events: none; z-index: 1; direction: ltr; }
   .wp-date-end { transform: translateX(100%); }
   .wp-date-below { top: 31px; }
+  /* who carries it out, inside the bar: bold black on a light label */
+  .wp-bar { gap: 4px; }
+  .wp-bar-text { flex-shrink: 0; }
+  .wp-bar-name { flex-shrink: 1; min-width: 0; }
+  .wp-bar-by { position: relative; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; background: rgba(255, 255, 255, 0.88); color: #000; font-weight: 800; font-size: 0.66rem; line-height: 15px; padding: 0 4px; border-radius: 3px; }

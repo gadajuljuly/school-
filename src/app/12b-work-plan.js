@@ -199,10 +199,15 @@
             fill.style.width = item.progress + "%";
             bar.appendChild(fill);
           }
-          var text = wpState.zoom === "week" ? item.name + (item.by ? " · " + item.by : "") :
-            (item.progress > 0 && item.status !== "done" ? item.progress + "%" : "");
-          // only where it fits - a sliver of "...%" says nothing
-          if (text && (to - from + 1) * dayW >= (wpState.zoom === "week" ? 30 : 34)) bar.appendChild(wpEl("span", "wp-bar-text", text));
+          // inside the bar, from its start: the % done, (in the week view the
+          // name,) and who carries it out - in black on a light label, so
+          // it reads on every bar colour. Only what fits: a sliver of
+          // "...%" says nothing.
+          var pct = item.progress > 0 && item.status !== "done" ? item.progress + "%" : "";
+          var room = barWidth;
+          if (pct && room >= 32) { bar.appendChild(wpEl("span", "wp-bar-text", pct)); room -= 34; }
+          if (wpState.zoom === "week" && room >= 40) { bar.appendChild(wpEl("span", "wp-bar-text wp-bar-name", item.name)); room -= 60; }
+          if (item.by && room >= 30) bar.appendChild(wpEl("span", "wp-bar-by", item.by));
           t.appendChild(bar);
         }
         row.appendChild(t);
