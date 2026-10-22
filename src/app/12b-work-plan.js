@@ -174,9 +174,9 @@
         var to = Math.min(range.days - 1, wpDiff(range.start, item.end));
         if (to >= 0 && from <= range.days - 1) {
           var cls = wpClass(item);
-          var bar = wpEl("div", "wp-bar wp-" + cls);
+          var bar = wpEl("div", "wp-bar wp-" + cls + (wpLinkFrom && wpLinkFrom.itemId === item.id ? " wp-linking" : ""));
           bar.setAttribute("data-id", item.id);
-          if (item.after) bar.setAttribute("data-after", item.after);
+          if (!forPdf) wpBindBarLongPress(bar, g.sheet, item);
           bar.style.right = (from * dayW + 1) + "px";
           bar.style.width = Math.max(4, (to - from + 1) * dayW - 2) + "px";
           if (item.progress > 0 && item.status !== "done") {
@@ -192,7 +192,7 @@
         }
         row.appendChild(t);
         if (!forPdf) {
-          row.addEventListener("click", function () { openWorkPlanEditor(g.sheet, item); });
+          row.addEventListener("click", function () { wpRowTapped(g.sheet, item); });
         }
         host.appendChild(row);
       });
@@ -218,7 +218,7 @@
     workPlanChart.hidden = !any;
     if (any) {
       wpBuildChart(workPlanChart, groups, range, workPlanChart.clientWidth || window.innerWidth, false);
-      wpDrawDependencies(workPlanChart);
+      wpDrawDependencies(workPlanChart, groups);
     }
     document.getElementById("workPlanCopyWeekBtn").hidden = wpState.zoom !== "week";
   }
@@ -254,6 +254,7 @@
     if (!workPlanView.hidden) closeWorkPlan();
   }, true);
   function closeWorkPlan() {
+    wpLinkFrom = null;
     workPlanView.hidden = true;
     render(); // the day's tasks follow the plan's changes
   }
@@ -286,12 +287,16 @@
     wpProgressLabel.textContent = tr("workPlanProgress").replace("{p}", p);
   }
 
-  function openWorkPlanEditor(sheet, item) {
+  // fromTask: a task being turned into an activity (prefills it; once
+  // saved, the task becomes the activity's own task)
+  function openWorkPlanEditor(sheet, item, fromTask) {
     var isNew = !item;
     var start = wpState.zoom === "month" && wpState.anchor.slice(0, 7) !== todayISO().slice(0, 7) ? wpState.anchor.slice(0, 8) + "01" : todayISO();
+    if (fromTask) start = fromTask.date && fromTask.date > todayISO() ? fromTask.date : todayISO();
     var copy = item ? JSON.parse(JSON.stringify(item)) :
-      { id: uid(), name: "", start: start, end: start, by: "", status: "todo", progress: 0, note: "" };
-    wpEditing = { sheetId: sheet ? sheet.id : null, item: copy, isNew: isNew };
+      { id: uid(), name: fromTask ? fromTask.text : "", start: start, end: start, by: "",
+        status: fromTask && fromTask.status === 1 ? "prog" : "todo", progress: 0, note: "" };
+    wpEditing = { sheetId: sheet ? sheet.id : null, item: copy, isNew: isNew, fromTaskId: fromTask ? fromTask.id : null };
     wpName.value = copy.name;
     wpStart.value = copy.start;
     wpEnd.value = copy.end;
@@ -317,6 +322,7 @@
     var peopleSheet = allSheets().find(function (s) { return s.id === wpEditing.sheetId; });
     if (peopleSheet) wpFillPeople(peopleSheet);
     wpFillAfterOptions(peopleSheet, copy);
+    wpRenderLinksList(peopleSheet, copy);
     wpDeleteBtn.hidden = isNew;
     document.getElementById("workPlanEditTitle").textContent = tr(isNew ? "workPlanAddTitle" : "workPlanEditTitle");
     wpEditOverlay.hidden = false;
@@ -375,7 +381,15 @@
       updatedBy: myPhoneNumber || null,
       updatedAt: Date.now()
     });
+    var fromTaskId = wpEditing.fromTaskId;
     saveWorkPlanItem(sheet, item, false);
+    if (fromTaskId) {
+      var task = sheet.tasks.find(function (t) { return t.id === fromTaskId; });
+      if (task && !task.planItemId) {
+        task.planItemId = item.id;
+        saveData();
+      }
+    }
     closeWorkPlanEditor();
     wpCascadeDependents(sheet, item);
   });
@@ -441,7 +455,7 @@
       document.body.appendChild(wrap);
       var collapsedBefore = wpState.collapsed;
       wpBuildChart(chart, groups, range, 1052, true);
-      wpDrawDependencies(chart);
+      wpDrawDependencies(chart, groups);
       wpState.collapsed = collapsedBefore;
       return window.html2canvas(wrap, { scale: 2, backgroundColor: "#ffffff" }).then(function (canvas) {
         document.body.removeChild(wrap);
@@ -622,3 +636,14 @@
     }
     openOfficeProcurementView(task.targetSheetId, task.targetDate);
   }
+
+  // Task menu: a task becomes a work-plan activity - the plan opens on the
+  // activity editor, prefilled from the task.
+  taskToPlanBtn.addEventListener("click", function () {
+    var sheet = activeSheet();
+    var task = sheet.tasks.find(function (t) { return t.id === pendingMoveTaskId; });
+    closeMoveTask();
+    if (!task) return;
+    openWorkPlan();
+    openWorkPlanEditor(sheet, null, task);
+  });

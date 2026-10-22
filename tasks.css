@@ -3331,3 +3331,15 @@
   #diaryView #siteLogPlanBtn .library-item-thumb img { transform: scale(0.84); }
   /* the activity editor is taller than a small phone - it scrolls */
   #workPlanEditOverlay .modal-box { max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); overflow-y: auto; }
+  /* linking: the long-pressed bar blinks until the second activity is tapped */
+  .wp-bar.wp-linking { animation: wp-blink 0.7s ease-in-out infinite; outline: 2px solid #e0703a; outline-offset: 1px; }
+  @keyframes wp-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+  .wp-bar { touch-action: pan-x pan-y; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  .wp-link-pair { margin: 0; font-weight: 700; text-align: center; }
+  .wp-link-types { display: flex; flex-direction: column; gap: 6px; }
+  .wp-link-type { display: flex; gap: 8px; align-items: flex-start; border: 1px solid var(--rule); border-radius: 8px; padding: 7px 9px; background: #fff; cursor: pointer; }
+  .wp-link-type input { margin-top: 3px; }
+  .wp-link-type span { display: flex; flex-direction: column; }
+  .wp-link-type small { color: var(--ink-muted); font-size: 0.78rem; }
+  .wp-link-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 0.82rem; }
+  #wpLinksList[hidden] { display: none; }

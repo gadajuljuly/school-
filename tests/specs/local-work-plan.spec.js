@@ -296,3 +296,91 @@ test("phone notices: late the next morning, starting the afternoon before - quie
   await page.evaluate(() => { const el = document.getElementById("wpNotifyLateToggle"); el.checked = false; el.dispatchEvent(new Event("change")); });
   await expect.poll(async () => (await planAlarms()).map((a) => a.id)).toEqual(startToo ? ["plan-start:p1:w2"] : []);
 });
+
+test("long-press a bar, tap another: link them with any link type and a lag", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [], workPlan: [
+    { id: "a", name: "יסודות", start: iso(0), end: iso(4), by: "", status: "todo", progress: 0 },
+    { id: "b", name: "קירות", start: iso(0), end: iso(2), by: "", status: "todo", progress: 0 },
+    { id: "c", name: "גג", start: iso(10), end: iso(12), by: "", status: "todo", progress: 0 },
+  ] }] });
+  await page.locator("#workPlanBtn").click();
+  await page.locator(".wp-zoom[data-zoom=all]").click();
+  const bar = (name) => page.locator("#workPlanChart .wp-row", { hasText: name }).locator(".wp-bar");
+  const row = (name) => page.locator("#workPlanChart .wp-row", { hasText: name });
+
+  // long press יסודות -> it blinks; the release doesn't open the editor
+  const box = await bar("יסודות").boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(900);
+  await page.mouse.up();
+  await expect(bar("יסודות")).toHaveClass(/wp-linking/);
+  await expect(page.locator("#workPlanEditOverlay")).toBeHidden();
+
+  // tap קירות -> the link dialog with all four types
+  await row("קירות").click();
+  await expect(page.locator("#workPlanLinkOverlay")).toBeVisible();
+  await expect(page.locator("#wpLinkPair")).toContainText("יסודות");
+  await expect(page.locator(".wp-link-type")).toHaveCount(4);
+  await expect(page.locator("input[name=wpLinkType]:checked")).toHaveValue("FS");
+  // finish-to-finish, 1 day after: קירות must end a day after יסודות ends
+  await page.locator("input[name=wpLinkType][value=FF]").check();
+  await page.locator("#wpLinkLag").fill("1");
+  await page.locator("#wpLinkSaveBtn").click();
+  await expect(bar("יסודות")).not.toHaveClass(/wp-linking/);
+  await expect.poll(async () => (await serverPlan(page, "p1")).find((x) => x.id === "b"))
+    .toMatchObject({ start: iso(3), end: iso(5), links: [{ from: "a", type: "FF", lag: 1 }] });
+  await expect(page.locator("#workPlanChart .wp-deps path[marker-end]")).toHaveCount(1);
+
+  // the reverse link would loop
+  const kb = await bar("קירות").boundingBox();
+  await page.mouse.move(kb.x + kb.width / 2, kb.y + kb.height / 2);
+  await page.mouse.down(); await page.waitForTimeout(900); await page.mouse.up();
+  await row("יסודות").click();
+  await page.locator("#wpLinkSaveBtn").click();
+  await expect(page.locator("#workPlanLinkOverlay")).toBeVisible(); // refused (alert accepted by the harness)
+  await page.locator("#wpLinkCancelBtn").click();
+
+  // the editor lists the link; moving יסודות later offers to move קירות along
+  await row("יסודות").click();
+  await page.locator("#wpPostponeBtn").click();
+  await page.locator("#wpPostponeDays").fill("3");
+  await page.locator("#wpPostponeApplyBtn").click();
+  await expect(page.locator("#confirmOverlay")).toContainText("קירות");
+  await page.locator("#confirmYesBtn").click();
+  await expect.poll(async () => (await serverPlan(page, "p1")).find((x) => x.id === "b").end).toBe(iso(8));
+
+  // removing the link from the dialog
+  const ab = await bar("יסודות").boundingBox();
+  await page.mouse.move(ab.x + ab.width / 2, ab.y + ab.height / 2);
+  await page.mouse.down(); await page.waitForTimeout(900); await page.mouse.up();
+  await row("קירות").click();
+  await expect(page.locator("input[name=wpLinkType]:checked")).toHaveValue("FF");
+  await page.locator("#wpLinkRemoveBtn").click();
+  await expect.poll(async () => (await serverPlan(page, "p1")).find((x) => x.id === "b").links).toEqual([]);
+});
+
+test("task menu: 'העברה לתוכנית העבודה' turns a task into an activity, the editor prefilled", async ({ page }) => {
+  await openLocalApp(page);
+  await page.locator("#taskInput").fill("יציקת תקרה");
+  await page.locator("#addForm button[type=submit]").click();
+  const row = page.locator("#taskList li.task", { hasText: "יציקת תקרה" });
+  await longPress(page, row);
+  await expect(page.locator("#taskWorkPlanBtn")).toBeHidden(); // not linked yet
+  await page.locator("#taskToPlanBtn").click();
+  await expect(page.locator("#workPlanView")).toBeVisible();
+  await expect(page.locator("#workPlanEditOverlay")).toBeVisible();
+  await expect(page.locator("#wpName")).toHaveValue("יציקת תקרה");
+  await expect(page.locator("#wpStart")).toHaveValue(iso(0));
+  await page.locator("#wpEnd").fill(iso(2));
+  await page.locator("#wpBy").fill("צוות טפסנות");
+  await page.locator("#workPlanEditForm button[type=submit]").click();
+  await expect(page.locator("#workPlanChart .wp-row", { hasText: "יציקת תקרה" })).toBeVisible();
+  await page.locator("#workPlanBackBtn").click();
+  // the same task, now the activity's (one row, with the plan icon)
+  await expect(row).toHaveCount(1);
+  await expect(row.locator(".task-plan-badge")).toBeVisible();
+  await longPress(page, row);
+  await expect(page.locator("#taskToPlanBtn")).toBeHidden();
+  await expect(page.locator("#taskWorkPlanBtn")).toBeVisible();
+});

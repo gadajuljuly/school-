@@ -205,7 +205,7 @@
       toCopy.forEach(function (c) {
         saveWorkPlanItem(c.sheet, Object.assign({}, c.item, {
           id: uid(), start: addDaysToISO(c.item.start, 7), end: addDaysToISO(c.item.end, 7),
-          status: "todo", progress: 0, after: null, updatedBy: myPhoneNumber || null, updatedAt: Date.now()
+          status: "todo", progress: 0, after: null, links: [], updatedBy: myPhoneNumber || null, updatedAt: Date.now()
         }), false);
       });
       wpState.anchor = addDaysToISO(wpState.anchor, 7);
@@ -280,49 +280,90 @@
     }
   });
 
-  // After an activity is saved: the ones that start after it and now
-  // overlap it are offered to move along (and theirs after them).
+  // ---- links between activities ------------------------------------------
+  // An activity's links: [{ from (the other activity's id), type, lag
+  // (days; negative = overlap) }], kept on the activity they constrain.
+  //   FS סיום-התחלה: starts after `from` ends      SS התחלה-התחלה: starts with it
+  //   FF סיום-סיום:  ends with it                    SF התחלה-סיום: ends once it starts
+  // "מתחילה אחרי" (item.after) is an FS link without a lag.
+  var WP_LINK_TYPES = ["FS", "SS", "FF", "SF"];
+  function wpLinksOf(item) {
+    var out = (item.links || []).slice();
+    if (item.after && !out.some(function (l) { return l.from === item.after && l.type === "FS"; })) {
+      out.push({ from: item.after, type: "FS", lag: 0 });
+    }
+    return out;
+  }
+  // How many days `s` must move later for the link from `p` to hold (0: it does).
+  function wpLinkShift(s, p, link) {
+    var lag = link.lag || 0;
+    var need = link.type === "SS" ? wpDiff(s.start, addDaysToISO(p.start, lag)) :
+      link.type === "FF" ? wpDiff(s.end, addDaysToISO(p.end, lag)) :
+      link.type === "SF" ? wpDiff(s.end, addDaysToISO(p.start, lag)) :
+      wpDiff(s.start, addDaysToISO(p.end, 1 + lag));
+    return need > 0 ? need : 0;
+  }
+
+  // After an activity is saved: the ones linked to it that no longer fit
+  // their link are offered to move along (and theirs after them).
   function wpCascadeDependents(sheet, item) {
-    var moves = [];
+    var moves = {};
+    var order = [];
     var byId = {};
     (sheet.workPlan || []).forEach(function (x) { byId[x.id] = Object.assign({}, x); });
     byId[item.id] = item;
     var queue = [item.id];
-    while (queue.length) {
+    var guard = 0;
+    while (queue.length && guard++ < 500) {
       var pred = byId[queue.shift()];
       Object.keys(byId).forEach(function (id) {
         var x = byId[id];
-        if (x.after !== pred.id || x.status === "done" || x.start > pred.end) return;
-        var days = wpDiff(x.start, addDaysToISO(pred.end, 1));
-        byId[id] = wpShift(x, days);
-        moves.push(byId[id]);
-        queue.push(id);
+        if (x.status === "done") return;
+        wpLinksOf(x).forEach(function (link) {
+          if (link.from !== pred.id) return;
+          var days = wpLinkShift(byId[id], pred, link);
+          if (!days) return;
+          byId[id] = wpShift(byId[id], days);
+          if (!moves[id]) order.push(id);
+          moves[id] = byId[id];
+          queue.push(id);
+        });
       });
     }
-    if (!moves.length) return;
+    if (!order.length) return;
     askConfirm(tr("workPlanCascadeConfirm").replace("{name}", item.name)
-      .replace("{list}", moves.map(function (m) { return m.name; }).join(", ")), function () {
-      moves.forEach(function (m) { saveWorkPlanItem(sheet, m, false); });
+      .replace("{list}", order.map(function (id) { return moves[id].name; }).join(", ")), function () {
+      order.forEach(function (id) { saveWorkPlanItem(sheet, moves[id], false); });
       renderWorkPlan();
     });
   }
 
-  // Arrows from each activity's end to the start of the one after it.
-  function wpDrawDependencies(host) {
+  // Arrows for every link, from the right end of one bar to the right end
+  // of the other (RTL: a bar's start is its right edge, its end the left).
+  function wpDrawDependencies(host, groups) {
     var old = host.querySelector(".wp-deps");
     if (old) old.remove();
     var bars = {};
     host.querySelectorAll(".wp-bar[data-id]").forEach(function (b) { bars[b.getAttribute("data-id")] = b; });
     var hostBox = host.getBoundingClientRect();
+    var ox = host.scrollLeft - hostBox.left, oy = host.scrollTop - hostBox.top;
     var lines = [];
-    host.querySelectorAll(".wp-bar[data-after]").forEach(function (b) {
-      var pred = bars[b.getAttribute("data-after")];
-      if (!pred) return;
-      var p = pred.getBoundingClientRect(), d = b.getBoundingClientRect();
-      var ox = host.scrollLeft - hostBox.left, oy = host.scrollTop - hostBox.top;
-      var x1 = p.left + ox, y1 = p.top + p.height / 2 + oy;
-      var x2 = d.right + ox, y2 = d.top + d.height / 2 + oy;
-      lines.push("M" + x1 + "," + y1 + " h-5 V" + y2 + " H" + (x2 + 4));
+    (groups || []).forEach(function (g) {
+      g.items.forEach(function (item) {
+        var d = bars[item.id];
+        if (!d) return;
+        wpLinksOf(item).forEach(function (link) {
+          var pb = bars[link.from];
+          if (!pb) return;
+          var p = pb.getBoundingClientRect(), s = d.getBoundingClientRect();
+          var fromStart = link.type === "SS" || link.type === "SF";
+          var toStart = link.type === "FS" || link.type === "SS";
+          var x1 = (fromStart ? p.right : p.left) + ox, y1 = p.top + p.height / 2 + oy;
+          var x2 = (toStart ? s.right : s.left) + ox, y2 = s.top + s.height / 2 + oy;
+          var out1 = fromStart ? 6 : -6, out2 = toStart ? 6 : -6;
+          lines.push("M" + x1 + "," + y1 + " H" + (x1 + out1) + " V" + y2 + " H" + (x2 + out2 / 1.5));
+        });
+      });
     });
     if (!lines.length) return;
     var ns = "http://www.w3.org/2000/svg";
@@ -333,6 +374,165 @@
     svg.innerHTML = '<defs><marker id="wpArrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#5b6b7d"/></marker></defs>' +
       lines.map(function (d) { return '<path d="' + d + '" fill="none" stroke="#5b6b7d" stroke-width="1.4" marker-end="url(#wpArrow)"/>'; }).join("");
     host.appendChild(svg);
+  }
+
+  // Linking on the chart: a long press on an activity's bar makes it blink,
+  // a tap on another activity of the same project then asks how to link them.
+  var wpLinkFrom = null; // { sheetId, itemId }
+  // the tap that ends a long press isn't a tap on its own
+  var wpLinkSuppress = null; // { itemId, until }
+  function wpBindBarLongPress(bar, sheet, item) {
+    var timer = null, x0 = 0, y0 = 0, fired = false;
+    var cancel = function () { clearTimeout(timer); timer = null; };
+    bar.addEventListener("pointerdown", function (e) {
+      x0 = e.clientX; y0 = e.clientY;
+      fired = false;
+      cancel();
+      timer = setTimeout(function () {
+        timer = null;
+        fired = true;
+        wpLinkFrom = { sheetId: sheet.id, itemId: item.id };
+        workPlanChart.querySelectorAll(".wp-linking").forEach(function (b) { b.classList.remove("wp-linking"); });
+        bar.classList.add("wp-linking");
+        if (navigator.vibrate) { try { navigator.vibrate(30); } catch (err) {} }
+        showToast(tr("workPlanLinkHint").replace("{name}", item.name), 3500);
+      }, 600);
+    });
+    bar.addEventListener("pointerup", function () {
+      if (fired) wpLinkSuppress = { itemId: item.id, until: Date.now() + 400 };
+    });
+    bar.addEventListener("pointermove", function (e) {
+      if (Math.abs(e.clientX - x0) > 10 || Math.abs(e.clientY - y0) > 10) cancel();
+    });
+    bar.addEventListener("pointerup", cancel);
+    bar.addEventListener("pointercancel", cancel);
+    bar.addEventListener("pointerleave", cancel);
+    bar.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+  }
+  function wpRowTapped(sheet, item) {
+    var sup = wpLinkSuppress;
+    wpLinkSuppress = null;
+    if (sup && sup.itemId === item.id && Date.now() < sup.until) return;
+    if (!wpLinkFrom) { openWorkPlanEditor(sheet, item); return; }
+    var from = wpLinkFrom;
+    wpLinkFrom = null;
+    renderWorkPlan();
+    if (from.itemId === item.id) return; // tapped itself: cancelled
+    if (from.sheetId !== sheet.id) { showToast(tr("workPlanLinkSameProject")); return; }
+    var pred = (sheet.workPlan || []).find(function (x) { return x.id === from.itemId; });
+    if (pred) openWorkPlanLinkDialog(sheet, pred, item);
+  }
+
+  var wpLinkOverlay = document.getElementById("workPlanLinkOverlay");
+  var wpLinkLag = document.getElementById("wpLinkLag");
+  var wpLinkTarget = null; // { sheet, pred, succ }
+  function wpLinkTypeText(type, pred, succ) {
+    return tr("workPlanLink" + type + "Desc").replace("{a}", pred.name).replace("{b}", succ.name);
+  }
+  function openWorkPlanLinkDialog(sheet, pred, succ) {
+    wpLinkTarget = { sheet: sheet, pred: pred, succ: succ };
+    document.getElementById("wpLinkPair").textContent = pred.name + (RTL_LANGS[currentLang] ? "  ←  " : "  →  ") + succ.name;
+    // the "now tap another activity" hint has done its job
+    var toast = document.getElementById("appToast");
+    if (toast) toast.classList.remove("app-toast-visible");
+    var existing = wpLinksOf(succ).find(function (l) { return l.from === pred.id; });
+    var list = document.getElementById("wpLinkTypes");
+    list.innerHTML = "";
+    WP_LINK_TYPES.forEach(function (type) {
+      var label = wpEl("label", "wp-link-type");
+      var radio = document.createElement("input");
+      radio.type = "radio";
+      radio.name = "wpLinkType";
+      radio.value = type;
+      radio.checked = existing ? existing.type === type : type === "FS";
+      label.appendChild(radio);
+      var text = wpEl("span", "");
+      text.appendChild(wpEl("b", "", tr("workPlanLink" + type)));
+      text.appendChild(wpEl("small", "", wpLinkTypeText(type, pred, succ)));
+      label.appendChild(text);
+      list.appendChild(label);
+    });
+    wpLinkLag.value = String(existing ? existing.lag || 0 : 0);
+    document.getElementById("wpLinkRemoveBtn").hidden = !existing;
+    wpLinkOverlay.hidden = false;
+  }
+  function closeWorkPlanLinkDialog() {
+    wpLinkOverlay.hidden = true;
+    wpLinkTarget = null;
+  }
+  // Would linking succ after pred loop back (pred already follows succ)?
+  function wpLinkMakesCycle(sheet, predId, succId) {
+    var seen = {}, stack = [predId];
+    var byId = {};
+    (sheet.workPlan || []).forEach(function (x) { byId[x.id] = x; });
+    while (stack.length) {
+      var id = stack.pop();
+      if (id === succId) return true;
+      if (seen[id] || !byId[id]) continue;
+      seen[id] = true;
+      wpLinksOf(byId[id]).forEach(function (l) { stack.push(l.from); });
+    }
+    return false;
+  }
+  function wpWithoutLinkFrom(item, predId) {
+    var next = Object.assign({}, item, {
+      links: wpLinksOf(item).filter(function (l) { return l.from !== predId; })
+    });
+    next.after = null; // folded into links from now on
+    return next;
+  }
+  document.getElementById("wpLinkSaveBtn").addEventListener("click", function () {
+    if (!wpLinkTarget) return;
+    var t = wpLinkTarget;
+    var checked = document.querySelector("input[name=wpLinkType]:checked");
+    var type = checked ? checked.value : "FS";
+    if (wpLinkMakesCycle(t.sheet, t.pred.id, t.succ.id)) { alert(tr("workPlanLinkCycle")); return; }
+    var link = { from: t.pred.id, type: type, lag: parseInt(wpLinkLag.value, 10) || 0 };
+    var succ = wpWithoutLinkFrom(t.succ, t.pred.id);
+    succ.links.push(link);
+    succ.updatedBy = myPhoneNumber || null;
+    succ.updatedAt = Date.now();
+    var days = succ.status === "done" ? 0 : wpLinkShift(succ, t.pred, link);
+    if (days) succ = wpShift(succ, days);
+    saveWorkPlanItem(t.sheet, succ, false);
+    closeWorkPlanLinkDialog();
+    renderWorkPlan();
+    if (days) showToast(tr("workPlanLinkMoved").replace("{name}", succ.name).replace("{n}", days), 3500);
+    wpCascadeDependents(t.sheet, succ);
+  });
+  document.getElementById("wpLinkRemoveBtn").addEventListener("click", function () {
+    if (!wpLinkTarget) return;
+    var t = wpLinkTarget;
+    saveWorkPlanItem(t.sheet, Object.assign(wpWithoutLinkFrom(t.succ, t.pred.id), { updatedAt: Date.now() }), false);
+    closeWorkPlanLinkDialog();
+    renderWorkPlan();
+  });
+  document.getElementById("wpLinkCancelBtn").addEventListener("click", closeWorkPlanLinkDialog);
+
+  // The editor lists the activity's links, each removable.
+  function wpRenderLinksList(sheet, item) {
+    var box = document.getElementById("wpLinksList");
+    box.innerHTML = "";
+    var links = (item.links || []);
+    box.hidden = !links.length;
+    if (!links.length) return;
+    box.appendChild(wpEl("label", "", tr("workPlanLinks")));
+    links.forEach(function (link) {
+      var pred = sheet && (sheet.workPlan || []).find(function (x) { return x.id === link.from; });
+      if (!pred) return;
+      var row = wpEl("div", "wp-link-row");
+      row.appendChild(wpEl("span", "", wpLinkTypeText(link.type, pred, item) +
+        (link.lag ? " (" + (link.lag > 0 ? "+" : "") + link.lag + " " + tr("workPlanDays") + ")" : "")));
+      var del = wpEl("button", "voice-item-del", "✕");
+      del.type = "button";
+      del.title = tr("deleteBtn");
+      del.addEventListener("click", function () {
+        item.links = item.links.filter(function (l) { return l !== link; });
+        wpRenderLinksList(sheet, item);
+      });
+      row.appendChild(del);
+      box.appendChild(row);
+    });
   }
 
   // ---- notices ------------------------------------------------------------

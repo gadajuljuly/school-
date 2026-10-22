@@ -664,6 +664,7 @@
   var taskReminderCancelBtn = document.getElementById("taskReminderCancelBtn");
   var convertToNoteBtn = document.getElementById("convertToNoteBtn");
   var taskWorkPlanBtn = document.getElementById("taskWorkPlanBtn");
+  var taskToPlanBtn = document.getElementById("taskToPlanBtn");
   var convertToTaskBtn = document.getElementById("convertToTaskBtn");
   var transferToLogBtn = document.getElementById("transferToLogBtn");
   var removeFromLogBtn = document.getElementById("removeFromLogBtn");
@@ -733,6 +734,8 @@
     convertToNoteBtn.hidden = !task || task.type === "note";
     convertToTaskBtn.hidden = !task || task.type !== "note";
     taskWorkPlanBtn.hidden = !task || !task.planItemId;
+    taskToPlanBtn.hidden = !task || !!task.planItemId || task.type === "note" ||
+      activeSheet().id === HEAD_OFFICE_SHEET_ID || !!task.headOfficeVirtual;
     var logEligible = task && task.type === "task" && task.status === 2;
     transferToLogBtn.hidden = !logEligible || !!task.logEntry;
     removeFromLogBtn.hidden = !logEligible || !task.logEntry;
