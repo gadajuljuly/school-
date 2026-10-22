@@ -10998,8 +10998,31 @@
     host.querySelectorAll(".wp-bar[data-id]").forEach(function (b) { bars[b.getAttribute("data-id")] = b; });
     var hostBox = host.getBoundingClientRect();
     var ox = host.scrollLeft - hostBox.left, oy = host.scrollTop - hostBox.top;
+    // Each line gets its own lane: lines into the same bar edge come in
+    // at different heights, and a vertical (or a horizontal in a gap)
+    // that would lie on another line's moves aside until it's clear.
     var lines = [];
-    var fromCount = {};
+    var verticals = [], horizontals = [];
+    var intoEdge = {};
+    function overlaps(a0, a1, b0, b1) { return Math.min(a0, a1) < Math.max(b0, b1) && Math.min(b0, b1) < Math.max(a0, a1); }
+    function freeX(x, y0, y1, step) {
+      for (var n = 0; n < 12; n++) {
+        var hit = verticals.some(function (v) { return Math.abs(v.x - x) < 4 && overlaps(y0, y1, v.y0, v.y1); });
+        if (!hit) break;
+        x += step;
+      }
+      verticals.push({ x: x, y0: y0, y1: y1 });
+      return x;
+    }
+    function freeY(y, x0, x1, step) {
+      for (var n = 0; n < 8; n++) {
+        var hit = horizontals.some(function (h) { return Math.abs(h.y - y) < 4 && overlaps(x0, x1, h.x0, h.x1); });
+        if (!hit) break;
+        y += step;
+      }
+      horizontals.push({ y: y, x0: x0, x1: x1 });
+      return y;
+    }
     (groups || []).forEach(function (g) {
       g.items.forEach(function (item) {
         var d = bars[item.id];
@@ -11010,25 +11033,28 @@
           var p = pb.getBoundingClientRect(), s = d.getBoundingClientRect();
           var fromStart = link.type === "SS" || link.type === "SF";
           var toStart = link.type === "FS" || link.type === "SS";
-          // a few px apart for each further line leaving the same activity
-          var k = fromCount[link.from] = (fromCount[link.from] || 0) + 1;
-          var shift = (k - 1) * 5;
-          // leaves from under (or over) the first bar, at its end or start,
-          // drops straight to the second bar's row and comes into its edge
-          // from outside, head pointing at it
-          var x1 = (fromStart ? p.right - 5 - shift : p.left + 5 + shift) + ox;
           var down = s.top >= p.bottom;
-          var y1 = (down ? p.bottom : p.top) + oy;
+          var dir = toStart ? 1 : -1; // which side of the target edge is "outside"
+          // into the same edge: each further line a little lower in the
+          // coloured part of the bar
+          var edgeKey = item.id + (toStart ? ":s" : ":e");
+          var k = intoEdge[edgeKey] = (intoEdge[edgeKey] || 0) + 1;
           var x2 = (toStart ? s.right : s.left) + ox;
-          var y2 = s.top + s.height * 2 / 3 + oy;
-          var dir = toStart ? 1 : -1; // which side of the edge is "outside"
+          var y2 = s.top + 17 + (k - 1) * 6 + oy;
+          if (y2 > s.bottom - 3 + oy) y2 = s.bottom - 3 + oy;
+          var y1 = (down ? p.bottom : p.top) + oy;
+          // leaves from under (over) the first bar near its end or start,
+          // stepping inward along the bar while another line is there
+          var x1 = freeX((fromStart ? p.right - 5 : p.left + 5) + ox, y1, y2, fromStart ? -5 : 5);
           var path;
           if ((x1 - x2) * dir > 10) {
+            freeY(y2, x1, x2, 0);
             path = "M" + x1 + "," + y1 + " V" + y2 + " H" + (x2 + 2 * dir);
           } else {
             // the edge faces away: round it through the gap above/below it
-            var yGap = (down ? s.top - 4 : s.bottom + 4) + oy;
-            path = "M" + x1 + "," + y1 + " V" + yGap + " H" + (x2 + (12 + shift) * dir) + " V" + y2 + " H" + (x2 + 2 * dir);
+            var yGap = freeY((down ? s.top - 4 : s.bottom + 4) + oy, x1, x2 + 12 * dir, down ? -4 : 4);
+            var xTurn = freeX(x2 + (12 + (k - 1) * 5) * dir, yGap, y2, 5 * dir);
+            path = "M" + x1 + "," + y1 + " V" + yGap + " H" + xTurn + " V" + y2 + " H" + (x2 + 2 * dir);
           }
           lines.push(path);
         });
