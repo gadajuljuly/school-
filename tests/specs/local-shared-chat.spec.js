@@ -152,3 +152,42 @@ test("'הורדות' is a built-in library folder that can't be deleted", async 
   await expect(dl).toBeVisible();
   await expect(dl.locator(".library-item-delete")).toHaveCount(0);
 });
+
+test("an image in the chat zooms with two fingers, moves with one, and a double tap zooms in and out", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheet: SHEET, native: true });
+  await sendFileMessage(page, { fileName: "סקיצה.png", fileType: "image/png" });
+  await page.locator("#chatBtn").click();
+  await page.locator(".chat-bubble-image img").click();
+  await expect(page.locator("#imageViewerOverlay")).toBeVisible();
+  const scale = () => page.evaluate(() => {
+    const m = /scale\(([\d.]+)\)/.exec(document.getElementById("imageViewerImg").style.transform || "");
+    return m ? +m[1] : 1;
+  });
+  // fingers: pointer events on the viewer
+  const fire = (type, id, x, y) => page.evaluate(({ type, id, x, y }) => {
+    document.getElementById("imageViewerOverlay").dispatchEvent(new PointerEvent(type, { pointerId: id, clientX: x, clientY: y, bubbles: true, cancelable: true, pointerType: "touch" }));
+  }, { type, id, x, y });
+  const box = await page.locator("#imageViewerOverlay").boundingBox();
+  const cx = box.x + box.width / 2, cy = box.y + box.height / 2;
+  await fire("pointerdown", 1, cx - 40, cy);
+  await fire("pointerdown", 2, cx + 40, cy);
+  for (let i = 1; i <= 5; i++) { await fire("pointermove", 1, cx - 40 - i * 16, cy); await fire("pointermove", 2, cx + 40 + i * 16, cy); }
+  await fire("pointerup", 1, cx - 120, cy);
+  await fire("pointerup", 2, cx + 120, cy);
+  expect(await scale()).toBeCloseTo(3, 1); // fingers 80px apart -> 240px apart
+  // a tap while zoomed doesn't close it
+  await fire("pointerdown", 1, cx, cy); await fire("pointerup", 1, cx, cy);
+  await page.waitForTimeout(500);
+  await expect(page.locator("#imageViewerOverlay")).toBeVisible();
+  // double tap: back to normal, then in again
+  await fire("pointerdown", 1, cx, cy); await fire("pointerup", 1, cx, cy);
+  await fire("pointerdown", 1, cx, cy); await fire("pointerup", 1, cx, cy);
+  expect(await scale()).toBe(1);
+  await page.waitForTimeout(400);
+  await fire("pointerdown", 1, cx, cy); await fire("pointerup", 1, cx, cy);
+  await fire("pointerdown", 1, cx, cy); await fire("pointerup", 1, cx, cy);
+  expect(await scale()).toBeCloseTo(2.5, 1);
+  // ✕ closes it whatever the zoom
+  await page.locator(".image-viewer-close").click();
+  await expect(page.locator("#imageViewerOverlay")).toBeHidden();
+});

@@ -316,16 +316,113 @@
 
   var imageViewerOverlay = document.getElementById("imageViewerOverlay");
   var imageViewerImg = document.getElementById("imageViewerImg");
+  // Two fingers zoom (about the point between them), one finger moves a
+  // zoomed picture, a double tap zooms in / back out. A single tap on the
+  // unzoomed picture, or ✕, closes it.
+  var ivZoom = { s: 1, x: 0, y: 0 };
+  var ivPointers = {};
+  var ivGesture = null;
+  var ivLastTap = 0;
+  var ivCloseTimer = null;
+  function ivApply() {
+    var W = imageViewerOverlay.clientWidth, H = imageViewerOverlay.clientHeight;
+    var maxX = Math.max(0, (imageViewerImg.offsetWidth * ivZoom.s - W) / 2);
+    var maxY = Math.max(0, (imageViewerImg.offsetHeight * ivZoom.s - H) / 2);
+    ivZoom.x = Math.max(-maxX, Math.min(maxX, ivZoom.x));
+    ivZoom.y = Math.max(-maxY, Math.min(maxY, ivZoom.y));
+    imageViewerImg.style.transform = "translate(" + ivZoom.x + "px," + ivZoom.y + "px) scale(" + ivZoom.s + ")";
+  }
+  // zoom to s keeping the screen point (px, py) still
+  function ivZoomAt(s, px, py, from) {
+    var r = imageViewerOverlay.getBoundingClientRect();
+    var cx = px - r.left - r.width / 2, cy = py - r.top - r.height / 2;
+    s = Math.max(1, Math.min(6, s));
+    ivZoom.x = cx - (cx - from.x) * s / from.s;
+    ivZoom.y = cy - (cy - from.y) * s / from.s;
+    ivZoom.s = s;
+    ivApply();
+  }
   function openImageViewer(url, name) {
+    ivZoom = { s: 1, x: 0, y: 0 };
+    ivPointers = {};
+    ivGesture = null;
+    imageViewerImg.style.transform = "";
     imageViewerImg.src = url;
     imageViewerImg.alt = name || "";
     imageViewerOverlay.hidden = false;
   }
   function closeImageViewer() {
+    clearTimeout(ivCloseTimer);
     imageViewerOverlay.hidden = true;
     imageViewerImg.removeAttribute("src");
   }
-  imageViewerOverlay.addEventListener("click", closeImageViewer);
+  imageViewerOverlay.querySelector(".image-viewer-close").addEventListener("click", function (e) {
+    e.stopPropagation();
+    closeImageViewer();
+  });
+  imageViewerOverlay.addEventListener("pointerdown", function (e) {
+    if (e.target.closest(".image-viewer-close")) return;
+    e.preventDefault();
+    clearTimeout(ivCloseTimer);
+    ivPointers[e.pointerId] = { x: e.clientX, y: e.clientY };
+    var ids = Object.keys(ivPointers);
+    if (ids.length === 2) {
+      var a = ivPointers[ids[0]], b = ivPointers[ids[1]];
+      ivGesture = { pinch: true, d: Math.hypot(a.x - b.x, a.y - b.y) || 1, mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, from: Object.assign({}, ivZoom), moved: true };
+    } else if (ids.length === 1) {
+      ivGesture = { start: { x: e.clientX, y: e.clientY }, from: Object.assign({}, ivZoom), moved: false };
+    }
+  });
+  imageViewerOverlay.addEventListener("pointermove", function (e) {
+    if (!ivPointers[e.pointerId] || !ivGesture) return;
+    ivPointers[e.pointerId] = { x: e.clientX, y: e.clientY };
+    var ids = Object.keys(ivPointers);
+    if (ivGesture.pinch && ids.length >= 2) {
+      var a = ivPointers[ids[0]], b = ivPointers[ids[1]];
+      var mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      var g = ivGesture.from;
+      // zoom about the starting midpoint, then follow the fingers
+      ivZoomAt(g.s * Math.hypot(a.x - b.x, a.y - b.y) / ivGesture.d, ivGesture.mid.x, ivGesture.mid.y, g);
+      ivZoom.x += mid.x - ivGesture.mid.x;
+      ivZoom.y += mid.y - ivGesture.mid.y;
+      ivApply();
+    } else if (!ivGesture.pinch) {
+      var dx = e.clientX - ivGesture.start.x, dy = e.clientY - ivGesture.start.y;
+      if (Math.hypot(dx, dy) > 8) ivGesture.moved = true;
+      if (ivZoom.s > 1) {
+        ivZoom.x = ivGesture.from.x + dx;
+        ivZoom.y = ivGesture.from.y + dy;
+        ivApply();
+      }
+    }
+  });
+  function ivPointerEnd(e) {
+    if (!ivPointers[e.pointerId]) return;
+    delete ivPointers[e.pointerId];
+    var left = Object.keys(ivPointers);
+    var g = ivGesture;
+    if (left.length === 1 && g && g.pinch) {
+      // one finger stays down after a pinch: carry on moving with it
+      var p = ivPointers[left[0]];
+      ivGesture = { start: { x: p.x, y: p.y }, from: Object.assign({}, ivZoom), moved: true };
+      return;
+    }
+    if (left.length) return;
+    ivGesture = null;
+    if (!g || g.moved || g.pinch || e.type === "pointercancel") return;
+    var now = Date.now();
+    if (now - ivLastTap < 320) {
+      ivLastTap = 0;
+      if (ivZoom.s > 1) { ivZoom = { s: 1, x: 0, y: 0 }; ivApply(); }
+      else ivZoomAt(2.5, e.clientX, e.clientY, ivZoom);
+      return;
+    }
+    ivLastTap = now;
+    // a single tap: close, unless zoomed in (or a second tap follows)
+    if (ivZoom.s === 1) ivCloseTimer = setTimeout(closeImageViewer, 330);
+  }
+  imageViewerOverlay.addEventListener("pointerup", ivPointerEnd);
+  imageViewerOverlay.addEventListener("pointercancel", ivPointerEnd);
 
   // ⬇ asks which of the project's library folders to save into ("הורדות"
   // first, then the rest), then files a copy there.

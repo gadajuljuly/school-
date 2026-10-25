@@ -2666,7 +2666,8 @@
     padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
   }
   .image-viewer[hidden] { display: none; }
-  .image-viewer img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .image-viewer { touch-action: none; overflow: hidden; }
+  .image-viewer img { max-width: 100%; max-height: 100%; object-fit: contain; transform-origin: center center; will-change: transform; user-select: none; -webkit-user-drag: none; }
   .image-viewer-close {
     position: absolute;
     top: calc(12px + env(safe-area-inset-top, 0px));
