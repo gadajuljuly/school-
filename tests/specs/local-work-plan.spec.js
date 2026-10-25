@@ -44,6 +44,8 @@ test("private project: add, edit to done, late shown in red, any length, delete"
   expect(box.width).toBeGreaterThan(200);
   await page.locator(".wp-zoom[data-zoom=week]").click();
   await expect(rows.nth(1).locator(".wp-bar")).toBeVisible();
+  // (back to the whole plan: on a Sunday, last week's activity has no bar this week)
+  await page.locator(".wp-zoom[data-zoom=all]").click();
 
   // done -> green, the late banner goes away
   await rows.first().click();
