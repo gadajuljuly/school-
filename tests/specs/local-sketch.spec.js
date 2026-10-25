@@ -283,3 +283,41 @@ test("sketch share: a shared project's sketch can go straight into its chat as a
   await page.locator("#sketchShareCancelBtn").click();
   await expect(page.locator("#sketchShareOverlay")).toBeHidden();
 });
+
+test("sketch fill: a closed area is painted under its lines; an open one isn't; painting again recolours", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
+  await page.locator("#sketchBtn").click();
+  await page.locator(".sk-tool[data-tool=line]").click();
+  // a closed square, and a U open at the top next to it
+  for (const [a, b] of [[[60, 100], [200, 100]], [[200, 100], [200, 240]], [[200, 240], [60, 240]], [[60, 240], [60, 100]],
+    [[240, 100], [240, 240]], [[240, 240], [340, 240]], [[340, 240], [340, 100]]]) await drag(page, a, b);
+  const box = await page.locator("#sketchCanvas").boundingBox();
+  const fills = async () => (await els(page)).filter((e) => e.type === "fill");
+
+  await page.locator(".sk-tool[data-tool=fill]").click();
+  await page.mouse.click(box.x + 130, box.y + 170);
+  let f = await fills();
+  expect(f).toHaveLength(1);
+  expect(f[0].color).toBe("#1f1f1f");
+  expect(f[0].src).toMatch(/^data:image\/png/);
+  expect(f[0].w).toBeGreaterThan(135); // the whole square, into the lines
+  expect(f[0].w).toBeLessThan(150);
+
+  await page.mouse.click(box.x + 290, box.y + 170); // inside the open U
+  await page.mouse.click(box.x + 130, box.y + 400); // outside everything
+  expect(await fills()).toHaveLength(1);
+
+  await page.locator(".sk-color[data-color='#c62828']").click();
+  await page.mouse.click(box.x + 100, box.y + 140);
+  f = await fills();
+  expect(f).toHaveLength(1);
+  expect(f[0].color).toBe("#c62828");
+
+  // the eraser on a line takes the line, inside the area takes the paint
+  await page.locator(".sk-tool[data-tool=eraser]").click();
+  await page.mouse.click(box.x + 130, box.y + 170);
+  expect(await fills()).toHaveLength(0);
+  expect((await els(page)).filter((e) => e.type === "line")).toHaveLength(7);
+  await page.locator("#sketchUndoBtn").click();
+  expect(await fills()).toHaveLength(1);
+});

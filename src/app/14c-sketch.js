@@ -270,7 +270,7 @@
       ctx.beginPath(); ctx.arc(n0.x, n0.y, L * 0.7, 0, Math.PI * 2); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(n0.x, n0.y - L); ctx.lineTo(n0.x - L * 0.3, n0.y + L * 0.4); ctx.lineTo(n0.x, n0.y + L * 0.15); ctx.closePath(); ctx.fill();
       skLabel(ctx, "N", n0.x, n0.y - L - 8 * z, 0, 12 * Math.max(0.8, z), el.color);
-    } else if (el.type === "image") {
+    } else if (el.type === "image" || el.type === "fill") {
       var img = sk.images[el.id];
       if (!img) {
         img = new Image();
@@ -281,11 +281,17 @@
       if (img.complete && img.naturalWidth) {
         var ip = P(el.p);
         ctx.save();
-        ctx.globalAlpha = 0.55;
+        ctx.globalAlpha = el.type === "fill" ? 1 : 0.55;
         ctx.drawImage(img, ip.x, ip.y, el.w * z, el.h * z);
         ctx.restore();
       }
     }
+  }
+  // background picture, then painted areas, then everything drawn on top
+  function skDrawLayers(ctx, view) {
+    sk.els.forEach(function (el) { if (el.type === "image") skDrawEl(ctx, el, view); });
+    sk.els.forEach(function (el) { if (el.type === "fill") skDrawEl(ctx, el, view); });
+    sk.els.forEach(function (el) { if (el.type !== "image" && el.type !== "fill") skDrawEl(ctx, el, view); });
   }
   function skDraw() {
     if (sketchView.hidden) return;
@@ -293,8 +299,7 @@
     var w = skCanvas.width / dpr, h = skCanvas.height / dpr;
     skCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
     skDrawGrid(skCtx, w, h, sk.view);
-    sk.els.forEach(function (el) { if (el.type === "image") skDrawEl(skCtx, el, sk.view); });
-    sk.els.forEach(function (el) { if (el.type !== "image") skDrawEl(skCtx, el, sk.view); });
+    skDrawLayers(skCtx, sk.view);
     if (sk.draft) skDrawEl(skCtx, sk.draft, sk.view);
     var scaleLabel = document.getElementById("sketchScaleLabel");
     scaleLabel.textContent = sk.scale ? tr("sketchScaleNow").replace("{n}", sk.scale.per + " " + tr(sk.scale.unit === "cm" ? "sketchUnitCm" : "sketchUnitM")) : tr("sketchNoScale");
@@ -430,8 +435,112 @@
       case "text": return skDist(p, el.p) < tol * 2.5;
       case "north": return skDist(p, el.p) < 30;
       case "image": return false; // removed with its own button
+      case "fill": return skFillHas(el, p);
     }
     return false;
+  }
+
+  // ---- painting an area -------------------------------------------------
+  // The lines around the touch are drawn into a bitmap, the area is
+  // flooded from the touch, and the result is kept as a see-through
+  // picture lying under the lines. An area that isn't closed isn't painted.
+  var SK_FILL_ALPHA = 90; // of 255
+  function skFillBarriers() {
+    return sk.els.filter(function (el) {
+      return ["stroke", "line", "wall", "rect", "circle", "door", "window"].indexOf(el.type) >= 0;
+    });
+  }
+  function skFill(p) {
+    var walls = skFillBarriers();
+    var minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
+    walls.forEach(function (el) {
+      skSegmentsOf(el).forEach(function (sg) {
+        sg.forEach(function (q) { minx = Math.min(minx, q.x); miny = Math.min(miny, q.y); maxx = Math.max(maxx, q.x); maxy = Math.max(maxy, q.y); });
+      });
+    });
+    if (!walls.length || p.x <= minx || p.x >= maxx || p.y <= miny || p.y >= maxy) { showToast(tr("sketchFillOpen")); return; }
+    minx -= 4; miny -= 4; maxx += 4; maxy += 4;
+    var k = Math.min(2, 1600 / Math.max(maxx - minx, maxy - miny)); // pixels per world unit
+    var W = Math.ceil((maxx - minx) * k), H = Math.ceil((maxy - miny) * k);
+    var c = document.createElement("canvas");
+    c.width = W; c.height = H;
+    var ctx = c.getContext("2d");
+    ctx.strokeStyle = "#000";
+    ctx.lineCap = ctx.lineJoin = "round";
+    walls.forEach(function (el) {
+      // a little thicker than drawn, so a hand-drawn corner that almost meets still closes
+      ctx.lineWidth = Math.max((el.type === "wall" ? 7 : (el.w || SK_WIDTHS[1])) * k, 1.5) + 3;
+      ctx.beginPath();
+      skSegmentsOf(el).forEach(function (sg) {
+        ctx.moveTo((sg[0].x - minx) * k, (sg[0].y - miny) * k);
+        ctx.lineTo((sg[1].x - minx) * k, (sg[1].y - miny) * k);
+      });
+      ctx.stroke();
+    });
+    var px = ctx.getImageData(0, 0, W, H).data;
+    var ink = new Uint8Array(W * H), area = new Uint8Array(W * H);
+    for (var i = 0; i < W * H; i++) ink[i] = px[i * 4 + 3] > 40 ? 1 : 0;
+    var sx = Math.floor((p.x - minx) * k), sy = Math.floor((p.y - miny) * k), start = sy * W + sx;
+    if (ink[start]) { showToast(tr("sketchFillOpen")); return; }
+    var stack = [start], open = false, n = 0;
+    area[start] = 1;
+    while (stack.length) {
+      var j = stack.pop(), x = j % W, y = (j - x) / W;
+      n++;
+      if (x === 0 || y === 0 || x === W - 1 || y === H - 1) { open = true; break; }
+      [j - 1, j + 1, j - W, j + W].forEach(function (q) { if (!area[q] && !ink[q]) { area[q] = 1; stack.push(q); } });
+    }
+    if (open || n < 4) { showToast(tr("sketchFillOpen")); return; }
+    // reach a few pixels into the lines, so no white seam shows along them
+    for (var pass = 0; pass < 3; pass++) {
+      var grow = [];
+      for (var q = W; q < W * H - W; q++) {
+        if (!area[q] && ink[q] && (area[q - 1] || area[q + 1] || area[q - W] || area[q + W])) grow.push(q);
+      }
+      grow.forEach(function (q2) { area[q2] = 1; });
+    }
+    var x0 = W, y0 = H, x1 = 0, y1 = 0;
+    for (var m = 0; m < W * H; m++) {
+      if (!area[m]) continue;
+      var mx = m % W, my = (m - mx) / W;
+      if (mx < x0) x0 = mx; if (mx > x1) x1 = mx; if (my < y0) y0 = my; if (my > y1) y1 = my;
+    }
+    var cw = x1 - x0 + 1, ch = y1 - y0 + 1;
+    var out = document.createElement("canvas");
+    out.width = cw; out.height = ch;
+    var octx = out.getContext("2d"), img = octx.createImageData(cw, ch);
+    var hex = sk.color.replace("#", ""), r = parseInt(hex.slice(0, 2), 16), g = parseInt(hex.slice(2, 4), 16), b = parseInt(hex.slice(4, 6), 16);
+    for (var yy = 0; yy < ch; yy++) {
+      for (var xx = 0; xx < cw; xx++) {
+        if (!area[(yy + y0) * W + xx + x0]) continue;
+        var o = (yy * cw + xx) * 4;
+        img.data[o] = r; img.data[o + 1] = g; img.data[o + 2] = b; img.data[o + 3] = SK_FILL_ALPHA;
+      }
+    }
+    octx.putImageData(img, 0, 0);
+    var el = { type: "fill", id: uid(), src: out.toDataURL("image/png"), p: { x: minx + x0 / k, y: miny + y0 / k }, w: cw / k, h: ch / k, color: sk.color };
+    skCommit(function () {
+      // painting an area again replaces its old colour
+      sk.els = sk.els.filter(function (e) { return !(e.type === "fill" && skFillHas(e, p)); });
+      sk.els.push(el);
+    });
+  }
+  // is p inside the painted part of a fill (its picture's see-through pixels aside)?
+  function skFillHas(el, p) {
+    if (p.x < el.p.x || p.y < el.p.y || p.x > el.p.x + el.w || p.y > el.p.y + el.h) return false;
+    var img = sk.images[el.id];
+    if (!img || !img.naturalWidth) return true;
+    if (!sk.fillMasks) sk.fillMasks = {};
+    var mask = sk.fillMasks[el.id];
+    if (!mask) {
+      var c = document.createElement("canvas");
+      c.width = img.naturalWidth; c.height = img.naturalHeight;
+      c.getContext("2d").drawImage(img, 0, 0);
+      mask = sk.fillMasks[el.id] = { data: c.getContext("2d").getImageData(0, 0, c.width, c.height).data, w: c.width, h: c.height };
+    }
+    var x = Math.min(mask.w - 1, Math.floor((p.x - el.p.x) / el.w * mask.w));
+    var y = Math.min(mask.h - 1, Math.floor((p.y - el.p.y) / el.h * mask.h));
+    return mask.data[(y * mask.w + x) * 4 + 3] > 0;
   }
 
   // ---- input --------------------------------------------------------------
@@ -607,7 +716,12 @@
   }
   function skErase(p) {
     var tol = 10 / sk.view.z;
-    for (var i = sk.els.length - 1; i >= 0; i--) {
+    // the lines first: a painted area lies under them
+    var order = [];
+    for (var i = sk.els.length - 1; i >= 0; i--) if (sk.els[i].type !== "fill") order.push(i);
+    for (i = sk.els.length - 1; i >= 0; i--) if (sk.els[i].type === "fill") order.push(i);
+    for (var o = 0; o < order.length; o++) {
+      i = order[o];
       if (skHit(sk.els[i], p, tol)) {
         var idx = i;
         var rest = skErasePiece(idx, p);
@@ -639,6 +753,7 @@
     var p = skEventPoint(e);
     if (sk.tool === "hand") { skPinch = { pan: true, start: { x: e.clientX, y: e.clientY }, view: Object.assign({}, sk.view) }; return; }
     if (sk.tool === "eraser") { skErase(p); return; }
+    if (sk.tool === "fill") { skFill(p); return; }
     if (sk.tool === "text") { skAskText("", function (text) { skCommit(function () { sk.els.push({ type: "text", p: p, text: text, color: sk.color, size: 16 }); }); }); return; }
     if (sk.tool === "north") { skCommit(function () { sk.els.push({ type: "north", p: skSnapPoint(p), color: sk.color }); }); return; }
     // pressing on a dimension with the dimension tool shifts it sideways
@@ -836,6 +951,7 @@
       if (sk.tool === "leader") showToast(tr("sketchLeaderHint"), 2500);
       else if (sk.tool === "dim") showToast(tr("sketchDimHint"), 2500);
       else if (sk.tool === "door") showToast(tr("sketchDoorHint"), 2500);
+      else if (sk.tool === "fill") showToast(tr("sketchFillHint"), 2500);
     });
   });
   document.getElementById("sketchShapesBtn").addEventListener("click", function () {
@@ -928,8 +1044,7 @@
     var ctx = c.getContext("2d");
     var view = { x: minx, y: miny, z: z };
     skDrawGrid(ctx, c.width, c.height, view);
-    sk.els.forEach(function (el) { if (el.type === "image") skDrawEl(ctx, el, view); });
-    sk.els.forEach(function (el) { if (el.type !== "image") skDrawEl(ctx, el, view); });
+    skDrawLayers(ctx, view);
     if (sk.scale) {
       ctx.font = "700 " + Math.round(14 * Math.max(1, z / 1.5)) + "px Assistant, Arial, sans-serif";
       ctx.fillStyle = "#2e4fb8";
