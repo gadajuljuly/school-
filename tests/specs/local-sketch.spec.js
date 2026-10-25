@@ -501,3 +501,36 @@ test("sketch background: the 🖼 button offers a photo, a picture from the gall
   await page.locator("#sketchUndoBtn").click();
   expect((await els(page)).filter((e) => e.type === "image")).toHaveLength(1);
 });
+
+test("sketch background: a PDF - one page goes straight in, of several I pick the page", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
+  await page.locator("#sketchBtn").click();
+  expect(await page.locator("#sketchImageInput").getAttribute("accept")).toContain("application/pdf");
+  // a landscape A4 plan with two pages, made with jsPDF
+  const pdf = await page.evaluate(async () => {
+    await new Promise((res) => { const s = document.createElement("script"); s.src = "vendor/jspdf.umd.min.js"; s.onload = res; document.head.appendChild(s); });
+    const d = new window.jspdf.jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
+    d.setFillColor(200, 0, 0); d.rect(20, 20, 100, 60, "F");
+    d.addPage(); d.setFillColor(0, 0, 200); d.rect(20, 20, 100, 60, "F");
+    return Array.from(new Uint8Array(d.output("arraybuffer")));
+  });
+  await page.locator("#sketchImageInput").setInputFiles({ name: "תוכנית.pdf", mimeType: "application/pdf", buffer: Buffer.from(pdf) });
+  await expect(page.locator("#sketchPdfPageOverlay")).toBeVisible();
+  await expect(page.locator("#sketchPdfPageList button")).toHaveText(["📄 עמוד 1", "📄 עמוד 2"]);
+  await page.locator("#sketchPdfPageList button", { hasText: "עמוד 2" }).click();
+  await expect.poll(async () => (await els(page)).filter((e) => e.type === "image").length, { timeout: 15000 }).toBe(1);
+  const bg = (await els(page)).find((e) => e.type === "image");
+  expect(bg.w / bg.h).toBeCloseTo(297 / 210, 1); // the page's own shape
+  // page 2 is the blue one
+  const rgb = await page.evaluate((src) => new Promise((res) => {
+    const im = new Image();
+    im.onload = () => {
+      const c = document.createElement("canvas"); c.width = im.width; c.height = im.height;
+      const x = c.getContext("2d"); x.drawImage(im, 0, 0);
+      res(Array.from(x.getImageData(Math.round(im.width * 0.2), Math.round(im.height * 0.25), 1, 1).data));
+    };
+    im.src = src;
+  }), bg.src);
+  expect(rgb[2]).toBeGreaterThan(150);
+  expect(rgb[0]).toBeLessThan(80);
+});

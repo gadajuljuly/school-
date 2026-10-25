@@ -722,6 +722,15 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="sketchPdfPageOverlay" hidden style="z-index:41">
+    <div class="modal-box" role="alertdialog" aria-modal="true">
+      <p class="modal-message" data-i18n="sketchPdfPageTitle">איזה עמוד מהקובץ לשים ברקע?</p>
+      <div class="move-task-projects" id="sketchPdfPageList"></div>
+      <div class="modal-actions">
+        <button type="button" class="modal-btn modal-btn-no" id="sketchPdfPageCancelBtn" data-i18n="cancelBtn">ביטול</button>
+      </div>
+    </div>
+  </div>
   <div class="modal-overlay" id="libraryMoveOverlay" hidden>
     <div class="modal-box" role="alertdialog" aria-modal="true">
       <p class="modal-message" data-i18n="libraryMoveToFolderTitle">לאיזו תיקייה להעביר?</p>
@@ -1060,7 +1069,7 @@
       <button type="button" class="sketch-scale-chip" id="sketchScaleBtn"><span id="sketchScaleLabel"></span></button>
       <div class="sketch-shapes-menu" id="sketchBgMenu" hidden>
         <button type="button" class="sk-head-btn" id="sketchBgCameraBtn" data-i18n="sketchBgCamera">📷 צילום</button>
-        <button type="button" class="sk-head-btn" id="sketchImageBtn" data-i18n="sketchBgFile">🖼 מהגלריה / קובץ</button>
+        <button type="button" class="sk-head-btn" id="sketchImageBtn" data-i18n="sketchBgFile">🖼 תמונה / PDF</button>
         <button type="button" class="sk-head-btn" id="sketchBgRemoveBtn" data-i18n="sketchBgRemove">🗑 הסרת הרקע</button>
       </div>
       <div class="sketch-pick-menu" id="sketchObjMenu" hidden></div>
@@ -1105,7 +1114,7 @@
         <button type="button" class="sk-mini" id="sketchClearBtn" data-i18n-title="sketchClear" title="ניקוי">🗑</button>
       </div>
     </div>
-    <input type="file" accept="image/*" id="sketchImageInput" hidden>
+    <input type="file" accept="image/*,application/pdf,.pdf" id="sketchImageInput" hidden>
     <input type="file" accept="image/*" capture="environment" id="sketchImageCameraInput" hidden>
   </div>
 
@@ -1355,6 +1364,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=c2db74526f"></script>
+<script src="tasks-app.js?v=8faa964b23"></script>
 </body>
 </html>

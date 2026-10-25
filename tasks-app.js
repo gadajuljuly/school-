@@ -399,7 +399,11 @@
     sketchNorth: { he: "⬆ צפון", en: "⬆ North", ar: "⬆ شمال", ru: "⬆ Север" },
     sketchBg: { he: "תמונת רקע", en: "Background picture", ar: "صورة خلفية", ru: "Фоновое изображение" },
     sketchBgCamera: { he: "📷 צילום", en: "📷 Take a photo", ar: "📷 التقاط صورة", ru: "📷 Сфотографировать" },
-    sketchBgFile: { he: "🖼 מהגלריה / קובץ", en: "🖼 From gallery / file", ar: "🖼 من المعرض / ملف", ru: "🖼 Из галереи / файла" },
+    sketchBgFile: { he: "🖼 תמונה / PDF", en: "🖼 Picture / PDF", ar: "🖼 صورة / PDF", ru: "🖼 Изображение / PDF" },
+    sketchPdfPageTitle: { he: "איזה עמוד מהקובץ לשים ברקע?", en: "Which page of the file goes in the background?", ar: "أي صفحة من الملف تريد وضعها في الخلفية؟", ru: "Какую страницу файла поставить фоном?" },
+    sketchPdfPage: { he: "עמוד {n}", en: "Page {n}", ar: "صفحة {n}", ru: "Страница {n}" },
+    sketchPdfLoading: { he: "פותח את הקובץ...", en: "Opening the file...", ar: "جارٍ فتح الملف...", ru: "Открываю файл..." },
+    sketchPdfError: { he: "לא הצלחתי לפתוח את קובץ ה-PDF", en: "Couldn't open the PDF file", ar: "تعذر فتح ملف PDF", ru: "Не удалось открыть PDF-файл" },
     sketchBgRemove: { he: "🗑 הסרת הרקע", en: "🗑 Remove background", ar: "🗑 إزالة الخلفية", ru: "🗑 Убрать фон" },
     sketchSnap: { he: "הצמדה למשבצות", en: "Snap to grid", ar: "الالتصاق بالشبكة", ru: "Привязка к сетке" },
     sketchUndo: { he: "ביטול", en: "Undo", ar: "تراجع", ru: "Отменить" },
@@ -15814,24 +15818,74 @@
     skCommit(function () { sk.els = sk.els.filter(function (el) { return el.type !== "image"; }); });
   });
   [skImageInput, skImageCameraInput].forEach(function (input) { input.addEventListener("change", function () { skSetBackground(input); }); });
+  // A PDF (a plan, say): one of its pages, drawn sharp, is the background
+  function skLoadPdf() {
+    return (window.pdfjsLib ? Promise.resolve() : loadScriptOnce("vendor/pdf.min.js")).then(function () {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = "vendor/pdf.worker.min.js";
+      return window.pdfjsLib;
+    });
+  }
+  function skPdfPageCanvas(pdf, n) {
+    return pdf.getPage(n).then(function (page) {
+      var v = page.getViewport({ scale: 1 });
+      var vp = page.getViewport({ scale: 2200 / Math.max(v.width, v.height) });
+      var c = document.createElement("canvas");
+      c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+      var ctx = c.getContext("2d");
+      ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, c.width, c.height);
+      return page.render({ canvasContext: ctx, viewport: vp }).promise.then(function () { return c; });
+    });
+  }
+  var skPdfPageOverlay = document.getElementById("sketchPdfPageOverlay");
+  document.getElementById("sketchPdfPageCancelBtn").addEventListener("click", function () { skPdfPageOverlay.hidden = true; });
+  function skPdfBackground(file) {
+    showToast(tr("sketchPdfLoading"));
+    file.arrayBuffer().then(function (buf) {
+      return skLoadPdf().then(function (lib) { return lib.getDocument({ data: new Uint8Array(buf) }).promise; });
+    }).then(function (pdf) {
+      var use = function (n) {
+        skPdfPageCanvas(pdf, n).then(function (c) { skPlaceBackground(c, 2200); }, function () { alert(tr("sketchPdfError")); });
+      };
+      if (pdf.numPages === 1) { use(1); return; }
+      var list = document.getElementById("sketchPdfPageList");
+      list.innerHTML = "";
+      for (var n = 1; n <= Math.min(pdf.numPages, 60); n++) {
+        (function (n) {
+          var b = document.createElement("button");
+          b.type = "button";
+          b.textContent = "📄 " + tr("sketchPdfPage").replace("{n}", n);
+          b.addEventListener("click", function () { skPdfPageOverlay.hidden = true; use(n); });
+          list.appendChild(b);
+        })(n);
+      }
+      skPdfPageOverlay.hidden = false;
+    }).catch(function (err) {
+      console.error("sketch pdf failed:", err);
+      alert(tr("sketchPdfError"));
+    });
+  }
   function skSetBackground(input) {
     var file = input.files && input.files[0];
     input.value = "";
     if (!file) return;
-    scanLoadImage(file).then(function (canvas) {
-      var k = Math.min(1, 1400 / Math.max(canvas.width, canvas.height));
-      var c = document.createElement("canvas");
-      c.width = Math.round(canvas.width * k); c.height = Math.round(canvas.height * k);
-      c.getContext("2d").drawImage(canvas, 0, 0, c.width, c.height);
-      var r = skCanvas.getBoundingClientRect();
-      var fit = Math.min(r.width / c.width, r.height / c.height) * 0.9 / sk.view.z;
-      var tl = skToWorld(r.width / 2 - c.width * fit * sk.view.z / 2, r.height / 2 - c.height * fit * sk.view.z / 2);
-      skCommit(function () {
-        sk.els = sk.els.filter(function (el) { return el.type !== "image"; });
-        sk.els.unshift({ type: "image", id: uid(), src: c.toDataURL("image/jpeg", 0.8), p: tl, w: c.width * fit, h: c.height * fit });
-      });
+    if (file.type === "application/pdf" || /\.pdf$/i.test(file.name || "")) { skPdfBackground(file); return; }
+    scanLoadImage(file).then(function (canvas) { skPlaceBackground(canvas, 1400); });
+  }
+  // fitted to the screen, replacing any earlier background
+  function skPlaceBackground(canvas, maxSide) {
+    var k = Math.min(1, maxSide / Math.max(canvas.width, canvas.height));
+    var c = document.createElement("canvas");
+    c.width = Math.round(canvas.width * k); c.height = Math.round(canvas.height * k);
+    c.getContext("2d").drawImage(canvas, 0, 0, c.width, c.height);
+    var r = skCanvas.getBoundingClientRect();
+    var fit = Math.min(r.width / c.width, r.height / c.height) * 0.9 / sk.view.z;
+    var tl = skToWorld(r.width / 2 - c.width * fit * sk.view.z / 2, r.height / 2 - c.height * fit * sk.view.z / 2);
+    skCommit(function () {
+      sk.els = sk.els.filter(function (el) { return el.type !== "image"; });
+      sk.els.unshift({ type: "image", id: uid(), src: c.toDataURL("image/jpeg", 0.8), p: tl, w: c.width * fit, h: c.height * fit });
     });
   }
+
 
   // ---- open / close / save -------------------------------------------------------
   function openSketch() {
