@@ -163,11 +163,13 @@
         host.appendChild(gh);
         if (collapsed) return;
       }
-      g.items.forEach(function (item) {
-        var row = wpEl("div", "wp-row");
+      wpBuildHammockRows(host, g, range, dayW, forPdf, track, function (item, hammock) {
+        var row = wpEl("div", "wp-row" + (hammock ? " wp-in-hammock" : ""));
         var name = wpEl("div", "wp-name");
+        if (hammock) name.style.borderRightColor = hammock.color;
         name.appendChild(wpEl("span", "wp-name-text", item.name));
         if (item.by) name.appendChild(wpEl("small", "", item.by));
+        if (!forPdf) wpBindNameLongPress(name, g.sheet, item);
         row.appendChild(name);
         var t = track();
         var from = Math.max(0, wpDiff(range.start, item.start));
@@ -345,6 +347,7 @@
     if (peopleSheet) wpFillPeople(peopleSheet);
     wpFillAfterOptions(peopleSheet, copy);
     wpRenderLinksList(peopleSheet, copy);
+    wpFillHammocks(peopleSheet, copy.hammock || null);
     wpDeleteBtn.hidden = isNew;
     document.getElementById("workPlanEditTitle").textContent = tr(isNew ? "workPlanAddTitle" : "workPlanEditTitle");
     wpEditOverlay.hidden = false;
@@ -359,23 +362,37 @@
   // Applies one activity's change (or its removal) to a project's plan -
   // locally right away, and for a shared project onto the server's fresh
   // copy (other members' edits in between are kept).
-  function saveWorkPlanItem(sheet, item, remove) {
+  // hammock (optional): a hammock to add / update along with it; hammocks
+  // no activity is in any more are dropped. item may be null (a hammock
+  // renamed / recoloured).
+  function saveWorkPlanItem(sheet, item, remove, hammock) {
     var apply = function (list) {
+      if (!item) return (list || []).slice();
       var out = (list || []).filter(function (x) { return x.id !== item.id; });
       if (!remove) out.push(item);
       return out;
     };
+    var applyHammocks = function (list, plan) {
+      var out = (list || []).filter(function (h) { return !hammock || h.id !== hammock.id; });
+      if (hammock) out.push(hammock);
+      return out.filter(function (h) { return plan.some(function (x) { return x.hammock === h.id; }); });
+    };
     sheet.workPlan = apply(sheet.workPlan);
+    sheet.workHammocks = applyHammocks(sheet.workHammocks, sheet.workPlan);
     if (!sheet.shared) {
       saveData();
       return;
     }
     if (!supabaseClient) return;
     updateSharedSheetDataSafely(sheet.id, function (current) {
-      return Object.assign({}, current, { workPlan: apply(current.workPlan) });
+      var plan = apply(current.workPlan);
+      return Object.assign({}, current, { workPlan: plan, workHammocks: applyHammocks(current.workHammocks, plan) });
     }).then(function (newData) {
       var live = sharedSheets.find(function (s) { return s.id === sheet.id; });
-      if (live) live.workPlan = newData.workPlan || [];
+      if (live) {
+        live.workPlan = newData.workPlan || [];
+        live.workHammocks = newData.workHammocks || [];
+      }
       refreshWorkPlanIfOpen();
     }, function () {
       alert(tr("workPlanSaveError"));
@@ -400,11 +417,13 @@
       note: wpNote.value.trim(),
       showInTasks: wpShowInTasks.checked,
       after: wpAfter.value || null,
+      hammock: wpHammockSelect.value && wpHammockSelect.value !== "__new" ? wpHammockSelect.value : null,
       updatedBy: myPhoneNumber || null,
       updatedAt: Date.now()
     });
     var fromTaskId = wpEditing.fromTaskId;
-    saveWorkPlanItem(sheet, item, false);
+    var newHammock = wpEditing.newHammock && wpEditing.newHammock.id === item.hammock ? wpEditing.newHammock : null;
+    saveWorkPlanItem(sheet, item, false, newHammock);
     if (fromTaskId) {
       var task = sheet.tasks.find(function (t) { return t.id === fromTaskId; });
       if (task && !task.planItemId) {
@@ -434,6 +453,8 @@
     var s = allSheets().find(function (x) { return x.id === wpProject.value; });
     if (s) wpFillPeople(s);
     wpFillAfterOptions(s, wpEditing.item);
+    wpEditing.newHammock = null;
+    wpFillHammocks(s, null);
   });
   document.querySelectorAll(".wp-status").forEach(function (b) {
     b.addEventListener("click", function () {

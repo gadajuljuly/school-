@@ -362,7 +362,7 @@
           data: {
             tasks: sheet.tasks || [], reports: sheet.reports || [], files: [], folders: sheet.folders || null,
             siteLogs: sheet.siteLogs || [], ended: sheet.ended || false, endedDate: sheet.endedDate || null, logoId: sheet.logoId || null,
-            workPlan: sheet.workPlan || []
+            workPlan: sheet.workPlan || [], workHammocks: sheet.workHammocks || []
           },
           data_version: 1,
           members: sheet.members || [],

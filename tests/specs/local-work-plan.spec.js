@@ -397,3 +397,78 @@ test("the work plan always opens on the whole plan (הכל), whatever view it wa
   await page.locator("#workPlanBtn").click();
   await expect(page.locator(".wp-zoom[data-zoom=all]")).toHaveClass(/on/);
 });
+
+const serverHammocks = (page, id) => page.evaluate((id) => (window.__backend.tables.shared_projects.find((r) => r.id === id).data.workHammocks || []), id);
+
+test("hammock (ערסל): made from an activity's settings or a long press on its name; summary bar, folding, rename, empty ones go", async ({ page }) => {
+  const plan = [
+    { id: "a1", name: "שלד בניין A", start: iso(-4), end: iso(5), status: "prog", progress: 50, by: "" },
+    { id: "a2", name: "חשמל בניין A", start: iso(6), end: iso(15), status: "todo", progress: 0, by: "" },
+    { id: "b1", name: "ריצוף חניון", start: iso(0), end: iso(3), status: "todo", progress: 0, by: "" },
+  ];
+  await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [], workPlan: plan }] });
+  await page.locator("#workPlanBtn").click();
+  const chart = page.locator("#workPlanChart");
+  await expect(chart.locator(".wp-hammock-row")).toHaveCount(0); // none yet: as before
+
+  // 1) from the settings: "＋ ערסל חדש…" -> name + colour
+  await chart.locator(".wp-row", { hasText: "שלד בניין A" }).click();
+  await page.locator("#wpHammock").selectOption("__new");
+  await expect(page.locator("#wpHammockEditOverlay")).toBeVisible();
+  await page.locator("#wpHammockName").fill("בניין A");
+  await page.locator(".wp-hammock-color[data-color='#2e7d32']").click();
+  await page.locator("#wpHammockEditOkBtn").click();
+  await expect(page.locator("#wpHammock")).toHaveValue(/.+/);
+  await page.locator("#workPlanEditForm button[type=submit]").click();
+  await expect(chart.locator(".wp-hammock-row")).toHaveCount(1);
+  await expect(chart.locator(".wp-hammock-row")).toContainText("בניין A");
+  await expect(chart.locator(".wp-hammock-none")).toBeVisible(); // the rest: "ללא ערסל"
+  await expect.poll(async () => (await serverHammocks(page, "p1")).map((h) => [h.name, h.color])).toEqual([["בניין A", "#2e7d32"]]);
+  const hid = (await serverHammocks(page, "p1"))[0].id;
+  expect((await serverPlan(page, "p1")).find((x) => x.id === "a1").hammock).toBe(hid);
+
+  // 2) a long press on an activity's name -> pick the hammock
+  await longPress(page, chart.locator(".wp-row", { hasText: "חשמל בניין A" }).locator(".wp-name"), 900);
+  await expect(page.locator("#wpHammockMenuOverlay")).toBeVisible();
+  await expect(page.locator("#workPlanEditOverlay")).toBeHidden(); // not the settings too
+  await page.locator("#wpHammockMenuList button", { hasText: "בניין A" }).click();
+  await expect.poll(async () => (await serverPlan(page, "p1")).find((x) => x.id === "a2").hammock).toBe(hid);
+  // ...and a new one from the same menu
+  await longPress(page, chart.locator(".wp-row", { hasText: "ריצוף חניון" }).locator(".wp-name"), 900);
+  await page.locator("#wpHammockMenuList button", { hasText: "ערסל חדש" }).click();
+  await page.locator("#wpHammockName").fill("חניון");
+  await page.locator("#wpHammockEditOkBtn").click();
+  await expect(chart.locator(".wp-hammock-row")).toHaveCount(2);
+  await expect(chart.locator(".wp-hammock-none")).toHaveCount(0);
+  await expect.poll(async () => (await serverHammocks(page, "p1")).length).toBe(2);
+
+  // the summary bar spans its activities; done weighted by length (10 days at 50%, 10 at 0%)
+  const hrow = chart.locator(".wp-hammock-row", { hasText: "בניין A" });
+  await expect(hrow.locator(".wp-hbar-text")).toHaveText("25%");
+  await expect(hrow).toContainText("2 פעילויות");
+  const hb = await hrow.locator(".wp-hbar").boundingBox();
+  const b1 = await chart.locator(".wp-row", { hasText: "שלד בניין A" }).locator(".wp-bar").boundingBox();
+  const b2 = await chart.locator(".wp-row", { hasText: "חשמל בניין A" }).locator(".wp-bar").boundingBox();
+  expect(Math.abs((hb.x + hb.width) - (b1.x + b1.width))).toBeLessThan(4); // RTL: starts with the first
+  expect(Math.abs(hb.x - b2.x)).toBeLessThan(4);                           // ends with the last
+
+  // tap folds it shut / open
+  await hrow.click();
+  await expect(chart.locator(".wp-row", { hasText: "שלד בניין A" })).toHaveCount(0);
+  await hrow.click();
+  await expect(chart.locator(".wp-row", { hasText: "שלד בניין A" })).toHaveCount(1);
+
+  // long press on it: rename
+  await longPress(page, hrow.locator(".wp-name"), 900);
+  await expect(page.locator("#wpHammockEditOverlay")).toBeVisible();
+  await page.locator("#wpHammockName").fill("בניין A – שלד וגמר");
+  await page.locator("#wpHammockEditOkBtn").click();
+  await expect(chart.locator(".wp-hammock-row", { hasText: "שלד וגמר" })).toHaveCount(1);
+  await expect.poll(async () => (await serverHammocks(page, "p1")).map((h) => h.name).sort()).toEqual(["בניין A – שלד וגמר", "חניון"]);
+
+  // the last activity out of "חניון": it goes
+  await longPress(page, chart.locator(".wp-row", { hasText: "ריצוף חניון" }).locator(".wp-name"), 900);
+  await page.locator("#wpHammockMenuList button", { hasText: "ללא ערסל" }).click();
+  await expect(chart.locator(".wp-hammock-row")).toHaveCount(1);
+  await expect.poll(async () => (await serverHammocks(page, "p1")).map((h) => h.name)).toEqual(["בניין A – שלד וגמר"]);
+});

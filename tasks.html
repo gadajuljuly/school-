@@ -35,7 +35,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<link rel="stylesheet" href="tasks.css?v=7ad92d0833">
+<link rel="stylesheet" href="tasks.css?v=5d867840e9">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -132,6 +132,8 @@
       </div>
       <label data-i18n="workPlanName">שם הפעילות</label>
       <input type="text" id="wpName" maxlength="120" required>
+      <label data-i18n="workPlanHammock">ערסל</label>
+      <select id="wpHammock"></select>
       <div class="cal-form-row">
         <div class="wp-field"><label data-i18n="workPlanFrom">מתאריך</label><input type="date" id="wpStart" required></div>
         <div class="wp-field"><label data-i18n="workPlanTo">עד תאריך</label><input type="date" id="wpEnd" required></div>
@@ -167,6 +169,26 @@
         <button type="button" class="modal-btn modal-btn-no" id="wpCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </form>
+  </div>
+</div>
+<div class="modal-overlay" id="wpHammockMenuOverlay" hidden style="z-index:41">
+  <div class="modal-box" role="alertdialog" aria-modal="true">
+    <p class="modal-message" id="wpHammockMenuTitle"></p>
+    <div class="move-task-projects" id="wpHammockMenuList"></div>
+    <div class="modal-actions">
+      <button type="button" class="modal-btn modal-btn-no" id="wpHammockMenuCancelBtn" data-i18n="cancelBtn">ביטול</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="wpHammockEditOverlay" hidden style="z-index:42">
+  <div class="modal-box" role="alertdialog" aria-modal="true">
+    <p class="modal-message" id="wpHammockEditTitle"></p>
+    <input type="text" id="wpHammockName" maxlength="60" autocomplete="off" class="wp-hammock-name-input">
+    <div class="wp-hammock-colors" id="wpHammockColors"></div>
+    <div class="modal-actions">
+      <button type="button" class="modal-btn modal-btn-no" id="wpHammockEditCancelBtn" data-i18n="cancelBtn">ביטול</button>
+      <button type="button" class="modal-btn modal-btn-primary" id="wpHammockEditOkBtn" data-i18n="workPlanSave">שמירה</button>
+    </div>
   </div>
 </div>
 <div class="modal-overlay" id="workPlanLinkOverlay" hidden>
@@ -1364,6 +1386,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=e60a59c75e"></script>
+<script src="tasks-app.js?v=2c9c23c795"></script>
 </body>
 </html>

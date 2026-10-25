@@ -3300,6 +3300,27 @@
   .wp-todo { background: var(--accent); color: #fff; }
   .wp-group { position: sticky; right: 0; display: flex; justify-content: space-between; padding: 6px 10px; background: var(--paper-alt); font-weight: 700; font-size: 0.85rem; border-bottom: 1px solid var(--rule); cursor: pointer; }
   .wp-group em { font-style: normal; color: var(--danger); font-size: 0.8rem; }
+  /* ערסל: a hammock row (bold, its colour down the side, a slim summary
+     bar with end ticks) and its activities, edged in its colour */
+  .wp-hammock-row { background: #f6f8fc; }
+  .wp-hammock-row .wp-name { background: #f6f8fc; }
+  .wp-hammock-name { border-right: 5px solid #2e4fb8; }
+  .wp-hammock-name .wp-name-text { font-weight: 800; }
+  .wp-in-hammock .wp-name { border-right: 3px solid transparent; padding-right: 12px; }
+  .wp-hbar { position: absolute; top: 15px; height: 12px; border-radius: 2px; background: color-mix(in srgb, var(--hc, #2e4fb8) 30%, #fff); border: 1.5px solid var(--hc, #2e4fb8); box-sizing: border-box; z-index: 1; overflow: visible; display: flex; align-items: center; }
+  .wp-hbar::before, .wp-hbar::after { content: ""; position: absolute; bottom: -7px; border: 5px solid transparent; border-top: 6px solid var(--hc, #2e4fb8); }
+  .wp-hbar::before { right: -5.5px; }
+  .wp-hbar::after { left: -5.5px; }
+  .wp-hbar-fill { position: absolute; right: 0; top: 0; bottom: 0; background: var(--hc, #2e4fb8); }
+  .wp-hbar-text { position: relative; margin: 0 auto; font-size: 0.62rem; font-weight: 800; color: #1d1d1d; background: rgba(255,255,255,0.85); padding: 0 3px; border-radius: 3px; line-height: 1.1; }
+  .wp-hbar-late { box-shadow: 0 0 0 2px #e07b00; }
+  .wp-hammock-none { position: sticky; right: 0; padding: 4px 10px; font-size: 0.75rem; font-weight: 700; color: var(--ink-muted); background: #fafafa; border-bottom: 1px solid var(--rule); }
+  .wp-hammock-pick { border-right: 6px solid var(--hc) !important; }
+  .wp-hammock-pick.on { font-weight: 800; }
+  .wp-hammock-name-input { width: 100%; box-sizing: border-box; font: inherit; padding: 8px 10px; border: 1px solid var(--rule); border-radius: 8px; margin-bottom: 10px; }
+  .wp-hammock-colors { display: flex; justify-content: center; gap: 10px; margin-bottom: 8px; }
+  .wp-hammock-color { width: 32px; height: 32px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 1px #bbb; cursor: pointer; }
+  .wp-hammock-color.on { box-shadow: 0 0 0 3px var(--ink); }
   .wp-legend { display: flex; flex-wrap: wrap; gap: 6px 12px; justify-content: center; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); font-size: 0.75rem; color: var(--ink-muted); border-top: 1px solid var(--rule); flex-shrink: 0; }
   .wp-legend b { display: inline-block; width: 12px; height: 8px; border-radius: 2px; margin-left: 4px; vertical-align: middle; }
   .wp-legend .wp-late-b { background: var(--plan-red); }
