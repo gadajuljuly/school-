@@ -989,9 +989,52 @@
       chatSaveFolderOverlay.hidden = false;
     });
   });
-  // share as a picture (WhatsApp, mail...)
+  // share as a picture: into the project's own chat (a shared project),
+  // or out to other apps (WhatsApp, mail...)
+  var sketchShareOverlay = document.getElementById("sketchShareOverlay");
+  var skSharePending = null;
+  function skShareToApps(canvas) {
+    canvas.toBlob(function (blob) { attemptShare(blob, skFileName() + ".png", "image/png"); }, "image/png");
+  }
+  function skShareToChat(canvas, sheetId) {
+    var fileName = skFileName() + ".png";
+    showToast(tr("sketchSendingToChat"));
+    canvas.toBlob(function (blob) {
+      var path = sheetId + "/files/" + uid() + "-" + safeStorageFileName(fileName);
+      supabaseClient.storage.from(LIBRARY_BUCKET).upload(path, blob, { contentType: "image/png" })
+        .then(function (result) {
+          if (result.error) throw result.error;
+          return resolveFileUrl(path);
+        })
+        .then(function (url) { return sendChatFileMessage(sheetId, url, fileName, "image/png", blob.size || 0); })
+        .then(function () {
+          if (activeChatSheetId === sheetId) renderChatMessages();
+          showToast(tr("sketchSentToChat"));
+        }, function (err) {
+          console.error("sketch to chat failed:", err);
+          alert(tr("chatFileUploadError"));
+        });
+    }, "image/png");
+  }
   document.getElementById("sketchShareBtn").addEventListener("click", function () {
     var canvas = skRenderForExport();
     if (!canvas) { showToast(tr("sketchEmptyMsg")); return; }
-    canvas.toBlob(function (blob) { attemptShare(blob, skFileName() + ".png", "image/png"); }, "image/png");
+    var shared = supabaseClient && sharedSheets.some(function (s) { return s.id === sk.sheetId; });
+    if (!shared) { skShareToApps(canvas); return; }
+    skSharePending = canvas;
+    sketchShareOverlay.hidden = false;
+  });
+  document.getElementById("sketchShareChatBtn").addEventListener("click", function () {
+    sketchShareOverlay.hidden = true;
+    if (skSharePending) skShareToChat(skSharePending, sk.sheetId);
+    skSharePending = null;
+  });
+  document.getElementById("sketchShareAppsBtn").addEventListener("click", function () {
+    sketchShareOverlay.hidden = true;
+    if (skSharePending) skShareToApps(skSharePending);
+    skSharePending = null;
+  });
+  document.getElementById("sketchShareCancelBtn").addEventListener("click", function () {
+    sketchShareOverlay.hidden = true;
+    skSharePending = null;
   });

@@ -335,6 +335,18 @@
     </form>
   </div>
 </div>
+<div class="modal-overlay" id="sketchShareOverlay" hidden style="z-index:41">
+  <div class="modal-box" role="alertdialog" aria-modal="true">
+    <p class="modal-message" data-i18n="sketchShareHow">איך לשתף את הסקיצה?</p>
+    <div class="move-task-projects">
+      <button type="button" id="sketchShareChatBtn" data-i18n="sketchShareToChat">💬 לצ'אט של הפרויקט</button>
+      <button type="button" id="sketchShareAppsBtn" data-i18n="sketchShareToApps">📤 לאפליקציות אחרות</button>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="modal-btn modal-btn-no" id="sketchShareCancelBtn" data-i18n="cancelBtn">ביטול</button>
+    </div>
+  </div>
+</div>
 <div class="modal-overlay" id="chatSaveFolderOverlay" hidden style="z-index:41">
   <div class="modal-box" role="alertdialog" aria-modal="true">
     <p class="modal-message" data-i18n="chatSaveFolderTitle">לאיזו תיקייה בספרייה לשמור?</p>
@@ -1319,6 +1331,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=540cee00d9"></script>
+<script src="tasks-app.js?v=a97c9402d7"></script>
 </body>
 </html>

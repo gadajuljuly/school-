@@ -262,3 +262,24 @@ test("sketch: a new dimension can start where another ends", async ({ page }) =>
   expect(all.map((e) => e.type)).toEqual(["dim", "dim"]);
   expect(all[0].off || 0).toBe(0);
 });
+
+test("sketch share: a shared project's sketch can go straight into its chat as a picture", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME, "+972500000002"], tasks: [] }] });
+  await page.locator("#sketchBtn").click();
+  await page.locator(".sk-tool[data-tool=line]").click();
+  await drag(page, [40, 160], [240, 160]);
+  await page.locator("#sketchShareBtn").click();
+  await expect(page.locator("#sketchShareOverlay")).toBeVisible();
+  await page.locator("#sketchShareChatBtn").click();
+  await expect(page.locator("#sketchShareOverlay")).toBeHidden();
+  await expect.poll(() => page.evaluate(() => window.__backend.tables.shared_projects[0].messages.length)).toBe(1);
+  const msg = await page.evaluate(() => window.__backend.tables.shared_projects[0].messages[0]);
+  expect(msg).toMatchObject({ type: "file", phone: ME, fileType: "image/png", fileName: expect.stringMatching(/^סקיצה בניין A .+\.png$/) });
+  const up = await page.evaluate(() => window.__backend.uploads);
+  expect(up[0].path).toMatch(/^p1\/files\/.+\.png$/);
+  expect(up[0].size).toBeGreaterThan(500);
+  // the other choice still shares out to other apps; cancel closes it
+  await page.locator("#sketchShareBtn").click();
+  await page.locator("#sketchShareCancelBtn").click();
+  await expect(page.locator("#sketchShareOverlay")).toBeHidden();
+});
