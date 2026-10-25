@@ -35,7 +35,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<link rel="stylesheet" href="tasks.css?v=8935124d55">
+<link rel="stylesheet" href="tasks.css?v=e2aae58fc9">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -1048,6 +1048,11 @@
       <canvas id="sketchCanvas"></canvas>
       <div class="sketch-len-tip" id="sketchLenTip" hidden></div>
       <button type="button" class="sketch-scale-chip" id="sketchScaleBtn"><span id="sketchScaleLabel"></span></button>
+      <div class="sketch-pick-menu" id="sketchObjMenu" hidden></div>
+      <div class="sketch-pick-menu" id="sketchFillMenu" hidden>
+        <p class="sk-pick-title" data-i18n="sketchFillHint">געו בתוך שטח סגור כדי לצבוע אותו</p>
+        <div class="sk-fill-list"></div>
+      </div>
       <div class="sketch-shapes-menu" id="sketchShapesMenu" hidden>
         <button type="button" class="sk-tool" data-tool="wall" data-i18n="sketchWall">▬ קיר</button>
         <button type="button" class="sk-tool" data-tool="door" data-i18n="sketchDoor">◜ דלת</button>
@@ -1066,6 +1071,7 @@
         <button type="button" class="sk-tool" data-tool="text" data-i18n-title="sketchText" title="טקסט">T</button>
         <button type="button" class="sk-tool-more" id="sketchShapesBtn" data-i18n-title="sketchShapes" title="צורות">◫</button>
         <button type="button" class="sk-tool" data-tool="fill" data-i18n-title="sketchFill" title="צביעת שטח">🪣</button>
+        <button type="button" class="sk-tool-more" id="sketchObjBtn" data-i18n-title="sketchObjects" title="אובייקטים">🚜</button>
         <button type="button" class="sk-tool" data-tool="eraser" data-i18n-title="sketchEraser" title="מחק">⌫</button>
         <button type="button" class="sk-tool" data-tool="hand" data-i18n-title="sketchHand" title="הזזה">✋</button>
       </div>
@@ -1332,6 +1338,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=c1bfb1bc22"></script>
+<script src="tasks-app.js?v=370b0ad88f"></script>
 </body>
 </html>

@@ -321,3 +321,84 @@ test("sketch fill: a closed area is painted under its lines; an open one isn't; 
   await page.locator("#sketchUndoBtn").click();
   expect(await fills()).toHaveLength(1);
 });
+
+test("sketch objects: placed from the menu, moved by dragging, sized and turned by the yellow dot", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
+  await page.locator("#sketchBtn").click();
+  await page.locator("#sketchObjBtn").click();
+  await expect(page.locator(".sk-obj-pick")).toHaveCount(13);
+  await page.locator(".sk-obj-pick[data-obj=car]").click();
+  await expect(page.locator("#sketchObjMenu")).toBeHidden();
+  let car = (await els(page))[0];
+  expect(car).toMatchObject({ type: "obj", kind: "car", rot: 0 });
+  expect(car.w / car.h).toBeCloseTo(4.5 / 1.9, 2);
+  expect(car.w).toBeCloseTo(90, 0); // 4.5 m, a square being a metre
+  const view = await page.evaluate(() => JSON.parse(localStorage.getItem(Object.keys(localStorage).find((x) => x.startsWith("itask-sketch:")))).view);
+  const scr = (p) => [(p.x - view.x) * view.z, (p.y - view.y) * view.z];
+
+  // move: drag the body
+  const c0 = scr(car.c);
+  await drag(page, c0, [c0[0] - 60, c0[1] + 40]);
+  let moved = (await els(page))[0];
+  expect(moved.c.x - car.c.x).toBeCloseTo(-60, 0);
+  expect(moved.c.y - car.c.y).toBeCloseTo(40, 0);
+  expect(moved.w).toBe(car.w);
+
+  // the yellow dot at its corner: pulled straight out it doubles the size
+  car = moved;
+  const hd = [car.c.x + car.w / 2, car.c.y + car.h / 2];
+  const h0 = scr({ x: hd[0], y: hd[1] }), cc = scr(car.c);
+  await drag(page, h0, [cc[0] + (h0[0] - cc[0]) * 2, cc[1] + (h0[1] - cc[1]) * 2]);
+  let big = (await els(page))[0];
+  expect(big.w / car.w).toBeCloseTo(2, 1);
+  expect(big.rot).toBe(0);
+  expect(big.c).toEqual(car.c);
+
+  // ...and swung round the centre it turns (snapping to 15 degrees)
+  const r = Math.hypot(big.w / 2, big.h / 2), a0 = Math.atan2(big.h, big.w);
+  const target = { x: big.c.x + r * Math.cos(a0 + Math.PI / 2), y: big.c.y + r * Math.sin(a0 + Math.PI / 2) };
+  const hd2 = scr({ x: big.c.x + big.w / 2, y: big.c.y + big.h / 2 });
+  await drag(page, hd2, scr(target));
+  const turned = (await els(page))[0];
+  expect(turned.rot).toBeCloseTo(Math.PI / 2, 3);
+  expect(turned.w).toBeCloseTo(big.w, 0);
+
+  // undo goes back one gesture at a time
+  await page.locator("#sketchUndoBtn").click();
+  expect((await els(page))[0].rot).toBe(0);
+
+  // another tool drops the selection; the eraser takes the object
+  await page.locator(".sk-tool[data-tool=eraser]").click();
+  await page.mouse.click(...(await (async () => { const b = await page.locator("#sketchCanvas").boundingBox(); const p = scr(big.c); return [b.x + p[0], b.y + p[1]]; })()));
+  expect(await els(page)).toHaveLength(0);
+});
+
+test("sketch fill: textures - paving, road (with a centre line), grass, soil, base course, water", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
+  await page.locator("#sketchBtn").click();
+  await page.locator(".sk-tool[data-tool=line]").click();
+  for (const [a, b] of [[[40, 100], [340, 100]], [[340, 100], [340, 160]], [[340, 160], [40, 160]], [[40, 160], [40, 100]]]) await drag(page, a, b);
+  const box = await page.locator("#sketchCanvas").boundingBox();
+  await page.locator(".sk-tool[data-tool=fill]").click();
+  await expect(page.locator("#sketchFillMenu")).toBeVisible();
+  await expect(page.locator(".sk-fill-pick")).toHaveCount(7);
+  await page.locator(".sk-fill-pick[data-fill=road]").click();
+  await expect(page.locator("#sketchFillMenu")).toBeHidden();
+  await page.mouse.click(box.x + 190, box.y + 130);
+  let f = (await els(page)).filter((e) => e.type === "fill");
+  expect(f).toHaveLength(1);
+  expect(f[0].pattern).toBe("road");
+  expect(Math.abs(Math.sin(f[0].axis.ang))).toBeLessThan(0.05); // along the long side
+  // the texture is drawn: a dark road pixel inside the area
+  const px = await page.evaluate(({ x, y }) => {
+    const c = document.getElementById("sketchCanvas"), d = window.devicePixelRatio || 1;
+    return Array.from(c.getContext("2d").getImageData(Math.round(x * d), Math.round(y * d), 1, 1).data);
+  }, { x: 100, y: 115 });
+  expect(px[0]).toBeLessThan(120);
+
+  await page.locator(".sk-tool[data-tool=fill]").click();
+  await page.locator(".sk-fill-pick[data-fill=grass]").click();
+  await page.mouse.click(box.x + 190, box.y + 130);
+  f = (await els(page)).filter((e) => e.type === "fill");
+  expect(f.map((e) => e.pattern)).toEqual(["grass"]);
+});

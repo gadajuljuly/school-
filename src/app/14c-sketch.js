@@ -45,6 +45,7 @@
     sk.scale = (d && d.scale) || null;
     sk.view = (d && d.view) || { x: -40, y: -40, z: 1 };
     sk.undo = []; sk.redo = [];
+    sk.objSel = null;
   }
   function skCommit(fn) {
     sk.undo.push(JSON.stringify(sk.els));
@@ -270,6 +271,8 @@
       ctx.beginPath(); ctx.arc(n0.x, n0.y, L * 0.7, 0, Math.PI * 2); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(n0.x, n0.y - L); ctx.lineTo(n0.x - L * 0.3, n0.y + L * 0.4); ctx.lineTo(n0.x, n0.y + L * 0.15); ctx.closePath(); ctx.fill();
       skLabel(ctx, "N", n0.x, n0.y - L - 8 * z, 0, 12 * Math.max(0.8, z), el.color);
+    } else if (el.type === "obj") {
+      skDrawObj(ctx, el, view);
     } else if (el.type === "image" || el.type === "fill") {
       var img = sk.images[el.id];
       if (!img) {
@@ -282,7 +285,7 @@
         var ip = P(el.p);
         ctx.save();
         ctx.globalAlpha = el.type === "fill" ? 1 : 0.55;
-        ctx.drawImage(img, ip.x, ip.y, el.w * z, el.h * z);
+        ctx.drawImage(el.pattern ? skFillArt(el, img) : img, ip.x, ip.y, el.w * z, el.h * z);
         ctx.restore();
       }
     }
@@ -301,6 +304,7 @@
     skDrawGrid(skCtx, w, h, sk.view);
     skDrawLayers(skCtx, sk.view);
     if (sk.draft) skDrawEl(skCtx, sk.draft, sk.view);
+    skDrawObjSelection(skCtx, sk.view);
     var scaleLabel = document.getElementById("sketchScaleLabel");
     scaleLabel.textContent = sk.scale ? tr("sketchScaleNow").replace("{n}", sk.scale.per + " " + tr(sk.scale.unit === "cm" ? "sketchUnitCm" : "sketchUnitM")) : tr("sketchNoScale");
   }
@@ -436,6 +440,7 @@
       case "north": return skDist(p, el.p) < 30;
       case "image": return false; // removed with its own button
       case "fill": return skFillHas(el, p);
+      case "obj": return skObjHas(el, p, tol / 2);
     }
     return false;
   }
@@ -509,21 +514,38 @@
     var out = document.createElement("canvas");
     out.width = cw; out.height = ch;
     var octx = out.getContext("2d"), img = octx.createImageData(cw, ch);
+    var pattern = sk.fillKind && sk.fillKind !== "color" ? sk.fillKind : null;
     var hex = sk.color.replace("#", ""), r = parseInt(hex.slice(0, 2), 16), g = parseInt(hex.slice(2, 4), 16), b = parseInt(hex.slice(4, 6), 16);
     for (var yy = 0; yy < ch; yy++) {
       for (var xx = 0; xx < cw; xx++) {
         if (!area[(yy + y0) * W + xx + x0]) continue;
         var o = (yy * cw + xx) * 4;
-        img.data[o] = r; img.data[o + 1] = g; img.data[o + 2] = b; img.data[o + 3] = SK_FILL_ALPHA;
+        img.data[o] = r; img.data[o + 1] = g; img.data[o + 2] = b; img.data[o + 3] = pattern ? 235 : SK_FILL_ALPHA;
       }
     }
     octx.putImageData(img, 0, 0);
     var el = { type: "fill", id: uid(), src: out.toDataURL("image/png"), p: { x: minx + x0 / k, y: miny + y0 / k }, w: cw / k, h: ch / k, color: sk.color };
+    if (pattern) {
+      el.pattern = pattern;
+      if (pattern === "road") el.axis = skAreaAxis(area, W, H, minx, miny, k);
+    }
     skCommit(function () {
       // painting an area again replaces its old colour
       sk.els = sk.els.filter(function (e) { return !(e.type === "fill" && skFillHas(e, p)); });
       sk.els.push(el);
     });
+  }
+  // the long axis of a painted area (its centre, direction and half length)
+  function skAreaAxis(area, W, H, minx, miny, k) {
+    var n = 0, sx = 0, sy = 0, sxx = 0, syy = 0, sxy = 0;
+    for (var i = 0; i < W * H; i += 2) {
+      if (!area[i]) continue;
+      var x = i % W, y = (i - x) / W;
+      n++; sx += x; sy += y; sxx += x * x; syy += y * y; sxy += x * y;
+    }
+    var cx = sx / n, cy = sy / n, vxx = sxx / n - cx * cx, vyy = syy / n - cy * cy, vxy = sxy / n - cx * cy;
+    var ang = 0.5 * Math.atan2(2 * vxy, vxx - vyy);
+    return { cx: minx + cx / k, cy: miny + cy / k, ang: ang, len: (W + H) / k };
   }
   // is p inside the painted part of a fill (its picture's see-through pixels aside)?
   function skFillHas(el, p) {
@@ -743,6 +765,7 @@
       clearTimeout(skHoldTimer);
       sk.draft = null;
       if (skDimMove) { skDimMove.el.off = skDimMove.off; skDimMove = null; }
+      skObjCancelDrag();
       skLenTip.hidden = true;
       var a = skPointers[ids[0]], b = skPointers[ids[1]];
       skPinch = { d: Math.hypot(a.x - b.x, a.y - b.y), mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, view: Object.assign({}, sk.view) };
@@ -751,6 +774,8 @@
     }
     if (ids.length > 2) return;
     var p = skEventPoint(e);
+    ["sketchShapesMenu", "sketchObjMenu", "sketchFillMenu"].forEach(function (id) { document.getElementById(id).hidden = true; });
+    if (skObjPointerDown(p)) return;
     if (sk.tool === "hand") { skPinch = { pan: true, start: { x: e.clientX, y: e.clientY }, view: Object.assign({}, sk.view) }; return; }
     if (sk.tool === "eraser") { skErase(p); return; }
     if (sk.tool === "fill") { skFill(p); return; }
@@ -796,6 +821,7 @@
       skDraw();
       return;
     }
+    if (skObjPointerMove(skEventPoint(e))) return;
     if (sk.tool === "eraser" && e.buttons) { skErase(skEventPoint(e)); return; }
     if (skDimMove) {
       var m = skDimMove, q = skEventPoint(e), el = m.el, len = skDist(el.a, el.b) || 1;
@@ -832,6 +858,7 @@
       if (!Object.keys(skPointers).length) { skPinch = null; skSaveDraft(); }
       return;
     }
+    if (skObjPointerEnd()) return;
     if (skDimMove) {
       var m = skDimMove;
       skDimMove = null;
@@ -943,6 +970,10 @@
     document.getElementById("sketchRedoBtn").disabled = !sk.redo.length;
     document.getElementById("sketchSnapBtn").classList.toggle("on", sk.snap);
     document.getElementById("sketchShapesMenu").hidden = true;
+    document.getElementById("sketchObjMenu").hidden = true;
+    document.getElementById("sketchFillMenu").hidden = true;
+    document.getElementById("sketchObjBtn").classList.toggle("on", sk.tool === "obj");
+    if (sk.tool !== "obj" && sk.objSel) { sk.objSel = null; skDraw(); }
   }
   document.querySelectorAll(".sk-tool").forEach(function (b) {
     b.addEventListener("click", function () {
@@ -951,7 +982,6 @@
       if (sk.tool === "leader") showToast(tr("sketchLeaderHint"), 2500);
       else if (sk.tool === "dim") showToast(tr("sketchDimHint"), 2500);
       else if (sk.tool === "door") showToast(tr("sketchDoorHint"), 2500);
-      else if (sk.tool === "fill") showToast(tr("sketchFillHint"), 2500);
     });
   });
   document.getElementById("sketchShapesBtn").addEventListener("click", function () {
@@ -1029,6 +1059,7 @@
     sk.els.forEach(function (el) {
       if (el.pts) el.pts.forEach(add);
       if (el.type === "dim") { var bl = skDimLine(el); add(bl.a); add(bl.b); }
+      if (el.type === "obj") { [[-1, -1], [1, -1], [1, 1], [-1, 1]].forEach(function (q) { add(skObjCorner(el, q[0], q[1])); }); return; }
       if (el.a) add(el.a);
       if (el.b) { add(el.b); if (el.type === "leader") add({ x: el.b.x + (el.b.x >= el.a.x ? 1 : -1) * 160, y: el.b.y - 20 }); }
       if (el.c) { add({ x: el.c.x - (el.rx || el.r), y: el.c.y - (el.ry || el.r) }); add({ x: el.c.x + (el.rx || el.r), y: el.c.y + (el.ry || el.r) }); }
