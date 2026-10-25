@@ -1,9 +1,9 @@
 // ITASK
 // © 2026 Ahmad Juljoly. All rights reserved.
-var CACHE_NAME = "tasks-app-v328";
+var CACHE_NAME = "tasks-app-v331";
 var CORE_ASSETS = [
-  "./tasks-app.js?v=c48a6856a2",
-  "./tasks.css?v=83df081a35",
+  "./tasks-app.js?v=d8d70c7624",
+  "./tasks.css?v=430d083c60",
   "./tasks.html",
   "./tasks-manifest.json",
   "./tasks-icon-192.png",
@@ -21,6 +21,7 @@ var CORE_ASSETS = [
   "./tasks-plus-icon.webp",
   "./tasks-scan-icon.webp",
   "./tasks-work-plan-icon.webp",
+  "./tasks-sketch-icon.webp",
   "./tasks-calendar-icon.webp",
   "./tasks-calendar-app-icon.webp",
   "./tasks-calendar-app-icon-blank.webp",

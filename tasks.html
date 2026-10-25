@@ -35,7 +35,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<link rel="stylesheet" href="tasks.css?v=83df081a35">
+<link rel="stylesheet" href="tasks.css?v=430d083c60">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -181,6 +181,40 @@
         <button type="button" class="modal-btn modal-btn-primary" id="wpLinkSaveBtn" data-i18n="workPlanLinkSave">קשירה</button>
         <button type="button" class="modal-btn modal-btn-danger" id="wpLinkRemoveBtn" data-i18n="workPlanLinkRemove" hidden>הסרת קשירה</button>
         <button type="button" class="modal-btn modal-btn-no" id="wpLinkCancelBtn" data-i18n="cancelBtn">ביטול</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="sketchTextOverlay" hidden>
+  <div class="modal-box">
+    <form class="cal-form" id="sketchTextForm">
+      <p class="modal-message" data-i18n="sketchTextTitle">טקסט</p>
+      <input type="text" id="sketchTextInput" maxlength="80" autocomplete="off">
+      <p class="cal-form-note" id="sketchTextHint" data-i18n="sketchDimTextHint" hidden>המידה לפי קנה המידה - אפשר לשנות למספר או מילה אחרים</p>
+      <div class="modal-actions">
+        <button type="submit" class="modal-btn modal-btn-primary" data-i18n="voiceSaveBtn">אישור</button>
+        <button type="button" class="modal-btn modal-btn-no" id="sketchTextCancelBtn" data-i18n="cancelBtn">ביטול</button>
+      </div>
+    </form>
+  </div>
+</div>
+<div class="modal-overlay" id="sketchScaleOverlay" hidden>
+  <div class="modal-box">
+    <div class="cal-form">
+      <p class="modal-message" data-i18n="sketchScaleTitle">קנה מידה</p>
+      <div class="sk-scale-row">
+        <span data-i18n="sketchScaleSquare">משבצת אחת =</span>
+        <input type="number" id="sketchScalePer" min="0.1" step="any" value="50">
+        <select id="sketchScaleUnit">
+          <option value="cm" data-i18n="sketchUnitCm">ס"מ</option>
+          <option value="m" data-i18n="sketchUnitM">מ'</option>
+        </select>
+      </div>
+      <p class="cal-form-note" data-i18n="sketchScaleNote">קווים ישרים יראו את האורך האמיתי, ומידות יתמלאו לבד.</p>
+      <div class="modal-actions">
+        <button type="button" class="modal-btn modal-btn-primary" id="sketchScaleSaveBtn" data-i18n="voiceSaveBtn">אישור</button>
+        <button type="button" class="modal-btn" id="sketchScaleOffBtn" data-i18n="sketchScaleOff">בלי קנה מידה</button>
+        <button type="button" class="modal-btn modal-btn-no" id="sketchScaleCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </div>
   </div>
@@ -483,6 +517,7 @@
 
     <div class="ruled-body">
       <div class="sheet-title-wrap" id="sheetTitleWrap">
+        <button type="button" class="sketch-btn" id="sketchBtn" data-i18n-title="sketchTitle" title="סקיצה"><img src="tasks-sketch-icon.webp" alt=""></button>
         <button type="button" class="completed-tasks-toggle-btn" id="showCompletedTasksBtn" data-i18n="showCompletedTasksBtn">משימות שבוצעו</button>
         <button type="button" class="completed-tasks-toggle-btn" id="showActiveTasksBtn" data-i18n="showActiveTasksBtn" hidden>משימות לא בוצעו</button>
         <img class="sheet-title-logo" id="sheetTitleLogo" alt="" hidden>
@@ -988,6 +1023,57 @@
     </div>
   </div>
 
+  <div class="sketch-view" id="sketchView" hidden>
+    <div class="sketch-head">
+      <button type="button" class="report-back-btn" id="sketchCloseBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
+      <div class="sketch-title" id="sketchTitle"></div>
+      <button type="button" class="sk-mini" id="sketchUndoBtn" data-i18n-title="sketchUndo" title="ביטול">↶</button>
+      <button type="button" class="sk-mini" id="sketchRedoBtn" data-i18n-title="sketchRedo" title="חזרה">↷</button>
+      <button type="button" class="sk-head-btn" id="sketchShareBtn" data-i18n-title="sketchShare" title="שיתוף">&#128228;</button>
+      <button type="button" class="sk-head-btn sk-save" id="sketchSaveBtn" data-i18n="sketchSave">שמירה</button>
+    </div>
+    <div class="sketch-stage">
+      <canvas id="sketchCanvas"></canvas>
+      <div class="sketch-len-tip" id="sketchLenTip" hidden></div>
+      <button type="button" class="sketch-scale-chip" id="sketchScaleBtn"><span id="sketchScaleLabel"></span></button>
+      <div class="sketch-shapes-menu" id="sketchShapesMenu" hidden>
+        <button type="button" class="sk-tool" data-tool="wall" data-i18n="sketchWall">▬ קיר</button>
+        <button type="button" class="sk-tool" data-tool="door" data-i18n="sketchDoor">◜ דלת</button>
+        <button type="button" class="sk-tool" data-tool="window" data-i18n="sketchWindow">☰ חלון</button>
+        <button type="button" class="sk-tool" data-tool="stairs" data-i18n="sketchStairs">▤ מדרגות</button>
+        <button type="button" class="sk-tool" data-tool="north" data-i18n="sketchNorth">⬆ צפון</button>
+        <button type="button" class="sk-head-btn" id="sketchImageBtn" data-i18n="sketchImage">🖼 תמונת רקע</button>
+      </div>
+    </div>
+    <div class="sketch-tools">
+      <div class="sk-row">
+        <button type="button" class="sk-tool" data-tool="pen" data-i18n-title="sketchPen" title="עיפרון">✏️</button>
+        <button type="button" class="sk-tool" data-tool="line" data-i18n-title="sketchLine" title="קו ישר">╱</button>
+        <button type="button" class="sk-tool" data-tool="dim" data-i18n-title="sketchDim" title="מידה">↔</button>
+        <button type="button" class="sk-tool" data-tool="leader" data-i18n-title="sketchLeader" title="חץ עם טקסט">↙︎T</button>
+        <button type="button" class="sk-tool" data-tool="text" data-i18n-title="sketchText" title="טקסט">T</button>
+        <button type="button" class="sk-tool-more" id="sketchShapesBtn" data-i18n-title="sketchShapes" title="צורות">◫</button>
+        <button type="button" class="sk-tool" data-tool="eraser" data-i18n-title="sketchEraser" title="מחק">⌫</button>
+        <button type="button" class="sk-tool" data-tool="hand" data-i18n-title="sketchHand" title="הזזה">✋</button>
+      </div>
+      <div class="sk-row">
+        <button type="button" class="sk-color" data-color="#1f1f1f" style="--c:#1f1f1f"></button>
+        <button type="button" class="sk-color" data-color="#2e4fb8" style="--c:#2e4fb8"></button>
+        <button type="button" class="sk-color" data-color="#c62828" style="--c:#c62828"></button>
+        <button type="button" class="sk-color" data-color="#2e7d32" style="--c:#2e7d32"></button>
+        <button type="button" class="sk-color" data-color="#c05023" style="--c:#c05023"></button>
+        <span class="sk-sep"></span>
+        <button type="button" class="sk-width" data-width="0"><i style="height:2px"></i></button>
+        <button type="button" class="sk-width" data-width="1"><i style="height:4px"></i></button>
+        <button type="button" class="sk-width" data-width="2"><i style="height:7px"></i></button>
+        <span class="sk-sep"></span>
+        <button type="button" class="sk-mini" id="sketchSnapBtn" data-i18n-title="sketchSnap" title="הצמדה למשבצות">#</button>
+        <button type="button" class="sk-mini" id="sketchClearBtn" data-i18n-title="sketchClear" title="ניקוי">🗑</button>
+      </div>
+    </div>
+    <input type="file" accept="image/*" id="sketchImageInput" hidden>
+  </div>
+
   <div class="report-view" id="workPlanView" hidden>
     <div class="report-head">
       <button type="button" class="report-back-btn" id="workPlanBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
@@ -1233,6 +1319,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=c48a6856a2"></script>
+<script src="tasks-app.js?v=d8d70c7624"></script>
 </body>
 </html>
