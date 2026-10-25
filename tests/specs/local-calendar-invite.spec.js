@@ -173,3 +173,15 @@ test("owner removing the event withdraws the invite from everyone", async ({ pag
   }).toEqual({ invite: null, mine: null });
   expect(await page.evaluate(() => window.__native.deleted)).toEqual([100]);
 });
+
+test("the calendar always opens on the month, whatever view it was left on", async ({ page }) => {
+  await openWithSharedProject(page, { phone: A, native: true, calendarEvents: [], sheet: sheetWith({}) });
+  await page.locator("#calendarAppBtn").click();
+  await expect(page.locator("#calView")).toBeVisible();
+  await expect(page.locator(".cal-mode-btn[data-cal-mode=month]")).toHaveClass(/active/);
+  await page.locator(".cal-mode-btn[data-cal-mode=day]").click();
+  await expect(page.locator(".cal-mode-btn[data-cal-mode=day]")).toHaveClass(/active/);
+  await page.locator("#calCloseBtn").click();
+  await page.locator("#calendarAppBtn").click();
+  await expect(page.locator(".cal-mode-btn[data-cal-mode=month]")).toHaveClass(/active/);
+});

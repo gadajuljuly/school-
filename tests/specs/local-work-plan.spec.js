@@ -386,3 +386,14 @@ test("task menu: 'העברה לתוכנית העבודה' turns a task into an a
   await expect(page.locator("#taskToPlanBtn")).toBeHidden();
   await expect(page.locator("#taskWorkPlanBtn")).toBeVisible();
 });
+
+test("the work plan always opens on the whole plan (הכל), whatever view it was left on", async ({ page }) => {
+  await openWithSharedProject(page, { phone: "+972500000001", sheets: [{ id: "p1", name: "בניין A", members: ["+972500000001"], tasks: [] }] });
+  await page.locator("#workPlanBtn").click();
+  await expect(page.locator(".wp-zoom[data-zoom=all]")).toHaveClass(/on/);
+  await page.locator(".wp-zoom[data-zoom=week]").click();
+  await expect(page.locator(".wp-zoom[data-zoom=week]")).toHaveClass(/on/);
+  await page.locator("#workPlanBackBtn").click();
+  await page.locator("#workPlanBtn").click();
+  await expect(page.locator(".wp-zoom[data-zoom=all]")).toHaveClass(/on/);
+});

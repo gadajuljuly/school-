@@ -1883,6 +1883,7 @@
   function openCalendarView() {
     if (!calPlugin) return;
     calState.anchor = new Date();
+    calState.mode = "month"; // always opens on the month
     calView.hidden = false;
     calFitAboveFooter();
     calEnsurePermission(function () { calLoadCalendars().then(calLoadAndRender); });
@@ -10178,7 +10179,7 @@
   var wpDeleteBtn = document.getElementById("wpDeleteBtn");
   var wpShowInTasks = document.getElementById("wpShowInTasks");
   var WP_NAME_W = 112;
-  var wpState = { sheetId: null, zoom: "month", anchor: todayISO(), collapsed: {} };
+  var wpState = { sheetId: null, zoom: "all", anchor: todayISO(), collapsed: {} };
   var wpEditing = null; // { sheetId, item (a copy), isNew }
   var wpEditStatus = "todo";
 
@@ -10399,6 +10400,7 @@
     if (!sheet) return;
     wpState.sheetId = sheet.id === HEAD_OFFICE_SHEET_ID ? null : sheet.id;
     wpState.anchor = todayISO();
+    wpState.zoom = "all"; // opens on the whole plan
     workPlanTitle.textContent = wpState.sheetId ? tr("workPlanTitle") + " – " + sheet.name : tr("workPlanOfficeTitle");
     workPlanView.hidden = false;
     wpFitAboveFooter();

@@ -135,6 +135,7 @@
   function openCalendarView() {
     if (!calPlugin) return;
     calState.anchor = new Date();
+    calState.mode = "month"; // always opens on the month
     calView.hidden = false;
     calFitAboveFooter();
     calEnsurePermission(function () { calLoadCalendars().then(calLoadAndRender); });
