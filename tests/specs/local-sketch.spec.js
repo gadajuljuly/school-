@@ -478,3 +478,26 @@ test("sketch #: a new line starting near the end of another is caught exactly on
   expect(fourth.a.x % 10).toBe(0);
   expect(fourth.b.x % 10).toBe(0);
 });
+
+test("sketch background: the 🖼 button offers a photo, a picture from the gallery, and removing it", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
+  await page.locator("#sketchBtn").click();
+  await page.locator("#sketchBgBtn").click();
+  await expect(page.locator("#sketchBgMenu")).toBeVisible();
+  await expect(page.locator("#sketchBgCameraBtn")).toBeVisible();
+  await expect(page.locator("#sketchImageBtn")).toBeVisible();
+  await expect(page.locator("#sketchBgRemoveBtn")).toBeHidden(); // nothing to remove yet
+  expect(await page.locator("#sketchImageCameraInput").getAttribute("capture")).toBe("environment");
+  const png = require("path").join(__dirname, "../../tasks-icon-192.png");
+  await page.locator("#sketchImageInput").setInputFiles(png);
+  await expect.poll(async () => (await els(page)).filter((e) => e.type === "image").length).toBe(1);
+  // a second picture replaces the first
+  await page.locator("#sketchImageCameraInput").setInputFiles(png);
+  await expect.poll(async () => (await els(page)).filter((e) => e.type === "image").length).toBe(1);
+  await page.locator("#sketchBgBtn").click();
+  await expect(page.locator("#sketchBgRemoveBtn")).toBeVisible();
+  await page.locator("#sketchBgRemoveBtn").click();
+  expect((await els(page)).filter((e) => e.type === "image")).toHaveLength(0);
+  await page.locator("#sketchUndoBtn").click();
+  expect((await els(page)).filter((e) => e.type === "image")).toHaveLength(1);
+});

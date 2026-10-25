@@ -1048,6 +1048,11 @@
       <canvas id="sketchCanvas"></canvas>
       <div class="sketch-len-tip" id="sketchLenTip" hidden></div>
       <button type="button" class="sketch-scale-chip" id="sketchScaleBtn"><span id="sketchScaleLabel"></span></button>
+      <div class="sketch-shapes-menu" id="sketchBgMenu" hidden>
+        <button type="button" class="sk-head-btn" id="sketchBgCameraBtn" data-i18n="sketchBgCamera">📷 צילום</button>
+        <button type="button" class="sk-head-btn" id="sketchImageBtn" data-i18n="sketchBgFile">🖼 מהגלריה / קובץ</button>
+        <button type="button" class="sk-head-btn" id="sketchBgRemoveBtn" data-i18n="sketchBgRemove">🗑 הסרת הרקע</button>
+      </div>
       <div class="sketch-pick-menu" id="sketchObjMenu" hidden></div>
       <div class="sketch-pick-menu" id="sketchFillMenu" hidden>
         <p class="sk-pick-title" data-i18n="sketchFillHint">געו בתוך שטח סגור כדי לצבוע אותו</p>
@@ -1059,7 +1064,6 @@
         <button type="button" class="sk-tool" data-tool="window" data-i18n="sketchWindow">☰ חלון</button>
         <button type="button" class="sk-tool" data-tool="stairs" data-i18n="sketchStairs">▤ מדרגות</button>
         <button type="button" class="sk-tool" data-tool="north" data-i18n="sketchNorth">⬆ צפון</button>
-        <button type="button" class="sk-head-btn" id="sketchImageBtn" data-i18n="sketchImage">🖼 תמונת רקע</button>
       </div>
     </div>
     <div class="sketch-tools">
@@ -1086,11 +1090,13 @@
         <button type="button" class="sk-width" data-width="1"><i style="height:4px"></i></button>
         <button type="button" class="sk-width" data-width="2"><i style="height:7px"></i></button>
         <span class="sk-sep"></span>
+        <button type="button" class="sk-mini" id="sketchBgBtn" data-i18n-title="sketchBg" title="תמונת רקע">🖼</button>
         <button type="button" class="sk-mini" id="sketchSnapBtn" data-i18n-title="sketchSnap" title="הצמדה למשבצות">#</button>
         <button type="button" class="sk-mini" id="sketchClearBtn" data-i18n-title="sketchClear" title="ניקוי">🗑</button>
       </div>
     </div>
     <input type="file" accept="image/*" id="sketchImageInput" hidden>
+    <input type="file" accept="image/*" capture="environment" id="sketchImageCameraInput" hidden>
   </div>
 
   <div class="report-view" id="workPlanView" hidden>
@@ -1338,6 +1344,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=aec93f0f71"></script>
+<script src="tasks-app.js?v=044e7b8058"></script>
 </body>
 </html>

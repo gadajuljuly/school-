@@ -397,7 +397,10 @@
     sketchWindow: { he: "☰ חלון", en: "☰ Window", ar: "☰ نافذة", ru: "☰ Окно" },
     sketchStairs: { he: "▤ מדרגות", en: "▤ Stairs", ar: "▤ درج", ru: "▤ Лестница" },
     sketchNorth: { he: "⬆ צפון", en: "⬆ North", ar: "⬆ شمال", ru: "⬆ Север" },
-    sketchImage: { he: "🖼 תמונת רקע", en: "🖼 Background photo", ar: "🖼 صورة خلفية", ru: "🖼 Фото-подложка" },
+    sketchBg: { he: "תמונת רקע", en: "Background picture", ar: "صورة خلفية", ru: "Фоновое изображение" },
+    sketchBgCamera: { he: "📷 צילום", en: "📷 Take a photo", ar: "📷 التقاط صورة", ru: "📷 Сфотографировать" },
+    sketchBgFile: { he: "🖼 מהגלריה / קובץ", en: "🖼 From gallery / file", ar: "🖼 من المعرض / ملف", ru: "🖼 Из галереи / файла" },
+    sketchBgRemove: { he: "🗑 הסרת הרקע", en: "🗑 Remove background", ar: "🗑 إزالة الخلفية", ru: "🗑 Убрать фон" },
     sketchSnap: { he: "הצמדה למשבצות", en: "Snap to grid", ar: "الالتصاق بالشبكة", ru: "Привязка к сетке" },
     sketchUndo: { he: "ביטול", en: "Undo", ar: "تراجع", ru: "Отменить" },
     sketchRedo: { he: "חזרה", en: "Redo", ar: "إعادة", ru: "Повторить" },
@@ -15396,7 +15399,7 @@
     }
     if (ids.length > 2) return;
     var p = skEventPoint(e);
-    ["sketchShapesMenu", "sketchObjMenu", "sketchFillMenu"].forEach(function (id) { document.getElementById(id).hidden = true; });
+    ["sketchShapesMenu", "sketchObjMenu", "sketchFillMenu", "sketchBgMenu"].forEach(function (id) { document.getElementById(id).hidden = true; });
     if (skObjPointerDown(p)) return;
     if (sk.tool === "hand") { skPinch = { pan: true, start: { x: e.clientX, y: e.clientY }, view: Object.assign({}, sk.view) }; return; }
     if (sk.tool === "eraser") { skErase(p); return; }
@@ -15595,6 +15598,7 @@
     document.getElementById("sketchShapesMenu").hidden = true;
     document.getElementById("sketchObjMenu").hidden = true;
     document.getElementById("sketchFillMenu").hidden = true;
+    document.getElementById("sketchBgMenu").hidden = true;
     document.getElementById("sketchObjBtn").classList.toggle("on", sk.tool === "obj");
     if (sk.tool !== "obj" && sk.objSel) { sk.objSel = null; skDraw(); }
   }
@@ -15635,11 +15639,26 @@
     askConfirm(tr("sketchClearConfirm"), function () { skCommit(function () { sk.els = []; }); });
   });
   // a photo or plan to draw over, faded, fitted to the screen
+  // from the 🖼 button: take a photo, pick one, or take the background away
   var skImageInput = document.getElementById("sketchImageInput");
-  document.getElementById("sketchImageBtn").addEventListener("click", function () { skImageInput.click(); });
-  skImageInput.addEventListener("change", function () {
-    var file = skImageInput.files && skImageInput.files[0];
-    skImageInput.value = "";
+  var skImageCameraInput = document.getElementById("sketchImageCameraInput");
+  var skBgMenu = document.getElementById("sketchBgMenu");
+  document.getElementById("sketchBgBtn").addEventListener("click", function () {
+    var open = skBgMenu.hidden;
+    skUpdateButtons();
+    document.getElementById("sketchBgRemoveBtn").hidden = !sk.els.some(function (el) { return el.type === "image"; });
+    skBgMenu.hidden = !open;
+  });
+  document.getElementById("sketchImageBtn").addEventListener("click", function () { skBgMenu.hidden = true; skImageInput.click(); });
+  document.getElementById("sketchBgCameraBtn").addEventListener("click", function () { skBgMenu.hidden = true; skImageCameraInput.click(); });
+  document.getElementById("sketchBgRemoveBtn").addEventListener("click", function () {
+    skBgMenu.hidden = true;
+    skCommit(function () { sk.els = sk.els.filter(function (el) { return el.type !== "image"; }); });
+  });
+  [skImageInput, skImageCameraInput].forEach(function (input) { input.addEventListener("change", function () { skSetBackground(input); }); });
+  function skSetBackground(input) {
+    var file = input.files && input.files[0];
+    input.value = "";
     if (!file) return;
     scanLoadImage(file).then(function (canvas) {
       var k = Math.min(1, 1400 / Math.max(canvas.width, canvas.height));
@@ -15654,7 +15673,7 @@
         sk.els.unshift({ type: "image", id: uid(), src: c.toDataURL("image/jpeg", 0.8), p: tl, w: c.width * fit, h: c.height * fit });
       });
     });
-  });
+  }
 
   // ---- open / close / save -------------------------------------------------------
   function openSketch() {
