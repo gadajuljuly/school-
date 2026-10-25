@@ -818,6 +818,14 @@
      clear of the red margin line (.ruled-body::before, right:39px) */
   #libraryFoldersView #libraryScanBtn { left: auto; right: 50px; overflow: hidden; padding: 2px; }
   #libraryScanBtn img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  #libraryFoldersView #libraryAddFolderBtn { overflow: hidden; padding: 1px; width: 36px; }
+  #libraryAddFolderBtn img, #libraryAddSubfolderBtn img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  #libraryAddSubfolderBtn { overflow: hidden; padding: 1px; margin-inline-end: 6px; }
+  /* dragging a file onto a folder */
+  .library-item-lifted { opacity: 0.45; }
+  .library-drag-ghost { position: fixed; z-index: 90; width: 84px; pointer-events: none; opacity: 0.9; transform: scale(1.05) rotate(-3deg); box-shadow: 0 10px 24px rgba(0,0,0,0.3); background: var(--paper); border-radius: 10px; }
+  .library-drag-ghost .library-item-delete { display: none; }
+  .library-folder-tile.library-drop-over { outline: 3px solid var(--accent); outline-offset: 2px; background: color-mix(in srgb, var(--accent) 14%, transparent); border-radius: 10px; }
   #libraryFoldersView .library-grid {
     flex: none;
     overflow: visible;

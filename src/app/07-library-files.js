@@ -327,96 +327,121 @@
       if (activeLibrarySheetId !== sheet.id || !libraryFoldersView || libraryFoldersView.hidden) return;
       libraryFoldersGrid.innerHTML = "";
       folders.forEach(function (folder) {
-        var item = document.createElement("div");
-        item.className = "library-item";
-
-        var thumb = document.createElement("div");
-        thumb.className = "library-item-thumb";
-        thumb.textContent = "📁";
-        item.appendChild(thumb);
-
-        var nameEl = document.createElement("div");
-        nameEl.className = "library-item-name";
-        nameEl.textContent = folderDisplayName(folder);
-        item.appendChild(nameEl);
-
-        var folderLongPressFired = false;
-        item.addEventListener("click", function () {
-          if (folderLongPressFired) { folderLongPressFired = false; return; }
-          openLibraryFolderView(sheet, folder);
-        });
-
-        // Deletable: any folder that isn't one of today's actual default
-        // folders - covers both custom (keyless) folders and orphaned
-        // folders left over from an old key (e.g. a stale "logs" folder
-        // from before site logs were pointed at the "diaries" key), which
-        // would otherwise be stuck undeletable with a blank display name
-        // since LIBRARY_FOLDER_KEY_LABELS has no entry for it either.
-        if (DEFAULT_LIBRARY_FOLDER_KEYS.indexOf(folder.key) === -1) {
-          var delBtn = document.createElement("button");
-          delBtn.type = "button";
-          delBtn.className = "library-item-delete";
-          delBtn.textContent = "✕";
-          delBtn.addEventListener("click", function (e) {
-            e.stopPropagation();
-            askConfirm(tr("libraryConfirmDeleteFolder"), function () {
-              deleteLibraryFolder(sheet, folder);
-            });
-          });
-          item.appendChild(delBtn);
-
-          var folderPressStartX = 0, folderPressStartY = 0;
-          var startFolderPress = function (e) {
-            if (e.target.closest("button")) return;
-            var point = e.touches ? e.touches[0] : e;
-            folderPressStartX = point.clientX;
-            folderPressStartY = point.clientY;
-            folderLongPressFired = false;
-            clearTimeout(longPressTimer);
-            longPressTimer = setTimeout(function () {
-              folderLongPressFired = true;
-              openLibraryFolderActionModal(sheet, folder);
-            }, 1000);
-          };
-          var cancelFolderPress = function () { clearTimeout(longPressTimer); };
-          var moveFolderPress = function (e) {
-            var point = e.touches ? e.touches[0] : e;
-            if (Math.abs(point.clientX - folderPressStartX) > 10 || Math.abs(point.clientY - folderPressStartY) > 10) {
-              cancelFolderPress();
-            }
-          };
-          item.addEventListener("mousedown", startFolderPress);
-          item.addEventListener("mouseup", cancelFolderPress);
-          item.addEventListener("mouseleave", cancelFolderPress);
-          item.addEventListener("mousemove", moveFolderPress);
-          item.addEventListener("touchstart", startFolderPress, { passive: true });
-          item.addEventListener("touchend", cancelFolderPress);
-          item.addEventListener("touchmove", moveFolderPress, { passive: true });
-        }
-
-        libraryFoldersGrid.appendChild(item);
+        if (folder.parentId) return; // a folder inside a folder shows in its parent
+        libraryFoldersGrid.appendChild(buildLibraryFolderTile(sheet, folder));
       });
     });
+  }
+
+  // A folder's tile, on the library's first screen or inside its parent
+  // folder. It's also where a dragged file can be dropped.
+  function buildLibraryFolderTile(sheet, folder) {
+    var item = document.createElement("div");
+    item.className = "library-item library-folder-tile";
+    item.setAttribute("data-folder-id", folder.id);
+
+    var thumb = document.createElement("div");
+    thumb.className = "library-item-thumb";
+    thumb.textContent = "📁";
+    item.appendChild(thumb);
+
+    var nameEl = document.createElement("div");
+    nameEl.className = "library-item-name";
+    nameEl.textContent = folderDisplayName(folder);
+    item.appendChild(nameEl);
+
+    var folderLongPressFired = false;
+    item.addEventListener("click", function () {
+      if (folderLongPressFired) { folderLongPressFired = false; return; }
+      openLibraryFolderView(sheet, folder);
+    });
+
+    // Deletable: any folder that isn't one of today's actual default
+    // folders - covers both custom (keyless) folders and orphaned
+    // folders left over from an old key (e.g. a stale "logs" folder
+    // from before site logs were pointed at the "diaries" key), which
+    // would otherwise be stuck undeletable with a blank display name
+    // since LIBRARY_FOLDER_KEY_LABELS has no entry for it either.
+    if (DEFAULT_LIBRARY_FOLDER_KEYS.indexOf(folder.key) === -1) {
+      var delBtn = document.createElement("button");
+      delBtn.type = "button";
+      delBtn.className = "library-item-delete";
+      delBtn.textContent = "✕";
+      delBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        askConfirm(tr("libraryConfirmDeleteFolder"), function () {
+          deleteLibraryFolder(sheet, folder);
+        });
+      });
+      item.appendChild(delBtn);
+
+      var folderPressStartX = 0, folderPressStartY = 0;
+      var startFolderPress = function (e) {
+        if (e.target.closest("button")) return;
+        var point = e.touches ? e.touches[0] : e;
+        folderPressStartX = point.clientX;
+        folderPressStartY = point.clientY;
+        folderLongPressFired = false;
+        clearTimeout(longPressTimer);
+        longPressTimer = setTimeout(function () {
+          folderLongPressFired = true;
+          openLibraryFolderActionModal(sheet, folder);
+        }, 1000);
+      };
+      var cancelFolderPress = function () { clearTimeout(longPressTimer); };
+      var moveFolderPress = function (e) {
+        var point = e.touches ? e.touches[0] : e;
+        if (Math.abs(point.clientX - folderPressStartX) > 10 || Math.abs(point.clientY - folderPressStartY) > 10) {
+          cancelFolderPress();
+        }
+      };
+      item.addEventListener("mousedown", startFolderPress);
+      item.addEventListener("mouseup", cancelFolderPress);
+      item.addEventListener("mouseleave", cancelFolderPress);
+      item.addEventListener("mousemove", moveFolderPress);
+      item.addEventListener("touchstart", startFolderPress, { passive: true });
+      item.addEventListener("touchend", cancelFolderPress);
+      item.addEventListener("touchmove", moveFolderPress, { passive: true });
+    }
+    return item;
+  }
+
+  // the folder and every folder inside it, however deep
+  function libraryFolderAndInside(folders, folderId) {
+    var ids = [folderId], grew = true;
+    while (grew) {
+      grew = false;
+      folders.forEach(function (f) {
+        if (f.parentId && ids.indexOf(f.parentId) >= 0 && ids.indexOf(f.id) < 0) { ids.push(f.id); grew = true; }
+      });
+    }
+    return ids;
   }
 
   function deleteLibraryFolder(sheet, folder) {
     var sheetId = sheet.id;
     var isShared = !!sheet.shared;
-    var paths = (folder.files || []).map(function (f) { return f.path; });
+    var all = sheet.folders || [folder];
+    var gone = libraryFolderAndInside(all, folder.id);
+    var paths = [];
+    all.forEach(function (f) { if (gone.indexOf(f.id) >= 0) (f.files || []).forEach(function (x) { paths.push(x.path); }); });
     var removePromise = paths.length ? supabaseClient.storage.from(LIBRARY_BUCKET).remove(paths) : Promise.resolve();
     removePromise.then(function () {
       if (isShared) {
         return applySharedLibraryFolders(sheetId, function (folders) {
-          return folders.filter(function (f) { return f.id !== folder.id; });
+          var drop = libraryFolderAndInside(folders, folder.id);
+          return folders.filter(function (f) { return drop.indexOf(f.id) < 0; });
         });
       }
       var liveSheet = data.sheets.find(function (s) { return s.id === sheetId; });
       if (liveSheet && liveSheet.folders) {
-        liveSheet.folders = liveSheet.folders.filter(function (f) { return f.id !== folder.id; });
+        var drop = libraryFolderAndInside(liveSheet.folders, folder.id);
+        liveSheet.folders = liveSheet.folders.filter(function (f) { return drop.indexOf(f.id) < 0; });
         saveData();
       }
     }).then(function () {
       renderLibraryFolders();
+      if (!libraryView.hidden) renderLibraryGrid();
     }, function () {
       alert(tr("libraryUploadError"));
     });
@@ -452,9 +477,11 @@
     var sheet = allSheets().find(function (s) { return s.id === activeLibrarySheetId; });
     var folder = sheet && sheet.folders && sheet.folders.find(function (f) { return f.id === activeLibraryFolderId; });
     var files = (folder && folder.files) || [];
+    var subfolders = folder ? sheet.folders.filter(function (f) { return f.parentId === folder.id; }) : [];
     libraryGrid.classList.toggle("library-grid-rows", !!folder && (isProcurementOrdersFolder(folder) || isAttendanceReportsFolder(folder) || isToolsReportsFolder(folder)));
     libraryGrid.innerHTML = "";
-    if (!files.length) {
+    subfolders.forEach(function (sub) { libraryGrid.appendChild(buildLibraryFolderTile(sheet, sub)); });
+    if (!files.length && !subfolders.length) {
       var empty = document.createElement("div");
       empty.className = "library-empty";
       empty.textContent = tr("libraryEmptyPrompt");
@@ -506,40 +533,149 @@
       });
       item.appendChild(delBtn);
 
-      // Long-press (matching the folder grid's own long-press pattern) pops
-      // up a share/delete action modal, so sharing a file doesn't need its
-      // own always-visible button crowding the thumbnail grid.
-      var filePressStartX = 0, filePressStartY = 0;
-      var startFilePress = function (e) {
-        if (e.target.closest("button")) return;
-        var point = e.touches ? e.touches[0] : e;
-        filePressStartX = point.clientX;
-        filePressStartY = point.clientY;
-        fileLongPressFired = false;
-        clearTimeout(longPressTimer);
-        longPressTimer = setTimeout(function () {
-          fileLongPressFired = true;
-          openLibraryFileActionModal(sheet, folder, entry);
-        }, 1000);
-      };
-      var cancelFilePress = function () { clearTimeout(longPressTimer); };
-      var moveFilePress = function (e) {
-        var point = e.touches ? e.touches[0] : e;
-        if (Math.abs(point.clientX - filePressStartX) > 10 || Math.abs(point.clientY - filePressStartY) > 10) {
-          cancelFilePress();
-        }
-      };
-      item.addEventListener("mousedown", startFilePress);
-      item.addEventListener("mouseup", cancelFilePress);
-      item.addEventListener("mouseleave", cancelFilePress);
-      item.addEventListener("mousemove", moveFilePress);
-      item.addEventListener("touchstart", startFilePress, { passive: true });
-      item.addEventListener("touchend", cancelFilePress);
-      item.addEventListener("touchmove", moveFilePress, { passive: true });
+      // Hold a file and it lifts: drag it onto a folder to move it there,
+      // or let go where it is for the share / move / delete actions.
+      attachLibraryFileDrag(item, folder, function (held) { fileLongPressFired = held; }, function (targetFolderId) {
+        if (targetFolderId) moveLibraryFile(sheet, folder.id, entry, targetFolderId);
+        else openLibraryFileActionModal(sheet, folder, entry);
+      });
 
       libraryGrid.appendChild(item);
     });
   }
+
+  function attachLibraryFileDrag(item, folder, onLift, onDone) {
+    var start = null, lifted = false, ghost = null, over = null, timer = null;
+    var pointOf = function (e) { return (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]) || e; };
+    var stopMouse = function () {
+      document.removeEventListener("mousemove", move);
+      document.removeEventListener("mouseup", end);
+    };
+    var setOver = function (tile) {
+      if (tile === over) return;
+      if (over) over.classList.remove("library-drop-over");
+      over = tile;
+      if (over) over.classList.add("library-drop-over");
+    };
+    function begin(e) {
+      if (e.target.closest("button") || (e.button != null && e.button !== 0 && !e.touches)) return;
+      var p = pointOf(e);
+      start = { x: p.clientX, y: p.clientY };
+      lifted = false;
+      onLift(false); // a fresh press: its own click counts again
+      clearTimeout(timer);
+      timer = setTimeout(function () {
+        lifted = true;
+        onLift(true);
+        item.classList.add("library-item-lifted");
+        if (navigator.vibrate) { try { navigator.vibrate(25); } catch (err) {} }
+      }, 450);
+      if (!e.touches) {
+        document.addEventListener("mousemove", move);
+        document.addEventListener("mouseup", end);
+      }
+    }
+    function move(e) {
+      if (!start) return;
+      var p = pointOf(e);
+      var dist = Math.hypot(p.clientX - start.x, p.clientY - start.y);
+      if (!lifted) {
+        if (dist > 10) { clearTimeout(timer); start = null; stopMouse(); } // a scroll
+        return;
+      }
+      if (e.cancelable) e.preventDefault();
+      if (!ghost && dist > 8) {
+        ghost = item.cloneNode(true);
+        ghost.classList.remove("library-item-lifted");
+        ghost.classList.add("library-drag-ghost");
+        document.body.appendChild(ghost);
+      }
+      if (!ghost) return;
+      ghost.style.left = (p.clientX - 42) + "px";
+      ghost.style.top = (p.clientY - 42) + "px";
+      var under = document.elementFromPoint(p.clientX, p.clientY);
+      var tile = under && under.closest(".library-folder-tile");
+      setOver(tile && tile.getAttribute("data-folder-id") !== folder.id ? tile : null);
+    }
+    function end(e) {
+      clearTimeout(timer);
+      stopMouse();
+      if (!start) return;
+      start = null;
+      if (!lifted) return;
+      item.classList.remove("library-item-lifted");
+      var dragged = !!ghost, target = over && over.getAttribute("data-folder-id");
+      if (ghost) { ghost.remove(); ghost = null; }
+      setOver(null);
+      if (e.type === "touchcancel") return;
+      if (dragged && !target) return; // dropped nowhere: stays put
+      onDone(target || null);
+    }
+    item.addEventListener("mousedown", begin);
+    item.addEventListener("touchstart", begin, { passive: true });
+    item.addEventListener("touchmove", move, { passive: false });
+    item.addEventListener("touchend", end);
+    item.addEventListener("touchcancel", end);
+  }
+
+  // Moves a file's entry from one folder to another (the stored file stays
+  // where it is - only which folder lists it changes).
+  function moveLibraryFile(sheet, fromId, entry, toId) {
+    if (fromId === toId) return;
+    var move = function (folders) {
+      return folders.map(function (f) {
+        if (f.id === fromId) return Object.assign({}, f, { files: (f.files || []).filter(function (x) { return x.id !== entry.id; }) });
+        if (f.id === toId && !(f.files || []).some(function (x) { return x.id === entry.id; })) return Object.assign({}, f, { files: (f.files || []).concat([entry]) });
+        return f;
+      });
+    };
+    var done = function () {
+      renderLibraryGrid();
+      var to = (allSheets().find(function (s) { return s.id === sheet.id; }) || sheet).folders.find(function (f) { return f.id === toId; });
+      if (to) showToast(tr("libraryMovedToFolder").replace("{folder}", folderDisplayName(to)));
+    };
+    if (sheet.shared) {
+      applySharedLibraryFolders(sheet.id, move).then(done, function () { alert(tr("libraryUploadError")); });
+      return;
+    }
+    var liveSheet = data.sheets.find(function (s) { return s.id === sheet.id; });
+    if (!liveSheet || !liveSheet.folders) return;
+    liveSheet.folders = move(liveSheet.folders);
+    saveData();
+    done();
+  }
+  // a folder's name with the folders it's inside: "תוכניות / חשמל"
+  function libraryFolderPath(folders, folder) {
+    var names = [folderDisplayName(folder)], f = folder, guard = 0;
+    while (f.parentId && guard++ < 20) {
+      f = folders.find(function (x) { return x.id === f.parentId; });
+      if (!f) break;
+      names.unshift(folderDisplayName(f));
+    }
+    return names.join(" / ");
+  }
+  var libraryMoveOverlay = document.getElementById("libraryMoveOverlay");
+  var libraryMoveList = document.getElementById("libraryMoveList");
+  function openLibraryMoveModal(sheet, folder, entry) {
+    var folders = (allSheets().find(function (s) { return s.id === sheet.id; }) || sheet).folders || [];
+    libraryMoveList.innerHTML = "";
+    folders.map(function (f) { return { f: f, path: libraryFolderPath(folders, f) }; })
+      .sort(function (x, y) { return x.path.localeCompare(y.path); })
+      .forEach(function (row) {
+        if (row.f.id === folder.id) return;
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.textContent = "📁 " + row.path;
+        btn.addEventListener("click", function () {
+          libraryMoveOverlay.hidden = true;
+          moveLibraryFile(sheet, folder.id, entry, row.f.id);
+        });
+        libraryMoveList.appendChild(btn);
+      });
+    libraryMoveOverlay.hidden = false;
+  }
+  document.getElementById("libraryMoveCancelBtn").addEventListener("click", function () { libraryMoveOverlay.hidden = true; });
+  libraryMoveOverlay.addEventListener("click", function (e) { if (e.target === libraryMoveOverlay) libraryMoveOverlay.hidden = true; });
 
   function deleteLibraryFile(sheet, folder, entry) {
     var sheetId = sheet.id;
@@ -595,6 +731,11 @@
     closeLibraryFileActionModal();
     if (!pending) return;
     shareLibraryFile(pending.entry);
+  });
+  document.getElementById("libraryFileActionMoveBtn").addEventListener("click", function () {
+    var pending = pendingLibraryFileAction;
+    closeLibraryFileActionModal();
+    if (pending) openLibraryMoveModal(pending.sheet, pending.folder, pending.entry);
   });
   libraryFileActionDeleteBtn.addEventListener("click", function () {
     var pending = pendingLibraryFileAction;
@@ -659,13 +800,17 @@
   }
   function openLibraryFolderView(sheet, folder) {
     activeLibraryFolderId = folder.id;
-    libraryHeadTitle.textContent = folderDisplayName(folder);
+    libraryHeadTitle.textContent = libraryFolderPath((sheet && sheet.folders) || [folder], folder);
     renderLibraryGrid();
     libraryFoldersView.hidden = true;
     libraryView.hidden = false;
     updateActiveFabHighlight();
   }
   function closeLibraryView() {
+    var sheet = allSheets().find(function (s) { return s.id === activeLibrarySheetId; });
+    var folder = sheet && sheet.folders && sheet.folders.find(function (f) { return f.id === activeLibraryFolderId; });
+    var parent = folder && folder.parentId && sheet.folders.find(function (f) { return f.id === folder.parentId; });
+    if (parent) { openLibraryFolderView(sheet, parent); return; }
     libraryView.hidden = true;
     activeLibraryFolderId = null;
     libraryFoldersView.hidden = false;
@@ -680,7 +825,9 @@
     libraryFileInput.value = "";
   });
 
-  function openLibraryFolderNameModal() {
+  var newLibraryFolderParentId = null;
+  function openLibraryFolderNameModal(parentId) {
+    newLibraryFolderParentId = parentId || null;
     libraryFolderNameInput.value = "";
     libraryFolderNameOverlay.hidden = false;
     libraryFolderNameInput.focus();
@@ -695,19 +842,25 @@
     closeLibraryFolderNameModal();
     if (!sheet) return;
     var newFolder = { id: uid(), key: null, name: name, files: [] };
+    if (newLibraryFolderParentId) newFolder.parentId = newLibraryFolderParentId;
+    var shown = function () {
+      if (!libraryView.hidden) renderLibraryGrid();
+      else renderLibraryFolders();
+    };
     if (sheet.shared) {
       applySharedLibraryFolders(sheet.id, function (folders) { return (folders || []).concat([newFolder]); })
-        .then(function () { renderLibraryFolders(); });
+        .then(shown);
       return;
     }
     var liveSheet = data.sheets.find(function (s) { return s.id === sheet.id; });
     if (liveSheet) {
       liveSheet.folders = (liveSheet.folders || []).concat([newFolder]);
       saveData();
-      renderLibraryFolders();
+      shown();
     }
   }
-  libraryAddFolderBtn.addEventListener("click", openLibraryFolderNameModal);
+  libraryAddFolderBtn.addEventListener("click", function () { openLibraryFolderNameModal(null); });
+  document.getElementById("libraryAddSubfolderBtn").addEventListener("click", function () { openLibraryFolderNameModal(activeLibraryFolderId); });
   libraryFolderNameOkBtn.addEventListener("click", createLibraryFolder);
   libraryFolderNameCancelBtn.addEventListener("click", closeLibraryFolderNameModal);
   libraryFolderNameInput.addEventListener("keydown", function (e) {
