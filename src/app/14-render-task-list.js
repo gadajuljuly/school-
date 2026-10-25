@@ -465,6 +465,7 @@
     diaryView.hidden = !diaryMode;
     libraryFoldersView.hidden = !libraryMode;
     chatView.hidden = !chatMode;
+    document.getElementById("sketchBtn").hidden = libraryMode; // no sketch icon in the library
     ruledBodyEl.classList.toggle("chat-mode", chatMode);
     if (reportsMode) {
       addForm.hidden = true;

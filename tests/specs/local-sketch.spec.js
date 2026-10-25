@@ -443,3 +443,13 @@ test("sketch fill: back to a plain colour after a texture", async ({ page }) => 
   expect(f[0].pattern).toBeUndefined();
   expect(f[0].color).toBe("#2e4fb8");
 });
+
+test("the sketch icon is hidden in the library and back with the tasks", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
+  await expect(page.locator("#sketchBtn")).toBeVisible();
+  await page.locator("#libraryBtn").click();
+  await expect(page.locator("#libraryFoldersView")).toBeVisible();
+  await expect(page.locator("#sketchBtn")).toBeHidden();
+  await page.locator("#tasksFabBtn").click();
+  await expect(page.locator("#sketchBtn")).toBeVisible();
+});
