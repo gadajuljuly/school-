@@ -164,3 +164,61 @@ test("sketch eraser: only the piece between crossings or corners goes", async ({
   all = await els(page);
   expect(all.filter((e) => e.type === "line" && e.a.x === 140 && e.b.x === 140 && e.a.y === 40)).toHaveLength(0);
 });
+
+test("sketch: several lines in one held stroke each straighten, keeping their direction", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
+  await page.locator("#sketchBtn").click();
+  await page.locator(".sk-tool[data-tool=pen]").click();
+  // a wobbly zig-zag: right, then down-right at a slant, then right again
+  const corners = [[40, 100], [180, 110], [250, 260], [340, 250]];
+  const pts = [];
+  for (let k = 1; k < corners.length; k++) {
+    const [ax, ay] = corners[k - 1], [bx, by] = corners[k];
+    for (let i = k === 1 ? 0 : 1; i <= 12; i++) {
+      const t = i / 12, j = i % 2 ? 2 : -2;
+      pts.push([ax + (bx - ax) * t + j, ay + (by - ay) * t - j]);
+    }
+  }
+  await drawHeld(page, pts);
+  const all = await els(page);
+  expect(all.map((e) => e.type)).toEqual(["stroke"]);
+  const got = all[0].pts;
+  expect(got.length).toBe(4); // three straight lines
+  // each corner where it was drawn (world units are offset from the screen)
+  got.forEach((p, i) => {
+    expect(Math.abs((p.x - got[0].x) - (corners[i][0] - corners[0][0]))).toBeLessThan(8);
+    expect(Math.abs((p.y - got[0].y) - (corners[i][1] - corners[0][1]))).toBeLessThan(8);
+  });
+});
+
+// a wobbly hand-drawn polygon with n corners on radius r, starting at a corner
+const wobblyPolygon = (cx, cy, r, n, rot) => {
+  const pts = [];
+  for (let k = 0; k < n; k++) {
+    const a1 = rot + k / n * Math.PI * 2, a2 = rot + (k + 1) / n * Math.PI * 2;
+    const r1 = r * (1 + (k % 2 ? 0.08 : -0.06)), r2 = r * (1 + ((k + 1) % n % 2 ? 0.08 : -0.06));
+    for (let i = 0; i < 10; i++) {
+      const t = i / 10, j = i % 2 ? 1.5 : -1.5;
+      pts.push([cx + r1 * Math.cos(a1) * (1 - t) + r2 * Math.cos(a2) * t + j, cy + r1 * Math.sin(a1) * (1 - t) + r2 * Math.sin(a2) * t - j]);
+    }
+  }
+  pts.push(pts[0]);
+  return pts;
+};
+
+test("sketch: a held triangle, pentagon or hexagon becomes a perfect one", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
+  await page.locator("#sketchBtn").click();
+  await page.locator(".sk-tool[data-tool=pen]").click();
+  const shapes = [[120, 140, 70, 3, -Math.PI / 2], [280, 300, 70, 5, -Math.PI / 2], [140, 460, 65, 6, 0]];
+  for (const s of shapes) await drawHeld(page, wobblyPolygon(...s));
+  const all = await els(page);
+  expect(all.map((e) => e.type)).toEqual(["stroke", "stroke", "stroke"]);
+  all.forEach((el, i) => {
+    const n = shapes[i][3], p = el.pts;
+    expect(p.length).toBe(n + 1); // closed: back to the start
+    expect(p[n]).toEqual(p[0]);
+    const sides = p.slice(0, n).map((q, k) => Math.hypot(p[k + 1].x - q.x, p[k + 1].y - q.y));
+    sides.forEach((s) => expect(Math.abs(s - sides[0])).toBeLessThan(0.5)); // all sides equal
+  });
+});

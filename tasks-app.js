@@ -14746,7 +14746,7 @@
     for (var i = 1; i < pts.length; i++) len += skDist(pts[i - 1], pts[i]);
     var chord = skDist(a, b);
     if (chord > 0 && len / chord < 1.15) return { type: "line", a: skSnapPoint(a), b: skSnapPoint(skSnapAngle(a, b)) };
-    if (chord > len * 0.25) return null; // not closed
+    if (chord > len * 0.25) return skPolyline(pts); // not closed
     var minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
     pts.forEach(function (p) {
       minx = Math.min(minx, p.x); maxx = Math.max(maxx, p.x); miny = Math.min(miny, p.y); maxy = Math.max(maxy, p.y);
@@ -14763,13 +14763,80 @@
       boxErr += Math.min(Math.abs(p.x - minx), Math.abs(p.x - maxx), Math.abs(p.y - miny), Math.abs(p.y - maxy));
     });
     ellErr /= pts.length; boxErr /= pts.length;
-    if (Math.min(ellErr, boxErr) > size * 0.12) return null;
+    // a triangle, pentagon, hexagon... hugs its own straight sides closer
+    var poly = skClosedPolygon(pts, size);
+    if (poly && poly.pts.length === 5 && boxErr < size * 0.06) poly = null; // four square corners: a rectangle
+    if (poly && poly.err < ellErr && poly.err < boxErr * 0.8) return { type: "stroke", pts: poly.pts };
+    if (Math.min(ellErr, boxErr) > size * 0.12) return poly ? { type: "stroke", pts: poly.pts } : null;
     if (ellErr <= boxErr) {
       var ratio = rx / ry;
       if (ratio > 0.8 && ratio < 1.25) return { type: "circle", c: skSnapPoint({ x: cx, y: cy }), r: (rx + ry) / 2 };
       return { type: "circle", c: skSnapPoint({ x: cx, y: cy }), r: (rx + ry) / 2, rx: rx, ry: ry };
     }
     return { type: "rect", a: skSnapPoint({ x: minx, y: miny }), b: skSnapPoint({ x: maxx, y: maxy }) };
+  }
+
+  // several lines in one stroke: each straight run becomes a straight line
+  // between its corners, keeping the direction it was drawn in
+  function skPolyline(pts) {
+    var minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
+    pts.forEach(function (p) {
+      minx = Math.min(minx, p.x); maxx = Math.max(maxx, p.x); miny = Math.min(miny, p.y); maxy = Math.max(maxy, p.y);
+    });
+    var keep = {};
+    keep[0] = keep[pts.length - 1] = true;
+    skRdp(pts, Math.max(6, Math.max(maxx - minx, maxy - miny) * 0.06), 0, pts.length - 1, keep);
+    var idx = Object.keys(keep).map(Number).sort(function (x, y) { return x - y; });
+    var out = idx.map(function (i) { return { x: pts[i].x, y: pts[i].y }; });
+    // drop runs too short to be a line of their own
+    out = out.filter(function (p, i) { return i === 0 || i === out.length - 1 || skDist(p, out[i - 1]) > 6; });
+    if (out.length < 3 || out.length > 12) return null;
+    return { type: "stroke", pts: out };
+  }
+
+  // a closed stroke as a polygon of 3-8 straight sides: { pts, err } or null.
+  // One that is nearly regular is made exactly regular.
+  function skClosedPolygon(pts, size) {
+    var keep = {};
+    keep[0] = keep[pts.length - 1] = true;
+    skRdp(pts, Math.max(6, size * 0.06), 0, pts.length - 1, keep);
+    var v = Object.keys(keep).map(Number).sort(function (x, y) { return x - y; })
+      .map(function (i) { return { x: pts[i].x, y: pts[i].y }; });
+    v.pop(); // the end meets the start
+    v = v.filter(function (p, i) { return !i || skDist(p, v[i - 1]) > size * 0.08; });
+    // the start was mid-side: no corner there
+    var turn = function (i) {
+      var a = v[(i + v.length - 1) % v.length], b = v[i], c = v[(i + 1) % v.length];
+      var a1 = Math.atan2(b.y - a.y, b.x - a.x), a2 = Math.atan2(c.y - b.y, c.x - b.x);
+      return Math.abs(Math.atan2(Math.sin(a2 - a1), Math.cos(a2 - a1)));
+    };
+    for (var i = v.length - 1; i >= 0 && v.length > 3; i--) if (turn(i) < 0.35) v.splice(i, 1);
+    if (v.length < 3 || v.length > 8) return null;
+    var n = v.length, cx = 0, cy = 0;
+    v.forEach(function (p) { cx += p.x / n; cy += p.y / n; });
+    var sides = v.map(function (p, k) { return skDist(p, v[(k + 1) % n]); });
+    var radii = v.map(function (p) { return skDist(p, { x: cx, y: cy }); });
+    var mean = function (a) { return a.reduce(function (x, y) { return x + y; }, 0) / a.length; };
+    var ms = mean(sides), mr = mean(radii);
+    var even = function (a, m) { return a.every(function (x) { return Math.abs(x - m) < m * 0.22; }); };
+    if (even(sides, ms) && even(radii, mr)) {
+      var area = 0;
+      v.forEach(function (p, k) { var q = v[(k + 1) % n]; area += p.x * q.y - q.x * p.y; });
+      var step = (area < 0 ? -1 : 1) * Math.PI * 2 / n, sx = 0, sy = 0;
+      v.forEach(function (p, k) {
+        var a0 = Math.atan2(p.y - cy, p.x - cx) - k * step;
+        sx += Math.cos(a0); sy += Math.sin(a0);
+      });
+      var start = Math.atan2(sy, sx);
+      v = v.map(function (p, k) { return { x: cx + mr * Math.cos(start + k * step), y: cy + mr * Math.sin(start + k * step) }; });
+    }
+    var err = 0;
+    pts.forEach(function (p) {
+      var d = Infinity;
+      for (var k = 0; k < n; k++) d = Math.min(d, skSegDist(p, v[k], v[(k + 1) % n]));
+      err += d;
+    });
+    return { pts: v.concat([{ x: v[0].x, y: v[0].y }]), err: err / pts.length };
   }
 
   // ---- hit testing (eraser) ---------------------------------------------
