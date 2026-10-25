@@ -381,7 +381,8 @@ test("sketch fill: textures - paving, road (with a centre line), grass, soil, ba
   const box = await page.locator("#sketchCanvas").boundingBox();
   await page.locator(".sk-tool[data-tool=fill]").click();
   await expect(page.locator("#sketchFillMenu")).toBeVisible();
-  await expect(page.locator(".sk-fill-pick")).toHaveCount(7);
+  await expect(page.locator(".sk-fill-pick")).toHaveCount(6);
+  await expect(page.locator(".sk-fill-color")).toHaveCount(5); // plain colours too
   await page.locator(".sk-fill-pick[data-fill=road]").click();
   await expect(page.locator("#sketchFillMenu")).toBeHidden();
   await page.mouse.click(box.x + 190, box.y + 130);
@@ -422,4 +423,23 @@ test("sketch objects: each comes in a top view and a side view", async ({ page }
   // the menu remembers the last view
   await page.locator("#sketchObjBtn").click();
   await expect(page.locator(".sk-view-switch button[data-view=side]")).toHaveClass(/on/);
+});
+
+test("sketch fill: back to a plain colour after a texture", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
+  await page.locator("#sketchBtn").click();
+  await page.locator(".sk-tool[data-tool=line]").click();
+  for (const [a, b] of [[[60, 100], [200, 100]], [[200, 100], [200, 240]], [[200, 240], [60, 240]], [[60, 240], [60, 100]]]) await drag(page, a, b);
+  const box = await page.locator("#sketchCanvas").boundingBox();
+  await page.locator(".sk-tool[data-tool=fill]").click();
+  await page.locator(".sk-fill-pick[data-fill=grass]").click();
+  await page.mouse.click(box.x + 130, box.y + 170);
+  await page.locator(".sk-tool[data-tool=fill]").click();
+  await page.locator(".sk-fill-color[data-color='#2e4fb8']").click();
+  await expect(page.locator(".sk-color[data-color='#2e4fb8']")).toHaveClass(/on/);
+  await page.mouse.click(box.x + 130, box.y + 170);
+  const f = (await els(page)).filter((e) => e.type === "fill");
+  expect(f).toHaveLength(1);
+  expect(f[0].pattern).toBeUndefined();
+  expect(f[0].color).toBe("#2e4fb8");
 });

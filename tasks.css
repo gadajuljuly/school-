@@ -3395,6 +3395,9 @@
   .sk-view-switch button.on { background: var(--accent); color: var(--accent-contrast); }
   .sk-fill-pick canvas { width: 56px; height: 40px; border-radius: 6px; border: 1px solid #ccc; }
   .sk-fill-pick.on { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .sk-fill-colors { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 2px 0 6px; border-bottom: 1px solid var(--rule); margin-bottom: 2px; font-size: 0.8rem; font-weight: 700; }
+  .sk-fill-color { width: 34px; height: 34px; border-radius: 8px; border: 2px solid #fff; background: color-mix(in srgb, var(--c) 45%, #fff); box-shadow: 0 0 0 1px #bbb; cursor: pointer; }
+  .sk-fill-color.on { box-shadow: 0 0 0 2px var(--accent); }
   .sketch-shapes-menu .sk-tool { width: auto; padding: 0 10px; font-size: 0.85rem; }
   .sketch-tools { flex-shrink: 0; display: flex; flex-direction: column; gap: 6px; padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px)); }
   .sk-row { display: flex; justify-content: center; align-items: center; gap: 5px; flex-wrap: wrap; }

@@ -377,7 +377,7 @@
     skObj_signWorks: { he: "עבודות בדרך", en: "Road works", ar: "أعمال على الطريق", ru: "Дорожные работы" },
     skObj_container: { he: "קונטיינר", en: "Container", ar: "حاوية", ru: "Контейнер" },
     skObj_bridge: { he: "גשר", en: "Bridge", ar: "جسر", ru: "Мост" },
-    skFill_color: { he: "צבע", en: "Colour", ar: "لون", ru: "Цвет" },
+    skFill_color: { he: "צבע אחיד:", en: "Plain colour:", ar: "لون موحد:", ru: "Сплошной цвет:" },
     skFill_paving: { he: "אבן משתלבת", en: "Paving blocks", ar: "بلاط متداخل", ru: "Брусчатка" },
     skFill_road: { he: "כביש", en: "Road", ar: "شارع", ru: "Дорога" },
     skFill_grass: { he: "דשא", en: "Grass", ar: "عشب", ru: "Трава" },

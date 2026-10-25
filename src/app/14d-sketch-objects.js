@@ -643,7 +643,29 @@
   function skBuildFillMenu() {
     var list = skFillMenu.querySelector(".sk-fill-list");
     list.innerHTML = "";
+    // a plain see-through colour, in any of the pen colours
+    var row = document.createElement("div");
+    row.className = "sk-fill-colors";
+    var title = document.createElement("span");
+    title.textContent = tr("skFill_color");
+    row.appendChild(title);
+    SK_COLORS.forEach(function (color) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "sk-fill-color" + (sk.fillKind === "color" && sk.color === color ? " on" : "");
+      b.setAttribute("data-color", color);
+      b.style.setProperty("--c", color);
+      b.addEventListener("click", function () {
+        sk.fillKind = "color";
+        sk.color = color;
+        skFillMenu.hidden = true;
+        skUpdateButtons();
+      });
+      row.appendChild(b);
+    });
+    list.appendChild(row);
     SK_FILL_KINDS.forEach(function (kind) {
+      if (kind === "color") return;
       var b = document.createElement("button");
       b.type = "button";
       b.className = "sk-fill-pick" + (sk.fillKind === kind ? " on" : "");
