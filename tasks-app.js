@@ -14832,12 +14832,154 @@
     skLenTip.style.left = (e.clientX - r.left + 14) + "px";
     skLenTip.style.top = (e.clientY - r.top - 34) + "px";
   }
+  // ---- erasing piece by piece -------------------------------------------
+  // A line, wall, rectangle or pen stroke is erased only between the two
+  // break points around the touch: where another line crosses it, and its
+  // own corners (a rectangle's, or a pen stroke's sharp turns). Anything
+  // else, or a line with no break points, goes whole.
+  function skRdp(pts, eps, first, last, keep) {
+    var maxD = 0, idx = -1;
+    for (var i = first + 1; i < last; i++) {
+      var d = skSegDist(pts[i], pts[first], pts[last]);
+      if (d > maxD) { maxD = d; idx = i; }
+    }
+    if (maxD > eps) { keep[idx] = true; skRdp(pts, eps, first, idx, keep); skRdp(pts, eps, idx, last, keep); }
+  }
+  // { pts, closed, corners: [index...] } or null (erased whole)
+  function skPathOf(el) {
+    if (el.type === "line" || el.type === "wall") return { pts: [el.a, el.b], closed: false, corners: [] };
+    if (el.type === "rect") {
+      return { pts: [el.a, { x: el.b.x, y: el.a.y }, el.b, { x: el.a.x, y: el.b.y }], closed: true, corners: [0, 1, 2, 3] };
+    }
+    if (el.type === "stroke" && el.pts.length > 1) {
+      var keep = {};
+      skRdp(el.pts, 4, 0, el.pts.length - 1, keep);
+      return { pts: el.pts, closed: false, corners: Object.keys(keep).map(Number) };
+    }
+    return null;
+  }
+  // every straight piece of another element, for crossings
+  function skSegmentsOf(el) {
+    var segs = [];
+    var path = skPathOf(el);
+    if (path) {
+      var n = path.pts.length;
+      for (var i = 0; i < (path.closed ? n : n - 1); i++) segs.push([path.pts[i], path.pts[(i + 1) % n]]);
+    } else if (el.type === "circle") {
+      var rx = el.rx || el.r, ry = el.ry || el.r, prev = null;
+      for (var k = 0; k <= 48; k++) {
+        var q = { x: el.c.x + rx * Math.cos(k / 48 * Math.PI * 2), y: el.c.y + ry * Math.sin(k / 48 * Math.PI * 2) };
+        if (prev) segs.push([prev, q]);
+        prev = q;
+      }
+    } else if (el.a && el.b && (el.type === "dim" || el.type === "door" || el.type === "window" || el.type === "leader")) {
+      segs.push([el.a, el.b]);
+    }
+    return segs;
+  }
+  function skCross(p1, p2, p3, p4) {
+    var d = (p2.x - p1.x) * (p4.y - p3.y) - (p2.y - p1.y) * (p4.x - p3.x);
+    if (Math.abs(d) < 1e-9) return null;
+    var t = ((p3.x - p1.x) * (p4.y - p3.y) - (p3.y - p1.y) * (p4.x - p3.x)) / d;
+    var u = ((p3.x - p1.x) * (p2.y - p1.y) - (p3.y - p1.y) * (p2.x - p1.x)) / d;
+    return (t >= 0 && t <= 1 && u >= 0 && u <= 1) ? t : null;
+  }
+  // the points of a path between two distances along it
+  function skSubPath(pts, cum, from, to) {
+    var out = [];
+    var at = function (sDist) {
+      for (var i = 1; i < pts.length; i++) {
+        if (sDist <= cum[i] + 1e-9) {
+          var seg = cum[i] - cum[i - 1] || 1, t = (sDist - cum[i - 1]) / seg;
+          return { x: pts[i - 1].x + (pts[i].x - pts[i - 1].x) * t, y: pts[i - 1].y + (pts[i].y - pts[i - 1].y) * t };
+        }
+      }
+      return pts[pts.length - 1];
+    };
+    out.push(at(from));
+    for (var i = 0; i < pts.length; i++) if (cum[i] > from + 1e-6 && cum[i] < to - 1e-6) out.push(pts[i]);
+    out.push(at(to));
+    return out;
+  }
+  function skErasePiece(index, p) {
+    var el = sk.els[index];
+    var path = skPathOf(el);
+    if (!path) return null;
+    var pts = path.closed ? path.pts.concat([path.pts[0]]) : path.pts.slice();
+    var cum = [0];
+    for (var i = 1; i < pts.length; i++) cum.push(cum[i - 1] + skDist(pts[i - 1], pts[i]));
+    var total = cum[cum.length - 1];
+    if (total < 1) return null;
+    // where on the path the touch is
+    var best = Infinity, sTap = 0;
+    for (var j = 1; j < pts.length; j++) {
+      var a = pts[j - 1], b = pts[j], dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy;
+      var t = l2 ? Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / l2)) : 0;
+      var dd = Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+      if (dd < best) { best = dd; sTap = cum[j - 1] + t * (cum[j] - cum[j - 1]); }
+    }
+    // break points: corners and crossings
+    var bps = path.corners.map(function (ci) { return cum[ci]; });
+    sk.els.forEach(function (other, oi) {
+      if (oi === index) return;
+      skSegmentsOf(other).forEach(function (seg) {
+        for (var k = 1; k < pts.length; k++) {
+          var tt = skCross(pts[k - 1], pts[k], seg[0], seg[1]);
+          if (tt !== null) bps.push(cum[k - 1] + tt * (cum[k] - cum[k - 1]));
+        }
+      });
+    });
+    var eps = 0.5;
+    // an open path's own ends aren't break points; a closed one's start is a corner
+    bps = path.closed ?
+      bps.map(function (x) { return x >= total - eps ? 0 : x; }) :
+      bps.filter(function (x) { return x > eps && x < total - eps; });
+    bps.sort(function (x, y) { return x - y; });
+    var s0 = null, s1 = null;
+    bps.forEach(function (x) {
+      if (x < sTap - eps) s0 = x;
+      if (x > sTap + eps && s1 === null) s1 = x;
+    });
+    var pieces = [];
+    if (path.closed) {
+      if (bps.length < 2) return [];
+      if (s0 === null) s0 = bps[bps.length - 1] - total;
+      if (s1 === null) s1 = bps[0] + total;
+      // what's left runs from s1 round to s0
+      var twice = pts.concat(pts.slice(1));
+      var cum2 = cum.concat(cum.slice(1).map(function (x) { return x + total; }));
+      var from = s1, to = s0 + total;
+      if (from >= total) { from -= total; to -= total; }
+      pieces.push(skSubPath(twice, cum2, from, to));
+    } else {
+      if (s0 !== null) pieces.push(skSubPath(pts, cum, 0, s0));
+      if (s1 !== null) pieces.push(skSubPath(pts, cum, s1, total));
+    }
+    // back into shapes: straight pieces stay lines/walls, pen pieces strokes
+    var out = [];
+    pieces.forEach(function (piece) {
+      if (piece.length < 2) return;
+      if (el.type === "stroke") {
+        out.push({ type: "stroke", pts: piece, color: el.color, w: el.w });
+        return;
+      }
+      for (var q = 1; q < piece.length; q++) {
+        if (skDist(piece[q - 1], piece[q]) < 1) continue;
+        out.push({ type: el.type === "wall" ? "wall" : "line", a: piece[q - 1], b: piece[q], color: el.color, w: el.w });
+      }
+    });
+    return out;
+  }
   function skErase(p) {
     var tol = 10 / sk.view.z;
     for (var i = sk.els.length - 1; i >= 0; i--) {
       if (skHit(sk.els[i], p, tol)) {
         var idx = i;
-        skCommit(function () { sk.els.splice(idx, 1); });
+        var rest = skErasePiece(idx, p);
+        skCommit(function () {
+          if (rest) sk.els.splice.apply(sk.els, [idx, 1].concat(rest));
+          else sk.els.splice(idx, 1);
+        });
         return;
       }
     }

@@ -133,3 +133,34 @@ test("sketch: a held hand-drawn circle becomes a circle, a box a rectangle - and
   expect(Math.abs((r.b.x - r.a.x) - 200)).toBeLessThan(15);
   expect(Math.abs((r.b.y - r.a.y) - 100)).toBeLessThan(15);
 });
+
+test("sketch eraser: only the piece between crossings or corners goes", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
+  await page.evaluate(() => {
+    localStorage.setItem("itask-sketch:p1", JSON.stringify({ scale: null, view: { x: 0, y: 0, z: 1 }, els: [
+      { type: "line", a: { x: 40, y: 100 }, b: { x: 340, y: 100 }, color: "#1f1f1f", w: 3 },   // crossed twice
+      { type: "line", a: { x: 140, y: 40 }, b: { x: 140, y: 160 }, color: "#1f1f1f", w: 3 },
+      { type: "line", a: { x: 240, y: 40 }, b: { x: 240, y: 160 }, color: "#1f1f1f", w: 3 },
+      { type: "rect", a: { x: 60, y: 240 }, b: { x: 300, y: 360 }, color: "#c62828", w: 3 },
+    ] }));
+  });
+  await page.locator("#sketchBtn").click();
+  await page.locator(".sk-tool[data-tool=eraser]").click();
+  const box = await page.locator("#sketchCanvas").boundingBox();
+  // the middle of the long line, between the two crossings
+  await page.mouse.click(box.x + 190, box.y + 100);
+  let all = await els(page);
+  const horiz = all.filter((e) => e.type === "line" && e.a.y === 100 && e.b.y === 100);
+  expect(horiz.map((e) => [Math.round(e.a.x), Math.round(e.b.x)]).sort((a, b) => a[0] - b[0])).toEqual([[40, 140], [240, 340]]);
+  // the rectangle's top side, corner to corner: the other three sides stay
+  await page.mouse.click(box.x + 180, box.y + 240);
+  all = await els(page);
+  expect(all.some((e) => e.type === "rect")).toBe(false);
+  const red = all.filter((e) => e.color === "#c62828");
+  expect(red).toHaveLength(3);
+  expect(red.every((e) => !(e.a.y === 240 && e.b.y === 240))).toBe(true);
+  // a line with nothing crossing it goes whole
+  await page.mouse.click(box.x + 140, box.y + 50);
+  all = await els(page);
+  expect(all.filter((e) => e.type === "line" && e.a.x === 140 && e.b.x === 140 && e.a.y === 40)).toHaveLength(0);
+});
