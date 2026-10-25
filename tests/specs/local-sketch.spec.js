@@ -561,7 +561,23 @@ test("sketch background: a long press on it picks it up and moves it; a quick st
   expect(after[0].p.x - bg0.p.x).toBeCloseTo(60 / view.z, 0);
   expect(after[0].p.y - bg0.p.y).toBeCloseTo(-30 / view.z, 0);
   expect(after[0].w).toBe(bg0.w);
-  // one undo puts it back
+  // after the long press it stays picked: a red ✕ at its top corner removes it
+  const moved = after[0];
+  const xAt = [Math.min(box.width - 20, (moved.p.x + moved.w - view.x) * view.z), Math.max(48, (moved.p.y - view.y) * view.z)];
+  await page.mouse.click(box.x + xAt[0], box.y + xAt[1]);
+  expect((await els(page)).map((e) => e.type)).toEqual(["stroke"]);
+  // one undo brings it back, two put it where it was
+  await page.locator("#sketchUndoBtn").click();
+  expect((await els(page))[0].p).toEqual(moved.p);
   await page.locator("#sketchUndoBtn").click();
   expect((await els(page))[0].p).toEqual(bg0.p);
+  // a touch elsewhere drops the ✕: that same corner then just draws
+  await page.mouse.move(box.x + cx, box.y + cy + 30);
+  await page.mouse.down();
+  await page.waitForTimeout(700);
+  await page.mouse.up();
+  await page.mouse.click(box.x + 20, box.y + 600);
+  const corner = [Math.min(box.width - 20, (bg0.p.x + bg0.w - view.x) * view.z), Math.max(48, (bg0.p.y - view.y) * view.z)];
+  await page.mouse.click(box.x + corner[0], box.y + corner[1]);
+  expect((await els(page)).filter((e) => e.type === "image")).toHaveLength(1);
 });

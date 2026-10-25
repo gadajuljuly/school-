@@ -14798,6 +14798,7 @@
     sk.view = (d && d.view) || { x: -40, y: -40, z: 1 };
     sk.undo = []; sk.redo = [];
     sk.objSel = null;
+    sk.bgSel = false;
   }
   function skCommit(fn) {
     sk.undo.push(JSON.stringify(sk.els));
@@ -15084,11 +15085,19 @@
     skDrawLayers(skCtx, sk.view);
     if (sk.draft) skDrawEl(skCtx, sk.draft, sk.view);
     skDrawObjSelection(skCtx, sk.view);
-    if (skBgMove) {
-      var b0 = skToScreen(skBgMove.el.p);
+    var bgShown = skBgSelected();
+    if (bgShown) {
+      var b0 = skToScreen(bgShown.p), bx = skBgCloseScreen(bgShown);
       skCtx.save();
       skCtx.strokeStyle = "#2e4fb8"; skCtx.lineWidth = 2; skCtx.setLineDash([8, 5]);
-      skCtx.strokeRect(b0.x, b0.y, skBgMove.el.w * sk.view.z, skBgMove.el.h * sk.view.z);
+      skCtx.strokeRect(b0.x, b0.y, bgShown.w * sk.view.z, bgShown.h * sk.view.z);
+      skCtx.setLineDash([]);
+      skCtx.shadowColor = "rgba(0,0,0,0.35)"; skCtx.shadowBlur = 4;
+      skCtx.beginPath(); skCtx.arc(bx.x, bx.y, 14, 0, Math.PI * 2);
+      skCtx.fillStyle = "#d32f2f"; skCtx.fill();
+      skCtx.shadowBlur = 0;
+      skCtx.strokeStyle = "#fff"; skCtx.lineWidth = 3; skCtx.lineCap = "round";
+      skCtx.beginPath(); skCtx.moveTo(bx.x - 5, bx.y - 5); skCtx.lineTo(bx.x + 5, bx.y + 5); skCtx.moveTo(bx.x + 5, bx.y - 5); skCtx.lineTo(bx.x - 5, bx.y + 5); skCtx.stroke();
       skCtx.restore();
     }
     if (sk.draft && sk.snapMark) {
@@ -15373,6 +15382,15 @@
       return el.type === "image" && p.x >= el.p.x && p.y >= el.p.y && p.x <= el.p.x + el.w && p.y <= el.p.y + el.h;
     });
   }
+  // the picked-up background keeps a frame and a red ✕ (removes it) until
+  // the next touch elsewhere
+  function skBgSelected() { return sk.bgSel ? sk.els.find(function (el) { return el.type === "image"; }) : null; }
+  // the ✕ on screen: at the picture's top corner, kept in view
+  function skBgCloseScreen(el) {
+    var q = skToScreen({ x: el.p.x + el.w, y: el.p.y });
+    var dpr = window.devicePixelRatio || 1, W = skCanvas.width / dpr, H = skCanvas.height / dpr;
+    return { x: Math.max(20, Math.min(W - 20, q.x)), y: Math.max(48, Math.min(H - 20, q.y)) };
+  }
   function skBgCancel() {
     if (skBgHold) { clearTimeout(skBgHold.timer); skBgHold = null; }
     if (skBgMove) { skBgMove.el.p = skBgMove.p0; skBgMove = null; }
@@ -15583,6 +15601,15 @@
     if (ids.length > 2) return;
     var p = skEventPoint(e);
     ["sketchShapesMenu", "sketchObjMenu", "sketchFillMenu", "sketchBgMenu"].forEach(function (id) { document.getElementById(id).hidden = true; });
+    var selBg = skBgSelected();
+    if (selBg) {
+      sk.bgSel = false;
+      if (skDist(skToScreen(p), skBgCloseScreen(selBg)) < 22) {
+        skCommit(function () { sk.els = sk.els.filter(function (el) { return el !== selBg; }); });
+        return;
+      }
+      skDraw();
+    }
     if (skObjPointerDown(p)) return;
     var bg = ["eraser", "fill", "text", "north"].indexOf(sk.tool) < 0 && skBgAt(p);
     if (bg) {
@@ -15598,6 +15625,7 @@
         if (skDimMove) { skDimMove.el.off = skDimMove.off; skDimMove = null; }
         skLenTip.hidden = true;
         skBgMove = { el: h.el, start: h.at, p0: { x: h.el.p.x, y: h.el.p.y }, before: JSON.stringify(sk.els) };
+        sk.bgSel = true;
         if (navigator.vibrate) { try { navigator.vibrate(25); } catch (err) {} }
         skDraw();
       }, 550);
@@ -15827,6 +15855,7 @@
   document.querySelectorAll(".sk-tool").forEach(function (b) {
     b.addEventListener("click", function () {
       sk.tool = b.getAttribute("data-tool");
+      if (sk.bgSel) { sk.bgSel = false; skDraw(); }
       skUpdateButtons();
       if (sk.tool === "leader") showToast(tr("sketchLeaderHint"), 2500);
       else if (sk.tool === "dim") showToast(tr("sketchDimHint"), 2500);
