@@ -453,3 +453,28 @@ test("the sketch icon is hidden in the library and back with the tasks", async (
   await page.locator("#tasksFabBtn").click();
   await expect(page.locator("#sketchBtn")).toBeVisible();
 });
+
+test("sketch #: a new line starting near the end of another is caught exactly on it", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
+  await page.locator("#sketchBtn").click();
+  await page.locator(".sk-tool[data-tool=line]").click();
+  // one line drawn off the grid (# off)...
+  await page.locator("#sketchSnapBtn").click();
+  await drag(page, [40, 103], [193, 147]);
+  await page.locator("#sketchSnapBtn").click(); // # on again
+  const first = (await els(page))[0];
+  expect(first.b.x % 10).not.toBe(0);
+  // ...a new one started a few pixels from its end starts exactly there
+  await drag(page, [199, 151], [300, 260]);
+  // and one ended a few pixels from its start ends exactly there
+  await drag(page, [300, 260], [45, 108]);
+  const [, second, third] = await els(page);
+  expect(second.a).toEqual(first.b);
+  expect(third.b).toEqual(first.a);
+  expect(third.a).toEqual(second.b);
+  // far from any end it still sits on the grid
+  await drag(page, [80, 400], [203, 400]);
+  const fourth = (await els(page))[3];
+  expect(fourth.a.x % 10).toBe(0);
+  expect(fourth.b.x % 10).toBe(0);
+});

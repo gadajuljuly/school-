@@ -64,8 +64,35 @@
     var r = skCanvas.getBoundingClientRect();
     return skToWorld(e.clientX - r.left, e.clientY - r.top);
   }
+  // with # on, a point near the end of a line already drawn (or a corner)
+  // is caught exactly on it; otherwise on the grid
+  function skEndPoints() {
+    var out = [];
+    sk.els.forEach(function (el) {
+      if (el.type === "line" || el.type === "wall" || el.type === "dim" || el.type === "door" || el.type === "window") out.push(el.a, el.b);
+      else if (el.type === "rect" || el.type === "stairs") out.push(el.a, el.b, { x: el.a.x, y: el.b.y }, { x: el.b.x, y: el.a.y });
+      else if (el.type === "stroke" && el.pts.length > 1) {
+        // a straightened stroke's corners, a freehand one's two ends
+        if (el.pts.length <= 13) out.push.apply(out, el.pts);
+        else out.push(el.pts[0], el.pts[el.pts.length - 1]);
+      }
+    });
+    return out;
+  }
+  function skEndSnap(p) {
+    if (!sk.snap) return null;
+    var best = null, bestD = 16 / sk.view.z;
+    skEndPoints().forEach(function (q) {
+      var d = skDist(p, q);
+      if (d < bestD) { bestD = d; best = q; }
+    });
+    sk.snapMark = best ? { x: best.x, y: best.y } : null;
+    return sk.snapMark;
+  }
   function skSnapPoint(p) {
     if (!sk.snap) return p;
+    var e = skEndSnap(p);
+    if (e) return { x: e.x, y: e.y };
     var g = SK_CELL / 2;
     return { x: Math.round(p.x / g) * g, y: Math.round(p.y / g) * g };
   }
@@ -305,6 +332,14 @@
     skDrawLayers(skCtx, sk.view);
     if (sk.draft) skDrawEl(skCtx, sk.draft, sk.view);
     skDrawObjSelection(skCtx, sk.view);
+    if (sk.draft && sk.snapMark) {
+      // the caught end: a green square
+      var sm = skToScreen(sk.snapMark);
+      skCtx.save();
+      skCtx.strokeStyle = "#1e9e3a"; skCtx.lineWidth = 2.5;
+      skCtx.strokeRect(sm.x - 7, sm.y - 7, 14, 14);
+      skCtx.restore();
+    }
     var scaleLabel = document.getElementById("sketchScaleLabel");
     scaleLabel.textContent = sk.scale ? tr("sketchScaleNow").replace("{n}", sk.scale.per + " " + tr(sk.scale.unit === "cm" ? "sketchUnitCm" : "sketchUnitM")) : tr("sketchNoScale");
   }
@@ -584,7 +619,8 @@
     var d = sk.draft;
     if (!d || d.locked) return; // straightened while held: final
     if (d.type === "stroke") { d.pts.push(p); return; }
-    var b = d.type === "leader" ? p : skSnapPoint(d.type === "stairs" ? p : skSnapAngle(d.a, p));
+    var e = d.type !== "leader" && skEndSnap(p);
+    var b = e ? { x: e.x, y: e.y } : d.type === "leader" ? p : skSnapPoint(d.type === "stairs" ? p : skSnapAngle(d.a, p));
     d.b = b;
   }
   function skShowLenTip(e) {
@@ -875,6 +911,7 @@
     }
     var d = sk.draft;
     sk.draft = null;
+    sk.snapMark = null;
     skLenTip.hidden = true;
     if (!d) return;
     delete d.locked;
