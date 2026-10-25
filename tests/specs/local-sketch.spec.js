@@ -222,3 +222,43 @@ test("sketch: a held triangle, pentagon or hexagon becomes a perfect one", async
     sides.forEach((s) => expect(Math.abs(s - sides[0])).toBeLessThan(0.5)); // all sides equal
   });
 });
+
+test("sketch: pressing a dimension and dragging moves it back and forth, with extension lines", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
+  await page.locator("#sketchBtn").click();
+  await page.locator(".sk-tool[data-tool=dim]").click();
+  await drag(page, [40, 160], [240, 160]);
+  await page.locator("#sketchTextForm button[type=submit]").click();
+  let all = await els(page);
+  const { a, b } = all[0];
+
+  await drag(page, [140, 161], [140, 101]); // up
+  all = await els(page);
+  expect(all).toHaveLength(1); // moved, not a new dimension
+  expect(all[0].off).toBe(-60);
+  expect(all[0].a).toEqual(a); // still measures the same points
+  expect(all[0].b).toEqual(b);
+
+  await drag(page, [140, 101], [140, 191]); // and back down past where it was
+  expect((await els(page))[0].off).toBe(30);
+
+  await page.locator("#sketchUndoBtn").click();
+  expect((await els(page))[0].off).toBe(-60);
+
+  // pressing away from it still draws a new dimension
+  await drag(page, [40, 300], [200, 300]);
+  await expect(page.locator("#sketchTextOverlay")).toBeVisible();
+});
+
+test("sketch: a new dimension can start where another ends", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
+  await page.locator("#sketchBtn").click();
+  await page.locator(".sk-tool[data-tool=dim]").click();
+  await drag(page, [40, 160], [240, 160]);
+  await page.locator("#sketchTextForm button[type=submit]").click();
+  await drag(page, [240, 160], [240, 300]);
+  await page.locator("#sketchTextForm button[type=submit]").click();
+  const all = await els(page);
+  expect(all.map((e) => e.type)).toEqual(["dim", "dim"]);
+  expect(all[0].off || 0).toBe(0);
+});

@@ -382,7 +382,7 @@
     sketchUnitM: { he: "מ'", en: "m", ar: "م", ru: "м" },
     sketchMeterShort: { he: "מ'", en: "m", ar: "م", ru: "м" },
     sketchLeaderHint: { he: "גרור מהנקודה אל המקום של הטקסט", en: "Drag from the point to where the text goes", ar: "اسحب من النقطة إلى مكان النص", ru: "Тяните от точки к месту текста" },
-    sketchDimHint: { he: "גרור מקצה לקצה של המידה", en: "Drag from one end of the dimension to the other", ar: "اسحب من طرف القياس إلى طرفه الآخر", ru: "Тяните от одного конца размера к другому" },
+    sketchDimHint: { he: "גרור מקצה לקצה של המידה. לחיצה וגרירה על מידה מזיזה אותה", en: "Drag from one end of the dimension to the other. Press and drag a dimension to move it", ar: "اسحب من طرف القياس إلى طرفه الآخر. اضغط واسحب القياس لتحريكه", ru: "Тяните от одного конца размера к другому. Нажмите и тяните размер, чтобы сдвинуть его" },
     sketchDoorHint: { he: "גרור מהציר של הדלת לכיוון הכנף", en: "Drag from the door's hinge along its leaf", ar: "اسحب من مفصل الباب باتجاه الدرفة", ru: "Тяните от петли вдоль полотна" },
     sketchEmptyMsg: { he: "הסקיצה ריקה", en: "The sketch is empty", ar: "الرسم فارغ", ru: "Эскиз пуст" },
     shareTaskTitle: { he: "הוספת משימה", en: "Add a task", ar: "إضافة مهمة", ru: "Добавить задачу" },

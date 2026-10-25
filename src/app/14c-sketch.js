@@ -69,6 +69,12 @@
     return { x: Math.round(p.x / g) * g, y: Math.round(p.y / g) * g };
   }
   function skDist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+  // a dimension can be shifted sideways (off) from the points it measures
+  function skDimLine(el) {
+    var off = el.off || 0, len = skDist(el.a, el.b) || 1;
+    var nx = -(el.b.y - el.a.y) / len * off, ny = (el.b.x - el.a.x) / len * off;
+    return { a: { x: el.a.x + nx, y: el.a.y + ny }, b: { x: el.b.x + nx, y: el.b.y + ny } };
+  }
   // straight lines lock to 0/45/90 degrees when close to them
   function skSnapAngle(a, b) {
     var ang = Math.atan2(b.y - a.y, b.x - a.x);
@@ -174,8 +180,21 @@
       else ctx.arc(c.x, c.y, el.r * z, 0, Math.PI * 2);
       ctx.stroke();
     } else if (el.type === "dim") {
-      var d1 = P(el.a), d2 = P(el.b);
+      var dl = skDimLine(el), d1 = P(dl.a), d2 = P(dl.b);
       ctx.lineWidth = Math.max(1, 1.3 * z);
+      if (Math.abs(el.off || 0) > 1) {
+        // extension lines from the measured points, a little past the dimension
+        var ex = (d1.x - P(el.a).x) / Math.abs(el.off * z), ey = (d1.y - P(el.a).y) / Math.abs(el.off * z);
+        ctx.save();
+        ctx.lineWidth = Math.max(0.8, 0.9 * z);
+        [[P(el.a), d1], [P(el.b), d2]].forEach(function (q) {
+          ctx.beginPath();
+          ctx.moveTo(q[0].x + ex * 3 * z, q[0].y + ey * 3 * z);
+          ctx.lineTo(q[1].x + ex * 5 * z, q[1].y + ey * 5 * z);
+          ctx.stroke();
+        });
+        ctx.restore();
+      }
       ctx.beginPath(); ctx.moveTo(d1.x, d1.y); ctx.lineTo(d2.x, d2.y); ctx.stroke();
       // short ticks across the ends, arrows at both
       var da = Math.atan2(d2.y - d1.y, d2.x - d1.x);
@@ -394,7 +413,10 @@
       case "stroke":
         for (var i = 1; i < el.pts.length; i++) if (skSegDist(p, el.pts[i - 1], el.pts[i]) < tol) return true;
         return false;
-      case "line": case "wall": case "dim": case "door": case "window":
+      case "dim":
+        var dl = skDimLine(el);
+        return skSegDist(p, dl.a, dl.b) < tol;
+      case "line": case "wall": case "door": case "window":
         return skSegDist(p, el.a, el.b) < tol;
       case "leader":
         return skSegDist(p, el.a, el.b) < tol || (Math.abs(p.y - el.b.y) < tol && Math.abs(p.x - el.b.x) < 120);
@@ -417,6 +439,7 @@
   var skPinch = null;
   var skHoldTimer = null;
   var skLastMove = null;
+  var skDimMove = null;
   function skStartDraft(p) {
     var t = sk.tool, color = sk.color, w = SK_WIDTHS[sk.width];
     var s = skSnapPoint(p);
@@ -484,7 +507,8 @@
         prev = q;
       }
     } else if (el.a && el.b && (el.type === "dim" || el.type === "door" || el.type === "window" || el.type === "leader")) {
-      segs.push([el.a, el.b]);
+      var sl = el.type === "dim" ? skDimLine(el) : el;
+      segs.push([sl.a, sl.b]);
     }
     return segs;
   }
@@ -604,6 +628,7 @@
       // a second finger: pan + zoom, and whatever was being drawn is dropped
       clearTimeout(skHoldTimer);
       sk.draft = null;
+      if (skDimMove) { skDimMove.el.off = skDimMove.off; skDimMove = null; }
       skLenTip.hidden = true;
       var a = skPointers[ids[0]], b = skPointers[ids[1]];
       skPinch = { d: Math.hypot(a.x - b.x, a.y - b.y), mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, view: Object.assign({}, sk.view) };
@@ -616,6 +641,17 @@
     if (sk.tool === "eraser") { skErase(p); return; }
     if (sk.tool === "text") { skAskText("", function (text) { skCommit(function () { sk.els.push({ type: "text", p: p, text: text, color: sk.color, size: 16 }); }); }); return; }
     if (sk.tool === "north") { skCommit(function () { sk.els.push({ type: "north", p: skSnapPoint(p), color: sk.color }); }); return; }
+    // pressing on a dimension with the dimension tool shifts it sideways
+    if (sk.tool === "dim") {
+      for (var i = sk.els.length - 1; i >= 0; i--) {
+        // away from its ends, so a new dimension can start where one ends
+        var dl = sk.els[i].type === "dim" && skDimLine(sk.els[i]);
+        if (dl && skHit(sk.els[i], p, 12 / sk.view.z) && Math.min(skDist(p, dl.a), skDist(p, dl.b)) > 16 / sk.view.z) {
+          skDimMove = { el: sk.els[i], start: p, off: sk.els[i].off || 0, before: JSON.stringify(sk.els) };
+          return;
+        }
+      }
+    }
     sk.draft = skStartDraft(p);
     skLastMove = { x: e.clientX, y: e.clientY };
     skDraw();
@@ -646,6 +682,13 @@
       return;
     }
     if (sk.tool === "eraser" && e.buttons) { skErase(skEventPoint(e)); return; }
+    if (skDimMove) {
+      var m = skDimMove, q = skEventPoint(e), el = m.el, len = skDist(el.a, el.b) || 1;
+      var off = m.off + ((q.x - m.start.x) * -(el.b.y - el.a.y) + (q.y - m.start.y) * (el.b.x - el.a.x)) / len;
+      el.off = sk.snap ? Math.round(off / (SK_CELL / 2)) * (SK_CELL / 2) : off;
+      skDraw();
+      return;
+    }
     if (!sk.draft) return;
     skUpdateDraft(skEventPoint(e));
     skShowLenTip(e);
@@ -672,6 +715,20 @@
     clearTimeout(skHoldTimer);
     if (skPinch) {
       if (!Object.keys(skPointers).length) { skPinch = null; skSaveDraft(); }
+      return;
+    }
+    if (skDimMove) {
+      var m = skDimMove;
+      skDimMove = null;
+      if ((m.el.off || 0) !== m.off) {
+        // one undo step back to where it was
+        sk.undo.push(m.before);
+        if (sk.undo.length > 80) sk.undo.shift();
+        sk.redo = [];
+        skSaveDraft();
+        skUpdateButtons();
+      }
+      skDraw();
       return;
     }
     var d = sk.draft;
@@ -855,6 +912,7 @@
     var add = function (p) { minx = Math.min(minx, p.x); miny = Math.min(miny, p.y); maxx = Math.max(maxx, p.x); maxy = Math.max(maxy, p.y); };
     sk.els.forEach(function (el) {
       if (el.pts) el.pts.forEach(add);
+      if (el.type === "dim") { var bl = skDimLine(el); add(bl.a); add(bl.b); }
       if (el.a) add(el.a);
       if (el.b) { add(el.b); if (el.type === "leader") add({ x: el.b.x + (el.b.x >= el.a.x ? 1 : -1) * 160, y: el.b.y - 20 }); }
       if (el.c) { add({ x: el.c.x - (el.rx || el.r), y: el.c.y - (el.ry || el.r) }); add({ x: el.c.x + (el.rx || el.r), y: el.c.y + (el.ry || el.r) }); }
