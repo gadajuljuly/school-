@@ -534,3 +534,34 @@ test("sketch background: a PDF - one page goes straight in, of several I pick th
   expect(rgb[2]).toBeGreaterThan(150);
   expect(rgb[0]).toBeLessThan(80);
 });
+
+test("sketch background: a long press on it picks it up and moves it; a quick stroke over it still draws", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
+  await page.locator("#sketchBtn").click();
+  await page.locator("#sketchImageInput").setInputFiles(require("path").join(__dirname, "../../tasks-icon-192.png"));
+  await expect.poll(async () => (await els(page)).filter((e) => e.type === "image").length).toBe(1);
+  const bg0 = (await els(page))[0];
+  const view = await page.evaluate(() => JSON.parse(localStorage.getItem(Object.keys(localStorage).find((x) => x.startsWith("itask-sketch:")))).view);
+  const box = await page.locator("#sketchCanvas").boundingBox();
+  const cx = (bg0.p.x + bg0.w / 2 - view.x) * view.z, cy = (bg0.p.y + bg0.h / 2 - view.y) * view.z;
+
+  // the pen, dragged straight away over the picture, draws as always
+  await page.locator(".sk-tool[data-tool=pen]").click();
+  await drag(page, [cx - 40, cy], [cx + 40, cy + 10]);
+  expect((await els(page)).map((e) => e.type)).toEqual(["image", "stroke"]);
+
+  // held still, then dragged: the picture moves, nothing is drawn
+  await page.mouse.move(box.x + cx, box.y + cy + 30);
+  await page.mouse.down();
+  await page.waitForTimeout(700);
+  for (let i = 1; i <= 6; i++) await page.mouse.move(box.x + cx + i * 10, box.y + cy + 30 - i * 5);
+  await page.mouse.up();
+  const after = await els(page);
+  expect(after.map((e) => e.type)).toEqual(["image", "stroke"]);
+  expect(after[0].p.x - bg0.p.x).toBeCloseTo(60 / view.z, 0);
+  expect(after[0].p.y - bg0.p.y).toBeCloseTo(-30 / view.z, 0);
+  expect(after[0].w).toBe(bg0.w);
+  // one undo puts it back
+  await page.locator("#sketchUndoBtn").click();
+  expect((await els(page))[0].p).toEqual(bg0.p);
+});

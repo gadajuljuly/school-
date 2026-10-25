@@ -398,6 +398,7 @@
     sketchStairs: { he: "▤ מדרגות", en: "▤ Stairs", ar: "▤ درج", ru: "▤ Лестница" },
     sketchNorth: { he: "⬆ צפון", en: "⬆ North", ar: "⬆ شمال", ru: "⬆ Север" },
     sketchBg: { he: "תמונת רקע", en: "Background picture", ar: "صورة خلفية", ru: "Фоновое изображение" },
+    sketchBgMoveHint: { he: "לחיצה ארוכה על הרקע וגרירה מזיזות אותו בדף", en: "Long-press the background and drag to move it on the page", ar: "اضغط مطولاً على الخلفية واسحب لتحريكها في الصفحة", ru: "Нажмите и удерживайте фон, затем тяните, чтобы сдвинуть его" },
     sketchBgCamera: { he: "📷 צילום", en: "📷 Take a photo", ar: "📷 التقاط صورة", ru: "📷 Сфотографировать" },
     sketchBgFile: { he: "🖼 תמונה / PDF", en: "🖼 Picture / PDF", ar: "🖼 صورة / PDF", ru: "🖼 Изображение / PDF" },
     sketchPdfPageTitle: { he: "איזה עמוד מהקובץ לשים ברקע?", en: "Which page of the file goes in the background?", ar: "أي صفحة من الملف تريد وضعها في الخلفية؟", ru: "Какую страницу файла поставить фоном?" },
@@ -15083,6 +15084,13 @@
     skDrawLayers(skCtx, sk.view);
     if (sk.draft) skDrawEl(skCtx, sk.draft, sk.view);
     skDrawObjSelection(skCtx, sk.view);
+    if (skBgMove) {
+      var b0 = skToScreen(skBgMove.el.p);
+      skCtx.save();
+      skCtx.strokeStyle = "#2e4fb8"; skCtx.lineWidth = 2; skCtx.setLineDash([8, 5]);
+      skCtx.strokeRect(b0.x, b0.y, skBgMove.el.w * sk.view.z, skBgMove.el.h * sk.view.z);
+      skCtx.restore();
+    }
     if (sk.draft && sk.snapMark) {
       // the caught end: a green square
       var sm = skToScreen(sk.snapMark);
@@ -15357,6 +15365,18 @@
   var skHoldTimer = null;
   var skLastMove = null;
   var skDimMove = null;
+  // a long press on the background picture picks it up; the finger then
+  // moves it about the page
+  var skBgHold = null, skBgMove = null;
+  function skBgAt(p) {
+    return sk.els.find(function (el) {
+      return el.type === "image" && p.x >= el.p.x && p.y >= el.p.y && p.x <= el.p.x + el.w && p.y <= el.p.y + el.h;
+    });
+  }
+  function skBgCancel() {
+    if (skBgHold) { clearTimeout(skBgHold.timer); skBgHold = null; }
+    if (skBgMove) { skBgMove.el.p = skBgMove.p0; skBgMove = null; }
+  }
   function skStartDraft(p) {
     var t = sk.tool, color = sk.color, w = SK_WIDTHS[sk.width];
     var s = skSnapPoint(p);
@@ -15553,6 +15573,7 @@
       sk.draft = null;
       if (skDimMove) { skDimMove.el.off = skDimMove.off; skDimMove = null; }
       skObjCancelDrag();
+      skBgCancel();
       skLenTip.hidden = true;
       var a = skPointers[ids[0]], b = skPointers[ids[1]];
       skPinch = { d: Math.hypot(a.x - b.x, a.y - b.y), mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, view: Object.assign({}, sk.view) };
@@ -15563,6 +15584,24 @@
     var p = skEventPoint(e);
     ["sketchShapesMenu", "sketchObjMenu", "sketchFillMenu", "sketchBgMenu"].forEach(function (id) { document.getElementById(id).hidden = true; });
     if (skObjPointerDown(p)) return;
+    var bg = ["eraser", "fill", "text", "north"].indexOf(sk.tool) < 0 && skBgAt(p);
+    if (bg) {
+      skBgHold = { el: bg, screen: { x: e.clientX, y: e.clientY }, at: p };
+      skBgHold.timer = setTimeout(function () {
+        var h = skBgHold;
+        skBgHold = null;
+        if (!h) return;
+        // whatever the press had started (a line, a pan...) is dropped
+        clearTimeout(skHoldTimer);
+        sk.draft = null;
+        if (skPinch && skPinch.pan) { sk.view = skPinch.view; skPinch = null; }
+        if (skDimMove) { skDimMove.el.off = skDimMove.off; skDimMove = null; }
+        skLenTip.hidden = true;
+        skBgMove = { el: h.el, start: h.at, p0: { x: h.el.p.x, y: h.el.p.y }, before: JSON.stringify(sk.els) };
+        if (navigator.vibrate) { try { navigator.vibrate(25); } catch (err) {} }
+        skDraw();
+      }, 550);
+    }
     if (sk.tool === "hand") { skPinch = { pan: true, start: { x: e.clientX, y: e.clientY }, view: Object.assign({}, sk.view) }; return; }
     if (sk.tool === "eraser") { skErase(p); return; }
     if (sk.tool === "fill") { skFill(p); return; }
@@ -15597,6 +15636,13 @@
       var wx = (skPinch.mid.x - r.left) / skPinch.view.z + skPinch.view.x;
       var wy = (skPinch.mid.y - r.top) / skPinch.view.z + skPinch.view.y;
       sk.view = { z: z, x: wx - (mid.x - r.left) / z, y: wy - (mid.y - r.top) / z };
+      skDraw();
+      return;
+    }
+    if (skBgHold && Math.hypot(e.clientX - skBgHold.screen.x, e.clientY - skBgHold.screen.y) > 8) skBgCancel();
+    if (skBgMove) {
+      var bq = skEventPoint(e);
+      skBgMove.el.p = { x: skBgMove.p0.x + bq.x - skBgMove.start.x, y: skBgMove.p0.y + bq.y - skBgMove.start.y };
       skDraw();
       return;
     }
@@ -15641,8 +15687,22 @@
   function skPointerEnd(e) {
     delete skPointers[e.pointerId];
     clearTimeout(skHoldTimer);
+    if (skBgHold) { clearTimeout(skBgHold.timer); skBgHold = null; }
     if (skPinch) {
       if (!Object.keys(skPointers).length) { skPinch = null; skSaveDraft(); }
+      return;
+    }
+    if (skBgMove) {
+      var bm = skBgMove;
+      skBgMove = null;
+      if (bm.el.p.x !== bm.p0.x || bm.el.p.y !== bm.p0.y) {
+        sk.undo.push(bm.before);
+        if (sk.undo.length > 80) sk.undo.shift();
+        sk.redo = [];
+        skSaveDraft();
+        skUpdateButtons();
+      }
+      skDraw();
       return;
     }
     if (skObjPointerEnd()) return;
@@ -15884,6 +15944,7 @@
       sk.els = sk.els.filter(function (el) { return el.type !== "image"; });
       sk.els.unshift({ type: "image", id: uid(), src: c.toDataURL("image/jpeg", 0.8), p: tl, w: c.width * fit, h: c.height * fit });
     });
+    showToast(tr("sketchBgMoveHint"), 3000);
   }
 
 

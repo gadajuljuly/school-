@@ -397,6 +397,7 @@
     sketchStairs: { he: "▤ מדרגות", en: "▤ Stairs", ar: "▤ درج", ru: "▤ Лестница" },
     sketchNorth: { he: "⬆ צפון", en: "⬆ North", ar: "⬆ شمال", ru: "⬆ Север" },
     sketchBg: { he: "תמונת רקע", en: "Background picture", ar: "صورة خلفية", ru: "Фоновое изображение" },
+    sketchBgMoveHint: { he: "לחיצה ארוכה על הרקע וגרירה מזיזות אותו בדף", en: "Long-press the background and drag to move it on the page", ar: "اضغط مطولاً على الخلفية واسحب لتحريكها في الصفحة", ru: "Нажмите и удерживайте фон, затем тяните, чтобы сдвинуть его" },
     sketchBgCamera: { he: "📷 צילום", en: "📷 Take a photo", ar: "📷 التقاط صورة", ru: "📷 Сфотографировать" },
     sketchBgFile: { he: "🖼 תמונה / PDF", en: "🖼 Picture / PDF", ar: "🖼 صورة / PDF", ru: "🖼 Изображение / PDF" },
     sketchPdfPageTitle: { he: "איזה עמוד מהקובץ לשים ברקע?", en: "Which page of the file goes in the background?", ar: "أي صفحة من الملف تريد وضعها في الخلفية؟", ru: "Какую страницу файла поставить фоном?" },
