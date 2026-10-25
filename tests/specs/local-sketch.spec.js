@@ -402,3 +402,24 @@ test("sketch fill: textures - paving, road (with a centre line), grass, soil, ba
   f = (await els(page)).filter((e) => e.type === "fill");
   expect(f.map((e) => e.pattern)).toEqual(["grass"]);
 });
+
+test("sketch objects: each comes in a top view and a side view", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
+  await page.locator("#sketchBtn").click();
+  await page.locator("#sketchObjBtn").click();
+  await expect(page.locator(".sk-view-switch button[data-view=top]")).toHaveClass(/on/);
+  await page.locator(".sk-obj-pick[data-obj=truck]").click();
+  await page.locator("#sketchObjBtn").click();
+  await page.locator(".sk-view-switch button[data-view=side]").click();
+  await expect(page.locator(".sk-view-switch button[data-view=side]")).toHaveClass(/on/);
+  await expect(page.locator(".sk-obj-pick")).toHaveCount(13);
+  await page.locator(".sk-obj-pick[data-obj=truck]").click();
+  const [top, side] = await els(page);
+  expect(top).toMatchObject({ kind: "truck", view: "top" });
+  expect(side).toMatchObject({ kind: "truck", view: "side" });
+  expect(top.w / top.h).toBeCloseTo(9 / 2.5, 2); // seen from above: length x width
+  expect(side.w / side.h).toBeCloseTo(9 / 3.4, 2); // from the side: length x height
+  // the menu remembers the last view
+  await page.locator("#sketchObjBtn").click();
+  await expect(page.locator(".sk-view-switch button[data-view=side]")).toHaveClass(/on/);
+});

@@ -3388,6 +3388,11 @@
   .sk-fill-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px; }
   .sk-obj-pick, .sk-fill-pick { display: flex; flex-direction: column; align-items: center; gap: 3px; border: 1px solid var(--rule); background: #fff; color: #222; border-radius: 10px; padding: 5px 2px; font: inherit; font-size: 0.72rem; font-weight: 700; cursor: pointer; line-height: 1.15; text-align: center; }
   .sk-obj-pick canvas { width: 44px; height: 44px; }
+  .sk-view-switch { grid-column: 1 / -1; display: flex; justify-content: center; gap: 0; }
+  .sk-view-switch button { flex: 1; max-width: 140px; height: 32px; border: 1px solid var(--accent); background: var(--paper); color: var(--accent); font: inherit; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
+  .sk-view-switch button:first-child { border-radius: 0 8px 8px 0; }
+  .sk-view-switch button:last-child { border-radius: 8px 0 0 8px; }
+  .sk-view-switch button.on { background: var(--accent); color: var(--accent-contrast); }
   .sk-fill-pick canvas { width: 56px; height: 40px; border-radius: 6px; border: 1px solid #ccc; }
   .sk-fill-pick.on { outline: 2px solid var(--accent); outline-offset: 1px; }
   .sketch-shapes-menu .sk-tool { width: auto; padding: 0 10px; font-size: 0.85rem; }

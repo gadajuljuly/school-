@@ -384,6 +384,8 @@
     skFill_soil: { he: "אדמה גננית", en: "Garden soil", ar: "تربة زراعية", ru: "Садовая земля" },
     skFill_gravel: { he: "מצעים", en: "Base course", ar: "طبقة أساس (حصى)", ru: "Щебёночное основание" },
     skFill_water: { he: "מים", en: "Water", ar: "ماء", ru: "Вода" },
+    sketchViewTop: { he: "מבט על", en: "Top view", ar: "منظر علوي", ru: "Вид сверху" },
+    sketchViewSide: { he: "מבט צד", en: "Side view", ar: "منظر جانبي", ru: "Вид сбоку" },
     sketchFill: { he: "צביעת שטח", en: "Paint an area", ar: "تلوين مساحة", ru: "Заливка области" },
     sketchFillHint: { he: "געו בתוך שטח סגור כדי לצבוע אותו בצבע שנבחר", en: "Tap inside a closed area to paint it in the chosen colour", ar: "المس داخل مساحة مغلقة لتلوينها باللون المختار", ru: "Нажмите внутри замкнутой области, чтобы залить её выбранным цветом" },
     sketchFillOpen: { he: "השטח לא סגור – סגרו את הקווים מסביב ונסו שוב", en: "The area isn't closed - close the lines around it and try again", ar: "المساحة غير مغلقة – أغلق الخطوط حولها وحاول مرة أخرى", ru: "Область не замкнута – замкните линии вокруг и попробуйте снова" },

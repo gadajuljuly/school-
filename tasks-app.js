@@ -385,6 +385,8 @@
     skFill_soil: { he: "אדמה גננית", en: "Garden soil", ar: "تربة زراعية", ru: "Садовая земля" },
     skFill_gravel: { he: "מצעים", en: "Base course", ar: "طبقة أساس (حصى)", ru: "Щебёночное основание" },
     skFill_water: { he: "מים", en: "Water", ar: "ماء", ru: "Вода" },
+    sketchViewTop: { he: "מבט על", en: "Top view", ar: "منظر علوي", ru: "Вид сверху" },
+    sketchViewSide: { he: "מבט צד", en: "Side view", ar: "منظر جانبي", ru: "Вид сбоку" },
     sketchFill: { he: "צביעת שטח", en: "Paint an area", ar: "تلوين مساحة", ru: "Заливка области" },
     sketchFillHint: { he: "געו בתוך שטח סגור כדי לצבוע אותו בצבע שנבחר", en: "Tap inside a closed area to paint it in the chosen colour", ar: "المس داخل مساحة مغلقة لتلوينها باللون المختار", ru: "Нажмите внутри замкнутой области, чтобы залить её выбранным цветом" },
     sketchFillOpen: { he: "השטח לא סגור – סגרו את הקווים מסביב ונסו שוב", en: "The area isn't closed - close the lines around it and try again", ar: "المساحة غير مغلقة – أغلق الخطوط حولها وحاول مرة أخرى", ru: "Область не замкнута – замкните линии вокруг и попробуйте снова" },
@@ -15683,21 +15685,26 @@
   // ---------------------------------------------------------------------
 
   // sizes in metres, length along the object's own x axis
+  // (top: length x width; side: length x height)
   var SK_OBJS = [
-    { kind: "tree", m: [5, 5] },
-    { kind: "car", m: [4.5, 1.9] },
-    { kind: "truck", m: [9, 2.5] },
-    { kind: "excavator", m: [9.5, 3.2] },
-    { kind: "backhoe", m: [6, 2.4] },
-    { kind: "bobcat", m: [3, 1.8] },
-    { kind: "worker", m: [1.2, 2] },
-    { kind: "signStop", m: [1.1, 2] },
-    { kind: "signNoEntry", m: [1.1, 2] },
-    { kind: "signGiveWay", m: [1.1, 2] },
-    { kind: "signWorks", m: [1.1, 2] },
-    { kind: "container", m: [6.06, 2.44] },
-    { kind: "bridge", m: [15, 6] }
+    { kind: "tree", m: [5, 5], s: [5, 6] },
+    { kind: "car", m: [4.5, 1.9], s: [4.5, 1.5] },
+    { kind: "truck", m: [9, 2.5], s: [9, 3.4] },
+    { kind: "excavator", m: [9.5, 3.2], s: [9.5, 4.2] },
+    { kind: "backhoe", m: [6, 2.4], s: [6.5, 3.6] },
+    { kind: "bobcat", m: [3, 1.8], s: [3.2, 2] },
+    { kind: "worker", m: [0.9, 0.6], s: [1.2, 2] },
+    { kind: "signStop", m: [1, 1], s: [1.1, 2] },
+    { kind: "signNoEntry", m: [1, 1], s: [1.1, 2] },
+    { kind: "signGiveWay", m: [1, 1], s: [1.1, 2] },
+    { kind: "signWorks", m: [1, 1], s: [1.1, 2] },
+    { kind: "container", m: [6.06, 2.44], s: [6.06, 2.59] },
+    { kind: "bridge", m: [15, 6], s: [15, 4] }
   ];
+  sk.objView = "top";
+  // older objects had no view: signs and the worker were drawn standing
+  function skObjViewOf(el) { return el.view || (/^sign|^worker$/.test(el.kind) ? "side" : "top"); }
+  function skObjSize(def, view) { return view === "side" ? def.s : def.m; }
   var SK_FILL_KINDS = ["color", "paving", "road", "grass", "soil", "gravel", "water"];
   sk.fillKind = "color";
 
@@ -15814,51 +15821,20 @@
       skBox(ctx, w * 0.26, -h * 0.5, w * 0.24, h, h * 0.05, "#5a5a5a", "#2e2e2e", lw);
     },
     worker: function (ctx, w, h) {
-      var u = Math.min(w / 1.2, h / 2), lw = Math.max(1, u * 0.06);
-      ctx.lineCap = "round";
-      ctx.strokeStyle = "#1f3b6e"; ctx.lineWidth = u * 0.22;
-      ctx.beginPath(); ctx.moveTo(-u * 0.14, u * 0.25); ctx.lineTo(-u * 0.2, u * 0.9); ctx.moveTo(u * 0.14, u * 0.25); ctx.lineTo(u * 0.2, u * 0.9); ctx.stroke();
-      ctx.strokeStyle = "#ff7a00"; ctx.lineWidth = u * 0.16;
-      ctx.beginPath(); ctx.moveTo(-u * 0.28, -u * 0.38); ctx.lineTo(-u * 0.48, u * 0.15); ctx.moveTo(u * 0.28, -u * 0.38); ctx.lineTo(u * 0.48, u * 0.15); ctx.stroke();
-      skBox(ctx, -u * 0.3, -u * 0.45, u * 0.6, u * 0.75, u * 0.12, "#ff7a00", "#9a4a00", lw);
-      ctx.fillStyle = "#e8e8e8";
-      ctx.fillRect(-u * 0.3, -u * 0.12, u * 0.6, u * 0.07);
-      ctx.fillRect(-u * 0.3, u * 0.08, u * 0.6, u * 0.07);
-      skDisc(ctx, 0, -u * 0.68, u * 0.2, "#e9b48a", "#8c5a3a", lw);
-      ctx.beginPath(); ctx.arc(0, -u * 0.72, u * 0.24, Math.PI, 0); ctx.closePath();
-      ctx.fillStyle = "#ffd400"; ctx.fill(); ctx.strokeStyle = "#8a6d00"; ctx.lineWidth = lw; ctx.stroke();
-      ctx.fillStyle = "#ffd400"; ctx.fillRect(-u * 0.32, -u * 0.74, u * 0.64, u * 0.06);
+      // a helmet and shoulders seen from above
+      var lw = Math.max(1, h * 0.05);
+      ctx.lineCap = "round"; ctx.strokeStyle = "#e9b48a"; ctx.lineWidth = h * 0.16;
+      ctx.beginPath(); ctx.moveTo(w * 0.05, -h * 0.42); ctx.lineTo(w * 0.32, -h * 0.3); ctx.moveTo(w * 0.05, h * 0.42); ctx.lineTo(w * 0.32, h * 0.3); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(0, 0, w * 0.3, h * 0.5, 0, 0, Math.PI * 2);
+      ctx.fillStyle = "#ff7a00"; ctx.fill(); ctx.strokeStyle = "#9a4a00"; ctx.lineWidth = lw; ctx.stroke();
+      ctx.fillStyle = "#e8e8e8"; ctx.fillRect(-w * 0.12, -h * 0.48, w * 0.06, h * 0.96);
+      skDisc(ctx, w * 0.02, 0, Math.min(w * 0.26, h * 0.3), "#ffd400", "#8a6d00", lw);
+      skDisc(ctx, w * 0.02, 0, Math.min(w * 0.12, h * 0.14), "#ffe766");
     },
-    signStop: function (ctx, w, h) { skSignPole(ctx, w, h); skSignOctagon(ctx, w, h); },
-    signNoEntry: function (ctx, w, h) {
-      skSignPole(ctx, w, h);
-      var r = Math.min(w, h / 1.8) * 0.48, cy = -h / 2 + r + 1;
-      skDisc(ctx, 0, cy, r, "#c8102e", "#fff", Math.max(1, r * 0.08));
-      skBox(ctx, -r * 0.68, cy - r * 0.16, r * 1.36, r * 0.32, 1, "#fff");
-    },
-    signGiveWay: function (ctx, w, h) {
-      skSignPole(ctx, w, h);
-      var s = Math.min(w, h / 1.8) * 0.98, top = -h / 2 + 1;
-      skPoly(ctx, [[-s / 2, top], [s / 2, top], [0, top + s * 0.87]], "#c8102e", "#fff", Math.max(1, s * 0.03));
-      skPoly(ctx, [[-s * 0.3, top + s * 0.12], [s * 0.3, top + s * 0.12], [0, top + s * 0.64]], "#fff");
-    },
-    signWorks: function (ctx, w, h) {
-      skSignPole(ctx, w, h);
-      var s = Math.min(w, h / 1.8) * 0.98, top = -h / 2 + 1, base = top + s * 0.87;
-      skPoly(ctx, [[0, top], [s / 2, base], [-s / 2, base]], "#c8102e", "#fff", Math.max(1, s * 0.03));
-      skPoly(ctx, [[0, top + s * 0.2], [s * 0.32, base - s * 0.09], [-s * 0.32, base - s * 0.09]], "#fff");
-      // a man digging
-      ctx.strokeStyle = "#111"; ctx.lineCap = "round"; ctx.lineWidth = Math.max(1, s * 0.05);
-      var cx = -s * 0.03, cy = base - s * 0.28;
-      skDisc(ctx, cx + s * 0.03, cy - s * 0.17, s * 0.045, "#111");
-      ctx.beginPath();
-      ctx.moveTo(cx, cy - s * 0.1); ctx.lineTo(cx - s * 0.04, cy + s * 0.05);
-      ctx.lineTo(cx - s * 0.1, cy + s * 0.16); ctx.moveTo(cx - s * 0.04, cy + s * 0.05); ctx.lineTo(cx + s * 0.04, cy + s * 0.16);
-      ctx.moveTo(cx, cy - s * 0.06); ctx.lineTo(cx + s * 0.1, cy + s * 0.02);
-      ctx.moveTo(cx + s * 0.04, cy - s * 0.08); ctx.lineTo(cx + s * 0.16, cy + s * 0.14);
-      ctx.stroke();
-      skPoly(ctx, [[cx + s * 0.12, base - s * 0.12], [cx + s * 0.24, base - s * 0.12], [cx + s * 0.18, base - s * 0.2]], "#111");
-    },
+    signStop: function (ctx, w, h) { skSignFace("signStop", ctx, Math.min(w, h), 0, 0); },
+    signNoEntry: function (ctx, w, h) { skSignFace("signNoEntry", ctx, Math.min(w, h), 0, 0); },
+    signGiveWay: function (ctx, w, h) { skSignFace("signGiveWay", ctx, Math.min(w, h), 0, 0); },
+    signWorks: function (ctx, w, h) { skSignFace("signWorks", ctx, Math.min(w, h), 0, 0); },
     container: function (ctx, w, h) {
       var lw = Math.max(1, h * 0.04);
       skBox(ctx, -w / 2, -h / 2, w, h, h * 0.03, "#b5532f", "#6e2f17", lw);
@@ -15890,21 +15866,176 @@
       [-0.15, 0.15].forEach(function (x) { ctx.beginPath(); ctx.moveTo(x * w, -h * 0.32); ctx.lineTo(x * w, h * 0.32); ctx.stroke(); });
     }
   };
-  function skSignPole(ctx, w, h) {
-    skBox(ctx, -Math.max(1, w * 0.04), -h / 2 + w * 0.4, Math.max(2, w * 0.08), h - w * 0.4, 1, "#8d9399", "#5d6267", 0.8);
+  // a road sign's face, s across, centred on (cx, cy)
+  function skSignFace(kind, ctx, s, cx, cy) {
+    var lw = Math.max(1, s * 0.04);
+    if (kind === "signStop") {
+      var pts = [];
+      for (var i = 0; i < 8; i++) { var a = Math.PI / 8 + i * Math.PI / 4; pts.push([cx + Math.cos(a) * s / 2, cy + Math.sin(a) * s / 2]); }
+      skPoly(ctx, pts, "#c8102e", "#fff", lw * 2);
+      ctx.fillStyle = "#fff";
+      ctx.font = "800 " + (s * 0.25) + "px Assistant, Arial, sans-serif";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText("עצור", cx, cy + s * 0.02);
+    } else if (kind === "signNoEntry") {
+      skDisc(ctx, cx, cy, s * 0.48, "#c8102e", "#fff", lw * 2);
+      skBox(ctx, cx - s * 0.33, cy - s * 0.08, s * 0.66, s * 0.16, 1, "#fff");
+    } else if (kind === "signGiveWay") {
+      var top = cy - s * 0.43;
+      skPoly(ctx, [[cx - s / 2, top], [cx + s / 2, top], [cx, top + s * 0.87]], "#c8102e", "#fff", lw);
+      skPoly(ctx, [[cx - s * 0.3, top + s * 0.12], [cx + s * 0.3, top + s * 0.12], [cx, top + s * 0.64]], "#fff");
+    } else if (kind === "signWorks") {
+      var t = cy - s * 0.43, base = t + s * 0.87;
+      skPoly(ctx, [[cx, t], [cx + s / 2, base], [cx - s / 2, base]], "#c8102e", "#fff", lw);
+      skPoly(ctx, [[cx, t + s * 0.2], [cx + s * 0.32, base - s * 0.09], [cx - s * 0.32, base - s * 0.09]], "#fff");
+      // a man digging
+      ctx.strokeStyle = "#111"; ctx.lineCap = "round"; ctx.lineWidth = Math.max(1, s * 0.05);
+      var mx = cx - s * 0.03, my = base - s * 0.28;
+      skDisc(ctx, mx + s * 0.03, my - s * 0.17, s * 0.045, "#111");
+      ctx.beginPath();
+      ctx.moveTo(mx, my - s * 0.1); ctx.lineTo(mx - s * 0.04, my + s * 0.05);
+      ctx.lineTo(mx - s * 0.1, my + s * 0.16); ctx.moveTo(mx - s * 0.04, my + s * 0.05); ctx.lineTo(mx + s * 0.04, my + s * 0.16);
+      ctx.moveTo(mx, my - s * 0.06); ctx.lineTo(mx + s * 0.1, my + s * 0.02);
+      ctx.moveTo(mx + s * 0.04, my - s * 0.08); ctx.lineTo(mx + s * 0.16, my + s * 0.14);
+      ctx.stroke();
+      skPoly(ctx, [[mx + s * 0.12, base - s * 0.12], [mx + s * 0.24, base - s * 0.12], [mx + s * 0.18, base - s * 0.2]], "#111");
+    }
   }
-  function skSignOctagon(ctx, w, h) {
-    var r = Math.min(w, h / 1.8) * 0.5, cy = -h / 2 + r + 1, pts = [];
-    for (var i = 0; i < 8; i++) { var a = Math.PI / 8 + i * Math.PI / 4; pts.push([Math.cos(a) * r, cy + Math.sin(a) * r]); }
-    skPoly(ctx, pts, "#c8102e", "#fff", Math.max(1, r * 0.08));
-    ctx.fillStyle = "#fff";
-    ctx.font = "800 " + (r * 0.5) + "px Assistant, Arial, sans-serif";
-    ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText("עצור", 0, cy + r * 0.04);
+  function skSignOnPole(kind) {
+    return function (ctx, w, h) {
+      var s = Math.min(w, h / 1.8);
+      skBox(ctx, -Math.max(1, w * 0.04), -h / 2 + s * 0.4, Math.max(2, w * 0.08), h - s * 0.4, 1, "#8d9399", "#5d6267", 0.8);
+      skSignFace(kind, ctx, s * 0.98, 0, -h / 2 + s / 2 + 1);
+    };
   }
+  function skWheel(ctx, x, y, r) {
+    skDisc(ctx, x, y, r, SK_TYRE, "#111", Math.max(0.8, r * 0.08));
+    skDisc(ctx, x, y, r * 0.45, "#9aa0a6");
+  }
+  function skArm(ctx, pts, width, color, edge) {
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
+    ctx.beginPath(); pts.forEach(function (q, i) { if (i) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); });
+    ctx.strokeStyle = edge; ctx.lineWidth = width + 2; ctx.stroke();
+    ctx.strokeStyle = color; ctx.lineWidth = width; ctx.stroke();
+  }
+  // seen from the side: front = +x, the ground at the bottom
+  var SK_DRAW_SIDE = {
+    tree: function (ctx, w, h) {
+      var R = Math.min(w * 0.5, h * 0.4), cy = -h / 2 + R, lw = Math.max(1, R * 0.04);
+      ctx.fillStyle = "rgba(0,0,0,0.15)"; ctx.beginPath(); ctx.ellipse(0, h / 2 - h * 0.02, R * 0.7, h * 0.03, 0, 0, Math.PI * 2); ctx.fill();
+      skPoly(ctx, [[-R * 0.1, h / 2], [-R * 0.06, cy + R * 0.3], [R * 0.06, cy + R * 0.3], [R * 0.1, h / 2]], "#6b4a2b", "#4a321c", lw);
+      for (var i = 0; i < 8; i++) {
+        var a = i / 8 * Math.PI * 2;
+        skDisc(ctx, Math.cos(a) * R * 0.55, cy + Math.sin(a) * R * 0.5, R * 0.45, "#4f8f3a", "#356b27", lw);
+      }
+      skDisc(ctx, 0, cy, R * 0.65, "#5fa347");
+      skDisc(ctx, -R * 0.22, cy - R * 0.22, R * 0.3, "#7cbd5d");
+    },
+    car: function (ctx, w, h) {
+      var lw = Math.max(1, h * 0.04);
+      skPoly(ctx, [[-w * 0.3, -h * 0.08], [-w * 0.2, -h * 0.46], [w * 0.1, -h * 0.46], [w * 0.26, -h * 0.08]], "#3f6fb5", "#23406e", lw);
+      skPoly(ctx, [[-w * 0.26, -h * 0.1], [-w * 0.18, -h * 0.38], [-w * 0.06, -h * 0.38], [-w * 0.06, -h * 0.1]], "#a9c4e6");
+      skPoly(ctx, [[-w * 0.03, -h * 0.1], [-w * 0.03, -h * 0.38], [w * 0.08, -h * 0.38], [w * 0.2, -h * 0.1]], "#a9c4e6");
+      skBox(ctx, -w * 0.5, -h * 0.1, w, h * 0.42, h * 0.14, "#3f6fb5", "#23406e", lw);
+      skBox(ctx, w * 0.46, -h * 0.02, w * 0.04, h * 0.1, 1, "#ffd84d");
+      skBox(ctx, -w * 0.5, -h * 0.02, w * 0.03, h * 0.1, 1, "#d7262b");
+      skWheel(ctx, -w * 0.3, h * 0.3, h * 0.2);
+      skWheel(ctx, w * 0.3, h * 0.3, h * 0.2);
+    },
+    truck: function (ctx, w, h) {
+      var lw = Math.max(1, h * 0.03);
+      skBox(ctx, -w * 0.5, -h * 0.5, w * 0.72, h * 0.68, 2, "#9aa3ad", "#59616b", lw);
+      ctx.strokeStyle = "#7d868f"; ctx.lineWidth = Math.max(0.6, lw * 0.7);
+      for (var i = 1; i < 10; i++) { var x = -w * 0.5 + w * 0.72 * i / 10; ctx.beginPath(); ctx.moveTo(x, -h * 0.47); ctx.lineTo(x, h * 0.15); ctx.stroke(); }
+      skBox(ctx, -w * 0.5, h * 0.18, w * 0.98, h * 0.08, 1, "#333");
+      skPoly(ctx, [[w * 0.24, h * 0.26], [w * 0.24, -h * 0.34], [w * 0.4, -h * 0.34], [w * 0.5, -h * 0.05], [w * 0.5, h * 0.26]], "#d0452f", "#7c2416", lw);
+      skPoly(ctx, [[w * 0.33, -h * 0.28], [w * 0.4, -h * 0.28], [w * 0.47, -h * 0.07], [w * 0.33, -h * 0.07]], "#a9c4e6");
+      [-0.36, -0.22, 0.38].forEach(function (x) { skWheel(ctx, x * w, h * 0.33, h * 0.16); });
+    },
+    excavator: function (ctx, w, h) {
+      var lw = Math.max(1, h * 0.03);
+      skBox(ctx, -w * 0.47, h * 0.27, w * 0.5, h * 0.23, h * 0.11, SK_TYRE, "#111", lw);
+      for (var i = 0; i < 5; i++) skDisc(ctx, -w * 0.42 + i * w * 0.1, h * 0.385, h * 0.06, "#666");
+      skBox(ctx, -w * 0.46, -h * 0.05, w * 0.44, h * 0.3, h * 0.04, SK_YELLOW, SK_YELLOW_DARK, lw);
+      skBox(ctx, -w * 0.46, -h * 0.03, w * 0.07, h * 0.26, h * 0.03, "#c48f00");
+      skBox(ctx, -w * 0.12, -h * 0.42, w * 0.13, h * 0.38, h * 0.03, SK_YELLOW, SK_YELLOW_DARK, lw);
+      skBox(ctx, -w * 0.1, -h * 0.38, w * 0.09, h * 0.2, 2, "#a9c4e6");
+      skArm(ctx, [[w * 0.0, -h * 0.02], [w * 0.22, -h * 0.47], [w * 0.4, -h * 0.1]], Math.max(2, h * 0.07), SK_YELLOW, SK_YELLOW_DARK);
+      skPoly(ctx, [[w * 0.34, -h * 0.12], [w * 0.48, -h * 0.12], [w * 0.47, h * 0.12], [w * 0.36, h * 0.06]], "#5a5a5a", "#2e2e2e", lw);
+    },
+    backhoe: function (ctx, w, h) {
+      var lw = Math.max(1, h * 0.03);
+      skBox(ctx, -w * 0.28, -h * 0.02, w * 0.55, h * 0.3, h * 0.05, SK_YELLOW, SK_YELLOW_DARK, lw);
+      skBox(ctx, -w * 0.18, -h * 0.42, w * 0.24, h * 0.42, h * 0.03, "#a9c4e6", SK_YELLOW_DARK, lw * 1.5);
+      skBox(ctx, -w * 0.2, -h * 0.45, w * 0.28, h * 0.05, 2, SK_YELLOW, SK_YELLOW_DARK, lw);
+      skWheel(ctx, -w * 0.14, h * 0.28, h * 0.22);
+      skWheel(ctx, w * 0.18, h * 0.34, h * 0.16);
+      skArm(ctx, [[w * 0.05, h * 0.0], [w * 0.36, h * 0.2]], Math.max(2, h * 0.05), SK_YELLOW, SK_YELLOW_DARK);
+      skPoly(ctx, [[w * 0.33, h * 0.06], [w * 0.5, h * 0.12], [w * 0.5, h * 0.45], [w * 0.36, h * 0.45]], "#6b6b6b", "#2e2e2e", lw);
+      skArm(ctx, [[-w * 0.27, h * 0.05], [-w * 0.4, -h * 0.4], [-w * 0.46, h * 0.18]], Math.max(2, h * 0.05), SK_YELLOW, SK_YELLOW_DARK);
+      skPoly(ctx, [[-w * 0.5, h * 0.14], [-w * 0.42, h * 0.14], [-w * 0.43, h * 0.32], [-w * 0.49, h * 0.28]], "#5a5a5a", "#2e2e2e", lw);
+    },
+    bobcat: function (ctx, w, h) {
+      var lw = Math.max(1, h * 0.03);
+      skBox(ctx, -w * 0.45, -h * 0.06, w * 0.66, h * 0.4, h * 0.06, "#eeeeee", "#333", lw);
+      skBox(ctx, -w * 0.45, h * 0.12, w * 0.66, h * 0.07, 1, "#e0661b");
+      skBox(ctx, -w * 0.28, -h * 0.46, w * 0.4, h * 0.4, h * 0.04, "#a9c4e6", "#333", lw * 1.5);
+      skWheel(ctx, -w * 0.25, h * 0.34, h * 0.16);
+      skWheel(ctx, w * 0.08, h * 0.34, h * 0.16);
+      skArm(ctx, [[-w * 0.4, -h * 0.36], [w * 0.2, -h * 0.3], [w * 0.34, h * 0.1]], Math.max(2, h * 0.07), "#e0661b", "#7a3510");
+      skPoly(ctx, [[w * 0.28, h * 0.02], [w * 0.5, h * 0.12], [w * 0.5, h * 0.48], [w * 0.3, h * 0.48]], "#5a5a5a", "#2e2e2e", lw);
+    },
+    worker: function (ctx, w, h) {
+      var u = Math.min(w / 1.2, h / 2), lw = Math.max(1, u * 0.06);
+      ctx.lineCap = "round";
+      ctx.strokeStyle = "#1f3b6e"; ctx.lineWidth = u * 0.22;
+      ctx.beginPath(); ctx.moveTo(-u * 0.14, u * 0.25); ctx.lineTo(-u * 0.2, u * 0.9); ctx.moveTo(u * 0.14, u * 0.25); ctx.lineTo(u * 0.2, u * 0.9); ctx.stroke();
+      ctx.strokeStyle = "#ff7a00"; ctx.lineWidth = u * 0.16;
+      ctx.beginPath(); ctx.moveTo(-u * 0.28, -u * 0.38); ctx.lineTo(-u * 0.48, u * 0.15); ctx.moveTo(u * 0.28, -u * 0.38); ctx.lineTo(u * 0.48, u * 0.15); ctx.stroke();
+      skBox(ctx, -u * 0.3, -u * 0.45, u * 0.6, u * 0.75, u * 0.12, "#ff7a00", "#9a4a00", lw);
+      ctx.fillStyle = "#e8e8e8";
+      ctx.fillRect(-u * 0.3, -u * 0.12, u * 0.6, u * 0.07);
+      ctx.fillRect(-u * 0.3, u * 0.08, u * 0.6, u * 0.07);
+      skDisc(ctx, 0, -u * 0.68, u * 0.2, "#e9b48a", "#8c5a3a", lw);
+      ctx.beginPath(); ctx.arc(0, -u * 0.72, u * 0.24, Math.PI, 0); ctx.closePath();
+      ctx.fillStyle = "#ffd400"; ctx.fill(); ctx.strokeStyle = "#8a6d00"; ctx.lineWidth = lw; ctx.stroke();
+      ctx.fillStyle = "#ffd400"; ctx.fillRect(-u * 0.32, -u * 0.74, u * 0.64, u * 0.06);
+    },
+    signStop: skSignOnPole("signStop"),
+    signNoEntry: skSignOnPole("signNoEntry"),
+    signGiveWay: skSignOnPole("signGiveWay"),
+    signWorks: skSignOnPole("signWorks"),
+    container: function (ctx, w, h) {
+      var lw = Math.max(1, h * 0.03);
+      skBox(ctx, -w / 2, -h / 2, w, h, 1, "#b5532f", "#6e2f17", lw);
+      ctx.lineWidth = Math.max(0.6, lw * 0.8);
+      for (var i = 1; i < 30; i++) {
+        var x = -w / 2 + w * i / 30;
+        ctx.strokeStyle = i % 2 ? "#923f20" : "#cf6a43";
+        ctx.beginPath(); ctx.moveTo(x, -h * 0.42); ctx.lineTo(x, h * 0.42); ctx.stroke();
+      }
+      skBox(ctx, -w / 2, -h / 2, w, h * 0.07, 1, "#7e3519");
+      skBox(ctx, -w / 2, h * 0.43, w, h * 0.07, 1, "#7e3519");
+      skBox(ctx, -w / 2, -h / 2, w * 0.03, h, 1, "#7e3519");
+      skBox(ctx, w / 2 - w * 0.03, -h / 2, w * 0.03, h, 1, "#7e3519");
+    },
+    bridge: function (ctx, w, h) {
+      var lw = Math.max(1, h * 0.02);
+      skBox(ctx, -w / 2, h * 0.3, w, h * 0.2, 1, "#5d9fd8");
+      ctx.strokeStyle = "#aed3f3"; ctx.lineWidth = lw;
+      for (var i = 0; i < 8; i++) { var x = -w * 0.4 + i * w * 0.1; ctx.beginPath(); ctx.moveTo(x, h * 0.4); ctx.quadraticCurveTo(x + w * 0.02, h * 0.36, x + w * 0.04, h * 0.4); ctx.stroke(); }
+      skPoly(ctx, [[-w / 2, -h * 0.12], [-w * 0.4, -h * 0.12], [-w * 0.34, h * 0.5], [-w / 2, h * 0.5]], "#8f8a80", "#555", lw);
+      skPoly(ctx, [[w / 2, -h * 0.12], [w * 0.4, -h * 0.12], [w * 0.34, h * 0.5], [w / 2, h * 0.5]], "#8f8a80", "#555", lw);
+      [-0.14, 0.14].forEach(function (x) { skBox(ctx, x * w - w * 0.025, 0, w * 0.05, h * 0.5, 1, "#a7a9ac", "#555", lw); });
+      skBox(ctx, -w / 2, -h * 0.12, w, h * 0.14, 1, "#a7a9ac", "#555", lw);
+      ctx.strokeStyle = "#555"; ctx.lineWidth = lw;
+      ctx.beginPath(); ctx.moveTo(-w / 2, -h * 0.4); ctx.lineTo(w / 2, -h * 0.4); ctx.stroke();
+      for (var p = 0; p <= 20; p++) { var px = -w / 2 + w * p / 20; ctx.beginPath(); ctx.moveTo(px, -h * 0.4); ctx.lineTo(px, -h * 0.12); ctx.stroke(); }
+    }
+  };
 
   function skDrawObj(ctx, el, view) {
-    var draw = SK_DRAW_OBJ[el.kind];
+    var draw = (skObjViewOf(el) === "side" ? SK_DRAW_SIDE : SK_DRAW_OBJ)[el.kind];
     if (!draw) return;
     var z = view.z;
     ctx.save();
@@ -15946,13 +16077,14 @@
   var skObjDrag = null;
   function skAddObject(kind) {
     var def = skObjDef(kind);
-    var upm = skUnitsPerMetre(), w = def.m[0] * upm, h = def.m[1] * upm;
+    var size = skObjSize(def, sk.objView);
+    var upm = skUnitsPerMetre(), w = size[0] * upm, h = size[1] * upm;
     // keep it a sensible size on the screen whatever the scale
     var dpr = window.devicePixelRatio || 1, screenW = skCanvas.width / dpr / sk.view.z, screenH = skCanvas.height / dpr / sk.view.z;
     var k = Math.min(1, Math.min(screenW, screenH) * 0.6 / Math.max(w, h));
     k = Math.max(k, 28 / Math.max(w, h));
     w *= k; h *= k;
-    var el = { type: "obj", id: uid(), kind: kind, c: { x: sk.view.x + screenW / 2, y: sk.view.y + screenH / 2 }, w: w, h: h, rot: 0 };
+    var el = { type: "obj", id: uid(), kind: kind, c: { x: sk.view.x + screenW / 2, y: sk.view.y + screenH / 2 }, w: w, h: h, rot: 0, view: sk.objView };
     sk.tool = "obj";
     skCommit(function () { sk.els.push(el); });
     sk.objSel = el.id;
@@ -16026,29 +16158,44 @@
 
   // ---- the objects menu ------------------------------------------------------
   var skObjMenu = document.getElementById("sketchObjMenu");
-  SK_OBJS.forEach(function (def) {
-    var b = document.createElement("button");
-    b.type = "button";
-    b.className = "sk-obj-pick";
-    b.setAttribute("data-obj", def.kind);
-    var c = document.createElement("canvas");
-    c.width = 88; c.height = 88;
-    var ctx = c.getContext("2d"), k = 76 / Math.max(def.m[0], def.m[1]);
-    ctx.translate(44, 44);
-    SK_DRAW_OBJ[def.kind](ctx, def.m[0] * k, def.m[1] * k);
-    var label = document.createElement("span");
-    label.setAttribute("data-i18n", "skObj_" + def.kind);
-    label.textContent = tr("skObj_" + def.kind);
-    b.appendChild(c);
-    b.appendChild(label);
-    b.addEventListener("click", function () {
-      skObjMenu.hidden = true;
-      skAddObject(def.kind);
+  function skBuildObjMenu() {
+    skObjMenu.innerHTML = "";
+    var sw = document.createElement("div");
+    sw.className = "sk-view-switch";
+    ["top", "side"].forEach(function (v) {
+      var vb = document.createElement("button");
+      vb.type = "button";
+      vb.setAttribute("data-view", v);
+      vb.className = sk.objView === v ? "on" : "";
+      vb.textContent = tr(v === "top" ? "sketchViewTop" : "sketchViewSide");
+      vb.addEventListener("click", function () { sk.objView = v; skBuildObjMenu(); });
+      sw.appendChild(vb);
     });
-    skObjMenu.appendChild(b);
-  });
+    skObjMenu.appendChild(sw);
+    SK_OBJS.forEach(function (def) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "sk-obj-pick";
+      b.setAttribute("data-obj", def.kind);
+      var c = document.createElement("canvas");
+      c.width = 88; c.height = 88;
+      var size = skObjSize(def, sk.objView), ctx = c.getContext("2d"), k = 76 / Math.max(size[0], size[1]);
+      ctx.translate(44, 44);
+      (sk.objView === "side" ? SK_DRAW_SIDE : SK_DRAW_OBJ)[def.kind](ctx, size[0] * k, size[1] * k);
+      var label = document.createElement("span");
+      label.textContent = tr("skObj_" + def.kind);
+      b.appendChild(c);
+      b.appendChild(label);
+      b.addEventListener("click", function () {
+        skObjMenu.hidden = true;
+        skAddObject(def.kind);
+      });
+      skObjMenu.appendChild(b);
+    });
+  }
   document.getElementById("sketchObjBtn").addEventListener("click", function () {
     var open = skObjMenu.hidden;
+    if (open) skBuildObjMenu();
     sk.tool = "obj";
     skUpdateButtons();
     skObjMenu.hidden = !open;
