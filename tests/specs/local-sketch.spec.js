@@ -90,3 +90,46 @@ test("sketch: lines, scale, dimension, callout, text, eraser, undo; the draft st
     return f && f.files.map((x) => x.name);
   }).toEqual([expect.stringMatching(/^סקיצה בניין A .+\.pdf$/)]);
 });
+
+// a hand-drawn closed shape, held at its end, then the finger wobbles and lifts
+async function drawHeld(page, points) {
+  const box = await page.locator("#sketchCanvas").boundingBox();
+  await page.mouse.move(box.x + points[0][0], box.y + points[0][1]);
+  await page.mouse.down();
+  for (const [x, y] of points.slice(1)) await page.mouse.move(box.x + x, box.y + y);
+  await page.waitForTimeout(800); // held: straightened
+  const [lx, ly] = points[points.length - 1];
+  await page.mouse.move(box.x + lx + 6, box.y + ly + 5); // the finger moves a bit as it lifts
+  await page.mouse.move(box.x + lx + 14, box.y + ly - 9);
+  await page.mouse.up();
+}
+const wobblyCircle = (cx, cy, rx, ry) => Array.from({ length: 40 }, (_, i) => {
+  const a = i / 38 * Math.PI * 2, j = (i % 3) - 1;
+  return [cx + (rx + j * 2) * Math.cos(a), cy + (ry + j * 2) * Math.sin(a)];
+});
+
+test("sketch: a held hand-drawn circle becomes a circle, a box a rectangle - and stays so as the finger lifts", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
+  await page.locator("#sketchBtn").click();
+  await page.locator(".sk-tool[data-tool=pen]").click();
+
+  await drawHeld(page, wobblyCircle(120, 140, 60, 56));
+  let all = await els(page);
+  expect(all.map((e) => e.type)).toEqual(["circle"]);
+  expect(all[0].rx).toBeUndefined(); // round enough: a true circle
+  expect(all[0].r).toBeGreaterThan(50);
+
+  await drawHeld(page, wobblyCircle(260, 330, 90, 45));
+  all = await els(page);
+  expect(all[1]).toMatchObject({ type: "circle" });
+  expect(all[1].rx / all[1].ry).toBeGreaterThan(1.6); // an ellipse
+
+  const box = [[60, 420], [130, 418], [200, 421], [260, 420], [262, 470], [259, 520], [200, 522], [130, 519], [60, 521], [58, 470], [61, 423]];
+  await drawHeld(page, box);
+  all = await els(page);
+  expect(all[2].type).toBe("rect");
+  const r = all[2];
+  // the lift didn't stretch it or turn it into a line
+  expect(Math.abs((r.b.x - r.a.x) - 200)).toBeLessThan(15);
+  expect(Math.abs((r.b.y - r.a.y) - 100)).toBeLessThan(15);
+});

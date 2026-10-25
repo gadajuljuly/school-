@@ -14625,7 +14625,10 @@
       ctx.strokeRect(Math.min(r1.x, r2.x), Math.min(r1.y, r2.y), Math.abs(r2.x - r1.x), Math.abs(r2.y - r1.y));
     } else if (el.type === "circle") {
       var c = P(el.c);
-      ctx.beginPath(); ctx.arc(c.x, c.y, el.r * z, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath();
+      if (el.rx) ctx.ellipse(c.x, c.y, el.rx * z, el.ry * z, 0, 0, Math.PI * 2);
+      else ctx.arc(c.x, c.y, el.r * z, 0, Math.PI * 2);
+      ctx.stroke();
     } else if (el.type === "dim") {
       var d1 = P(el.a), d2 = P(el.b);
       ctx.lineWidth = Math.max(1, 1.3 * z);
@@ -14744,22 +14747,29 @@
     var chord = skDist(a, b);
     if (chord > 0 && len / chord < 1.15) return { type: "line", a: skSnapPoint(a), b: skSnapPoint(skSnapAngle(a, b)) };
     if (chord > len * 0.25) return null; // not closed
-    var minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity, cx = 0, cy = 0;
+    var minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
     pts.forEach(function (p) {
       minx = Math.min(minx, p.x); maxx = Math.max(maxx, p.x); miny = Math.min(miny, p.y); maxy = Math.max(maxy, p.y);
-      cx += p.x; cy += p.y;
     });
-    cx /= pts.length; cy /= pts.length;
-    var rs = pts.map(function (p) { return Math.hypot(p.x - cx, p.y - cy); });
-    var rMean = rs.reduce(function (s, r) { return s + r; }, 0) / rs.length;
-    var rDev = Math.sqrt(rs.reduce(function (s, r) { return s + (r - rMean) * (r - rMean); }, 0) / rs.length);
-    if (rDev / rMean < 0.13) return { type: "circle", c: skSnapPoint({ x: cx, y: cy }), r: rMean };
-    // a box: most points near its border
-    var near = pts.filter(function (p) {
-      return Math.min(Math.abs(p.x - minx), Math.abs(p.x - maxx), Math.abs(p.y - miny), Math.abs(p.y - maxy)) < Math.max(maxx - minx, maxy - miny) * 0.12;
-    }).length;
-    if (near / pts.length > 0.8) return { type: "rect", a: skSnapPoint({ x: minx, y: miny }), b: skSnapPoint({ x: maxx, y: maxy }) };
-    return null;
+    var w = maxx - minx, h = maxy - miny, size = Math.max(w, h);
+    if (size < 8) return null;
+    var cx = (minx + maxx) / 2, cy = (miny + maxy) / 2, rx = w / 2 || 1, ry = h / 2 || 1;
+    // how far, on average, the stroke strays from an ellipse in its box
+    // and from the box's own sides - whichever it hugs closer wins
+    var ellErr = 0, boxErr = 0;
+    pts.forEach(function (p) {
+      var nx = (p.x - cx) / rx, ny = (p.y - cy) / ry;
+      ellErr += Math.abs(Math.hypot(nx, ny) - 1) * Math.min(rx, ry);
+      boxErr += Math.min(Math.abs(p.x - minx), Math.abs(p.x - maxx), Math.abs(p.y - miny), Math.abs(p.y - maxy));
+    });
+    ellErr /= pts.length; boxErr /= pts.length;
+    if (Math.min(ellErr, boxErr) > size * 0.12) return null;
+    if (ellErr <= boxErr) {
+      var ratio = rx / ry;
+      if (ratio > 0.8 && ratio < 1.25) return { type: "circle", c: skSnapPoint({ x: cx, y: cy }), r: (rx + ry) / 2 };
+      return { type: "circle", c: skSnapPoint({ x: cx, y: cy }), r: (rx + ry) / 2, rx: rx, ry: ry };
+    }
+    return { type: "rect", a: skSnapPoint({ x: minx, y: miny }), b: skSnapPoint({ x: maxx, y: maxy }) };
   }
 
   // ---- hit testing (eraser) ---------------------------------------------
@@ -14781,7 +14791,9 @@
         var c = [el.a, { x: el.b.x, y: el.a.y }, el.b, { x: el.a.x, y: el.b.y }];
         for (var k = 0; k < 4; k++) if (skSegDist(p, c[k], c[(k + 1) % 4]) < tol) return true;
         return el.type === "stairs" && p.x > Math.min(el.a.x, el.b.x) && p.x < Math.max(el.a.x, el.b.x) && p.y > Math.min(el.a.y, el.b.y) && p.y < Math.max(el.a.y, el.b.y);
-      case "circle": return Math.abs(skDist(p, el.c) - el.r) < tol;
+      case "circle":
+        if (el.rx) return Math.abs(Math.hypot((p.x - el.c.x) / el.rx, (p.y - el.c.y) / el.ry) - 1) * Math.min(el.rx, el.ry) < tol;
+        return Math.abs(skDist(p, el.c) - el.r) < tol;
       case "text": return skDist(p, el.p) < tol * 2.5;
       case "north": return skDist(p, el.p) < 30;
       case "image": return false; // removed with its own button
@@ -14805,7 +14817,7 @@
   }
   function skUpdateDraft(p) {
     var d = sk.draft;
-    if (!d) return;
+    if (!d || d.locked) return; // straightened while held: final
     if (d.type === "stroke") { d.pts.push(p); return; }
     var b = d.type === "leader" ? p : skSnapPoint(d.type === "stairs" ? p : skSnapAngle(d.a, p));
     d.b = b;
@@ -14893,6 +14905,7 @@
         if (shape) {
           shape.color = sk.draft.color;
           shape.w = sk.draft.w;
+          shape.locked = true;
           sk.draft = shape;
           if (navigator.vibrate) { try { navigator.vibrate(20); } catch (err) {} }
           skDraw();
@@ -14912,6 +14925,7 @@
     sk.draft = null;
     skLenTip.hidden = true;
     if (!d) return;
+    delete d.locked;
     if (d.type === "stroke") {
       if (d.pts.length < 2) d.pts.push({ x: d.pts[0].x + 0.5, y: d.pts[0].y });
     } else if (d.type !== "circle" && skDist(d.a, d.b) < 4) {
@@ -15090,7 +15104,7 @@
       if (el.pts) el.pts.forEach(add);
       if (el.a) add(el.a);
       if (el.b) { add(el.b); if (el.type === "leader") add({ x: el.b.x + (el.b.x >= el.a.x ? 1 : -1) * 160, y: el.b.y - 20 }); }
-      if (el.c) { add({ x: el.c.x - el.r, y: el.c.y - el.r }); add({ x: el.c.x + el.r, y: el.c.y + el.r }); }
+      if (el.c) { add({ x: el.c.x - (el.rx || el.r), y: el.c.y - (el.ry || el.r) }); add({ x: el.c.x + (el.rx || el.r), y: el.c.y + (el.ry || el.r) }); }
       if (el.p) { add({ x: el.p.x - 40, y: el.p.y - 40 }); add({ x: el.p.x + (el.w || 40), y: el.p.y + (el.h || 40) }); }
     });
     if (minx === Infinity) return null;
