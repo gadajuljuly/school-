@@ -415,7 +415,8 @@
     sketchAreaOk: { he: "✓ אישור", en: "✓ OK", ar: "✓ موافق", ru: "✓ Готово" },
     sketchBgLibrary: { he: "📚 מהספרייה של הפרויקט", en: "📚 From the project's library", ar: "📚 من مكتبة المشروع", ru: "📚 Из библиотеки проекта" },
     sketchLibTitle: { he: "איזה קובץ מהספרייה לשים ברקע?", en: "Which library file goes in the background?", ar: "أي ملف من المكتبة تريد وضعه في الخلفية؟", ru: "Какой файл из библиотеки поставить фоном?" },
-    sketchLibEmpty: { he: "אין בספרייה של הפרויקט תמונות או קבצי PDF", en: "The project's library has no pictures or PDF files", ar: "لا توجد صور أو ملفات PDF في مكتبة المشروع", ru: "В библиотеке проекта нет изображений и PDF" },
+    sketchLibBack: { he: "→ חזרה", en: "← Back", ar: "→ رجوع", ru: "← Назад" },
+    sketchLibNothing: { he: "אין בתיקייה הזו תמונות או קבצי PDF", en: "No pictures or PDF files in this folder", ar: "لا توجد صور أو ملفات PDF في هذا المجلد", ru: "В этой папке нет изображений и PDF" },
     sketchBgMoveHint: { he: "לחיצה ארוכה על הרקע וגרירה מזיזות אותו בדף", en: "Long-press the background and drag to move it on the page", ar: "اضغط مطولاً على الخلفية واسحب لتحريكها في الصفحة", ru: "Нажмите и удерживайте фон, затем тяните, чтобы сдвинуть его" },
     sketchBgCamera: { he: "📷 צילום", en: "📷 Take a photo", ar: "📷 التقاط صورة", ru: "📷 Сфотографировать" },
     sketchBgFile: { he: "🖼 תמונה / PDF", en: "🖼 Picture / PDF", ar: "🖼 صورة / PDF", ru: "🖼 Изображение / PDF" },
@@ -16214,36 +16215,49 @@
     var sheet = allSheets().find(function (s) { return s.id === sk.sheetId; });
     if (!sheet || !supabaseClient) return;
     ensureLibraryFolders(sheet, function (folders) {
-      var list = document.getElementById("sketchLibList");
-      list.innerHTML = "";
-      var rows = folders.map(function (f) { return { f: f, path: libraryFolderPath(folders, f), files: (f.files || []).filter(skIsBgFile) }; })
-        .filter(function (r) { return r.files.length; })
-        .sort(function (a, b) { return a.path.localeCompare(b.path); });
-      if (!rows.length) { showToast(tr("sketchLibEmpty")); return; }
-      rows.forEach(function (r) {
-        list.appendChild(Object.assign(document.createElement("div"), { className: "sk-lib-folder", textContent: "📁 " + r.path }));
-        r.files.forEach(function (entry) {
-          var b = document.createElement("button");
-          b.type = "button";
-          b.textContent = (skIsImg(entry) ? "🖼 " : "📄 ") + entry.name;
-          b.addEventListener("click", function () {
-            skLibOverlay.hidden = true;
-            showToast(tr("sketchPdfLoading"));
-            resolveFileUrl(entry.path).then(fetchFileBlob).then(function (blob) {
-              var file = new File([blob], entry.name, { type: entry.type || blob.type });
-              if (!skIsImg(entry)) skPdfBackground(file);
-              else scanLoadImage(file).then(function (canvas) { skPlaceBackground(canvas, 1400); });
-            }).catch(function (err) {
-              console.error("sketch library background failed:", err);
-              alert(tr("chatFileOpenError"));
-            });
-          });
-          list.appendChild(b);
-        });
-      });
+      skLibShow(folders, null);
       skLibOverlay.hidden = false;
     });
   });
+  // one folder at a time, like the library: its folders, then its pictures
+  // and PDFs; null = the library's first screen (folders only)
+  function skLibShow(folders, folder) {
+    var list = document.getElementById("sketchLibList");
+    list.innerHTML = "";
+    document.getElementById("sketchLibTitle").textContent = folder ? "📂 " + libraryFolderPath(folders, folder) : tr("sketchLibTitle");
+    var button = function (text, cls, onClick) {
+      var b = document.createElement("button");
+      b.type = "button";
+      if (cls) b.className = cls;
+      b.textContent = text;
+      b.addEventListener("click", onClick);
+      list.appendChild(b);
+    };
+    if (folder) {
+      var parent = folder.parentId && folders.find(function (f) { return f.id === folder.parentId; });
+      button(tr("sketchLibBack"), "sk-lib-back", function () { skLibShow(folders, parent || null); });
+    }
+    folders.filter(function (f) { return folder ? f.parentId === folder.id : !f.parentId; }).forEach(function (f) {
+      button("📁 " + folderDisplayName(f), "sk-lib-dir", function () { skLibShow(folders, f); });
+    });
+    (folder ? (folder.files || []).filter(skIsBgFile) : []).forEach(function (entry) {
+      button((skIsImg(entry) ? "🖼 " : "📄 ") + entry.name, "sk-lib-file", function () {
+        skLibOverlay.hidden = true;
+        showToast(tr("sketchPdfLoading"));
+        resolveFileUrl(entry.path).then(fetchFileBlob).then(function (blob) {
+          var file = new File([blob], entry.name, { type: entry.type || blob.type });
+          if (!skIsImg(entry)) skPdfBackground(file);
+          else scanLoadImage(file).then(function (canvas) { skPlaceBackground(canvas, 1400); });
+        }).catch(function (err) {
+          console.error("sketch library background failed:", err);
+          alert(tr("chatFileOpenError"));
+        });
+      });
+    });
+    if (folder && list.children.length === 1) {
+      list.appendChild(Object.assign(document.createElement("div"), { className: "sk-lib-folder", textContent: tr("sketchLibNothing") }));
+    }
+  }
   document.getElementById("sketchLibCancelBtn").addEventListener("click", function () { skLibOverlay.hidden = true; });
   document.getElementById("sketchBgRemoveBtn").addEventListener("click", function () {
     skBgMenu.hidden = true;

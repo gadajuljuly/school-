@@ -644,8 +644,22 @@ test("sketch background: a picture from the project's library (any folder)", asy
   await page.locator("#sketchBgBtn").click();
   await page.locator("#sketchBgLibraryBtn").click();
   await expect(page.locator("#sketchLibOverlay")).toBeVisible();
-  await expect(page.locator("#sketchLibList .sk-lib-folder")).toHaveText(["📁 תוכניות", "📁 תוכניות / חשמל"]);
-  await expect(page.locator("#sketchLibList button")).toHaveText(["🖼 חזית.png", "🖼 לוח.png"]); // no Word file
-  await page.locator("#sketchLibList button", { hasText: "לוח.png" }).click();
+  await expect(page.locator("#sketchLibTitle")).toHaveText("איזה קובץ מהספרייה לשים ברקע?");
+  // first: the folders only (a subfolder only inside its parent)
+  const list = page.locator("#sketchLibList button");
+  await expect(list.filter({ hasText: "תוכניות" })).toHaveCount(1);
+  await expect(list.filter({ hasText: "חשמל" })).toHaveCount(0);
+  expect((await list.allTextContents()).every((t) => t.startsWith("📁"))).toBe(true);
+  await list.filter({ hasText: "תוכניות" }).click();
+  await expect(page.locator("#sketchLibTitle")).toHaveText("📂 תוכניות");
+  await expect(list).toHaveText(["→ חזרה", "📁 חשמל", "🖼 חזית.png"]);
+  await list.filter({ hasText: "חשמל" }).click();
+  await expect(page.locator("#sketchLibTitle")).toHaveText("📂 תוכניות / חשמל");
+  await expect(list).toHaveText(["→ חזרה", "🖼 לוח.png"]); // no Word file
+  // back goes up one folder
+  await list.filter({ hasText: "חזרה" }).click();
+  await expect(page.locator("#sketchLibTitle")).toHaveText("📂 תוכניות");
+  await list.filter({ hasText: "חשמל" }).click();
+  await list.filter({ hasText: "לוח.png" }).click();
   await expect.poll(async () => (await els(page)).filter((e) => e.type === "image").length).toBe(1);
 });
