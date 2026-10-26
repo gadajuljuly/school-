@@ -35,7 +35,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<link rel="stylesheet" href="tasks.css?v=5d867840e9">
+<link rel="stylesheet" href="tasks.css?v=f8ae490f10">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -744,6 +744,18 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="sketchAreaChoiceOverlay" hidden style="z-index:41">
+    <div class="modal-box" role="alertdialog" aria-modal="true">
+      <p class="modal-message" id="sketchAreaChoiceTitle"></p>
+      <div class="move-task-projects">
+        <button type="button" id="sketchAreaAllBtn" data-i18n="sketchAreaAll">🗺 כל הסקיצה</button>
+        <button type="button" id="sketchAreaPickBtn" data-i18n="sketchAreaPick">✂ תחימת אזור</button>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="modal-btn modal-btn-no" id="sketchAreaChoiceCancelBtn" data-i18n="cancelBtn">ביטול</button>
+      </div>
+    </div>
+  </div>
   <div class="modal-overlay" id="sketchPdfPageOverlay" hidden style="z-index:41">
     <div class="modal-box" role="alertdialog" aria-modal="true">
       <p class="modal-message" data-i18n="sketchPdfPageTitle">איזה עמוד מהקובץ לשים ברקע?</p>
@@ -1088,6 +1100,13 @@
     <div class="sketch-stage">
       <canvas id="sketchCanvas"></canvas>
       <div class="sketch-len-tip" id="sketchLenTip" hidden></div>
+      <div class="sketch-area-bar" id="sketchAreaBar" hidden>
+        <span data-i18n="sketchAreaHint">סמנו את האזור – גררו את הנקודות הצהובות לשינוי</span>
+        <div class="sketch-area-btns">
+          <button type="button" class="sk-head-btn" id="sketchAreaCancelBtn" data-i18n="cancelBtn">ביטול</button>
+          <button type="button" class="sk-head-btn sk-save" id="sketchAreaOkBtn" data-i18n="sketchAreaOk">✓ אישור</button>
+        </div>
+      </div>
       <button type="button" class="sketch-scale-chip" id="sketchScaleBtn"><span id="sketchScaleLabel"></span></button>
       <div class="sketch-shapes-menu" id="sketchBgMenu" hidden>
         <button type="button" class="sk-head-btn" id="sketchBgCameraBtn" data-i18n="sketchBgCamera">📷 צילום</button>
@@ -1386,6 +1405,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=2c9c23c795"></script>
+<script src="tasks-app.js?v=6d147f66f5"></script>
 </body>
 </html>

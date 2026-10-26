@@ -333,6 +333,7 @@
     skDrawLayers(skCtx, sk.view);
     if (sk.draft) skDrawEl(skCtx, sk.draft, sk.view);
     skDrawObjSelection(skCtx, sk.view);
+    skDrawCrop(skCtx);
     var bgShown = skBgSelected();
     if (bgShown) {
       var b0 = skToScreen(bgShown.p), bx = skBgCloseScreen(bgShown);
@@ -840,6 +841,7 @@
       if (skDimMove) { skDimMove.el.off = skDimMove.off; skDimMove = null; }
       skObjCancelDrag();
       skBgCancel();
+      if (sk.crop) sk.crop.drag = null;
       skLenTip.hidden = true;
       var a = skPointers[ids[0]], b = skPointers[ids[1]];
       skPinch = { d: Math.hypot(a.x - b.x, a.y - b.y), mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, view: Object.assign({}, sk.view) };
@@ -848,6 +850,7 @@
     }
     if (ids.length > 2) return;
     var p = skEventPoint(e);
+    if (sk.crop) { skCropDown(p); return; }
     ["sketchShapesMenu", "sketchObjMenu", "sketchFillMenu", "sketchBgMenu"].forEach(function (id) { document.getElementById(id).hidden = true; });
     var selBg = skBgSelected();
     if (selBg) {
@@ -915,6 +918,7 @@
       skDraw();
       return;
     }
+    if (sk.crop) { if (ids.length === 1) skCropMove(skEventPoint(e)); return; }
     if (skBgHold && Math.hypot(e.clientX - skBgHold.screen.x, e.clientY - skBgHold.screen.y) > 8) skBgCancel();
     if (skBgMove) {
       var bq = skEventPoint(e);
@@ -968,6 +972,7 @@
       if (!Object.keys(skPointers).length) { skPinch = null; skSaveDraft(); }
       return;
     }
+    if (sk.crop) { skCropEnd(); return; }
     if (skBgMove) {
       var bm = skBgMove;
       skBgMove = null;
@@ -1237,6 +1242,7 @@
     skResize();
   }
   function closeSketch() {
+    if (sk.crop) skEndCrop();
     skSaveDraft();
     sketchView.hidden = true;
   }
@@ -1245,7 +1251,7 @@
   document.getElementById("sketchCloseBtn").addEventListener("click", closeSketch);
 
   // The drawing's own area (plus a margin), drawn sharp at a fixed scale.
-  function skRenderForExport() {
+  function skRenderForExport(area) {
     var minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
     var add = function (p) { minx = Math.min(minx, p.x); miny = Math.min(miny, p.y); maxx = Math.max(maxx, p.x); maxy = Math.max(maxy, p.y); };
     sk.els.forEach(function (el) {
@@ -1257,10 +1263,14 @@
       if (el.c) { add({ x: el.c.x - (el.rx || el.r), y: el.c.y - (el.ry || el.r) }); add({ x: el.c.x + (el.rx || el.r), y: el.c.y + (el.ry || el.r) }); }
       if (el.p) { add({ x: el.p.x - 40, y: el.p.y - 40 }); add({ x: el.p.x + (el.w || 40), y: el.p.y + (el.h || 40) }); }
     });
-    if (minx === Infinity) return null;
-    var pad = SK_CELL * 2;
-    minx = Math.floor((minx - pad) / SK_CELL) * SK_CELL; miny = Math.floor((miny - pad) / SK_CELL) * SK_CELL;
-    maxx += pad; maxy += pad;
+    if (area) {
+      minx = area.x0; miny = area.y0; maxx = area.x1; maxy = area.y1;
+    } else {
+      if (minx === Infinity) return null;
+      var pad = SK_CELL * 2;
+      minx = Math.floor((minx - pad) / SK_CELL) * SK_CELL; miny = Math.floor((miny - pad) / SK_CELL) * SK_CELL;
+      maxx += pad; maxy += pad;
+    }
     var z = Math.min(3, 2400 / Math.max(maxx - minx, maxy - miny));
     var c = document.createElement("canvas");
     c.width = Math.round((maxx - minx) * z); c.height = Math.round((maxy - miny) * z);
@@ -1295,8 +1305,9 @@
   }
   // into a library folder of the project, as a PDF
   document.getElementById("sketchSaveBtn").addEventListener("click", function () {
-    var canvas = skRenderForExport();
-    if (!canvas) { showToast(tr("sketchEmptyMsg")); return; }
+    skPickExportArea("sketchAreaSaveTitle", skSaveToLibrary);
+  });
+  function skSaveToLibrary(canvas) {
     var sheet = allSheets().find(function (s) { return s.id === sk.sheetId; });
     if (!sheet || !supabaseClient) { alert(tr("scanSaveError")); return; }
     ensureLibraryFolders(sheet, function (folders) {
@@ -1326,7 +1337,8 @@
       });
       chatSaveFolderOverlay.hidden = false;
     });
-  });
+  
+  }
   // share as a picture: into the project's own chat (a shared project),
   // or out to other apps (WhatsApp, mail...)
   var sketchShareOverlay = document.getElementById("sketchShareOverlay");
@@ -1355,13 +1367,14 @@
     }, "image/png");
   }
   document.getElementById("sketchShareBtn").addEventListener("click", function () {
-    var canvas = skRenderForExport();
-    if (!canvas) { showToast(tr("sketchEmptyMsg")); return; }
+    skPickExportArea("sketchAreaShareTitle", skShareCanvas);
+  });
+  function skShareCanvas(canvas) {
     var shared = supabaseClient && sharedSheets.some(function (s) { return s.id === sk.sheetId; });
     if (!shared) { skShareToApps(canvas); return; }
     skSharePending = canvas;
     sketchShareOverlay.hidden = false;
-  });
+  }
   document.getElementById("sketchShareChatBtn").addEventListener("click", function () {
     sketchShareOverlay.hidden = true;
     if (skSharePending) skShareToChat(skSharePending, sk.sheetId);

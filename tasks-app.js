@@ -407,6 +407,12 @@
     sketchStairs: { he: "▤ מדרגות", en: "▤ Stairs", ar: "▤ درج", ru: "▤ Лестница" },
     sketchNorth: { he: "⬆ צפון", en: "⬆ North", ar: "⬆ شمال", ru: "⬆ Север" },
     sketchBg: { he: "תמונת רקע", en: "Background picture", ar: "صورة خلفية", ru: "Фоновое изображение" },
+    sketchAreaSaveTitle: { he: "מה לשמור?", en: "What to save?", ar: "ماذا تريد أن تحفظ؟", ru: "Что сохранить?" },
+    sketchAreaShareTitle: { he: "מה לשתף?", en: "What to share?", ar: "ماذا تريد أن تشارك؟", ru: "Чем поделиться?" },
+    sketchAreaAll: { he: "🗺 כל הסקיצה", en: "🗺 The whole sketch", ar: "🗺 الرسم كاملاً", ru: "🗺 Весь эскиз" },
+    sketchAreaPick: { he: "✂ תחימת אזור", en: "✂ Mark an area", ar: "✂ تحديد منطقة", ru: "✂ Выделить область" },
+    sketchAreaHint: { he: "סמנו את האזור – גררו את הנקודות הצהובות לשינוי", en: "Mark the area - drag the yellow dots to change it", ar: "حدد المنطقة – اسحب النقاط الصفراء لتغييرها", ru: "Выделите область – тяните жёлтые точки, чтобы изменить" },
+    sketchAreaOk: { he: "✓ אישור", en: "✓ OK", ar: "✓ موافق", ru: "✓ Готово" },
     sketchBgMoveHint: { he: "לחיצה ארוכה על הרקע וגרירה מזיזות אותו בדף", en: "Long-press the background and drag to move it on the page", ar: "اضغط مطولاً على الخلفية واسحب لتحريكها في الصفحة", ru: "Нажмите и удерживайте фон, затем тяните, чтобы сдвинуть его" },
     sketchBgCamera: { he: "📷 צילום", en: "📷 Take a photo", ar: "📷 التقاط صورة", ru: "📷 Сфотографировать" },
     sketchBgFile: { he: "🖼 תמונה / PDF", en: "🖼 Picture / PDF", ar: "🖼 صورة / PDF", ru: "🖼 Изображение / PDF" },
@@ -15372,6 +15378,7 @@
     skDrawLayers(skCtx, sk.view);
     if (sk.draft) skDrawEl(skCtx, sk.draft, sk.view);
     skDrawObjSelection(skCtx, sk.view);
+    skDrawCrop(skCtx);
     var bgShown = skBgSelected();
     if (bgShown) {
       var b0 = skToScreen(bgShown.p), bx = skBgCloseScreen(bgShown);
@@ -15879,6 +15886,7 @@
       if (skDimMove) { skDimMove.el.off = skDimMove.off; skDimMove = null; }
       skObjCancelDrag();
       skBgCancel();
+      if (sk.crop) sk.crop.drag = null;
       skLenTip.hidden = true;
       var a = skPointers[ids[0]], b = skPointers[ids[1]];
       skPinch = { d: Math.hypot(a.x - b.x, a.y - b.y), mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, view: Object.assign({}, sk.view) };
@@ -15887,6 +15895,7 @@
     }
     if (ids.length > 2) return;
     var p = skEventPoint(e);
+    if (sk.crop) { skCropDown(p); return; }
     ["sketchShapesMenu", "sketchObjMenu", "sketchFillMenu", "sketchBgMenu"].forEach(function (id) { document.getElementById(id).hidden = true; });
     var selBg = skBgSelected();
     if (selBg) {
@@ -15954,6 +15963,7 @@
       skDraw();
       return;
     }
+    if (sk.crop) { if (ids.length === 1) skCropMove(skEventPoint(e)); return; }
     if (skBgHold && Math.hypot(e.clientX - skBgHold.screen.x, e.clientY - skBgHold.screen.y) > 8) skBgCancel();
     if (skBgMove) {
       var bq = skEventPoint(e);
@@ -16007,6 +16017,7 @@
       if (!Object.keys(skPointers).length) { skPinch = null; skSaveDraft(); }
       return;
     }
+    if (sk.crop) { skCropEnd(); return; }
     if (skBgMove) {
       var bm = skBgMove;
       skBgMove = null;
@@ -16276,6 +16287,7 @@
     skResize();
   }
   function closeSketch() {
+    if (sk.crop) skEndCrop();
     skSaveDraft();
     sketchView.hidden = true;
   }
@@ -16284,7 +16296,7 @@
   document.getElementById("sketchCloseBtn").addEventListener("click", closeSketch);
 
   // The drawing's own area (plus a margin), drawn sharp at a fixed scale.
-  function skRenderForExport() {
+  function skRenderForExport(area) {
     var minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
     var add = function (p) { minx = Math.min(minx, p.x); miny = Math.min(miny, p.y); maxx = Math.max(maxx, p.x); maxy = Math.max(maxy, p.y); };
     sk.els.forEach(function (el) {
@@ -16296,10 +16308,14 @@
       if (el.c) { add({ x: el.c.x - (el.rx || el.r), y: el.c.y - (el.ry || el.r) }); add({ x: el.c.x + (el.rx || el.r), y: el.c.y + (el.ry || el.r) }); }
       if (el.p) { add({ x: el.p.x - 40, y: el.p.y - 40 }); add({ x: el.p.x + (el.w || 40), y: el.p.y + (el.h || 40) }); }
     });
-    if (minx === Infinity) return null;
-    var pad = SK_CELL * 2;
-    minx = Math.floor((minx - pad) / SK_CELL) * SK_CELL; miny = Math.floor((miny - pad) / SK_CELL) * SK_CELL;
-    maxx += pad; maxy += pad;
+    if (area) {
+      minx = area.x0; miny = area.y0; maxx = area.x1; maxy = area.y1;
+    } else {
+      if (minx === Infinity) return null;
+      var pad = SK_CELL * 2;
+      minx = Math.floor((minx - pad) / SK_CELL) * SK_CELL; miny = Math.floor((miny - pad) / SK_CELL) * SK_CELL;
+      maxx += pad; maxy += pad;
+    }
     var z = Math.min(3, 2400 / Math.max(maxx - minx, maxy - miny));
     var c = document.createElement("canvas");
     c.width = Math.round((maxx - minx) * z); c.height = Math.round((maxy - miny) * z);
@@ -16334,8 +16350,9 @@
   }
   // into a library folder of the project, as a PDF
   document.getElementById("sketchSaveBtn").addEventListener("click", function () {
-    var canvas = skRenderForExport();
-    if (!canvas) { showToast(tr("sketchEmptyMsg")); return; }
+    skPickExportArea("sketchAreaSaveTitle", skSaveToLibrary);
+  });
+  function skSaveToLibrary(canvas) {
     var sheet = allSheets().find(function (s) { return s.id === sk.sheetId; });
     if (!sheet || !supabaseClient) { alert(tr("scanSaveError")); return; }
     ensureLibraryFolders(sheet, function (folders) {
@@ -16365,7 +16382,8 @@
       });
       chatSaveFolderOverlay.hidden = false;
     });
-  });
+  
+  }
   // share as a picture: into the project's own chat (a shared project),
   // or out to other apps (WhatsApp, mail...)
   var sketchShareOverlay = document.getElementById("sketchShareOverlay");
@@ -16394,13 +16412,14 @@
     }, "image/png");
   }
   document.getElementById("sketchShareBtn").addEventListener("click", function () {
-    var canvas = skRenderForExport();
-    if (!canvas) { showToast(tr("sketchEmptyMsg")); return; }
+    skPickExportArea("sketchAreaShareTitle", skShareCanvas);
+  });
+  function skShareCanvas(canvas) {
     var shared = supabaseClient && sharedSheets.some(function (s) { return s.id === sk.sheetId; });
     if (!shared) { skShareToApps(canvas); return; }
     skSharePending = canvas;
     sketchShareOverlay.hidden = false;
-  });
+  }
   document.getElementById("sketchShareChatBtn").addEventListener("click", function () {
     sketchShareOverlay.hidden = true;
     if (skSharePending) skShareToChat(skSharePending, sk.sheetId);
@@ -17102,6 +17121,139 @@
     skBuildFillMenu();
     skFillMenu.hidden = false;
   });
+
+  // ---------------------------------------------------------------------
+  // סקיצה – saving / sharing only part of it. "שמירה" and 📤 first ask:
+  // the whole sketch, or an area. For an area the rest of the page dims,
+  // a finger marks a rectangle (dragging outside it marks a new one), its
+  // yellow corner dots resize it and dragging inside it moves it; two
+  // fingers still zoom and pan. ✓ hands that rectangle (world units) to
+  // the export, which then draws just it.
+  // ---------------------------------------------------------------------
+  var skAreaChoice = document.getElementById("sketchAreaChoiceOverlay");
+  var skAreaBar = document.getElementById("sketchAreaBar");
+  var skAreaPending = null; // what to do with the canvas
+  sk.crop = null;           // { r: {x0,y0,x1,y1}, drag }
+
+  // asks whole / area, then done(canvas)
+  function skPickExportArea(titleKey, done) {
+    if (!sk.els.length) { showToast(tr("sketchEmptyMsg")); return; }
+    skAreaPending = done;
+    document.getElementById("sketchAreaChoiceTitle").textContent = tr(titleKey);
+    skAreaChoice.hidden = false;
+  }
+  document.getElementById("sketchAreaAllBtn").addEventListener("click", function () {
+    skAreaChoice.hidden = true;
+    var done = skAreaPending;
+    skAreaPending = null;
+    var canvas = skRenderForExport();
+    if (!canvas) { showToast(tr("sketchEmptyMsg")); return; }
+    if (done) done(canvas);
+  });
+  document.getElementById("sketchAreaPickBtn").addEventListener("click", function () {
+    skAreaChoice.hidden = true;
+    // to start with: the middle of the screen
+    var dpr = window.devicePixelRatio || 1, W = skCanvas.width / dpr, H = skCanvas.height / dpr;
+    var a = skToWorld(W * 0.12, H * 0.18), b = skToWorld(W * 0.88, H * 0.82);
+    sk.crop = { r: { x0: a.x, y0: a.y, x1: b.x, y1: b.y }, drag: null };
+    sketchView.classList.add("sk-cropping");
+    skAreaBar.hidden = false;
+    skDraw();
+  });
+  document.getElementById("sketchAreaChoiceCancelBtn").addEventListener("click", function () {
+    skAreaChoice.hidden = true;
+    skAreaPending = null;
+  });
+  function skEndCrop() {
+    sk.crop = null;
+    sketchView.classList.remove("sk-cropping");
+    skAreaBar.hidden = true;
+    skDraw();
+  }
+  document.getElementById("sketchAreaOkBtn").addEventListener("click", function () {
+    var r = sk.crop && sk.crop.r, done = skAreaPending;
+    skAreaPending = null;
+    skEndCrop();
+    if (!r || !done) return;
+    done(skRenderForExport(r));
+  });
+  document.getElementById("sketchAreaCancelBtn").addEventListener("click", function () {
+    skAreaPending = null;
+    skEndCrop();
+  });
+
+  function skCropNorm(r) {
+    return { x0: Math.min(r.x0, r.x1), y0: Math.min(r.y0, r.y1), x1: Math.max(r.x0, r.x1), y1: Math.max(r.y0, r.y1) };
+  }
+  function skCropCorners(r) {
+    return [{ x: r.x0, y: r.y0 }, { x: r.x1, y: r.y0 }, { x: r.x1, y: r.y1 }, { x: r.x0, y: r.y1 }];
+  }
+  // pointer handlers, called from the canvas's own while marking
+  function skCropDown(p) {
+    var c = sk.crop, r = c.r, sp = skToScreen(p);
+    var corners = skCropCorners(r);
+    for (var i = 0; i < 4; i++) {
+      if (skDist(sp, skToScreen(corners[i])) < 24) {
+        var opp = corners[(i + 2) % 4];
+        c.drag = { mode: "corner", fixed: opp };
+        return;
+      }
+    }
+    if (p.x > r.x0 && p.x < r.x1 && p.y > r.y0 && p.y < r.y1) {
+      c.drag = { mode: "move", start: p, r0: Object.assign({}, r) };
+      return;
+    }
+    c.drag = { mode: "new", start: p, prev: Object.assign({}, r) };
+    c.r = { x0: p.x, y0: p.y, x1: p.x, y1: p.y };
+    skDraw();
+  }
+  function skCropMove(p) {
+    var c = sk.crop, d = c.drag;
+    if (!d) return;
+    if (d.mode === "move") {
+      var dx = p.x - d.start.x, dy = p.y - d.start.y;
+      c.r = { x0: d.r0.x0 + dx, y0: d.r0.y0 + dy, x1: d.r0.x1 + dx, y1: d.r0.y1 + dy };
+    } else if (d.mode === "corner") {
+      c.r = skCropNorm({ x0: d.fixed.x, y0: d.fixed.y, x1: p.x, y1: p.y });
+    } else {
+      c.r = skCropNorm({ x0: d.start.x, y0: d.start.y, x1: p.x, y1: p.y });
+    }
+    skDraw();
+  }
+  function skCropEnd() {
+    var c = sk.crop, d = c.drag;
+    c.drag = null;
+    c.r = skCropNorm(c.r);
+    // too small to mean anything (a tap): keep what was marked before
+    if ((c.r.x1 - c.r.x0) * sk.view.z < 16 || (c.r.y1 - c.r.y0) * sk.view.z < 16) {
+      if (d && d.prev) c.r = d.prev;
+    }
+    skDraw();
+  }
+  // the dimmed page around the area, its frame and the four dots
+  function skDrawCrop(ctx) {
+    if (!sk.crop) return;
+    var dpr = window.devicePixelRatio || 1, W = skCanvas.width / dpr, H = skCanvas.height / dpr;
+    var r = skCropNorm(sk.crop.r), a = skToScreen({ x: r.x0, y: r.y0 }), b = skToScreen({ x: r.x1, y: r.y1 });
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, W, H);
+    ctx.rect(a.x, a.y, b.x - a.x, b.y - a.y);
+    ctx.fillStyle = "rgba(20, 30, 50, 0.45)";
+    ctx.fill("evenodd");
+    ctx.strokeStyle = "#fff"; ctx.lineWidth = 3;
+    ctx.strokeRect(a.x, a.y, b.x - a.x, b.y - a.y);
+    ctx.strokeStyle = "#2e4fb8"; ctx.lineWidth = 1.5; ctx.setLineDash([7, 5]);
+    ctx.strokeRect(a.x, a.y, b.x - a.x, b.y - a.y);
+    ctx.setLineDash([]);
+    ctx.shadowColor = "rgba(0,0,0,0.35)"; ctx.shadowBlur = 4;
+    [[a.x, a.y], [b.x, a.y], [b.x, b.y], [a.x, b.y]].forEach(function (q) {
+      ctx.beginPath(); ctx.arc(q[0], q[1], 10, 0, Math.PI * 2);
+      ctx.fillStyle = "#ffd400"; ctx.fill();
+      ctx.strokeStyle = "#8a6d00"; ctx.lineWidth = 2; ctx.stroke();
+    });
+    ctx.restore();
+  }
   function loadFromLocalOrDefault() {
     return loadLocalData() || defaultData();
   }

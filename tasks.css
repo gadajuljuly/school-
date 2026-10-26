@@ -3410,6 +3410,11 @@
   .sketch-scale-chip { position: absolute; top: 8px; right: 8px; background: rgba(255, 255, 255, 0.92); border: 1px solid #9cc3ea; color: #2e4fb8; border-radius: 14px; padding: 3px 10px; font: inherit; font-size: 0.78rem; font-weight: 700; cursor: pointer; }
   .sketch-shapes-menu { position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; background: var(--paper); border: 1px solid var(--rule); border-radius: 12px; padding: 8px; box-shadow: 0 6px 20px var(--shadow); width: max-content; max-width: 92%; }
   .sketch-shapes-menu[hidden] { display: none; }
+  /* marking an area to save / share: the tools step aside for the bar */
+  .sketch-area-bar { position: absolute; top: 8px; left: 8px; right: 8px; z-index: 3; display: flex; flex-direction: column; gap: 6px; align-items: center; background: var(--paper); border: 1px solid var(--rule); border-radius: 12px; padding: 8px 10px; box-shadow: 0 6px 20px var(--shadow); font-size: 0.85rem; font-weight: 700; text-align: center; }
+  .sketch-area-bar[hidden] { display: none; }
+  .sketch-area-btns { display: flex; gap: 10px; }
+  .sketch-view.sk-cropping .sketch-tools, .sketch-view.sk-cropping .sketch-scale-chip, .sketch-view.sk-cropping .sketch-head .sk-mini, .sketch-view.sk-cropping .sketch-head .sk-head-btn { visibility: hidden; }
   .sketch-pick-menu { position: absolute; bottom: 6px; left: 8px; right: 8px; max-height: 70%; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px; background: var(--paper); border: 1px solid var(--rule); border-radius: 12px; padding: 8px; box-shadow: 0 6px 20px var(--shadow); }
   .sketch-pick-menu[hidden] { display: none; }
   #sketchFillMenu { display: block; }

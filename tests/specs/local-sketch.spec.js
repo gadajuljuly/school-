@@ -84,6 +84,7 @@ test("sketch: lines, scale, dimension, callout, text, eraser, undo; the draft st
 
   // save into a library folder as a PDF
   await page.locator("#sketchSaveBtn").click();
+  await page.locator("#sketchAreaAllBtn").click(); // the whole sketch
   await page.locator("#chatSaveFolderOverlay button", { hasText: "תוכניות" }).click();
   await expect.poll(async () => {
     const f = (await page.evaluate(() => window.__backend.tables.shared_projects[0].data.folders || [])).find((x) => x.key === "plans");
@@ -269,6 +270,7 @@ test("sketch share: a shared project's sketch can go straight into its chat as a
   await page.locator(".sk-tool[data-tool=line]").click();
   await drag(page, [40, 160], [240, 160]);
   await page.locator("#sketchShareBtn").click();
+  await page.locator("#sketchAreaAllBtn").click();
   await expect(page.locator("#sketchShareOverlay")).toBeVisible();
   await page.locator("#sketchShareChatBtn").click();
   await expect(page.locator("#sketchShareOverlay")).toBeHidden();
@@ -280,6 +282,7 @@ test("sketch share: a shared project's sketch can go straight into its chat as a
   expect(up[0].size).toBeGreaterThan(500);
   // the other choice still shares out to other apps; cancel closes it
   await page.locator("#sketchShareBtn").click();
+  await page.locator("#sketchAreaAllBtn").click();
   await page.locator("#sketchShareCancelBtn").click();
   await expect(page.locator("#sketchShareOverlay")).toBeHidden();
 });
@@ -580,4 +583,45 @@ test("sketch background: a long press on it picks it up and moves it; a quick st
   const corner = [Math.min(box.width - 20, (bg0.p.x + bg0.w - view.x) * view.z), Math.max(48, (bg0.p.y - view.y) * view.z)];
   await page.mouse.click(box.x + corner[0], box.y + corner[1]);
   expect((await els(page)).filter((e) => e.type === "image")).toHaveLength(1);
+});
+
+test("sketch save / share: just a marked area of it", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME, "+972500000002"], tasks: [] }] });
+  await page.locator("#sketchBtn").click();
+  await page.locator(".sk-tool[data-tool=line]").click();
+  await drag(page, [40, 160], [340, 160]);
+  await drag(page, [40, 400], [340, 400]);
+  await page.locator("#sketchShareBtn").click();
+  await expect(page.locator("#sketchAreaChoiceTitle")).toHaveText("מה לשתף?");
+  await page.locator("#sketchAreaPickBtn").click();
+  await expect(page.locator("#sketchAreaBar")).toBeVisible();
+  await expect(page.locator(".sketch-tools")).toBeHidden(); // the tools step aside
+  // mark a new area around the top line only (dragging outside the first one)
+  const box = await page.locator("#sketchCanvas").boundingBox();
+  await drag(page, [20, 120], [360, 310]); // (below the bar at the top)
+  // the yellow dot at its bottom-left corner pulls it down a little
+  await drag(page, [20, 310], [20, 340]);
+  // what's exported: watch the canvas that becomes the picture
+  await page.evaluate(() => {
+    window.__exported = [];
+    const orig = HTMLCanvasElement.prototype.toBlob;
+    HTMLCanvasElement.prototype.toBlob = function (cb, type, q) { window.__exported.push([this.width, this.height]); return orig.call(this, cb, type, q); };
+  });
+  await page.locator("#sketchAreaOkBtn").click();
+  await expect(page.locator("#sketchAreaBar")).toBeHidden();
+  await expect(page.locator(".sketch-tools")).toBeVisible();
+  await expect(page.locator("#sketchShareOverlay")).toBeVisible();
+  await page.locator("#sketchShareChatBtn").click();
+  await expect.poll(() => page.evaluate(() => window.__backend.uploads.length)).toBe(1);
+  const [[w, h]] = await page.evaluate(() => window.__exported);
+  // the marked 340 x 220 area's shape, not the whole drawing's (which is taller than wide)
+  expect(w / h).toBeCloseTo(340 / 220, 1);
+  // cancelling the marking leaves nothing behind
+  await page.locator("#sketchSaveBtn").click();
+  await expect(page.locator("#sketchAreaChoiceTitle")).toHaveText("מה לשמור?");
+  await page.locator("#sketchAreaPickBtn").click();
+  await page.locator("#sketchAreaCancelBtn").click();
+  await expect(page.locator("#sketchAreaBar")).toBeHidden();
+  await expect(page.locator(".sketch-tools")).toBeVisible();
+  await expect(page.locator("#chatSaveFolderOverlay")).toBeHidden();
 });
