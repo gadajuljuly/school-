@@ -660,73 +660,100 @@
     voiceOverlay.hidden = true;
   }
 
-  function saveVoiceCommand() {
-    var sheet = allSheets().find(function (s) { return s.id === voiceProject.value; });
-    if (!sheet) return;
-    if (voiceAction.value === "done") {
-      var sel = document.getElementById("voiceDoneTask");
-      var task = sel && sheet.tasks.find(function (t) { return t.id === sel.value; });
-      if (!task) return;
+  // Carries out a confirmed command - from this dialog or from the
+  // assistant (עוזר ITASK). c: { action, texts, date, reminderTime,
+  // endDate, by, doneTaskId }. Resolves { msgKey, undo(), date, taskId },
+  // or null when there was nothing to do (or a reminder time already gone
+  // - a toast says so).
+  function voiceApplyCommand(sheet, c) {
+    if (c.action === "done") {
+      var task = sheet.tasks.find(function (t) { return t.id === c.doneTaskId; });
+      if (!task) return Promise.resolve(null);
+      var was = task.status;
       task.status = 2;
       if (task.planItemId) workPlanTaskStatusChanged(sheet, task);
       saveData();
       if (sheet.shared) sendChatSystemMessage(sheet.id, "done", task.text, myPhoneNumber);
-      closeVoiceOverlay();
-      render();
-      showToast(tr("voiceDoneMsg"));
-      return;
+      return Promise.resolve({ msgKey: "voiceDoneMsg", date: task.date, taskId: task.id, undo: function () {
+        task.status = was;
+        if (task.planItemId) workPlanTaskStatusChanged(sheet, task);
+        saveData();
+      } });
     }
-    var texts = voiceItemTexts.map(function (s) { return s.replace(/\s+/g, " ").trim(); }).filter(Boolean);
-    if (!texts.length) return;
-    if (voiceAction.value === "plan") {
-      var start = voiceDate.value || todayISO();
-      var end = voiceEndDate.value && voiceEndDate.value >= start ? voiceEndDate.value : start;
-      texts.forEach(function (name) {
-        saveWorkPlanItem(sheet, {
-          id: uid(), name: name, start: start, end: end, by: voiceBy.value.replace(/\s+/g, " ").trim(),
+    var texts = (c.texts || []).map(function (s) { return s.replace(/\s+/g, " ").trim(); }).filter(Boolean);
+    if (!texts.length) return Promise.resolve(null);
+    if (c.action === "plan") {
+      var start = c.date || todayISO();
+      var end = c.endDate && c.endDate >= start ? c.endDate : start;
+      var added = texts.map(function (name) {
+        var item = {
+          id: uid(), name: name, start: start, end: end, by: (c.by || "").replace(/\s+/g, " ").trim(),
           status: "todo", progress: 0, note: "", showInTasks: true, updatedBy: myPhoneNumber || null, updatedAt: Date.now()
-        }, false);
+        };
+        saveWorkPlanItem(sheet, item, false);
+        return item;
       });
-      closeVoiceOverlay();
-      render();
-      showToast(tr("voicePlanAddedMsg"));
-      return;
+      return Promise.resolve({ msgKey: "voicePlanAddedMsg", date: start, undo: function () {
+        added.forEach(function (item) { saveWorkPlanItem(sheet, item, true); });
+      } });
     }
-    var type = voiceAction.value === "note" ? "note" : "task";
-    var date = voiceDate.value || todayISO();
+    var type = c.action === "note" ? "note" : "task";
+    var date = c.date || todayISO();
     var reminder = null;
-    if (voiceReminderTime.value) {
-      var fireAt = new Date(date + "T" + voiceReminderTime.value);
+    if (c.reminderTime) {
+      var fireAt = new Date(date + "T" + c.reminderTime);
       if (isNaN(fireAt.getTime()) || fireAt.getTime() <= Date.now()) {
         showToast(tr("taskReminderPastMsg"));
-        return;
+        return Promise.resolve(null);
       }
-      reminder = { type: "time", date: date, time: voiceReminderTime.value, fireAt: fireAt.toISOString(), firedAt: null };
+      reminder = { type: "time", date: date, time: c.reminderTime, fireAt: fireAt.toISOString(), firedAt: null };
       if (sheet.shared) reminder.by = myPhoneNumber;
     }
     var ready = (!reminder || nativeTaskAlarmPlugin) ? Promise.resolve(true) : ensurePushReadyForTaskReminder();
-    ready.then(function (ok) {
+    return ready.then(function (ok) {
       if (reminder && !ok) {
         alert(tr("taskReminderNotSupportedMsg"));
         reminder = null;
       }
+      var ids = [];
       texts.forEach(function (text) {
         var t = { id: uid(), text: text, status: 0, urgent: false, type: type, date: date, createdAt: Date.now() };
         if (type === "note") t.time = currentTimeHHMM();
         if (reminder) t.reminder = Object.assign({}, reminder);
         sheet.tasks.push(t);
+        ids.push(t.id);
         if (sheet.shared && type === "task") sendChatSystemMessage(sheet.id, "added", text, myPhoneNumber);
       });
-      closeVoiceOverlay();
-      viewingArchive = false;
-      state.viewMode = "tasks";
-      state.showingCompleted = false;
-      data.activeSheetId = sheet.id;
-      state.viewDate = clampViewDate(date);
       saveData();
-      render();
-      showToast(tr(reminder ? "voiceAddedReminderMsg" : "voiceAddedMsg"));
       if (reminder) ensureExactAlarmPermission();
+      return { msgKey: reminder ? "voiceAddedReminderMsg" : "voiceAddedMsg", date: date, taskId: ids[0], undo: function () {
+        sheet.tasks = sheet.tasks.filter(function (t) { return ids.indexOf(t.id) < 0; });
+        saveData();
+      } };
+    });
+  }
+
+  function saveVoiceCommand() {
+    var sheet = allSheets().find(function (s) { return s.id === voiceProject.value; });
+    if (!sheet) return;
+    var sel = document.getElementById("voiceDoneTask");
+    var action = voiceAction.value;
+    voiceApplyCommand(sheet, {
+      action: action, texts: voiceItemTexts, date: voiceDate.value, reminderTime: voiceReminderTime.value,
+      endDate: voiceEndDate.value, by: voiceBy.value, doneTaskId: sel && sel.value
+    }).then(function (res) {
+      if (!res) return;
+      closeVoiceOverlay();
+      if (action === "task" || action === "note") {
+        viewingArchive = false;
+        state.viewMode = "tasks";
+        state.showingCompleted = false;
+        data.activeSheetId = sheet.id;
+        state.viewDate = clampViewDate(res.date);
+        saveData();
+      }
+      render();
+      showToast(tr(res.msgKey));
     });
   }
 

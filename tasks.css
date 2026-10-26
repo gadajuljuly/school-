@@ -3414,6 +3414,31 @@
   .sketch-area-bar { position: absolute; top: 8px; left: 8px; right: 8px; z-index: 3; display: flex; flex-direction: column; gap: 6px; align-items: center; background: var(--paper); border: 1px solid var(--rule); border-radius: 12px; padding: 8px 10px; box-shadow: 0 6px 20px var(--shadow); font-size: 0.85rem; font-weight: 700; text-align: center; }
   .sketch-area-bar[hidden] { display: none; }
   .sketch-area-btns { display: flex; gap: 10px; }
+  /* עוזר ITASK - a chat with the app (opened from the home-screen widget) */
+  .assistant-view { display: flex; flex-direction: column; }
+  .assistant-view[hidden] { display: none; }
+  .assistant-title { display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .assistant-title img { width: 26px; height: 26px; border-radius: 7px; }
+  .assistant-messages { flex: 1; overflow-y: auto; padding: 12px 12px 6px; display: flex; flex-direction: column; gap: 8px; background: var(--paper); }
+  .as-msg { max-width: 86%; padding: 8px 12px; border-radius: 14px; font-size: 0.92rem; line-height: 1.4; white-space: pre-wrap; word-break: break-word; }
+  .as-me { align-self: flex-start; background: var(--accent); color: var(--accent-contrast); border-bottom-right-radius: 4px; }
+  .as-bot { align-self: flex-end; background: #fff; color: var(--ink); border: 1px solid var(--rule); border-bottom-left-radius: 4px; }
+  .as-bot b { font-weight: 800; }
+  .as-bot ul { margin: 4px 0 0; padding-inline-start: 18px; }
+  .as-bot li { margin: 2px 0; }
+  .as-group { margin-top: 6px; font-weight: 800; font-size: 0.85rem; color: var(--accent); }
+  .as-thinking { color: var(--ink-muted); font-style: italic; }
+  .as-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .as-actions button, .as-chips button { border: 1px solid var(--rule); background: var(--paper); color: var(--ink); border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 0.82rem; font-weight: 700; cursor: pointer; }
+  .as-actions button:disabled { opacity: 0.55; }
+  .as-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .assistant-form { flex: none; display: flex; align-items: center; gap: 6px; padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--rule); background: var(--paper-alt, #f4efe4); }
+  .assistant-form input { flex: 1; min-width: 0; height: 44px; border: 1px solid var(--rule); border-radius: 22px; padding: 0 16px; font: inherit; font-size: 1rem; background: #fff; }
+  .assistant-mic, .assistant-send { flex: none; width: 44px; height: 44px; border-radius: 50%; border: none; font-size: 1.2rem; cursor: pointer; }
+  .assistant-mic { background: #fff; box-shadow: 0 0 0 1px var(--rule); }
+  .assistant-mic.listening { background: #d32f2f; color: #fff; animation: as-pulse 1s infinite; }
+  .assistant-send { background: var(--accent); color: var(--accent-contrast); transform: scaleX(-1); }
+  @keyframes as-pulse { 50% { box-shadow: 0 0 0 8px rgba(211,47,47,0.2); } }
   .sk-lib-list { max-height: 55vh; overflow-y: auto; }
   .sk-lib-folder { font-size: 0.8rem; color: var(--ink-muted); padding: 10px 4px; text-align: center; }
   .sk-lib-back { font-weight: 800; color: var(--accent) !important; }

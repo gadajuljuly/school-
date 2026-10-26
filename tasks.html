@@ -35,7 +35,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<link rel="stylesheet" href="tasks.css?v=7a6bd66e1e">
+<link rel="stylesheet" href="tasks.css?v=ddd8d0f46a">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -1202,6 +1202,19 @@
     </div>
   </div>
 
+  <div class="report-view assistant-view" id="assistantView" hidden>
+    <div class="report-head">
+      <button type="button" class="report-back-btn" id="assistantBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
+      <div class="report-head-title assistant-title"><img src="tasks-icon-192.png" alt=""><span data-i18n="assistantTitle">עוזר ITASK</span></div>
+    </div>
+    <div class="assistant-messages" id="assistantMessages"></div>
+    <form class="assistant-form" id="assistantForm" autocomplete="off">
+      <input type="text" id="assistantInput" maxlength="300" data-i18n-placeholder="assistantPlaceholder" placeholder="מה לעשות?">
+      <button type="button" class="assistant-mic" id="assistantMicBtn" data-i18n-title="voiceBtnTitle" title="פקודה קולית">🎤</button>
+      <button type="submit" class="assistant-send" id="assistantSendBtn" aria-label="send">➤</button>
+    </form>
+  </div>
+
   <div class="report-view" id="libraryView" hidden>
     <div class="report-head">
       <button type="button" class="report-back-btn" id="libraryBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
@@ -1415,6 +1428,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=9b00bdb9f2"></script>
+<script src="tasks-app.js?v=3c9ab5564a"></script>
 </body>
 </html>

@@ -219,6 +219,7 @@
   function openLaunchView(view, text) {
     if (view === "share") { openShareTaskModal(text); return; }
     if (view === "workplan") { openWorkPlan(); return; }
+    if (view === "assistant" || view === "assistant-listen") { openAssistant(view === "assistant-listen"); return; }
     if (!view || view.indexOf("task|") !== 0) return;
     var parts = view.split("|");
     closeMoveTask();
