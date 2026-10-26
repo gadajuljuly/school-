@@ -91,11 +91,13 @@ public class ItaskAlarmPlugin extends Plugin {
     }
 
     // What this build of the app can do, for the page to check before
-    // relying on it (version 22+: quiet work-plan notices).
+    // relying on it (version 22+: quiet work-plan notices; 23+: the
+    // "עוזר ITASK" home-screen bar).
     @PluginMethod
     public void features(PluginCall call) {
         JSObject result = new JSObject();
         result.put("quietAlarms", true);
+        result.put("assistantWidget", true);
         call.resolve(result);
     }
 

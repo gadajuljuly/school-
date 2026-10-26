@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="itask_assistant_label">ITASK assistant</string>
+    <string name="itask_assistant_hint">What to do?</string>
+    <string name="itask_assistant_mic">Voice command</string>
+    <string name="itask_assistant_description">Type or say what to do - a task, a reminder, or what's on today</string>
+</resources>

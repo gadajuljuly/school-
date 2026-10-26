@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="itask_assistant_label">עוזר ITASK</string>
+    <string name="itask_assistant_hint">מה לעשות?</string>
+    <string name="itask_assistant_mic">פקודה קולית</string>
+    <string name="itask_assistant_description">כתבו או אמרו מה לעשות – משימה, תזכורת, או מה יש היום</string>
+</resources>
