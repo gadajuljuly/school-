@@ -625,3 +625,27 @@ test("sketch save / share: just a marked area of it", async ({ page }) => {
   await expect(page.locator(".sketch-tools")).toBeVisible();
   await expect(page.locator("#chatSaveFolderOverlay")).toBeHidden();
 });
+
+test("sketch background: a picture from the project's library (any folder)", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
+  // the library: a picture inside a subfolder, a PDF and a Word file elsewhere
+  await page.evaluate(() => {
+    const folders = [
+      { id: "f1", key: "plans", name: null, files: [{ id: "x1", name: "חזית.png", path: "p1/f1/a.png", type: "image/png" }] },
+      { id: "f2", key: null, name: "חשמל", parentId: "f1", files: [{ id: "x2", name: "לוח.png", path: "p1/f2/b.png", type: "image/png" }, { id: "x3", name: "מפרט.docx", path: "p1/f2/c.docx", type: "application/msword" }] },
+    ];
+    window.__backend.tables.shared_projects[0].data.folders = folders;
+    // signed links lead to a real picture
+    const st = window.__backend.client.storage;
+    const from = st.from;
+    st.from = (b) => Object.assign(from(b), { createSignedUrl: () => Promise.resolve({ data: { signedUrl: location.origin + "/tasks-icon-192.png" }, error: null }) });
+  });
+  await page.locator("#sketchBtn").click();
+  await page.locator("#sketchBgBtn").click();
+  await page.locator("#sketchBgLibraryBtn").click();
+  await expect(page.locator("#sketchLibOverlay")).toBeVisible();
+  await expect(page.locator("#sketchLibList .sk-lib-folder")).toHaveText(["📁 תוכניות", "📁 תוכניות / חשמל"]);
+  await expect(page.locator("#sketchLibList button")).toHaveText(["🖼 חזית.png", "🖼 לוח.png"]); // no Word file
+  await page.locator("#sketchLibList button", { hasText: "לוח.png" }).click();
+  await expect.poll(async () => (await els(page)).filter((e) => e.type === "image").length).toBe(1);
+});

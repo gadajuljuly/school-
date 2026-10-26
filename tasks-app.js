@@ -413,6 +413,9 @@
     sketchAreaPick: { he: "✂ תחימת אזור", en: "✂ Mark an area", ar: "✂ تحديد منطقة", ru: "✂ Выделить область" },
     sketchAreaHint: { he: "סמנו את האזור – גררו את הנקודות הצהובות לשינוי", en: "Mark the area - drag the yellow dots to change it", ar: "حدد المنطقة – اسحب النقاط الصفراء لتغييرها", ru: "Выделите область – тяните жёлтые точки, чтобы изменить" },
     sketchAreaOk: { he: "✓ אישור", en: "✓ OK", ar: "✓ موافق", ru: "✓ Готово" },
+    sketchBgLibrary: { he: "📚 מהספרייה של הפרויקט", en: "📚 From the project's library", ar: "📚 من مكتبة المشروع", ru: "📚 Из библиотеки проекта" },
+    sketchLibTitle: { he: "איזה קובץ מהספרייה לשים ברקע?", en: "Which library file goes in the background?", ar: "أي ملف من المكتبة تريد وضعه في الخلفية؟", ru: "Какой файл из библиотеки поставить фоном?" },
+    sketchLibEmpty: { he: "אין בספרייה של הפרויקט תמונות או קבצי PDF", en: "The project's library has no pictures or PDF files", ar: "لا توجد صور أو ملفات PDF في مكتبة المشروع", ru: "В библиотеке проекта нет изображений и PDF" },
     sketchBgMoveHint: { he: "לחיצה ארוכה על הרקע וגרירה מזיזות אותו בדף", en: "Long-press the background and drag to move it on the page", ar: "اضغط مطولاً على الخلفية واسحب لتحريكها في الصفحة", ru: "Нажмите и удерживайте фон, затем тяните, чтобы сдвинуть его" },
     sketchBgCamera: { he: "📷 צילום", en: "📷 Take a photo", ar: "📷 التقاط صورة", ru: "📷 Сфотографировать" },
     sketchBgFile: { he: "🖼 תמונה / PDF", en: "🖼 Picture / PDF", ar: "🖼 صورة / PDF", ru: "🖼 Изображение / PDF" },
@@ -16200,6 +16203,48 @@
   });
   document.getElementById("sketchImageBtn").addEventListener("click", function () { skBgMenu.hidden = true; skImageInput.click(); });
   document.getElementById("sketchBgCameraBtn").addEventListener("click", function () { skBgMenu.hidden = true; skImageCameraInput.click(); });
+  // a picture or PDF already in the project's library (any folder)
+  var skLibOverlay = document.getElementById("sketchLibOverlay");
+  function skIsImg(entry) { return isImageFile(entry) || /\.(jpe?g|png|webp|gif)$/i.test(entry.name || ""); }
+  function skIsBgFile(entry) {
+    return skIsImg(entry) || /pdf/i.test(entry.type || "") || /\.pdf$/i.test(entry.name || "");
+  }
+  document.getElementById("sketchBgLibraryBtn").addEventListener("click", function () {
+    skBgMenu.hidden = true;
+    var sheet = allSheets().find(function (s) { return s.id === sk.sheetId; });
+    if (!sheet || !supabaseClient) return;
+    ensureLibraryFolders(sheet, function (folders) {
+      var list = document.getElementById("sketchLibList");
+      list.innerHTML = "";
+      var rows = folders.map(function (f) { return { f: f, path: libraryFolderPath(folders, f), files: (f.files || []).filter(skIsBgFile) }; })
+        .filter(function (r) { return r.files.length; })
+        .sort(function (a, b) { return a.path.localeCompare(b.path); });
+      if (!rows.length) { showToast(tr("sketchLibEmpty")); return; }
+      rows.forEach(function (r) {
+        list.appendChild(Object.assign(document.createElement("div"), { className: "sk-lib-folder", textContent: "📁 " + r.path }));
+        r.files.forEach(function (entry) {
+          var b = document.createElement("button");
+          b.type = "button";
+          b.textContent = (skIsImg(entry) ? "🖼 " : "📄 ") + entry.name;
+          b.addEventListener("click", function () {
+            skLibOverlay.hidden = true;
+            showToast(tr("sketchPdfLoading"));
+            resolveFileUrl(entry.path).then(fetchFileBlob).then(function (blob) {
+              var file = new File([blob], entry.name, { type: entry.type || blob.type });
+              if (!skIsImg(entry)) skPdfBackground(file);
+              else scanLoadImage(file).then(function (canvas) { skPlaceBackground(canvas, 1400); });
+            }).catch(function (err) {
+              console.error("sketch library background failed:", err);
+              alert(tr("chatFileOpenError"));
+            });
+          });
+          list.appendChild(b);
+        });
+      });
+      skLibOverlay.hidden = false;
+    });
+  });
+  document.getElementById("sketchLibCancelBtn").addEventListener("click", function () { skLibOverlay.hidden = true; });
   document.getElementById("sketchBgRemoveBtn").addEventListener("click", function () {
     skBgMenu.hidden = true;
     skCommit(function () { sk.els = sk.els.filter(function (el) { return el.type !== "image"; }); });

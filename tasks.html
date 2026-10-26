@@ -35,7 +35,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<link rel="stylesheet" href="tasks.css?v=f8ae490f10">
+<link rel="stylesheet" href="tasks.css?v=b66a29191f">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -756,6 +756,15 @@
       </div>
     </div>
   </div>
+  <div class="modal-overlay" id="sketchLibOverlay" hidden style="z-index:41">
+    <div class="modal-box" role="alertdialog" aria-modal="true">
+      <p class="modal-message" data-i18n="sketchLibTitle">איזה קובץ מהספרייה לשים ברקע?</p>
+      <div class="move-task-projects sk-lib-list" id="sketchLibList"></div>
+      <div class="modal-actions">
+        <button type="button" class="modal-btn modal-btn-no" id="sketchLibCancelBtn" data-i18n="cancelBtn">ביטול</button>
+      </div>
+    </div>
+  </div>
   <div class="modal-overlay" id="sketchPdfPageOverlay" hidden style="z-index:41">
     <div class="modal-box" role="alertdialog" aria-modal="true">
       <p class="modal-message" data-i18n="sketchPdfPageTitle">איזה עמוד מהקובץ לשים ברקע?</p>
@@ -1111,6 +1120,7 @@
       <div class="sketch-shapes-menu" id="sketchBgMenu" hidden>
         <button type="button" class="sk-head-btn" id="sketchBgCameraBtn" data-i18n="sketchBgCamera">📷 צילום</button>
         <button type="button" class="sk-head-btn" id="sketchImageBtn" data-i18n="sketchBgFile">🖼 תמונה / PDF</button>
+        <button type="button" class="sk-head-btn" id="sketchBgLibraryBtn" data-i18n="sketchBgLibrary">📚 מהספרייה של הפרויקט</button>
         <button type="button" class="sk-head-btn" id="sketchBgRemoveBtn" data-i18n="sketchBgRemove">🗑 הסרת הרקע</button>
       </div>
       <div class="sketch-pick-menu" id="sketchObjMenu" hidden></div>
@@ -1405,6 +1415,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=6d147f66f5"></script>
+<script src="tasks-app.js?v=1f3327ee1a"></script>
 </body>
 </html>
