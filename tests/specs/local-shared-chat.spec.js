@@ -191,3 +191,13 @@ test("an image in the chat zooms with two fingers, moves with one, and a double 
   await page.locator(".image-viewer-close").click();
   await expect(page.locator("#imageViewerOverlay")).toBeHidden();
 });
+
+test("opening the chat doesn't bring up the keyboard - only tapping the writing box does", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheet: SHEET });
+  await page.locator("#chatBtn").click();
+  await expect(page.locator("#chatView")).toBeVisible();
+  await page.waitForTimeout(300);
+  await expect(page.locator("#chatInput")).not.toBeFocused();
+  await page.locator("#chatInput").click();
+  await expect(page.locator("#chatInput")).toBeFocused();
+});

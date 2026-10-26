@@ -564,7 +564,8 @@
     refreshActiveChat();
     loadDeviceContactsIfNeeded();
     chatPollTimer = setInterval(refreshActiveChat, 5000);
-    chatInput.focus();
+    // no keyboard until the writing box is tapped
+    if (document.activeElement === chatInput) chatInput.blur();
   }
   // Tears down chat's own transient state (recording/editing/replying/
   // mention popup/poll timer) - called from render() itself (see its top,
