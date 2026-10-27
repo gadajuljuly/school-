@@ -111,7 +111,8 @@
     var office = !wpState.sheetId;
     var head = [tr("workPlanExcelActivity"), tr("workPlanHammock"), tr("workPlanBy"), tr("workPlanFrom"), tr("workPlanTo"),
       tr("workPlanExcelDays"), tr("workPlanStatus"), tr("workPlanExcelDone"), tr("workPlanStatusLate"),
-      tr("workPlanExcelBaseStart"), tr("workPlanExcelBaseEnd"), tr("workPlanExcelSlip"), tr("workPlanNote")];
+      tr("workPlanExcelBaseStart"), tr("workPlanExcelBaseEnd"), tr("workPlanExcelSlip"),
+      tr("workPlanActualStart"), tr("workPlanActualEnd"), tr("workPlanForecast"), tr("workPlanNote")];
     if (office) head.unshift(tr("shareTaskProject"));
     var rows = [head];
     var statusText = { todo: tr("workPlanStatusTodo"), prog: tr("workPlanStatusProg"), done: tr("workPlanStatusDone") };
@@ -123,7 +124,7 @@
         var row = [x.name, hams[x.hammock] || "", x.by || "", wpExcelDate(x.start), wpExcelDate(x.end),
           wpDiff(x.start, x.end) + 1, statusText[x.status] || "", (x.status === "done" ? 100 : x.progress || 0) + "%",
           wpIsLate(x) ? "✓" : "", base ? wpExcelDate(base.start) : "", base ? wpExcelDate(base.end) : "",
-          base ? wpDiff(base.end, x.end) : "", x.note || ""];
+          base ? wpDiff(base.end, x.end) : "", wpExcelDate(x.actualStart), wpExcelDate(x.actualEnd), wpExcelDate(wpForecastEnd(x)), x.note || ""];
         if (office) row.unshift(g.sheet.name);
         rows.push(row);
       });

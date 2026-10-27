@@ -38,7 +38,7 @@
 <script src="vendor/supabase-js-2.118.0.js"></script>
 <script src="vendor/firebase-app-compat-10.7.1.js"></script>
 <script src="vendor/firebase-auth-compat-10.7.1.js"></script>
-<link rel="stylesheet" href="tasks.css?v=8c12c7e675">
+<link rel="stylesheet" href="tasks.css?v=b014ebe5b6">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -155,6 +155,10 @@
       </div>
       <label id="wpProgressLabel"></label>
       <input type="range" id="wpProgress" min="0" max="100" step="5" value="0">
+      <div class="cal-form-row" id="wpActualRow" hidden>
+        <div class="wp-field"><label data-i18n="workPlanActualStart">התחלה בפועל</label><input type="date" id="wpActualStart"></div>
+        <div class="wp-field" id="wpActualEndField"><label data-i18n="workPlanActualEnd">סיום בפועל</label><input type="date" id="wpActualEnd"></div>
+      </div>
       <label data-i18n="workPlanNote">הערה</label>
       <textarea id="wpNote" maxlength="500"></textarea>
       <button type="button" class="wp-small-btn wp-postpone-btn" id="wpPostponeBtn" data-i18n="workPlanPostpone">⏩ דחייה</button>
@@ -1501,6 +1505,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=ad7c09f926"></script>
+<script src="tasks-app.js?v=ce7740aec9"></script>
 </body>
 </html>

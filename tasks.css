@@ -3306,6 +3306,9 @@
      bar with end ticks) and its activities, edged in its colour */
   /* קו בסיס: where an activity was planned, a thin grey bar along the
      bottom of its row; slipped ones say by how much */
+  /* צפי: where an activity under way is heading, past its planned end */
+  .wp-forecast { position: absolute; top: 10px; height: 26px; border: 2px dashed #c05023; border-right: none; border-radius: 5px 0 0 5px; background: repeating-linear-gradient(-45deg, rgba(192,80,35,0.12) 0 4px, transparent 4px 8px); z-index: 1; cursor: pointer; box-sizing: border-box; }
+  .wp-forecast-label { color: #c05023 !important; font-weight: 700; }
   .wp-base-bar { position: absolute; bottom: 2px; height: 4px; border-radius: 2px; background: #8a8f98; opacity: 0.75; z-index: 0; }
   .wp-base-bar.wp-base-late { background: #c05023; }
   .wp-slip { color: #c05023 !important; font-weight: 800; }

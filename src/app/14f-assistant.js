@@ -69,7 +69,7 @@
   }
 
   // ---- questions -------------------------------------------------------------
-  var ASSISTANT_QUESTION_RE = /^\s*(?:מה|מהן|מהם|אילו|איזה|אלו|כמה|תראה|תראי|הראה|הצג|יש\s+לי|שו|ماذا|ما\s|ما$|شو|ايش|إيش|اعرض|وريني|what|show)(?:\s|$)/i;
+  var ASSISTANT_QUESTION_RE = /^\s*(?:מתי|متى|when|מה|מהן|מהם|אילו|איזה|אלו|כמה|תראה|תראי|הראה|הצג|יש\s+לי|שו|ماذا|ما\s|ما$|شو|ايش|إيش|اعرض|وريني|what|show)(?:\s|$)/i;
   var ASSISTANT_COMMAND_RE = /(?:^|\s)(?:תוסיף|תוסיפי|הוסף|הוסיפי|תרשום|רשום|תזכיר|תזכירי|תזכורת|סמן|תסמן|סיימתי|أضف|اضف|ذكرني|سجل)(?:\s|$)/;
   function assistantIsQuestion(text) {
     if (ASSISTANT_COMMAND_RE.test(" " + text + " ")) return false;
@@ -137,6 +137,26 @@
   // answers a question; false when it isn't one it knows
   function assistantAnswer(text) {
     var t = " " + text + " ";
+    // "מתי צפוי להסתיים השלד?" - an activity's dates, as planned / as it goes
+    if (/^\s*(?:מתי|متى|when)\s/i.test(text)) {
+      var hit = assistantFindActivity(text.replace(/[?؟]/g, " ").replace(/\s(?:מתי|צפוי|צפויה|יסתיים|תסתיים|להסתיים|יתחיל|תתחיל|להתחיל|מסתיים|מסתיימת|ה?פעילות|متى)(?=\s|$)/g, " "));
+      if (hit) {
+        var x = hit.item, f = wpForecastEnd(x);
+        assistantBubble("bot", function (el) {
+          assistantAdd(el, "b", "📊 " + x.name + " – " + hit.sheet.name);
+          var lines = [];
+          if (x.status === "done") lines.push(tr("assistantActDone").replace("{date}", isoToDisplay(x.actualEnd || x.end)));
+          else {
+            lines.push(tr("assistantActPlanned").replace("{from}", isoToDisplay(x.start)).replace("{to}", isoToDisplay(x.end)));
+            if (x.actualStart) lines.push(tr("assistantActStarted").replace("{date}", isoToDisplay(x.actualStart)).replace("{p}", x.progress || 0));
+            if (f) lines.push(tr(f > x.end ? "assistantActForecastLate" : "assistantActForecast").replace("{date}", isoToDisplay(f)).replace("{n}", wpDiff(x.end, f)));
+            else if (wpIsLate(x)) lines.push(tr("assistantActLateNoPace"));
+          }
+          assistantAdd(el, "div", lines.join("\n"));
+        });
+        return true;
+      }
+    }
     if (/איחור|מאחר|מתעכב|באיחור|متأخر|تأخير|متأخرة/.test(t)) {
       assistantBubble("bot", function (el) {
         assistantAdd(el, "b", tr("assistantLateTitle"));

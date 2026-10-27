@@ -215,6 +215,7 @@
           t.appendChild(bar);
         }
         wpDrawBaselineBar(t, g.sheet, item, range, dayW);
+        wpDrawForecast(t, name, g.sheet, item, range, dayW, forPdf);
         row.appendChild(t);
         if (!forPdf) {
           row.addEventListener("click", function () { wpRowTapped(g.sheet, item); });
@@ -335,6 +336,7 @@
     document.getElementById("wpPostponeBtn").hidden = isNew;
     wpSetStatus(copy.status || "todo");
     wpSetProgress(copy.progress || 0);
+    wpFillActuals(copy);
     // Head Office adding: which project
     wpProjectRow.hidden = !(isNew && !wpState.sheetId);
     if (!wpProjectRow.hidden) {
@@ -381,8 +383,11 @@
       if (hammock) out.push(hammock);
       return out.filter(function (h) { return plan.some(function (x) { return x.hammock === h.id; }); });
     };
+    var prev = item && (sheet.workPlan || []).find(function (x) { return x.id === item.id; });
+    var change = item && !remove ? wpApplyActuals(prev, item) : null;
     sheet.workPlan = apply(sheet.workPlan);
     sheet.workHammocks = applyHammocks(sheet.workHammocks, sheet.workPlan);
+    wpAfterActuals(sheet, item, change);
     if (!sheet.shared) {
       saveData();
       return;
@@ -421,13 +426,17 @@
       note: wpNote.value.trim(),
       showInTasks: wpShowInTasks.checked,
       after: wpAfter.value || null,
+      actualStart: wpActualStart.value || null,
+      actualEnd: wpActualEnd.value || null,
       hammock: wpHammockSelect.value && wpHammockSelect.value !== "__new" ? wpHammockSelect.value : null,
       updatedBy: myPhoneNumber || null,
       updatedAt: Date.now()
     });
     var fromTaskId = wpEditing.fromTaskId;
     var newHammock = wpEditing.newHammock && wpEditing.newHammock.id === item.hammock ? wpEditing.newHammock : null;
+    wpEditorSaving = true;
     saveWorkPlanItem(sheet, item, false, newHammock);
+    wpEditorSaving = false;
     if (fromTaskId) {
       var task = sheet.tasks.find(function (t) { return t.id === fromTaskId; });
       if (task && !task.planItemId) {
@@ -466,6 +475,7 @@
       wpSetStatus(status);
       if (status === "done") wpSetProgress(100);
       else if (status === "todo") wpSetProgress(0);
+      wpActualsForStatus(status);
     });
   });
   wpProgress.addEventListener("input", function () {
@@ -473,6 +483,7 @@
     wpSetProgress(p);
     if (p === 100) wpSetStatus("done");
     else if (p > 0) wpSetStatus("prog");
+    wpActualsForStatus(wpEditStatus);
   });
 
   // ---- PDF -------------------------------------------------------------

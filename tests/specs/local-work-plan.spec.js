@@ -518,7 +518,8 @@ test("baseline (קו בסיס): saved, a slipped activity shows its grey planned
   const lines = csv.slice(1).split("\r\n");
   expect(lines[0]).toContain("קו בסיס – סיום");
   const elec = lines.find((l) => l.startsWith("חשמל"));
-  expect(elec.split(",").slice(-2)[0]).toBe("3"); // slipped 3 days
+  const col = lines[0].split(",").indexOf("סטייה (ימים)");
+  expect(elec.split(",")[col]).toBe("3"); // slipped 3 days
   expect(lines.find((l) => l.startsWith("שלד"))).toContain("50%");
 
   // delete it
@@ -527,4 +528,72 @@ test("baseline (קו בסיס): saved, a slipped activity shows its grey planned
   if (await page.locator("#confirmOverlay").isVisible()) await page.locator("#confirmYesBtn").click();
   await expect(chart.locator(".wp-base-bar")).toHaveCount(0);
   await expect.poll(serverBase).toBe(null);
+});
+
+test("actuals: started / finished dates kept; done early brings what follows forward, done late pushes it on", async ({ page }) => {
+  const plan = [
+    { id: "a1", name: "שלד", start: iso(-5), end: iso(5), status: "todo", progress: 0, by: "" },
+    { id: "a2", name: "טיח", start: iso(6), end: iso(10), status: "todo", progress: 0, by: "", after: "a1" },
+    { id: "b1", name: "חפירה", start: iso(-8), end: iso(-2), status: "prog", progress: 80, by: "", actualStart: iso(-8) },
+    { id: "b2", name: "יסודות", start: iso(-1), end: iso(3), status: "todo", progress: 0, by: "", after: "b1" },
+  ];
+  await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [], workPlan: plan }] });
+  await page.locator("#workPlanBtn").click();
+  const chart = page.locator("#workPlanChart");
+  const item = async (id) => (await serverPlan(page, "p1")).find((x) => x.id === id);
+
+  // "שלד" goes under way: its actual start is kept (it was due 5 days ago)
+  await chart.locator(".wp-row", { hasText: "שלד" }).click();
+  await page.locator(".wp-status[data-status=prog]").click();
+  await expect(page.locator("#wpActualStart")).toHaveValue(iso(-5));
+  await page.locator("#workPlanEditForm button[type=submit]").click();
+  await expect.poll(async () => (await item("a1")).actualStart).toBe(iso(-5));
+
+  // ...and is done today, 5 days early: its end moves to today, "טיח" is offered to come forward
+  await chart.locator(".wp-row", { hasText: "שלד" }).click();
+  await page.locator(".wp-status[data-status=done]").click();
+  await expect(page.locator("#wpActualEnd")).toHaveValue(iso(0));
+  await page.locator("#workPlanEditForm button[type=submit]").click();
+  await expect(page.locator("#confirmOverlay")).toBeVisible();
+  await expect(page.locator("#confirmOverlay")).toContainText("הסתיימה מוקדם");
+  await page.locator("#confirmYesBtn").click();
+  await expect.poll(async () => (await item("a1"))).toMatchObject({ status: "done", end: iso(0), actualEnd: iso(0) });
+  await expect.poll(async () => (await item("a2"))).toMatchObject({ start: iso(1), end: iso(5) });
+
+  // "חפירה" (due 2 days ago) is done today: its end moves on, "יסודות" with it
+  await chart.locator(".wp-row", { hasText: "חפירה" }).click();
+  await page.locator(".wp-status[data-status=done]").click();
+  await page.locator("#workPlanEditForm button[type=submit]").click();
+  await expect(page.locator("#confirmOverlay")).toBeVisible();
+  await page.locator("#confirmYesBtn").click();
+  await expect.poll(async () => (await item("b1"))).toMatchObject({ end: iso(0), actualStart: iso(-8), actualEnd: iso(0) });
+  await expect.poll(async () => (await item("b2")).start).toBe(iso(1));
+});
+
+test("forecast: an activity under way shows where its pace leads; tapping the tail replans by it; the assistant knows", async ({ page }) => {
+  const plan = [
+    // 40% after 6 days (today included): 9 more days -> today+9, planned today+2
+    { id: "c1", name: "שלד", start: iso(-5), end: iso(2), status: "prog", progress: 40, by: "", actualStart: iso(-5) },
+    { id: "c2", name: "חשמל", start: iso(3), end: iso(8), status: "todo", progress: 0, by: "", after: "c1" },
+  ];
+  await openWithSharedProject(page, { phone: ME, native: true, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [], workPlan: plan }] });
+  await page.locator("#workPlanBtn").click();
+  const row = page.locator("#workPlanChart .wp-row", { hasText: "שלד" });
+  const shown = iso(9).split("-").reverse().slice(0, 2).join("/");
+  await expect(row.locator(".wp-forecast-label")).toHaveText("צפי: " + shown);
+  await expect(row.locator(".wp-forecast")).toBeVisible();
+  // the assistant answers from the same numbers
+  await page.evaluate(() => window.__native.listeners.launchView({ view: "assistant" }));
+  await page.locator("#assistantInput").fill("מתי צפוי להסתיים השלד?");
+  await page.locator("#assistantSendBtn").click();
+  await expect(page.locator("#assistantMessages .as-bot").last()).toContainText("צפויה להסתיים ב-" + shown + " – 7 ימים אחרי המתוכנן");
+  await page.locator("#assistantBackBtn").click();
+  // replan by it: the end moves, and what's linked after it follows
+  await row.locator(".wp-forecast").click();
+  await expect(page.locator("#confirmOverlay")).toContainText(shown);
+  await page.locator("#confirmYesBtn").click();
+  await expect.poll(async () => (await serverPlan(page, "p1")).find((x) => x.id === "c1").end).toBe(iso(9));
+  if (await page.locator("#confirmOverlay").isVisible()) await page.locator("#confirmYesBtn").click();
+  await expect.poll(async () => (await serverPlan(page, "p1")).find((x) => x.id === "c2").start).toBe(iso(10));
+  await expect(row.locator(".wp-forecast")).toHaveCount(0); // on plan now
 });
