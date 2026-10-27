@@ -14,9 +14,9 @@ const tasksOf = (page) => page.evaluate(() => window.__backend.tables.shared_pro
 async function openFromWidget(page, view) {
   await expect.poll(() => page.evaluate(() => !!(window.__native.listeners && window.__native.listeners.launchView))).toBe(true);
   await page.evaluate((v) => window.__native.listeners.launchView({ view: v }), view);
-  await expect(page.locator("#assistantView")).toBeVisible();
+  await expect(page.locator("#assistantDock")).toBeVisible();
 }
-const bot = (page) => page.locator("#assistantMessages .as-bot");
+const bot = (page) => page.locator("#assistantDockReply .as-bot");
 const say = async (page, text) => {
   await page.locator("#assistantInput").fill(text);
   await page.locator("#assistantSendBtn").click();
@@ -63,7 +63,7 @@ test("a command is carried out at once, with undo; a done task; the widget's �
   await page.evaluate(() => { window.__voiceSay = "תזכיר לי מחר ב-9 להתקשר לקבלן החשמל"; });
   await openFromWidget(page, "assistant-listen");
   // heard and done without a tap
-  await expect(page.locator("#assistantMessages .as-me").last()).toHaveText("תזכיר לי מחר ב-9 להתקשר לקבלן החשמל");
+  await expect(page.locator("#assistantDockReply .as-me").last()).toHaveText("תזכיר לי מחר ב-9 להתקשר לקבלן החשמל");
   await expect(bot(page).last()).toContainText("✓");
   await expect(bot(page).last()).toContainText("09:00");
   await expect.poll(async () => (await tasksOf(page)).find((t) => /קבלן החשמל/.test(t.text))?.reminder?.time).toBe("09:00");
@@ -140,7 +140,53 @@ test("morning summary: a quiet notification each morning with the day's tasks, l
   await expect.poll(async () => (await morning()).length).toBe(0);
   // the tap: the assistant answers what's on today
   await page.evaluate(() => window.__native.listeners.launchView({ view: "assistant-today" }));
-  await expect(page.locator("#assistantView")).toBeVisible();
-  await expect(page.locator("#assistantMessages .as-me").last()).toHaveText("מה יש לי היום?");
+  await expect(page.locator("#assistantDock")).toBeVisible();
+  await expect(page.locator("#assistantDockReply .as-me").last()).toHaveText("מה יש לי היום?");
   await expect(bot(page).last()).toContainText("לבדוק ברזל בקומה 3");
+});
+
+test("the bar stays over the app; 'תציג' opens the project's plan / tasks / diary / chat under it; commands follow what's shown", async ({ page }) => {
+  const OTHER = { id: "p2", name: "חניון", members: [ME], tasks: [{ id: "x1", text: "לסמן חניות", status: 0, type: "task", date: iso(1), createdAt: 1 }],
+    workPlan: [{ id: "q1", name: "ריצוף", start: iso(0), end: iso(6), status: "todo", progress: 0, by: "" }] };
+  await openWithSharedProject(page, { phone: ME, native: true, sheets: [SHEET, OTHER] });
+  await openFromWidget(page, "assistant");
+
+  // the plan of a named project - shown above the bar (the bar isn't covered)
+  await say(page, "תציג לי את תוכנית העבודה של חניון");
+  await expect(page.locator("#workPlanView")).toBeVisible();
+  await expect(page.locator("#workPlanTitle")).toContainText("חניון");
+  await expect(bot(page).last()).toContainText("תוכנית העבודה – חניון");
+  const plan = await page.locator("#workPlanView").boundingBox(), dock = await page.locator("#assistantDock").boundingBox();
+  expect(plan.y + plan.height).toBeLessThanOrEqual(dock.y + 1);
+  await expect(page.locator("#assistantInput")).toBeVisible();
+
+  // a command about it, typed: the plan on screen changes
+  await say(page, "עדכן ריצוף ל-30%");
+  await expect(page.locator("#workPlanChart .wp-row", { hasText: "ריצוף" })).toContainText("30%");
+
+  // tasks of a project for a day
+  await say(page, "תציג את המשימות של חניון מחר");
+  await expect(page.locator("#workPlanView")).toBeHidden();
+  await expect(page.locator("#taskList li.task", { hasText: "לסמן חניות" })).toBeVisible();
+  // a new task lands in what's shown (that project, that day)
+  await say(page, "הוסף משימה לצבוע קווים");
+  await expect(page.locator("#taskList li.task", { hasText: "לצבוע קווים" })).toBeVisible();
+  const added = (await page.evaluate(() => window.__backend.tables.shared_projects.find((r) => r.id === "p2").data.tasks))
+    .find((t) => /לצבוע קווים/.test(t.text));
+  expect(added.date).toBe(iso(1));
+
+  // the diary, the chat
+  await say(page, "תציג את היומן של בניין A");
+  await expect(page.locator("#diaryView")).toBeVisible();
+  await say(page, "פתח את הצ'אט");
+  await expect(page.locator("#chatView")).toBeVisible();
+
+  // the whole conversation, one tap away
+  await page.locator("#assistantDockHistoryBtn").click();
+  await expect(page.locator("#assistantView")).toBeVisible();
+  await expect(page.locator("#assistantMessages .as-me")).toHaveCount(6);
+  await page.locator("#assistantBackBtn").click();
+  // ✕ closes the bar
+  await page.locator("#assistantDockCloseBtn").click();
+  await expect(page.locator("#assistantDock")).toBeHidden();
 });

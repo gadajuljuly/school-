@@ -38,7 +38,7 @@
 <script src="vendor/supabase-js-2.118.0.js"></script>
 <script src="vendor/firebase-app-compat-10.7.1.js"></script>
 <script src="vendor/firebase-auth-compat-10.7.1.js"></script>
-<link rel="stylesheet" href="tasks.css?v=b014ebe5b6">
+<link rel="stylesheet" href="tasks.css?v=e3b833b176">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -672,6 +672,16 @@
         </div>
       </div>
     </div>
+    <div class="assistant-dock" id="assistantDock" hidden>
+      <div class="assistant-dock-reply" id="assistantDockReply"></div>
+      <form class="assistant-form" id="assistantForm" autocomplete="off">
+        <button type="button" class="assistant-dock-btn" id="assistantDockCloseBtn" data-i18n-title="assistantClose" title="סגירת העוזר">✕</button>
+        <button type="button" class="assistant-dock-btn" id="assistantDockHistoryBtn" data-i18n-title="assistantHistoryTitle" title="השיחה עם העוזר">🕘</button>
+        <input type="text" id="assistantInput" maxlength="300" placeholder="מה לעשות?">
+        <button type="button" class="assistant-mic" id="assistantMicBtn" data-i18n-title="voiceBtnTitle" title="פקודה קולית">🎤</button>
+        <button type="submit" class="assistant-send" id="assistantSendBtn" aria-label="send">➤</button>
+      </form>
+    </div>
     <div class="footer-divider"></div>
     <div class="notebook-footer" id="notebookFooter">
       <button type="button" class="tasks-fab" id="tasksFabBtn" data-i18n-title="tasksBtnTitle" title="חזרה למשימות">
@@ -1282,14 +1292,9 @@
   <div class="report-view assistant-view" id="assistantView" hidden>
     <div class="report-head">
       <button type="button" class="report-back-btn" id="assistantBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
-      <div class="report-head-title assistant-title"><img src="tasks-icon-192.png" alt=""><span data-i18n="assistantTitle">עוזר ITASK</span></div>
+      <div class="report-head-title assistant-title"><img src="tasks-icon-192.png" alt=""><span data-i18n="assistantHistoryTitle">השיחה עם העוזר</span></div>
     </div>
     <div class="assistant-messages" id="assistantMessages"></div>
-    <form class="assistant-form" id="assistantForm" autocomplete="off">
-      <input type="text" id="assistantInput" maxlength="300" data-i18n-placeholder="assistantPlaceholder" placeholder="מה לעשות?">
-      <button type="button" class="assistant-mic" id="assistantMicBtn" data-i18n-title="voiceBtnTitle" title="פקודה קולית">🎤</button>
-      <button type="submit" class="assistant-send" id="assistantSendBtn" aria-label="send">➤</button>
-    </form>
   </div>
 
   <div class="report-view" id="libraryView" hidden>
@@ -1505,6 +1510,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=ce7740aec9"></script>
+<script src="tasks-app.js?v=4fd19b7a65"></script>
 </body>
 </html>

@@ -284,6 +284,17 @@
     assistantActForecast: { he: "בקצב הנוכחי צפויה להסתיים ב-{date} – בזמן 👍", en: "At this pace it ends on {date} - on time 👍", ar: "بهذه الوتيرة ينتهي في {date} – في الموعد 👍", ru: "При таком темпе – {date}, в срок 👍" },
     assistantActForecastLate: { he: "⚠ בקצב הנוכחי צפויה להסתיים ב-{date} – {n} ימים אחרי המתוכנן", en: "⚠ At this pace it ends on {date} - {n} days late", ar: "⚠ بهذه الوتيرة ينتهي في {date} – متأخراً {n} أيام", ru: "⚠ При таком темпе – {date}, на {n} дн. позже" },
     assistantActLateNoPace: { he: "⚠ עבר תאריך הסיום ואין עדיין אחוז ביצוע – אי אפשר לחשב צפי", en: "⚠ Past its end with no % yet - no forecast", ar: "⚠ تجاوز موعد الانتهاء بلا نسبة إنجاز – لا يمكن التوقع", ru: "⚠ Срок прошёл, а % нет – прогноза нет" },
+    assistantHistoryTitle: { he: "השיחה עם העוזר", en: "The conversation", ar: "المحادثة مع المساعد", ru: "Разговор с помощником" },
+    assistantClose: { he: "סגירת העוזר", en: "Close the assistant", ar: "إغلاق المساعد", ru: "Закрыть помощника" },
+    assistantShowingPlan: { he: "תוכנית העבודה – {p}", en: "Work plan – {p}", ar: "خطة العمل – {p}", ru: "План работ – {p}" },
+    assistantShowingCalendar: { he: "לוח השנה", en: "The calendar", ar: "التقويم", ru: "Календарь" },
+    assistantShowingDiary: { he: "יומן העבודה – {p}, {d}", en: "Site diary – {p}, {d}", ar: "يومية العمل – {p}، {d}", ru: "Журнал работ – {p}, {d}" },
+    assistantShowingChat: { he: "הצ'אט של {p}", en: "{p}'s chat", ar: "دردشة {p}", ru: "Чат {p}" },
+    assistantShowingLibrary: { he: "הספרייה של {p}", en: "{p}'s library", ar: "مكتبة {p}", ru: "Библиотека {p}" },
+    assistantShowingSketch: { he: "הסקיצה – {p}", en: "The sketch – {p}", ar: "الرسم – {p}", ru: "Эскиз – {p}" },
+    assistantShowingTasks: { he: "המשימות של {p} – {d}", en: "{p}'s tasks – {d}", ar: "مهام {p} – {d}", ru: "Задачи {p} – {d}" },
+    assistantCalendarAppOnly: { he: "לוח השנה זמין באפליקציה בטלפון", en: "The calendar is in the phone app", ar: "التقويم متاح في تطبيق الهاتف", ru: "Календарь доступен в приложении на телефоне" },
+    assistantNoChat: { he: "לפרויקט הזה אין צ'אט (רק לפרויקט משותף)", en: "This project has no chat (shared projects only)", ar: "لا توجد دردشة لهذا المشروع (للمشاريع المشتركة فقط)", ru: "У этого проекта нет чата (только у общих)" },
     voiceBtnTitle: { he: "פקודה קולית", en: "Voice command", ar: "أمر صوتي", ru: "Голосовая команда" },
     voiceTitle: { he: "פקודה קולית", en: "Voice command", ar: "أمر صوتي", ru: "Голосовая команда" },
     voiceListening: { he: "מקשיב... דבר עכשיו", en: "Listening... speak now", ar: "أستمع... تكلّم الآن", ru: "Слушаю... говорите" },
@@ -2065,7 +2076,7 @@
   function calFitAboveFooter() {
     calView.style.bottom = "";
     if (calView.hidden) return;
-    var edge = notebookFooterEl.previousElementSibling || notebookFooterEl;
+    var edge = assistantDockEdge() || notebookFooterEl.previousElementSibling || notebookFooterEl;
     var top = edge.getBoundingClientRect().top;
     if (notebookFooterEl.offsetHeight && top > window.innerHeight / 2 && top < window.innerHeight) {
       calView.style.bottom = (window.innerHeight - top) + "px";
@@ -11072,7 +11083,7 @@
   function wpFitAboveFooter() {
     workPlanView.style.bottom = "";
     if (workPlanView.hidden) return;
-    var edge = notebookFooterEl.previousElementSibling || notebookFooterEl;
+    var edge = assistantDockEdge() || notebookFooterEl.previousElementSibling || notebookFooterEl;
     var top = edge.getBoundingClientRect().top;
     if (notebookFooterEl.offsetHeight && top > window.innerHeight / 2 && top < window.innerHeight) {
       workPlanView.style.bottom = (window.innerHeight - top) + "px";
@@ -18169,16 +18180,33 @@
   // voice command and carried out at once - the reply says what was done,
   // with ↶ to undo it and a button to open it in the app.
   // ---------------------------------------------------------------------
+  // The assistant lives in a bar docked over the app, right above the icon
+  // row (#assistantDock): typed or spoken, with its latest exchange shown
+  // above its line and the whole conversation one tap away (🕘, the full
+  // #assistantView). "תציג..." opens the app's own screens under it, and
+  // what's on screen is what the next words are about.
   var assistantView = document.getElementById("assistantView");
   var assistantMessages = document.getElementById("assistantMessages");
+  var assistantDock = document.getElementById("assistantDock");
+  var assistantDockReply = document.getElementById("assistantDockReply");
   var assistantInput = document.getElementById("assistantInput");
   var assistantMicBtn = document.getElementById("assistantMicBtn");
   var assistantGreeted = false;
 
+  // the bar, when it's open: the screens above end at its top
+  function assistantDockEdge() { return assistantDock.hidden ? null : assistantDock; }
+  function assistantRefit() {
+    if (typeof wpFitAboveFooter === "function") wpFitAboveFooter();
+    if (typeof calFitAboveFooter === "function") calFitAboveFooter();
+  }
+  if (window.ResizeObserver) new ResizeObserver(assistantRefit).observe(assistantDock);
+
   // ask: a line to ask straight away (the morning summary's tap)
   function openAssistant(listen, ask) {
     assistantInput.placeholder = tr("assistantPlaceholder");
-    assistantView.hidden = false;
+    assistantView.hidden = true;
+    assistantDock.hidden = false;
+    assistantRefit();
     if (!assistantGreeted) {
       assistantGreeted = true;
       assistantGreet();
@@ -18191,19 +18219,40 @@
   function closeAssistant() {
     voiceStopListening();
     assistantMicBtn.classList.remove("listening");
+    assistantMoveToHistory();
+    assistantDock.hidden = true;
     assistantView.hidden = true;
+    assistantRefit();
     render();
   }
-  document.getElementById("assistantBackBtn").addEventListener("click", closeAssistant);
+  document.getElementById("assistantDockCloseBtn").addEventListener("click", closeAssistant);
+  // the whole conversation
+  function assistantMoveToHistory() {
+    while (assistantDockReply.firstChild) assistantMessages.appendChild(assistantDockReply.firstChild);
+  }
+  document.getElementById("assistantDockHistoryBtn").addEventListener("click", function () {
+    assistantMoveToHistory();
+    assistantView.hidden = false;
+    assistantMessages.scrollTop = assistantMessages.scrollHeight;
+  });
+  document.getElementById("assistantBackBtn").addEventListener("click", function () { assistantView.hidden = true; });
 
   // ---- bubbles ------------------------------------------------------------
+  // the bar shows the latest exchange (my line, its reply); what came
+  // before moves to the conversation, buttons and all
   function assistantBubble(who, build) {
     var el = document.createElement("div");
     el.className = "as-msg as-" + who;
     if (typeof build === "string") el.textContent = build;
     else build(el);
-    assistantMessages.appendChild(el);
-    assistantMessages.scrollTop = assistantMessages.scrollHeight;
+    if (assistantDock.hidden) {
+      assistantMessages.appendChild(el);
+      assistantMessages.scrollTop = assistantMessages.scrollHeight;
+      return el;
+    }
+    if (who === "me") assistantMoveToHistory();
+    assistantDockReply.appendChild(el);
+    assistantDockReply.scrollTop = assistantDockReply.scrollHeight;
     return el;
   }
   function assistantAdd(el, tag, text, cls) {
@@ -18367,11 +18416,13 @@
       if (!doneTask) { assistantBubble("bot", tr("assistantNoSuchTask")); return; }
       doneTask = doneTask.t;
     }
+    var ctx = assistantContext();
+    if (!sheet && ctx.sheet && sheets.indexOf(ctx.sheet) >= 0) sheet = ctx.sheet;
     if (!sheet) sheet = sheets.find(function (s) { return s.id === data.activeSheetId; }) || sheets[0];
     var texts = cmd.items.length ? cmd.items.slice() : (cmd.reminderTime ? [tr("voiceReminderDefault")] : []);
     if (cmd.action !== "done" && !texts.length) { assistantDidntGet(); return; }
     voiceApplyCommand(sheet, {
-      action: cmd.action, texts: texts, date: cmd.date || todayISO(), reminderTime: cmd.reminderTime,
+      action: cmd.action, texts: texts, date: cmd.date || (ctx.kind === "tasks" && state.viewDate >= todayISO() ? state.viewDate : todayISO()), reminderTime: cmd.reminderTime,
       endDate: cmd.endDate, by: cmd.by, doneTaskId: doneTask && doneTask.id
     }).then(function (res) {
       if (!res) return;
@@ -18441,6 +18492,7 @@
   // that moved back as it was) and a way to the plan
   function assistantPlanDone(sheet, before, title, line) {
     render();
+    refreshWorkPlanIfOpen();
     assistantBubble("bot", function (el) {
       assistantAdd(el, "b", "✓ " + title);
       assistantAdd(el, "div", tr("assistantInProject").replace("{p}", sheet.name) + "\n" + line);
@@ -18544,11 +18596,109 @@
     return false;
   }
 
+  // ---- what's on screen ----------------------------------------------------------
+  // { kind: plan|calendar|tasks|diary|chat|library|other, sheet }
+  function assistantContext() {
+    if (!workPlanView.hidden) {
+      return { kind: "plan", sheet: wpState.sheetId ? allSheets().find(function (x) { return x.id === wpState.sheetId; }) : null };
+    }
+    if (typeof calView !== "undefined" && calView && !calView.hidden) return { kind: "calendar", sheet: null };
+    var kinds = { tasks: "tasks", diary: "diary", chat: "chat", library: "library" };
+    return { kind: kinds[state.viewMode] || "other", sheet: activeSheet() };
+  }
+  // the screens opened over the app: shut before another is shown
+  function assistantCloseViews() {
+    if (!workPlanView.hidden) { workPlanView.hidden = true; wpLinkFrom = null; }
+    if (typeof calView !== "undefined" && calView && !calView.hidden) closeCalendarView();
+    if (!sketchView.hidden) closeSketch();
+    if (!diaryPhotosView.hidden) diaryPhotosView.hidden = true;
+    if (!libraryView.hidden) { libraryView.hidden = true; activeLibraryFolderId = null; }
+    assistantView.hidden = true;
+    exitArchiveView();
+    state.menuOpen = false;
+  }
+
+  // ---- showing --------------------------------------------------------------------
+  // "תציג את תוכנית העבודה של בניין A", "...את המשימות של מחר", "...את לוח
+  // השנה של שבוע הבא", "...את היומן", "...את הצ'אט", "...את הספרייה",
+  // "...את הסקיצה חתך קיר". True when it was a "show".
+  var ASSISTANT_SHOW_RE = /^\s*(?:תציג|תציגי|הצג|הציגי|תראה|תראי|הראה|הראי|תפתח|תפתחי|פתח|פתחי|עבור|תעבור|תעברי|اعرض|افتح|وريني|show|open)\s+(?:לי\s+|لي\s+)?(?:את\s+)?(.+)$/i;
+  function assistantShow(text) {
+    var m = text.replace(/[?؟.!]+$/, "").match(ASSISTANT_SHOW_RE);
+    if (!m) return false;
+    var what = " " + m[1] + " ";
+    var sheets = voiceTargetSheets();
+    var found = voiceFindSheet(what, sheets);
+    var ctx = assistantContext();
+    var sheet = found ? found.sheet : (ctx.sheet && sheets.indexOf(ctx.sheet) >= 0 ? ctx.sheet : activeSheet());
+    var parsed = parseVoiceCommand(what, [], null, { bareWeekday: true });
+    var day = parsed.date;
+    var kind = /תוכנית|תכנית|גאנט|גנט|خطة|plan|gantt/i.test(what) ? "plan" :
+      /לוח\s*ה?שנה|פגישות|קלנדר|التقويم|calendar/i.test(what) ? "calendar" :
+      /יומן|يومية|diary/i.test(what) ? "diary" :
+      /צ['׳]?אט|הודעות|الدردشة|chat/i.test(what) ? "chat" :
+      /ספרי[יה]|קבצים|المكتبة|library|files/i.test(what) ? "library" :
+      /סקיצ|رسم|sketch/i.test(what) ? "sketch" :
+      /משימות|מטלות|המשימות|مهام|المهام|tasks/i.test(what) || found || day ? "tasks" : null;
+    if (!kind) return false;
+    if (!sheet && kind !== "calendar") { assistantBubble("bot", tr("assistantNoProject")); return true; }
+    assistantCloseViews();
+    if (sheet) data.activeSheetId = sheet.id;
+    var say = null;
+    if (kind === "plan") {
+      state.viewMode = "tasks";
+      render();
+      openWorkPlan();
+      if (/שבוע/.test(what)) { wpState.zoom = "week"; wpState.anchor = day || (/הבא/.test(what) ? addDaysToISO(todayISO(), 7) : todayISO()); }
+      else if (/חודש/.test(what)) { wpState.zoom = "month"; wpState.anchor = day || (/הבא/.test(what) ? addDaysToISO(todayISO().slice(0, 8) + "01", 31) : todayISO()); }
+      renderWorkPlan();
+      say = tr("assistantShowingPlan").replace("{p}", sheet.name);
+    } else if (kind === "calendar") {
+      if (!calPlugin) { assistantBubble("bot", tr("assistantCalendarAppOnly")); return true; }
+      openCalendarView();
+      calState.mode = /שבוע/.test(what) ? "week" : (day || /היום|יום/.test(what)) ? "day" : "month";
+      if (/שבוע\s+הבא/.test(what) && !day) day = addDaysToISO(todayISO(), 7);
+      if (day) calState.anchor = new Date(day + "T12:00:00");
+      say = tr("assistantShowingCalendar");
+    } else if (kind === "diary") {
+      state.viewDate = clampViewDate(day && day <= todayISO() ? day : todayISO());
+      openDiaryView();
+      say = tr("assistantShowingDiary").replace("{p}", sheet.name).replace("{d}", isoToDisplay(state.viewDate));
+    } else if (kind === "chat") {
+      state.viewMode = "tasks";
+      render();
+      if (!sheet.shared) { assistantBubble("bot", tr("assistantNoChat")); return true; }
+      openChatView();
+      say = tr("assistantShowingChat").replace("{p}", sheet.name);
+    } else if (kind === "library") {
+      render();
+      openLibraryFoldersView();
+      say = tr("assistantShowingLibrary").replace("{p}", sheet.name);
+    } else if (kind === "sketch") {
+      state.viewMode = "tasks";
+      render();
+      openSketch();
+      var name = (found ? found.rest : what).replace(/\s(?:ה?סקיצה|ה?סקיצות|של|את)(?=\s)/g, " ").trim();
+      var hit = name && (sheet.sketches || []).find(function (x) { return voiceScoreTask({ text: x.name }, name) > 0; });
+      if (hit && hit.id !== sk.sketchId) skSwitchTo(sheet, skReadDraft(sheet.id, hit.id) || { sketchId: hit.id, name: hit.name, els: [], savedAt: 0, syncedAt: 0 });
+      say = tr("assistantShowingSketch").replace("{p}", sheet.name);
+    } else {
+      state.viewMode = "tasks";
+      state.showingCompleted = false;
+      if (day) state.viewDate = clampViewDate(day);
+      render();
+      say = tr("assistantShowingTasks").replace("{p}", sheet.name).replace("{d}", isoToDisplay(state.viewDate));
+    }
+    assistantBubble("bot", "👁 " + say);
+    return true;
+  }
+
   // a typed or spoken line
   function assistantHandle(text) {
     text = String(text || "").replace(/\s+/g, " ").trim();
     if (!text) return;
     assistantBubble("me", text);
+    if (assistantShow(text)) return;
     if (assistantSpecial(text)) return;
     if (assistantIsQuestion(text)) {
       if (!assistantAnswer(text)) assistantDidntGet();

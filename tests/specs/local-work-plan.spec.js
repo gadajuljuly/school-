@@ -586,8 +586,8 @@ test("forecast: an activity under way shows where its pace leads; tapping the ta
   await page.evaluate(() => window.__native.listeners.launchView({ view: "assistant" }));
   await page.locator("#assistantInput").fill("מתי צפוי להסתיים השלד?");
   await page.locator("#assistantSendBtn").click();
-  await expect(page.locator("#assistantMessages .as-bot").last()).toContainText("צפויה להסתיים ב-" + shown + " – 7 ימים אחרי המתוכנן");
-  await page.locator("#assistantBackBtn").click();
+  await expect(page.locator("#assistantDockReply .as-bot").last()).toContainText("צפויה להסתיים ב-" + shown + " – 7 ימים אחרי המתוכנן");
+  await page.locator("#assistantDockCloseBtn").click();
   // replan by it: the end moves, and what's linked after it follows
   await row.locator(".wp-forecast").click();
   await expect(page.locator("#confirmOverlay")).toContainText(shown);

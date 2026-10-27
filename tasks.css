@@ -3460,6 +3460,18 @@
   .as-actions button, .as-chips button { border: 1px solid var(--rule); background: var(--paper); color: var(--ink); border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 0.82rem; font-weight: 700; cursor: pointer; }
   .as-actions button:disabled { opacity: 0.55; }
   .as-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  /* the assistant docked over the app: its latest exchange and its line,
+     right above the icon row (the screens end above it) */
+  .assistant-dock { flex-shrink: 0; display: flex; flex-direction: column; background: var(--paper-alt, #f4efe4); border-top: 2px solid var(--accent); box-shadow: 0 -4px 12px rgba(0,0,0,0.08); position: relative; z-index: 3; }
+  .assistant-dock[hidden] { display: none; }
+  .assistant-dock-reply { max-height: 34vh; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding: 8px 10px 0; }
+  .assistant-dock-reply:empty { display: none; }
+  .assistant-dock .assistant-form { padding: 6px 8px; border-top: none; }
+  .assistant-dock .assistant-form input { height: 40px; }
+  .assistant-dock .assistant-mic, .assistant-dock .assistant-send { width: 40px; height: 40px; }
+  .assistant-dock-btn { flex: none; width: 32px; height: 40px; border: none; background: transparent; font-size: 1.05rem; cursor: pointer; color: var(--ink-muted); padding: 0; }
+  .as-flash { animation: as-flash 1.6s ease-out 1; }
+  @keyframes as-flash { 0%, 40% { box-shadow: 0 0 0 4px #ffd400, 0 0 14px 4px rgba(255,212,0,0.8); } 100% { box-shadow: 0 0 0 0 rgba(255,212,0,0); } }
   .assistant-form { flex: none; display: flex; align-items: center; gap: 6px; padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--rule); background: var(--paper-alt, #f4efe4); }
   .assistant-form input { flex: 1; min-width: 0; height: 44px; border: 1px solid var(--rule); border-radius: 22px; padding: 0 16px; font: inherit; font-size: 1rem; background: #fff; }
   .assistant-mic, .assistant-send { flex: none; width: 44px; height: 44px; border-radius: 50%; border: none; font-size: 1.2rem; cursor: pointer; }

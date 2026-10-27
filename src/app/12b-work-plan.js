@@ -272,7 +272,7 @@
   function wpFitAboveFooter() {
     workPlanView.style.bottom = "";
     if (workPlanView.hidden) return;
-    var edge = notebookFooterEl.previousElementSibling || notebookFooterEl;
+    var edge = assistantDockEdge() || notebookFooterEl.previousElementSibling || notebookFooterEl;
     var top = edge.getBoundingClientRect().top;
     if (notebookFooterEl.offsetHeight && top > window.innerHeight / 2 && top < window.innerHeight) {
       workPlanView.style.bottom = (window.innerHeight - top) + "px";
