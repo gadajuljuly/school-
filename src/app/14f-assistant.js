@@ -589,6 +589,104 @@
   // isn't a new task called "העבר..."
   var ASSISTANT_TASK_VERB_RE = /^\s*(?:העבר|תעביר|תעבירי|דחה|תדחה|תדחי|הזז|תזיז|מחק|תמחק|תמחקי|הסר|תסיר|בטל\s+סימון|תבטל\s+סימון)\s/;
 
+  // ---- the phone's calendar -------------------------------------------------------------
+  // "קבע מחר ב-10 פגישה עם היזם" (an hour, unless "לשעתיים" / "לחצי שעה"),
+  // "העבר את הפגישה של חמישי ל-12", "העבר את הפגישה עם היזם למחר ב-9" -
+  // into / in the phone's calendar (the app only), with ↶.
+  function assistantCalendarId() {
+    var ready = calState.calendars && calState.calendars.length ? Promise.resolve() : calLoadCalendars();
+    return ready.then(function () {
+      var writable = (calState.calendars || []).filter(function (c) { return c.writable; });
+      var last = null;
+      try { last = localStorage.getItem(CAL_LAST_CALENDAR_KEY); } catch (e) {}
+      var pick = writable.find(function (c) { return String(c.id) === last; }) || writable.find(function (c) { return c.primary; }) || writable[0];
+      return pick ? pick.id : null;
+    });
+  }
+  function assistantCalendarReply(title, line, undo) {
+    if (typeof calView !== "undefined" && !calView.hidden) calLoadAndRender();
+    assistantBubble("bot", function (el) {
+      assistantAdd(el, "b", "✓ " + title);
+      assistantAdd(el, "div", line);
+      var actions = assistantAdd(el, "div", null, "as-actions");
+      var u = assistantAdd(actions, "button", tr("assistantUndo"));
+      u.type = "button";
+      u.addEventListener("click", function () {
+        u.disabled = true;
+        undo().then(function () {
+          u.textContent = tr("assistantUndone");
+          if (!calView.hidden) calLoadAndRender();
+        });
+      });
+    });
+  }
+  function assistantHm(ms) {
+    var d = new Date(ms);
+    return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+  }
+  function assistantCalendarCommand(text, ctx) {
+    var t0 = " " + text.replace(/[?؟.!]+$/, "") + " ";
+    var meeting = /פגישה|פגישת|אירוע|סיור|ביקור|ביומן\s+של\s+הטלפון|בלוח\s+ה?שנה/.test(t0);
+    var cm = t0.match(/^\s*(?:קבע|תקבע|תקבעי|צור|תיצור|תקבע\s+לי|קבע\s+לי)\s+(?:לי\s+)?(.+)$/);
+    var mm = t0.match(/^\s*(?:העבר|תעביר|תעבירי|הזז|תזיז|דחה|תדחה)\s+(?:את\s+)?(ה?(?:פגישה|אירוע|סיור|ביקור).*)$/);
+    if (!cm && !mm) return false;
+    if (cm && !meeting && ctx.kind !== "calendar") return false;
+    if (!calPlugin) { assistantBubble("bot", tr("assistantCalendarAppOnly")); return true; }
+    if (cm) {
+      var body = " " + cm[1] + " ", mins = 60;
+      body = body.replace(/\s(?:ל|למשך\s+)(שעה|שעתיים|חצי\s+שעה|שלוש\s+שעות|(\d+)\s+שעות|(\d+)\s+דקות)(?=\s)/, function (m0, w, h, mi) {
+        mins = h ? +h * 60 : mi ? +mi : { "שעה": 60, "שעתיים": 120, "שלוש שעות": 180 }[w.replace(/\s+/g, " ")] || 30;
+        return " ";
+      });
+      var p = parseVoiceCommand(" תזכיר לי " + body + " ", [], null, { bareWeekday: true });
+      var title = (p.items.join(" ") || tr("assistantMeeting")).replace(/^\s*(?:לי|ש)\s+/, "").trim();
+      if (!p.reminderTime) { assistantBubble("bot", tr("assistantMeetingWhen")); return true; }
+      var start = new Date((p.date || todayISO()) + "T" + p.reminderTime).getTime();
+      assistantCalendarId().then(function (calId) {
+        if (calId == null) { assistantBubble("bot", tr("calSaveError")); return; }
+        return calPlugin.saveEvent({ calendarId: calId, title: title, allDay: false, start: start, end: start + mins * 60000,
+          rrule: "", reminderMinutes: 15, location: "", description: "" }).then(function (res) {
+          var id = res && res.eventId;
+          assistantCalendarReply(tr("assistantMeetingSet"), "📅 " + title + "\n" + assistantDayLabel(wpIso(new Date(start))) + " " + assistantHm(start) + "–" + assistantHm(start + mins * 60000),
+            function () { return calPlugin.deleteEvent({ eventId: id }); });
+        });
+      }).catch(function () { assistantBubble("bot", tr("calSaveError")); });
+      return true;
+    }
+    // moving: which one (its day / words), and to when
+    var parts = mm[1].match(/^(.*?)\s(?:ל-?|אל\s+)(?=\d|מחר|היום|יום|שעה|ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת)(.+)$/);
+    if (!parts) { assistantBubble("bot", tr("assistantMeetingWhen")); return true; }
+    var from = parseVoiceCommand(" " + parts[1] + " ", [], null, { bareWeekday: true });
+    var words = from.items.join(" ").replace(/(?:^|\s)(?:ה?פגישה|ה?אירוע|של|עם)(?=\s|$)/g, " ").trim();
+    var to = parseVoiceCommand(" תזכיר לי " + parts[2].replace(/^-?/, "ב-").replace(/^ב-(מחר|היום|יום|ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת)/, "$1") + " ", [], null, { bareWeekday: true });
+    if (!to.date && !to.reminderTime) { assistantBubble("bot", tr("assistantMeetingWhen")); return true; }
+    var now = Date.now();
+    calPlugin.listEvents({ from: now - 86400000, to: now + 45 * 86400000 }).then(function (res) {
+      var evs = ((res && res.events) || []).filter(function (e) { return !e.allDay; });
+      if (from.date) evs = evs.filter(function (e) { return wpIso(new Date(e.begin)) === from.date; });
+      if (words) {
+        var scored = evs.map(function (e) { return { e: e, s: voiceScoreTask({ text: e.title || "" }, words) }; }).filter(function (x) { return x.s > 0; });
+        if (scored.length) evs = scored.sort(function (a, b) { return b.s - a.s; }).map(function (x) { return x.e; });
+      }
+      evs.sort(function (a, b) { return a.begin - b.begin; });
+      var ev = evs.filter(function (e) { return e.begin >= now - 3600000; })[0] || evs[0];
+      if (!ev) { assistantBubble("bot", tr("assistantNoSuchMeeting")); return; }
+      return calPlugin.getEvent({ eventId: ev.eventId }).then(function (full) {
+        var len = (full.dtend || (full.dtstart + (full.durationMs || 3600000))) - full.dtstart;
+        var day = to.date || wpIso(new Date(full.dtstart));
+        var time = to.reminderTime || assistantHm(full.dtstart);
+        var start = new Date(day + "T" + time).getTime();
+        var base = { eventId: ev.eventId, calendarId: full.calendarId, title: full.title, allDay: false, rrule: full.rrule || "",
+          reminderMinutes: full.reminders && full.reminders.length ? full.reminders[0] : -1, location: full.location || "", description: full.description || "" };
+        return calPlugin.saveEvent(Object.assign({}, base, { start: start, end: start + len })).then(function () {
+          assistantCalendarReply(tr("assistantMeetingMoved"), "📅 " + full.title + "\n" + assistantDayLabel(day) + " " + time,
+            function () { return calPlugin.saveEvent(Object.assign({}, base, { start: full.dtstart, end: full.dtstart + len })); });
+        });
+      });
+    }).catch(function () { assistantBubble("bot", tr("calSaveError")); });
+    return true;
+  }
+
   function assistantSpecial(text) {
     var t = " " + text.replace(/[?؟.!]+$/, "") + " ";
     // progress
@@ -771,6 +869,7 @@
     var ctx = assistantContext();
     if (ctx.kind === "plan" && assistantPlanCommand(text, ctx)) return;
     if (ctx.kind === "tasks" && assistantTaskCommand(text)) return;
+    if (assistantCalendarCommand(text, ctx)) return;
     if (assistantSpecial(text)) return;
     if (ctx.kind === "tasks" && ASSISTANT_TASK_VERB_RE.test(" " + text)) { assistantBubble("bot", tr("assistantTaskNotFound")); return; }
     if (assistantIsQuestion(text)) {

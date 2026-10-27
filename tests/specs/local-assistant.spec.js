@@ -271,3 +271,29 @@ test("tasks on screen are numbered while the bar is open; done / undo / move / r
   await page.locator("#assistantDockCloseBtn").click();
   await expect(page.locator("#taskList .as-num")).toHaveCount(0);
 });
+
+test("calendar: set a meeting, move it, undo - in the phone's calendar", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, native: true, sheet: SHEET, calendarEvents: [] });
+  await openFromWidget(page, "assistant");
+  const events = () => page.evaluate(() => Object.values(window.__native.events));
+  const at = (dayIso, hm) => new Date(dayIso + "T" + hm).getTime();
+
+  await say(page, "קבע מחר ב-10 פגישה עם היזם");
+  await expect(bot(page).last()).toContainText("נקבע ביומן של הטלפון");
+  await expect.poll(async () => (await events()).map((e) => [e.title, e.start, e.end])).toEqual([["פגישה עם היזם", at(iso(1), "10:00"), at(iso(1), "11:00")]]);
+
+  await say(page, "העבר את הפגישה עם היזם ל-12");
+  await expect(bot(page).last()).toContainText("הועברה");
+  await expect.poll(async () => (await events())[0].start).toBe(at(iso(1), "12:00"));
+  expect((await events())[0].end).toBe(at(iso(1), "13:00")); // same length
+  await bot(page).last().locator("button", { hasText: "ביטול" }).click();
+  await expect.poll(async () => (await events())[0].start).toBe(at(iso(1), "10:00"));
+
+  await say(page, "קבע מחרתיים ב-8 סיור באתר לשעתיים");
+  await expect.poll(async () => (await events()).find((e) => /סיור/.test(e.title))?.end).toBe(at(iso(2), "10:00"));
+
+  // and the calendar shows them
+  await say(page, "תציג את לוח השנה של מחר");
+  await expect(page.locator("#calView")).toBeVisible();
+  await expect(page.locator("#calView")).toContainText("פגישה עם היזם");
+});
