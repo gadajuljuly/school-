@@ -301,6 +301,10 @@
     assistantLinkedDone: { he: "הפעילויות קושרו", en: "Linked", ar: "تم الربط", ru: "Связаны" },
     assistantActMarkedDone: { he: "הפעילות סומנה כהושלמה", en: "Marked done", ar: "تم وضع علامة منجز", ru: "Отмечена выполненной" },
     assistantActDeleted: { he: "הפעילות נמחקה", en: "Activity deleted", ar: "تم حذف النشاط", ru: "Работа удалена" },
+    assistantTaskNotFound: { he: "לא מצאתי את המשימה או את היום – אפשר לומר את המספר שליד המשימה, למשל \"העבר את 2 למחר\"", en: "I couldn't find that task or day - you can use the number by the task, e.g. \"move 2 to tomorrow\"", ar: "لم أجد المهمة أو اليوم – يمكن استخدام الرقم بجانب المهمة، مثلاً \"انقل 2 لبكرا\"", ru: "Не нашёл задачу или день – можно назвать номер рядом с задачей, напр. «перенеси 2 на завтра»" },
+    assistantTaskUndone: { he: "הסימון בוטל", en: "Marked not done", ar: "تم إلغاء العلامة", ru: "Отметка снята" },
+    assistantTaskDeleted: { he: "המשימה נמחקה", en: "Task deleted", ar: "تم حذف المهمة", ru: "Задача удалена" },
+    assistantTaskMoved: { he: "המשימה הועברה", en: "Task moved", ar: "تم نقل المهمة", ru: "Задача перенесена" },
     voiceBtnTitle: { he: "פקודה קולית", en: "Voice command", ar: "أمر صوتي", ru: "Голосовая команда" },
     voiceTitle: { he: "פקודה קולית", en: "Voice command", ar: "أمر صوتي", ru: "Голосовая команда" },
     voiceListening: { he: "מקשיב... דבר עכשיו", en: "Listening... speak now", ar: "أستمع... تكلّم الآن", ru: "Слушаю... говорите" },
@@ -15260,7 +15264,7 @@
       reminderAt = new Date(now.getTime() + mins * 60000);
       dateFound = true;
     });
-    take(/(\s)(?:מ)?(?:ה)?(?:יום\s+)?(מחרתיים|היום|מחר|بعد بكرة|بعد بكره|اليوم|بكرة|بكره|غدا|غداً|بكرا)(?=\s)/g, function (m, sp, w) {
+    take(/(\s)(?:מ|ל)?(?:ה)?(?:יום\s+)?(מחרתיים|היום|מחר|بعد بكرة|بعد بكره|اليوم|بكرة|بكره|غدا|غداً|بكرا)(?=\s)/g, function (m, sp, w) {
       var d = new Date(now);
       if (/מחרתיים|بعد/.test(w)) d.setDate(d.getDate() + 2);
       else if (/מחר|بكر|غد/.test(w)) d.setDate(d.getDate() + 1);
@@ -18222,6 +18226,7 @@
     assistantView.hidden = true;
     assistantDock.hidden = false;
     assistantRefit();
+    assistantNumberTasks();
     if (!assistantGreeted) {
       assistantGreeted = true;
       assistantGreet();
@@ -18239,6 +18244,7 @@
     assistantView.hidden = true;
     assistantRefit();
     render();
+    assistantNumberTasks();
   }
   document.getElementById("assistantDockCloseBtn").addEventListener("click", closeAssistant);
   // the whole conversation
@@ -18645,6 +18651,134 @@
     return false;
   }
 
+  // ---- the tasks on screen: numbered ---------------------------------------------------
+  // While the bar is open each task in the list gets a small number, so
+  // "סמן את 3 כבוצעה", "העבר את 5 למחר", "תזכיר לי על 2 בשעה 4", "מחק את 4",
+  // "בטל סימון 3" (a task's words work too, instead of its number).
+  var taskListEl = document.getElementById("taskList");
+  var assistantNumbering = false;
+  function assistantNumberTasks() {
+    if (assistantNumbering) return;
+    assistantNumbering = true;
+    taskListEl.querySelectorAll(".as-num").forEach(function (n) { n.remove(); });
+    if (!assistantDock.hidden && state.viewMode === "tasks") {
+      var n = 0;
+      taskListEl.querySelectorAll("li.task").forEach(function (li) {
+        var badge = document.createElement("span");
+        badge.className = "as-num";
+        badge.textContent = ++n;
+        li.insertBefore(badge, li.firstChild);
+      });
+    }
+    assistantNumbering = false;
+  }
+  if (window.MutationObserver) {
+    new MutationObserver(function () { if (!assistantNumbering) assistantNumberTasks(); }).observe(taskListEl, { childList: true });
+  }
+  // a task on screen by its number or its words
+  function assistantTaskOnScreen(token) {
+    var lis = Array.prototype.slice.call(taskListEl.querySelectorAll("li.task"));
+    var sheet = activeSheet();
+    var byLi = function (li) { return li && sheet && sheet.tasks.find(function (t) { return t.id === li.dataset.taskId; }); };
+    var num = String(token).match(/^\s*(\d{1,3})\s*$/) || String(token).match(/^\s*(?:משימה|מס(?:פר|'|׳)?)\s*(\d{1,3})\s*$/);
+    if (num) return byLi(lis[+num[1] - 1]);
+    var best = null;
+    lis.forEach(function (li) {
+      var t = byLi(li);
+      var sc = t ? voiceScoreTask(t, token) : 0;
+      if (sc > 0 && (!best || sc > best.sc)) best = { t: t, sc: sc };
+    });
+    return best && best.t;
+  }
+  function assistantTaskDone(sheet, t, title, line, undo) {
+    render();
+    assistantFlash("#taskList li.task[data-task-id='" + t.id + "']");
+    assistantBubble("bot", function (el) {
+      assistantAdd(el, "b", "✓ " + title);
+      assistantAdd(el, "div", line);
+      var actions = assistantAdd(el, "div", null, "as-actions");
+      var u = assistantAdd(actions, "button", tr("assistantUndo"));
+      u.type = "button";
+      u.addEventListener("click", function () {
+        undo();
+        saveData();
+        render();
+        u.disabled = true;
+        u.textContent = tr("assistantUndone");
+      });
+    });
+  }
+  function assistantSetTaskStatus(sheet, t, status) {
+    var wasDone = t.status === 2;
+    t.status = status;
+    if (t.planItemId) workPlanTaskStatusChanged(sheet, t);
+    if (t.planRef) workPlanRefStatusChanged(t);
+    saveData();
+    if (sheet.shared && t.type === "task" && wasDone !== (t.status === 2)) {
+      sendChatSystemMessage(sheet.id, t.status === 2 ? "done" : "undone", t.text, myPhoneNumber);
+    }
+  }
+  function assistantTaskCommand(text) {
+    var sheet = activeSheet();
+    if (!sheet) return false;
+    var t0 = " " + text.replace(/[?؟.!]+$/, "") + " ";
+    var m, t;
+    if ((m = t0.match(/^\s*(?:בטל|תבטל|תבטלי)\s+(?:את\s+)?(?:ה)?סימון\s+(?:של\s+)?(.+?)\s*$/)) && (t = assistantTaskOnScreen(m[1]))) {
+      var was = t.status;
+      assistantSetTaskStatus(sheet, t, 0);
+      assistantTaskDone(sheet, t, tr("assistantTaskUndone"), t.text, function () { assistantSetTaskStatus(sheet, t, was); });
+      return true;
+    }
+    if (((m = t0.match(/^\s*(?:סמן|תסמן|תסמני)\s+(?:את\s+)?(.+?)\s+(?:כ-?)?(?:בוצע|בוצעה|הושלם|הושלמה|גמור|גמורה)\s*$/)) ||
+        (m = t0.match(/^\s*(?:סיימתי|סיימנו)\s+(?:את\s+)?(\d{1,3})\s*$/)) || (m = t0.match(/^\s*(\d{1,3})\s+(?:בוצע|בוצעה|הושלם|הושלמה)\s*$/))) &&
+        (t = assistantTaskOnScreen(m[1]))) {
+      var was2 = t.status;
+      assistantSetTaskStatus(sheet, t, 2);
+      assistantTaskDone(sheet, t, tr("voiceDoneMsg"), t.text, function () { assistantSetTaskStatus(sheet, t, was2); });
+      return true;
+    }
+    if ((m = t0.match(/^\s*(?:מחק|תמחק|תמחקי|הסר|תסיר)\s+(?:את\s+)?(?:ה?משימה\s+)?(.+?)\s*$/)) && (t = assistantTaskOnScreen(m[1]))) {
+      var copy = JSON.parse(JSON.stringify(t)), at = sheet.tasks.indexOf(t);
+      removeTask(t.id);
+      assistantTaskDone(sheet, copy, tr("assistantTaskDeleted"), copy.text, function () { sheet.tasks.splice(Math.max(0, at), 0, copy); });
+      return true;
+    }
+    if ((m = t0.match(/^\s*(?:העבר|תעביר|תעבירי|דחה|תדחה|תדחי|הזז|תזיז)\s+(?:את\s+)?(\S+(?:\s+\S+)?)\s+(ל.+|ב.+)$/))) {
+      t = assistantTaskOnScreen(m[1]);
+      var p = parseVoiceCommand(" " + m[2] + " ", [], null, { bareWeekday: true });
+      // an activity's own task: it's the activity that moves (further on)
+      if (t && p.date && !t.planItemId) {
+        var old = { date: t.date, reminder: t.reminder ? JSON.parse(JSON.stringify(t.reminder)) : null };
+        t.date = p.date;
+        if (t.reminder && t.reminder.type === "time" && t.reminder.time) {
+          var fire = new Date(p.date + "T" + t.reminder.time);
+          t.reminder = Object.assign({}, t.reminder, { date: p.date, fireAt: fire.toISOString(), firedAt: null });
+        }
+        saveData();
+        assistantTaskDone(sheet, t, tr("assistantTaskMoved"), t.text + " → " + assistantDayLabel(p.date), function () { t.date = old.date; t.reminder = old.reminder; });
+        return true;
+      }
+    }
+    if ((m = t0.match(/^\s*(?:תזכיר|תזכירי|הזכר)\s+(?:לי\s+)?(?:על|את)\s+(\S+)\s+(.+)$/)) && (t = assistantTaskOnScreen(m[1]))) {
+      var r = parseVoiceCommand(" תזכיר לי " + m[2] + " ", [], null, { bareWeekday: true });
+      if (!r.reminderTime) return false;
+      var date = r.date || t.date;
+      var fireAt = new Date(date + "T" + r.reminderTime);
+      if (isNaN(fireAt.getTime()) || fireAt.getTime() <= Date.now()) { assistantBubble("bot", tr("taskReminderPastMsg")); return true; }
+      var oldR = t.reminder ? JSON.parse(JSON.stringify(t.reminder)) : null;
+      t.reminder = { type: "time", date: date, time: r.reminderTime, fireAt: fireAt.toISOString(), firedAt: null };
+      if (sheet.shared) t.reminder.by = myPhoneNumber;
+      saveData();
+      ensureExactAlarmPermission();
+      assistantTaskDone(sheet, t, tr("voiceAddedReminderMsg"), t.text + " ⏰ " + assistantDayLabel(date) + " " + r.reminderTime, function () { t.reminder = oldR; });
+      return true;
+    }
+    return false;
+  }
+  // with the tasks on screen, a move / delete / unmark nothing answered to
+  // isn't a new task called "העבר..."
+  var ASSISTANT_TASK_VERB_RE = /^\s*(?:העבר|תעביר|תעבירי|דחה|תדחה|תדחי|הזז|תזיז|מחק|תמחק|תמחקי|הסר|תסיר|בטל\s+סימון|תבטל\s+סימון)\s/;
+
   function assistantSpecial(text) {
     var t = " " + text.replace(/[?؟.!]+$/, "") + " ";
     // progress
@@ -18826,7 +18960,9 @@
     if (assistantShow(text)) return;
     var ctx = assistantContext();
     if (ctx.kind === "plan" && assistantPlanCommand(text, ctx)) return;
+    if (ctx.kind === "tasks" && assistantTaskCommand(text)) return;
     if (assistantSpecial(text)) return;
+    if (ctx.kind === "tasks" && ASSISTANT_TASK_VERB_RE.test(" " + text)) { assistantBubble("bot", tr("assistantTaskNotFound")); return; }
     if (assistantIsQuestion(text)) {
       if (!assistantAnswer(text)) assistantDidntGet();
       return;

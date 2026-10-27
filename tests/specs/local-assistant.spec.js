@@ -228,3 +228,46 @@ test("with the plan on screen: filter it, add / link / finish / delete activitie
   await say(page, "שמור קו בסיס");
   await expect.poll(() => page.evaluate(() => Object.keys((window.__backend.tables.shared_projects[0].data.workBaseline || {}).items || {}).length)).toBe(3);
 });
+
+test("tasks on screen are numbered while the bar is open; done / undo / move / reminder / delete by number or by words", async ({ page }) => {
+  const sheet = { id: "p1", name: "בניין A", members: [ME], tasks: [
+    { id: "k1", text: "לבדוק ברזל בקומה 3", status: 0, type: "task", date: iso(0), createdAt: 1 },
+    { id: "k2", text: "להזמין בטון", status: 0, type: "task", date: iso(0), createdAt: 2 },
+    { id: "k3", text: "לסדר את המחסן", status: 0, type: "task", date: iso(0), createdAt: 3 },
+  ] };
+  await openWithSharedProject(page, { phone: ME, native: true, sheet });
+  const task = async (id) => (await tasksOf(page)).find((t) => t.id === id);
+  const lis = page.locator("#taskList li.task");
+  await expect(lis).toHaveCount(3);
+  await expect(page.locator("#taskList .as-num")).toHaveCount(0); // not without the bar
+  await openFromWidget(page, "assistant");
+  await expect(page.locator("#taskList .as-num")).toHaveText(["1", "2", "3"]);
+  const idAt = async (n) => lis.nth(n - 1).getAttribute("data-task-id");
+
+  const second = await idAt(2);
+  await say(page, "סמן את 2 כבוצעה");
+  await expect.poll(async () => (await task(second)).status).toBe(2);
+  await say(page, "בטל סימון 2");
+  await expect.poll(async () => (await task(second)).status).toBe(0);
+
+  await say(page, "תזכיר לי על הבטון מחר בשעה 9");
+  await expect.poll(async () => (await task("k2")).reminder?.time).toBe("09:00");
+  expect((await task("k2")).reminder.date).toBe(iso(1));
+
+  const first = await idAt(1);
+  await say(page, "העבר את 1 למחר");
+  await expect.poll(async () => (await task(first)).date).toBe(iso(1));
+  await expect(lis).toHaveCount(2);                       // gone from today's list
+  await expect(page.locator("#taskList .as-num")).toHaveText(["1", "2"]); // renumbered
+  await bot(page).last().locator("button", { hasText: "ביטול" }).click();
+  await expect.poll(async () => (await task(first)).date).toBe(iso(0));
+
+  await say(page, "מחק את המחסן");
+  await expect.poll(async () => !!(await task("k3"))).toBe(false);
+  await bot(page).last().locator("button", { hasText: "ביטול" }).click();
+  await expect.poll(async () => !!(await task("k3"))).toBe(true);
+
+  // closing the bar takes the numbers away
+  await page.locator("#assistantDockCloseBtn").click();
+  await expect(page.locator("#taskList .as-num")).toHaveCount(0);
+});

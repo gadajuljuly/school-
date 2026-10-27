@@ -161,7 +161,7 @@
       reminderAt = new Date(now.getTime() + mins * 60000);
       dateFound = true;
     });
-    take(/(\s)(?:מ)?(?:ה)?(?:יום\s+)?(מחרתיים|היום|מחר|بعد بكرة|بعد بكره|اليوم|بكرة|بكره|غدا|غداً|بكرا)(?=\s)/g, function (m, sp, w) {
+    take(/(\s)(?:מ|ל)?(?:ה)?(?:יום\s+)?(מחרתיים|היום|מחר|بعد بكرة|بعد بكره|اليوم|بكرة|بكره|غدا|غداً|بكرا)(?=\s)/g, function (m, sp, w) {
       var d = new Date(now);
       if (/מחרתיים|بعد/.test(w)) d.setDate(d.getDate() + 2);
       else if (/מחר|بكر|غد/.test(w)) d.setDate(d.getDate() + 1);
