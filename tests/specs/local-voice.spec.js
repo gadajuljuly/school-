@@ -56,7 +56,7 @@ test("a spoken task with a project, day and time is added there with a reminder"
   const task = d.sheets.find((s) => s.id === "r").tasks[0];
   expect(task).toMatchObject({ text: "להזמין בטון", type: "task", date: ymd(tomorrow), reminder: { type: "time", time: "10:00" } });
   // the native alarm was handed to the phone
-  await expect.poll(() => page.evaluate(() => window.__native.alarms.length)).toBe(1);
+  await expect.poll(() => page.evaluate(() => window.__native.alarms.filter((a) => !a.id.startsWith("morning:")).length)).toBe(1);
 });
 
 test("nothing is saved on ביטול, and several tasks can be edited before saving", async ({ page }) => {

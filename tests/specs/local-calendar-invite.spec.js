@@ -82,7 +82,7 @@ test("invited member: the event goes into their phone's calendar, with icon and 
   const saved = (await page.evaluate(() => window.__native.saved))[0];
   expect(saved).toMatchObject({ title: "סיור באתר", start: start.getTime(), end: end.getTime(), calendarId: 1 });
   await expect(calIcon(page)).toHaveCount(1);
-  await expect.poll(() => page.evaluate(() => window.__native.alarms)).toEqual([
+  await expect.poll(() => page.evaluate(() => window.__native.alarms.filter((a) => !a.id.startsWith("morning:")))).toEqual([
     expect.objectContaining({ id: "sh1:k1:cal", at: start.getTime() - 15 * 60000 }),
   ]);
   await expect.poll(async () => (await serverTask(page)).calendarLinks[B]).toMatchObject({ eventId: saved.eventId, fromInvite: true, eventAt: EVENT_AT });
