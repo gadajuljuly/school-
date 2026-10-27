@@ -313,6 +313,8 @@
     assistantSpeakTitle: { he: "מצב דיבור: הקראת תשובות והקשבה רציפה", en: "Speech mode: answers read aloud, keeps listening", ar: "وضع الكلام: قراءة الإجابات والاستماع المستمر", ru: "Голосовой режим: ответы вслух, продолжает слушать" },
     assistantVoiceOn: { he: "מצב דיבור פעיל: אקריא את התשובות, ואחרי פקודה קולית אמשיך להקשיב", en: "Speech mode on: answers are read aloud, and after a spoken line I keep listening", ar: "وضع الكلام مفعل: سأقرأ الإجابات وأواصل الاستماع بعد الأمر الصوتي", ru: "Голосовой режим включён: читаю ответы и продолжаю слушать" },
     assistantVoiceOff: { he: "מצב דיבור כבוי", en: "Speech mode off", ar: "وضع الكلام متوقف", ru: "Голосовой режим выключен" },
+    assistantAiThinking: { he: "🤖 חושב...", en: "🤖 Thinking...", ar: "🤖 يفكر...", ru: "🤖 Думаю..." },
+    assistantAiNote: { he: "תשובה של הבינה המלאכותית בטלפון (Gemini Nano) - כדאי לבדוק", en: "An answer from the on-phone AI (Gemini Nano) - worth checking", ar: "إجابة من الذكاء الاصطناعي في الهاتف (Gemini Nano) - يُستحسن التحقق", ru: "Ответ ИИ в телефоне (Gemini Nano) - стоит проверить" },
     voiceBtnTitle: { he: "פקודה קולית", en: "Voice command", ar: "أمر صوتي", ru: "Голосовая команда" },
     voiceTitle: { he: "פקודה קולית", en: "Voice command", ar: "أمر صوتي", ru: "Голосовая команда" },
     voiceListening: { he: "מקשיב... דבר עכשיו", en: "Listening... speak now", ar: "أستمع... تكلّم الآن", ru: "Слушаю... говорите" },
@@ -18315,7 +18317,7 @@
   // what a bubble says, without its buttons and signs
   function assistantSpeechText(el) {
     var c = el.cloneNode(true);
-    c.querySelectorAll(".as-actions, .as-chips, button").forEach(function (b) { b.remove(); });
+    c.querySelectorAll(".as-actions, .as-chips, .as-ai-note, button").forEach(function (b) { b.remove(); });
     // a pause between lines (a detached copy has no layout, so no innerText)
     c.querySelectorAll("li, div, p, br, h3, h4").forEach(function (n) { n.after(". "); });
     return c.textContent.replace(/[\p{Extended_Pictographic}\u{FE0F}↶•→]/gu, " ")
@@ -18569,6 +18571,75 @@
     assistantBubble("bot", function (el) {
       assistantAdd(el, "div", tr("assistantDidntGet"));
       assistantAdd(el, "div", tr("assistantExamples"));
+    });
+  }
+
+  // ---- the on-phone AI (Gemini Nano, offline) -------------------------------
+  // A question the fixed answers don't cover goes to the model, with a short
+  // summary of the projects. It only answers - changes stay with the exact
+  // commands, so nothing it says is carried out.
+  var assistantAiLast = null; // the previous question and answer, for "ומה עם..."
+  function assistantAiData() {
+    var today = todayISO();
+    var ctx = assistantContext();
+    var sheets = voiceTargetSheets().slice();
+    if (ctx.sheet && sheets.indexOf(ctx.sheet) > 0) { sheets.splice(sheets.indexOf(ctx.sheet), 1); sheets.unshift(ctx.sheet); }
+    var lines = [], size = 0, LIMIT = 2600;
+    function add(line) {
+      if (size + line.length > LIMIT) return false;
+      lines.push(line); size += line.length + 1;
+      return true;
+    }
+    sheets.some(function (sh) {
+      if (!add("Project " + JSON.stringify(sh.name) + (sh === ctx.sheet ? " (on screen)" : "") + ":")) return true;
+      var tasks = voiceOpenTasks(sh).slice().sort(function (a, b) { return String(a.date || "").localeCompare(String(b.date || "")); });
+      tasks.slice(0, 20).forEach(function (t) {
+        add("- task: " + t.text + (t.date ? " | date " + t.date + (t.date < today ? " (overdue)" : "") : "") +
+          (t.reminder && t.reminder.time ? " | reminder " + t.reminder.time : "") + (t.status === 1 ? " | in progress" : ""));
+      });
+      (sh.workPlan || []).slice(0, 25).forEach(function (x) {
+        var f = wpForecastEnd(x);
+        add("- plan activity: " + x.name + " | " + x.start + " to " + x.end + " | " +
+          (x.status === "done" ? "done" : (x.progress || 0) + "%") + (wpIsLate(x) ? " | LATE" : "") +
+          (x.by ? " | by " + x.by : "") + (f && f > x.end ? " | forecast end " + f : "") + (x.note ? " | note: " + x.note : ""));
+      });
+      return false;
+    });
+    return lines.join("\n");
+  }
+  function assistantAiPrompt(text) {
+    var now = new Date();
+    return [
+      "You are the assistant inside ITASK, a construction-site task app. Answer the user's question using ONLY the data below.",
+      "Today is " + todayISO() + " (" + ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][now.getDay()] + ").",
+      "Reply in the language of the question, in at most 3 short sentences, plain text. If the data doesn't say, say you don't know.",
+      "You cannot change anything. If asked to do something, say which command to type, e.g. \"הוסף משימה ...\" or \"עדכן טיח ל-60%\".",
+      "DATA:",
+      assistantAiData() || "(no projects)",
+      assistantAiLast ? "Previous question: " + assistantAiLast.q + "\nPrevious answer: " + assistantAiLast.a : "",
+      "Question: " + text
+    ].filter(Boolean).join("\n");
+  }
+  function assistantAiChat(text) {
+    if (!voiceAiPlugin || !voiceAiEnabled()) { assistantDidntGet(); return; }
+    var thinking = assistantBubble("bot", tr("assistantAiThinking"));
+    thinking.classList.add("as-thinking");
+    var ask = voiceAiPlugin.available().then(function (res) {
+      if (!res || !res.available) return null;
+      return voiceAiPlugin.generate({ prompt: assistantAiPrompt(text) }).then(function (out) {
+        return String(out && out.text || "").replace(/\*\*|__|^#+\s*/gm, "").trim() || null;
+      });
+    }).catch(function () { return null; });
+    var timeout = new Promise(function (resolve) { setTimeout(function () { resolve(null); }, 25000); });
+    Promise.race([ask, timeout]).then(function (answer) {
+      thinking.remove();
+      if (!answer) { assistantDidntGet(); return; }
+      assistantAiLast = { q: text, a: answer };
+      assistantBubble("bot", function (el) {
+        el.classList.add("as-ai");
+        assistantAdd(el, "div", "🤖 " + answer);
+        assistantAdd(el, "small", tr("assistantAiNote")).className = "as-ai-note";
+      });
     });
   }
 
@@ -19139,7 +19210,7 @@
     if (assistantSpecial(text)) return;
     if (ctx.kind === "tasks" && ASSISTANT_TASK_VERB_RE.test(" " + text)) { assistantBubble("bot", tr("assistantTaskNotFound")); return; }
     if (assistantIsQuestion(text)) {
-      if (!assistantAnswer(text)) assistantDidntGet();
+      if (!assistantAnswer(text)) assistantAiChat(text);
       return;
     }
     var thinking = assistantBubble("bot", tr("voiceThinking"));

@@ -35,6 +35,11 @@ const NATIVE_FAKE = () => {
         speak: (o) => { (native.spoken = native.spoken || []).push(o.text); return ok({}); },
         stopSpeaking: () => ok(),
       },
+      // the on-phone model, only when a test sets window.__fakeAi(prompt) -> reply
+      ...(window.__fakeAi ? { ItaskAI: {
+        available: () => ok({ available: true, status: "available" }),
+        generate: ({ prompt }) => { (native.aiPrompts = native.aiPrompts || []).push(prompt); return ok({ text: window.__fakeAi(prompt) }); },
+      } } : {}),
       Filesystem: {
         writeFile: ({ path, data }) => { (native.files = native.files || []).push({ path, size: (data || "").length }); return ok({ uri: "file:///cache/" + path }); },
       },

@@ -330,3 +330,39 @@ test("speech mode 🔊: answers are read aloud; after a spoken line it listens a
   await openFromWidget(page, "assistant");
   await expect(page.locator("#assistantSpeakBtn")).toHaveText("🔊");
 });
+
+test("on-phone AI: a question the fixed answers don't cover goes to Gemini Nano with the projects' data; it answers, changes nothing", async ({ page }) => {
+  await page.addInitScript(() => {
+    window.__fakeAi = (prompt) => /^Convert a spoken command/.test(prompt) ? "" :
+      /Previous question/.test(prompt) ? "הטיח עדיין לא התחיל." : "צוות טפסנות אחראי על יציקת התקרה, והיא באיחור.";
+  });
+  await openWithSharedProject(page, { phone: ME, native: true, sheet: SHEET });
+  await openFromWidget(page, "assistant");
+  const before = JSON.stringify(await tasksOf(page));
+  await say(page, "מי אחראי על יציקת התקרה ולמה היא תקועה?");
+  await expect(bot(page).last()).toContainText("🤖 צוות טפסנות אחראי");
+  await expect(bot(page).last().locator(".as-ai-note")).toContainText("Gemini Nano");
+  if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT });
+  const prompts = await page.evaluate(() => window.__native.aiPrompts);
+  const p = prompts[prompts.length - 1];
+  expect(p).toContain("Question: מי אחראי על יציקת התקרה");
+  expect(p).toContain("plan activity: יציקת תקרה");
+  expect(p).toContain("LATE");
+  expect(p).toContain("by צוות טפסנות");
+  expect(p).toMatch(/task: להזמין בטון \| date \d{4}-\d\d-\d\d \| reminder 08:00/);
+  expect(p).toContain("forecast end"); // 40% in 6 days, past its end
+  // a follow-up carries the last exchange
+  await say(page, "ומה עם הטיח?");
+  await expect(bot(page).last()).toContainText("הטיח עדיין לא התחיל");
+  expect((await page.evaluate(() => window.__native.aiPrompts)).pop()).toContain("Previous answer: צוות טפסנות");
+  // nothing was changed
+  expect(JSON.stringify(await tasksOf(page))).toBe(before);
+});
+
+test("without the on-phone AI an unknown question still gets the examples", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, native: true, sheet: SHEET });
+  await openFromWidget(page, "assistant");
+  await say(page, "מי אחראי על יציקת התקרה ולמה היא תקועה?");
+  await expect(bot(page).last()).not.toContainText("🤖");
+  await expect(bot(page).last()).toContainText(/לא הבנתי|דוגמ/);
+});

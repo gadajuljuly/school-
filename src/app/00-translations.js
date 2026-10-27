@@ -312,6 +312,8 @@
     assistantSpeakTitle: { he: "מצב דיבור: הקראת תשובות והקשבה רציפה", en: "Speech mode: answers read aloud, keeps listening", ar: "وضع الكلام: قراءة الإجابات والاستماع المستمر", ru: "Голосовой режим: ответы вслух, продолжает слушать" },
     assistantVoiceOn: { he: "מצב דיבור פעיל: אקריא את התשובות, ואחרי פקודה קולית אמשיך להקשיב", en: "Speech mode on: answers are read aloud, and after a spoken line I keep listening", ar: "وضع الكلام مفعل: سأقرأ الإجابات وأواصل الاستماع بعد الأمر الصوتي", ru: "Голосовой режим включён: читаю ответы и продолжаю слушать" },
     assistantVoiceOff: { he: "מצב דיבור כבוי", en: "Speech mode off", ar: "وضع الكلام متوقف", ru: "Голосовой режим выключен" },
+    assistantAiThinking: { he: "🤖 חושב...", en: "🤖 Thinking...", ar: "🤖 يفكر...", ru: "🤖 Думаю..." },
+    assistantAiNote: { he: "תשובה של הבינה המלאכותית בטלפון (Gemini Nano) - כדאי לבדוק", en: "An answer from the on-phone AI (Gemini Nano) - worth checking", ar: "إجابة من الذكاء الاصطناعي في الهاتف (Gemini Nano) - يُستحسن التحقق", ru: "Ответ ИИ в телефоне (Gemini Nano) - стоит проверить" },
     voiceBtnTitle: { he: "פקודה קולית", en: "Voice command", ar: "أمر صوتي", ru: "Голосовая команда" },
     voiceTitle: { he: "פקודה קולית", en: "Voice command", ar: "أمر صوتي", ru: "Голосовая команда" },
     voiceListening: { he: "מקשיב... דבר עכשיו", en: "Listening... speak now", ar: "أستمع... تكلّم الآن", ru: "Слушаю... говорите" },
