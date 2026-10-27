@@ -3424,6 +3424,7 @@
   .sketch-area-btns { display: flex; gap: 10px; }
   /* עוזר ITASK - a chat with the app (opened from the home-screen widget) */
   .assistant-view { display: flex; flex-direction: column; }
+  .morning-time-row input { font: inherit; padding: 2px 6px; border: 1px solid var(--rule); border-radius: 6px; }
   .assistant-view[hidden] { display: none; }
   .assistant-title { display: flex; align-items: center; justify-content: center; gap: 8px; }
   .assistant-title img { width: 26px; height: 26px; border-radius: 7px; }

@@ -91,7 +91,7 @@ public final class TaskAlarmScheduler {
             JSONObject a = alarms.optJSONObject(i);
             if (a == null) continue;
             if (!id.equals(a.optString("id"))) { next.put(a); continue; }
-            if (a.optBoolean("quiet")) showQuiet(c, id, a.optString("title"), a.optString("body"));
+            if (a.optBoolean("quiet")) showQuiet(c, id, a.optString("title"), a.optString("body"), a.optString("view", "workplan"));
             else showRinging(c, id, a.optString("title"), a.optString("body"));
             markFired(c, id, a.optLong("at", 0));
             long repeatMinutes = a.optLong("repeatMinutes", 0);
@@ -289,7 +289,9 @@ public final class TaskAlarmScheduler {
 
     private static final String QUIET_CHANNEL_ID = "work_plan_notices";
 
-    private static void showQuiet(Context c, String id, String title, String body) {
+    // view: where tapping it opens the app ("workplan", or "assistant-today"
+    // for the morning summary - version 24+)
+    private static void showQuiet(Context c, String id, String title, String body, String view) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                 c.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             return;
@@ -301,7 +303,7 @@ public final class TaskAlarmScheduler {
             channel.setDescription("פעילויות באיחור ופעילויות שמתחילות מחר");
             nm.createNotificationChannel(channel);
         }
-        PendingIntent open = PendingIntent.getActivity(c, id.hashCode(), ItaskAlarmPlugin.openAppIntent(c, "workplan"),
+        PendingIntent open = PendingIntent.getActivity(c, id.hashCode(), ItaskAlarmPlugin.openAppIntent(c, view),
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         Notification n = new NotificationCompat.Builder(c, QUIET_CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.ic_menu_my_calendar)

@@ -35,7 +35,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<link rel="stylesheet" href="tasks.css?v=2e4d2958f6">
+<link rel="stylesheet" href="tasks.css?v=ab3c4cbcb8">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -500,6 +500,11 @@
               <option value="240" data-i18n="reminderEvery4Hours">כל 4 שעות</option>
             </select>
             <p class="reminder-status" id="reminderStatus" hidden></p>
+          </div>
+          <div class="menu-section" id="morningSummaryMenuSection">
+            <div class="menu-label" data-i18n="morningSummaryLabel">סיכום בוקר</div>
+            <label class="cal-form-check"><input type="checkbox" id="morningSummaryToggle" checked><span data-i18n="morningSummaryOn">התראה כל בוקר: מה יש היום</span></label>
+            <label class="cal-form-check morning-time-row"><span data-i18n="morningSummaryAt">בשעה</span> <input type="time" id="morningSummaryTime" value="07:00"></label>
           </div>
           <div class="menu-section" id="workPlanNotifMenuSection">
             <div class="menu-label" data-i18n="workPlanNotifLabel">התראות תוכנית עבודה</div>
@@ -1444,6 +1449,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=a4f7ab1b60"></script>
+<script src="tasks-app.js?v=7f32b32ac0"></script>
 </body>
 </html>

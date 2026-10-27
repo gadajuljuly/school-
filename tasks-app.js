@@ -249,6 +249,13 @@
     assistantOpenChat: { he: "פתח את הצ'אט", en: "Open the chat", ar: "افتح الدردشة", ru: "Открыть чат" },
     assistantWhichChat: { he: "לאיזה צ'אט? למשל: \"שלח לצ'אט של בניין A: הבטון מתעכב\"", en: "Which chat? e.g. \"send to Building A's chat: the concrete is late\"", ar: "لأي دردشة؟ مثلاً: \"أرسل لدردشة مبنى A: الباطون متأخر\"", ru: "В какой чат? Например: «напиши в чат корпуса A: бетон задерживается»" },
     assistantWhatToSay: { he: "מה לכתוב בהודעה?", en: "What should the message say?", ar: "ماذا أكتب في الرسالة؟", ru: "Что написать в сообщении?" },
+    morningSummaryLabel: { he: "סיכום בוקר", en: "Morning summary", ar: "ملخص الصباح", ru: "Утренняя сводка" },
+    morningSummaryOn: { he: "התראה כל בוקר: מה יש היום", en: "A notification each morning: what's on today", ar: "إشعار كل صباح: ماذا لديك اليوم", ru: "Уведомление каждое утро: что сегодня" },
+    morningSummaryAt: { he: "בשעה", en: "At", ar: "في الساعة", ru: "В" },
+    morningTitle: { he: "☀ בוקר טוב – ITASK", en: "☀ Good morning – ITASK", ar: "☀ صباح الخير – ITASK", ru: "☀ Доброе утро – ITASK" },
+    morningTasks: { he: "היום: {n} משימות", en: "Today: {n} tasks", ar: "اليوم: {n} مهام", ru: "Сегодня: {n} задач" },
+    morningLate: { he: "{n} פעילויות באיחור", en: "{n} late activities", ar: "{n} أنشطة متأخرة", ru: "{n} работ с опозданием" },
+    morningFirst: { he: "תזכורת ב-{time} – {text}", en: "a reminder at {time} – {text}", ar: "تذكير في {time} – {text}", ru: "напоминание в {time} – {text}" },
     voiceBtnTitle: { he: "פקודה קולית", en: "Voice command", ar: "أمر صوتي", ru: "Голосовая команда" },
     voiceTitle: { he: "פקודה קולית", en: "Voice command", ar: "أمر صوتي", ru: "Голосовая команда" },
     voiceListening: { he: "מקשיב... דבר עכשיו", en: "Listening... speak now", ar: "أستمع... تكلّم الآن", ru: "Слушаю... говорите" },
@@ -1744,7 +1751,7 @@
       });
     });
     if (flagged) saveData();
-    alarms = alarms.concat(workPlanNativeAlarms());
+    alarms = alarms.concat(workPlanNativeAlarms(), assistantMorningAlarms());
     var json = JSON.stringify(alarms);
     if (json === lastNativeTaskAlarmsJson) return;
     lastNativeTaskAlarmsJson = json;
@@ -1777,6 +1784,7 @@
     if (view === "share") { openShareTaskModal(text); return; }
     if (view === "workplan") { openWorkPlan(); return; }
     if (view === "assistant" || view === "assistant-listen") { openAssistant(view === "assistant-listen"); return; }
+    if (view === "assistant-today") { openAssistant(false, tr("assistantChipToday")); return; }
     if (!view || view.indexOf("task|") !== 0) return;
     var parts = view.split("|");
     closeMoveTask();
@@ -17579,7 +17587,8 @@
   var assistantMicBtn = document.getElementById("assistantMicBtn");
   var assistantGreeted = false;
 
-  function openAssistant(listen) {
+  // ask: a line to ask straight away (the morning summary's tap)
+  function openAssistant(listen, ask) {
     assistantInput.placeholder = tr("assistantPlaceholder");
     assistantView.hidden = false;
     if (!assistantGreeted) {
@@ -17587,6 +17596,7 @@
       assistantGreet();
     }
     assistantMicBtn.hidden = !(voiceSpeechPlugin || VoiceWebRecognition);
+    if (ask) { assistantHandle(ask); return; }
     if (listen && !assistantMicBtn.hidden) assistantListen();
     else assistantInput.focus();
   }
@@ -17970,6 +17980,72 @@
     });
   }
   assistantMicBtn.addEventListener("click", assistantListen);
+
+  // ---- the morning summary ---------------------------------------------------------
+  // A quiet phone notification each morning (07:00 unless set otherwise in
+  // the menu): the day's open tasks, the activities late by then and the
+  // day's first reminder. The next week's are scheduled with every alarm
+  // sync, each worked out from what's known now (the app redoes them
+  // whenever it opens); a day with nothing on gets none. Tapping one opens
+  // the assistant on "מה יש לי היום?" (app version 24+; before that, the app).
+  var MORNING_ON_KEY = "itask-morning-summary", MORNING_AT_KEY = "itask-morning-summary-at";
+  function morningSummaryOn() {
+    try { return localStorage.getItem(MORNING_ON_KEY) !== "off"; } catch (e) { return true; }
+  }
+  function morningSummaryTime() {
+    try { return localStorage.getItem(MORNING_AT_KEY) || "07:00"; } catch (e) { return "07:00"; }
+  }
+  // the summary line for a day, or null when there's nothing on
+  function morningSummaryText(iso) {
+    var tasks = 0, late = 0, first = null;
+    voiceTargetSheets().forEach(function (sheet) {
+      (sheet.tasks || []).forEach(function (t) {
+        if (t.type === "note" || t.status === 2 || t.headOfficeVirtual || !(t.text || "").trim()) return;
+        // today's list also holds what's still open from before
+        if (t.date !== iso && !(t.date < iso && iso === todayISO())) return;
+        tasks++;
+        var r = t.reminder;
+        if (r && r.type === "time" && r.date === iso && r.time && (!first || r.time < first.time)) first = { time: r.time, text: t.text };
+      });
+      late += (sheet.workPlan || []).filter(function (x) { return x.status !== "done" && x.end < iso; }).length;
+    });
+    if (!tasks && !late) return null;
+    var parts = [];
+    if (tasks) parts.push(tr("morningTasks").replace("{n}", tasks));
+    if (late) parts.push(tr("morningLate").replace("{n}", late));
+    if (first) parts.push(tr("morningFirst").replace("{time}", first.time).replace("{text}", first.text));
+    return parts.join(", ");
+  }
+  function assistantMorningAlarms() {
+    if (!wpQuietAlarmsSupported || !morningSummaryOn()) return [];
+    var hm = morningSummaryTime().split(":"), now = Date.now(), out = [];
+    for (var i = 0; i < 7; i++) {
+      var iso = addDaysToISO(todayISO(), i);
+      var d = wpDate(iso);
+      d.setHours(+hm[0] || 0, +hm[1] || 0, 0, 0);
+      if (d.getTime() <= now) continue;
+      var body = morningSummaryText(iso);
+      if (!body) continue;
+      out.push({ id: "morning:" + iso, title: tr("morningTitle"), body: body, quiet: true, at: d.getTime(), view: "assistant-today" });
+    }
+    return out;
+  }
+  (function () {
+    var toggle = document.getElementById("morningSummaryToggle");
+    var time = document.getElementById("morningSummaryTime");
+    toggle.checked = morningSummaryOn();
+    time.value = morningSummaryTime();
+    var resync = function () { lastNativeTaskAlarmsJson = null; syncNativeTaskAlarms(); };
+    toggle.addEventListener("change", function () {
+      try { localStorage.setItem(MORNING_ON_KEY, toggle.checked ? "on" : "off"); } catch (e) {}
+      resync();
+    });
+    time.addEventListener("change", function () {
+      if (!/^\d\d:\d\d$/.test(time.value)) return;
+      try { localStorage.setItem(MORNING_AT_KEY, time.value); } catch (e) {}
+      resync();
+    });
+  })();
   function loadFromLocalOrDefault() {
     return loadLocalData() || defaultData();
   }

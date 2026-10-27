@@ -187,7 +187,7 @@
       });
     });
     if (flagged) saveData();
-    alarms = alarms.concat(workPlanNativeAlarms());
+    alarms = alarms.concat(workPlanNativeAlarms(), assistantMorningAlarms());
     var json = JSON.stringify(alarms);
     if (json === lastNativeTaskAlarmsJson) return;
     lastNativeTaskAlarmsJson = json;
@@ -220,6 +220,7 @@
     if (view === "share") { openShareTaskModal(text); return; }
     if (view === "workplan") { openWorkPlan(); return; }
     if (view === "assistant" || view === "assistant-listen") { openAssistant(view === "assistant-listen"); return; }
+    if (view === "assistant-today") { openAssistant(false, tr("assistantChipToday")); return; }
     if (!view || view.indexOf("task|") !== 0) return;
     var parts = view.split("|");
     closeMoveTask();

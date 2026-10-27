@@ -120,3 +120,27 @@ test("assistant: progress of an activity, moving / postponing one, a message to 
   await bot(page).last().locator("button", { hasText: "פתח את הצ'אט" }).click();
   await expect(page.locator("#chatView")).toBeVisible();
 });
+
+test("morning summary: a quiet notification each morning with the day's tasks, late activities and first reminder; tap opens the assistant on today", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, native: true, sheet: SHEET });
+  const morning = () => page.evaluate(() => (window.__native.alarms || []).filter((a) => a.id.startsWith("morning:")));
+  // tomorrow: one open task with an 08:00 reminder, two activities late by then (w1 ended yesterday, w2 not yet)
+  await expect.poll(async () => (await morning()).map((a) => a.id)).toContain("morning:" + iso(1));
+  const tomorrow = (await morning()).find((a) => a.id === "morning:" + iso(1));
+  expect(tomorrow).toMatchObject({ quiet: true, view: "assistant-today" });
+  expect(tomorrow.body).toContain("היום: 1 משימות");
+  expect(tomorrow.body).toContain("1 פעילויות באיחור");
+  expect(tomorrow.body).toContain("תזכורת ב-08:00 – להזמין בטון");
+  expect(new Date(tomorrow.at).getHours()).toBe(7);
+  // the time is set from the menu
+  await page.evaluate(() => { const el = document.getElementById("morningSummaryTime"); el.value = "06:30"; el.dispatchEvent(new Event("change")); });
+  await expect.poll(async () => { const a = (await morning()).find((x) => x.id === "morning:" + iso(1)); return a && new Date(a.at).getHours() * 60 + new Date(a.at).getMinutes(); }).toBe(390);
+  // ...and turned off
+  await page.evaluate(() => { const el = document.getElementById("morningSummaryToggle"); el.checked = false; el.dispatchEvent(new Event("change")); });
+  await expect.poll(async () => (await morning()).length).toBe(0);
+  // the tap: the assistant answers what's on today
+  await page.evaluate(() => window.__native.listeners.launchView({ view: "assistant-today" }));
+  await expect(page.locator("#assistantView")).toBeVisible();
+  await expect(page.locator("#assistantMessages .as-me").last()).toHaveText("מה יש לי היום?");
+  await expect(bot(page).last()).toContainText("לבדוק ברזל בקומה 3");
+});
