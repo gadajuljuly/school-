@@ -753,6 +753,7 @@
           workPlan: privateSheet.workPlan || [],
           workHammocks: privateSheet.workHammocks || [],
           workBaseline: privateSheet.workBaseline || null,
+          sketches: privateSheet.sketches || [],
           ended: privateSheet.ended || false,
           endedDate: privateSheet.endedDate || null,
           logoId: privateSheet.logoId || null,

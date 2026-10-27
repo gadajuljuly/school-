@@ -32,18 +32,27 @@
     images: {}          // decoded background images by element id
   };
 
-  function skDraftKey() { return "itask-sketch:" + sk.sheetId; }
+  // Each sketch keeps its own copy on the phone (itask-sketch:<project>:<id>)
+  // on every change - the server copy (14g-sketch-cloud.js) follows it.
+  function skDraftKey(sketchId) { return "itask-sketch:" + sk.sheetId + ":" + (sketchId || sk.sketchId); }
   function skSaveDraft() {
+    if (!sk.sketchId) return;
+    sk.savedAt = Date.now();
     try {
-      localStorage.setItem(skDraftKey(), JSON.stringify({ els: sk.els, scale: sk.scale, view: sk.view }));
+      localStorage.setItem(skDraftKey(), JSON.stringify({ sketchId: sk.sketchId, name: sk.sketchName, els: sk.els, scale: sk.scale, view: sk.view, savedAt: sk.savedAt, syncedAt: sk.syncedAt || 0 }));
+      localStorage.setItem("itask-sketch-cur:" + sk.sheetId, sk.sketchId);
     } catch (e) {}
+    skCloudSoon();
   }
-  function skLoadDraft() {
-    var d = null;
-    try { d = JSON.parse(localStorage.getItem(skDraftKey()) || "null"); } catch (e) {}
-    sk.els = (d && d.els) || [];
-    sk.scale = (d && d.scale) || null;
-    sk.view = (d && d.view) || { x: -40, y: -40, z: 1 };
+  // puts a sketch (as kept on the phone, or fresh) on the pad
+  function skLoadDraft(d) {
+    sk.sketchId = d.sketchId;
+    sk.sketchName = d.name || tr("sketchTitle");
+    sk.els = d.els || [];
+    sk.scale = d.scale || null;
+    sk.view = d.view || { x: -40, y: -40, z: 1 };
+    sk.savedAt = d.savedAt || 0;
+    sk.syncedAt = d.syncedAt || 0;
     sk.undo = []; sk.redo = [];
     sk.objSel = null;
     sk.bgSel = false;
@@ -1318,15 +1327,16 @@
     var sheet = activeSheet();
     if (!sheet) return;
     sk.sheetId = sheet.id;
-    skLoadDraft();
-    document.getElementById("sketchTitle").textContent = tr("sketchTitle") + " – " + sheet.name;
+    skLoadDraft(skOpeningDraft(sheet));
+    skShowTitle();
     sketchView.hidden = false;
     skUpdateButtons();
     skResize();
+    skCloudAfterOpen(sheet);
   }
   function closeSketch() {
     if (sk.crop) skEndCrop();
-    skSaveDraft();
+    skCloudNow(true);
     sketchView.hidden = true;
   }
   window.addEventListener("resize", function () { if (!sketchView.hidden) skResize(); });

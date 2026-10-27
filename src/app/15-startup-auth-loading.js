@@ -222,6 +222,7 @@
       workPlan: d.workPlan || [],
       workHammocks: d.workHammocks || [],
       workBaseline: d.workBaseline || null,
+      sketches: d.sketches || [],
       ended: ended,
       endedDate: endedDate,
       logoId: logoId,
