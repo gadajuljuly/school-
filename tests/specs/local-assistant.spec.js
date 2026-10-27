@@ -190,3 +190,41 @@ test("the bar stays over the app; 'תציג' opens the project's plan / tasks / 
   await page.locator("#assistantDockCloseBtn").click();
   await expect(page.locator("#assistantDock")).toBeHidden();
 });
+
+test("with the plan on screen: filter it, add / link / finish / delete activities, save a baseline - the chart follows", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, native: true, sheet: SHEET });
+  await openFromWidget(page, "assistant");
+  await say(page, "תציג את תוכנית העבודה של בניין A");
+  const rows = page.locator("#workPlanChart .wp-row:not(.wp-head-row)");
+  await expect(rows).toHaveCount(2);
+
+  await say(page, "רק מה שבאיחור");
+  await expect(rows).toHaveCount(1);
+  await expect(rows.first()).toContainText("יציקת תקרה");
+  await expect(page.locator("#workPlanRangeLabel")).toContainText("רק מה שבאיחור");
+  await say(page, "הכל");
+  await expect(rows).toHaveCount(2);
+
+  await say(page, "הוסף פעילות איטום גג מיום ראשון עד שלישי, צוות איטום");
+  await expect(rows).toHaveCount(3);
+  const a = (await planOf(page)).find((x) => /איטום/.test(x.name));
+  expect(a.by).toBe("צוות איטום");
+
+  await say(page, "קשר את האיטום אחרי הטיח");
+  await expect(bot(page).last()).toContainText("קושרו");
+  const w2 = (await planOf(page)).find((x) => x.id === "w2");
+  await expect.poll(async () => (await planOf(page)).find((x) => x.id === a.id).links).toEqual([{ from: "w2", type: "FS", lag: 0 }]);
+  expect((await planOf(page)).find((x) => x.id === a.id).start > w2.end).toBe(true);
+
+  await say(page, "סמן את הטיח כהושלם");
+  await expect.poll(async () => (await planOf(page)).find((x) => x.id === "w2").status).toBe("done");
+  if (await page.locator("#confirmOverlay").isVisible()) await page.locator("#confirmNoBtn").click().catch(() => {});
+
+  await say(page, "מחק את פעילות האיטום");
+  await expect(rows).toHaveCount(2);
+  await bot(page).last().locator("button", { hasText: "ביטול" }).click();
+  await expect(rows).toHaveCount(3);
+
+  await say(page, "שמור קו בסיס");
+  await expect.poll(() => page.evaluate(() => Object.keys((window.__backend.tables.shared_projects[0].data.workBaseline || {}).items || {}).length)).toBe(3);
+});

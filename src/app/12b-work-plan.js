@@ -48,11 +48,18 @@
   function wpGroups() {
     if (wpState.sheetId) {
       var sheet = allSheets().find(function (s) { return s.id === wpState.sheetId; });
-      return sheet ? [{ sheet: sheet, items: wpSorted(sheet.workPlan) }] : [];
+      return sheet ? [{ sheet: sheet, items: wpFiltered(wpSorted(sheet.workPlan)) }] : [];
     }
     return officeReportSheets().slice().sort(compareSheetNames).map(function (s) {
-      return { sheet: s, items: wpSorted(s.workPlan) };
+      return { sheet: s, items: wpFiltered(wpSorted(s.workPlan)) };
     }).filter(function (g) { return g.items.length; });
+  }
+  // wpState.filter (set by the assistant: "רק מה שבאיחור", "רק ערסל חניון"):
+  // { late } or { hammock: id, name } - null shows everything
+  function wpFiltered(items) {
+    var f = wpState.filter;
+    if (!f) return items;
+    return items.filter(function (x) { return f.late ? wpIsLate(x) : f.hammock ? x.hammock === f.hammock : true; });
   }
 
   function wpRange(groups) {
@@ -229,7 +236,8 @@
     if (workPlanView.hidden) return;
     var groups = wpGroups();
     var range = wpRange(groups);
-    workPlanRangeLabel.textContent = wpRangeLabel(range);
+    workPlanRangeLabel.textContent = wpRangeLabel(range) + (wpState.filter ?
+      " · " + (wpState.filter.late ? tr("workPlanFilterLate") : tr("workPlanFilterHammock").replace("{h}", wpState.filter.name)) : "");
     workPlanNav.classList.toggle("wp-nav-off", wpState.zoom === "all");
     document.querySelectorAll(".wp-zoom").forEach(function (b) {
       b.classList.toggle("on", b.getAttribute("data-zoom") === wpState.zoom);
@@ -260,6 +268,7 @@
     wpState.sheetId = sheet.id === HEAD_OFFICE_SHEET_ID ? null : sheet.id;
     wpState.anchor = todayISO();
     wpState.zoom = "all"; // opens on the whole plan
+    wpState.filter = null;
     workPlanTitle.textContent = wpState.sheetId ? tr("workPlanTitle") + " – " + sheet.name : tr("workPlanOfficeTitle");
     workPlanView.hidden = false;
     wpFitAboveFooter();

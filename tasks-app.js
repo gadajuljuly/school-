@@ -295,6 +295,12 @@
     assistantShowingTasks: { he: "המשימות של {p} – {d}", en: "{p}'s tasks – {d}", ar: "مهام {p} – {d}", ru: "Задачи {p} – {d}" },
     assistantCalendarAppOnly: { he: "לוח השנה זמין באפליקציה בטלפון", en: "The calendar is in the phone app", ar: "التقويم متاح في تطبيق الهاتف", ru: "Календарь доступен в приложении на телефоне" },
     assistantNoChat: { he: "לפרויקט הזה אין צ'אט (רק לפרויקט משותף)", en: "This project has no chat (shared projects only)", ar: "لا توجد دردشة لهذا المشروع (للمشاريع المشتركة فقط)", ru: "У этого проекта нет чата (только у общих)" },
+    workPlanFilterLate: { he: "רק מה שבאיחור", en: "Late only", ar: "المتأخر فقط", ru: "Только опаздывающие" },
+    workPlanFilterHammock: { he: "רק {h}", en: "{h} only", ar: "{h} فقط", ru: "Только {h}" },
+    workPlanFilterAll: { he: "כל הפעילויות", en: "All activities", ar: "كل الأنشطة", ru: "Все работы" },
+    assistantLinkedDone: { he: "הפעילויות קושרו", en: "Linked", ar: "تم الربط", ru: "Связаны" },
+    assistantActMarkedDone: { he: "הפעילות סומנה כהושלמה", en: "Marked done", ar: "تم وضع علامة منجز", ru: "Отмечена выполненной" },
+    assistantActDeleted: { he: "הפעילות נמחקה", en: "Activity deleted", ar: "تم حذف النشاط", ru: "Работа удалена" },
     voiceBtnTitle: { he: "פקודה קולית", en: "Voice command", ar: "أمر صوتي", ru: "Голосовая команда" },
     voiceTitle: { he: "פקודה קולית", en: "Voice command", ar: "أمر صوتي", ru: "Голосовая команда" },
     voiceListening: { he: "מקשיב... דבר עכשיו", en: "Listening... speak now", ar: "أستمع... تكلّم الآن", ru: "Слушаю... говорите" },
@@ -10859,11 +10865,18 @@
   function wpGroups() {
     if (wpState.sheetId) {
       var sheet = allSheets().find(function (s) { return s.id === wpState.sheetId; });
-      return sheet ? [{ sheet: sheet, items: wpSorted(sheet.workPlan) }] : [];
+      return sheet ? [{ sheet: sheet, items: wpFiltered(wpSorted(sheet.workPlan)) }] : [];
     }
     return officeReportSheets().slice().sort(compareSheetNames).map(function (s) {
-      return { sheet: s, items: wpSorted(s.workPlan) };
+      return { sheet: s, items: wpFiltered(wpSorted(s.workPlan)) };
     }).filter(function (g) { return g.items.length; });
+  }
+  // wpState.filter (set by the assistant: "רק מה שבאיחור", "רק ערסל חניון"):
+  // { late } or { hammock: id, name } - null shows everything
+  function wpFiltered(items) {
+    var f = wpState.filter;
+    if (!f) return items;
+    return items.filter(function (x) { return f.late ? wpIsLate(x) : f.hammock ? x.hammock === f.hammock : true; });
   }
 
   function wpRange(groups) {
@@ -11040,7 +11053,8 @@
     if (workPlanView.hidden) return;
     var groups = wpGroups();
     var range = wpRange(groups);
-    workPlanRangeLabel.textContent = wpRangeLabel(range);
+    workPlanRangeLabel.textContent = wpRangeLabel(range) + (wpState.filter ?
+      " · " + (wpState.filter.late ? tr("workPlanFilterLate") : tr("workPlanFilterHammock").replace("{h}", wpState.filter.name)) : "");
     workPlanNav.classList.toggle("wp-nav-off", wpState.zoom === "all");
     document.querySelectorAll(".wp-zoom").forEach(function (b) {
       b.classList.toggle("on", b.getAttribute("data-zoom") === wpState.zoom);
@@ -11071,6 +11085,7 @@
     wpState.sheetId = sheet.id === HEAD_OFFICE_SHEET_ID ? null : sheet.id;
     wpState.anchor = todayISO();
     wpState.zoom = "all"; // opens on the whole plan
+    wpState.filter = null;
     workPlanTitle.textContent = wpState.sheetId ? tr("workPlanTitle") + " – " + sheet.name : tr("workPlanOfficeTitle");
     workPlanView.hidden = false;
     wpFitAboveFooter();
@@ -18478,7 +18493,17 @@
   // ---- work-plan and chat commands -------------------------------------------
   // "עדכן טיח ל-60%", "העבר את יציקת התקרה ליום חמישי", "דחה את החשמל
   // ביומיים", "שלח לצ'אט של בניין A: הבטון מתעכב". True when handled.
-  function assistantFindActivity(words) {
+  // the activity the words fit best - in the project on screen first
+  function assistantFindActivity(words, prefer) {
+    if (prefer === undefined) { var c = assistantContext(); prefer = c.kind === "plan" ? c.sheet : null; }
+    if (prefer) {
+      var own = null;
+      (prefer.workPlan || []).forEach(function (x) {
+        var sc = voiceScoreTask({ text: x.name }, words);
+        if (sc > 0 && (!own || sc > own.score)) own = { sheet: prefer, item: x, score: sc };
+      });
+      if (own) return own;
+    }
     var best = null;
     voiceTargetSheets().forEach(function (sheet) {
       (sheet.workPlan || []).forEach(function (x) {
@@ -18490,9 +18515,20 @@
   }
   // a reply saying what changed in the plan, with ↶ (puts every activity
   // that moved back as it was) and a way to the plan
-  function assistantPlanDone(sheet, before, title, line) {
+  // the bar of an activity on screen flashes (what just changed)
+  function assistantFlash(selector) {
+    setTimeout(function () {
+      document.querySelectorAll(selector).forEach(function (el) {
+        el.classList.remove("as-flash");
+        void el.offsetWidth;
+        el.classList.add("as-flash");
+      });
+    }, 60);
+  }
+  function assistantPlanDone(sheet, before, title, line, flashId) {
     render();
     refreshWorkPlanIfOpen();
+    if (flashId) assistantFlash("#workPlanChart .wp-bar[data-id='" + flashId + "']");
     assistantBubble("bot", function (el) {
       assistantAdd(el, "b", "✓ " + title);
       assistantAdd(el, "div", tr("assistantInProject").replace("{p}", sheet.name) + "\n" + line);
@@ -18520,6 +18556,95 @@
       });
     });
   }
+  // ---- the plan on screen -----------------------------------------------------------
+  // "הוסף פעילות איטום מיום ראשון לשבוע, צוות איטום", "קשר את הטיח אחרי
+  // החשמל", "סמן את החפירה כהושלמה", "מחק את פעילות הגידור", "שמור קו
+  // בסיס", "רק מה שבאיחור" / "רק ערסל חניון" / "הכל". True when handled.
+  function assistantPlanCommand(text, ctx) {
+    var sheet = ctx.sheet;
+    if (!sheet) return false;
+    var t = " " + text.replace(/[?؟.!]+$/, "") + " ";
+    var before = function () { return JSON.parse(JSON.stringify(sheet.workPlan || [])); };
+    // what the chart shows
+    if (/^\s*(?:תציג\s+)?(?:רק|בלבד)\s/.test(t) || /^\s*(?:הכל|הכול|בטל\s+(?:את\s+)?ה?סינון|תציג\s+הכל)\s*$/.test(t)) {
+      if (/איחור|מאחר/.test(t)) { wpState.filter = { late: true }; }
+      else if (/^\s*(?:הכל|הכול|בטל|תציג\s+הכל)/.test(t)) { wpState.filter = null; }
+      else {
+        var hName = t.replace(/\s(?:תציג|רק|את|ה?ערסל|ה?פעילויות|של)(?=\s)/g, " ").trim();
+        var ham = (sheet.workHammocks || []).find(function (h) { return voiceScoreTask({ text: h.name }, hName) > 0; });
+        if (!ham) return false;
+        wpState.filter = { hammock: ham.id, name: ham.name };
+      }
+      renderWorkPlan();
+      assistantBubble("bot", "👁 " + (wpState.filter ? (wpState.filter.late ? tr("workPlanFilterLate") : tr("workPlanFilterHammock").replace("{h}", wpState.filter.name)) : tr("workPlanFilterAll")));
+      return true;
+    }
+    if (/^\s*(?:שמור|תשמור|תשמרי)\s+(?:את\s+)?קו\s+(?:ה)?בסיס/.test(t)) {
+      var items = {};
+      (sheet.workPlan || []).forEach(function (x) { items[x.id] = { start: x.start, end: x.end }; });
+      wpState.showBaseline = true;
+      saveWorkBaseline(sheet, { savedAt: Date.now(), savedBy: myPhoneNumber || null, items: items });
+      assistantBubble("bot", "✓ " + tr("workPlanBaselineSavedMsg"));
+      return true;
+    }
+    // a new activity: whatever's added while the plan is shown goes into it
+    var am = t.match(/^\s*(?:הוסף|תוסיף|תוסיפי|הוסיפי|רשום|תרשום)\s+(?:פעילות\s+|לתוכנית\s+(?:העבודה\s+)?)?(.+)$/);
+    if (am) {
+      var cmd = parseVoicePlan(" לתוכנית העבודה " + am[1] + " ", [sheet], null, { people: voicePeople() });
+      if (!cmd.items.length) return false;
+      var b0 = before();
+      voiceApplyCommand(sheet, { action: "plan", texts: cmd.items, date: cmd.date, endDate: cmd.endDate, by: cmd.by }).then(function (res) {
+        if (!res) return;
+        var added = (sheet.workPlan || []).filter(function (x) { return !b0.some(function (y) { return y.id === x.id; }); });
+        assistantPlanDone(sheet, b0, tr("voicePlanAddedMsg"), added.map(function (x) {
+          return "📊 " + x.name + ": " + isoToDisplay(x.start) + " – " + isoToDisplay(x.end) + (x.by ? " (" + x.by + ")" : "");
+        }).join("\n"), added[0] && added[0].id);
+        // the undo of a new one is taking it out
+        var undo = assistantDockReply.querySelector(".as-bot:last-child .as-actions button");
+        if (undo) undo.addEventListener("click", function () { added.forEach(function (x) { saveWorkPlanItem(sheet, x, true); }); refreshWorkPlanIfOpen(); });
+      });
+      return true;
+    }
+    var lm = t.match(/^\s*(?:קשר|תקשר|תקשרי|חבר|תחבר|תחברי)\s+(?:את\s+)?(.+?)\s+(?:אחרי|לאחר)\s+(.+)$/);
+    if (lm) {
+      var succ = assistantFindActivity(lm[1], sheet), pred = assistantFindActivity(lm[2], sheet);
+      if (!succ || !pred || succ.item.id === pred.item.id || succ.sheet !== sheet || pred.sheet !== sheet) return false;
+      var b1 = before();
+      var linked = Object.assign({}, succ.item, { links: (succ.item.links || []).filter(function (l) { return l.from !== pred.item.id; }).concat([{ from: pred.item.id, type: "FS", lag: 0 }]),
+        updatedBy: myPhoneNumber || null, updatedAt: Date.now() });
+      saveWorkPlanItem(sheet, linked, false);
+      // it moves on if it no longer fits after the other one (the usual question)
+      var shift = wpLinkShift(linked, pred.item, { type: "FS", lag: 0 });
+      if (shift) { linked = wpShift(linked, shift); saveWorkPlanItem(sheet, linked, false); wpCascadeDependents(sheet, linked); }
+      assistantPlanDone(sheet, b1, tr("assistantLinkedDone"), "📊 " + pred.item.name + " → " + linked.name + ": " + isoToDisplay(linked.start), linked.id);
+      return true;
+    }
+    var dm = t.match(/^\s*(?:סמן|תסמן|תסמני)\s+(?:את\s+)?(.+?)\s+(?:כ-?)?(?:הושלם|הושלמה|גמור|גמורה|בוצע|בוצעה|נגמר|נגמרה)\s*$/) ||
+      t.match(/^\s*(?:סיימנו|סיימתי|גמרנו)\s+(?:את\s+)?(.+)$/) || t.match(/^\s*(.+?)\s+(?:הסתיים|הסתיימה|הושלם|הושלמה|נגמר|נגמרה)\s*$/);
+    if (dm) {
+      var hit = assistantFindActivity(dm[1], sheet);
+      if (!hit || hit.sheet !== sheet) return false;
+      var b2 = before();
+      var done = Object.assign({}, hit.item, { status: "done", progress: 100, updatedBy: myPhoneNumber || null, updatedAt: Date.now() });
+      saveWorkPlanItem(sheet, done, false);
+      assistantPlanDone(sheet, b2, tr("assistantActMarkedDone"), "📊 " + done.name + " ✓ " + isoToDisplay(done.end), done.id);
+      return true;
+    }
+    var xm = t.match(/^\s*(?:מחק|תמחק|תמחקי|הסר|תסיר|תסירי)\s+(?:את\s+)?(?:ה?פעילות\s+)?(.+)$/);
+    if (xm) {
+      var gone = assistantFindActivity(xm[1], sheet);
+      if (!gone || gone.sheet !== sheet) return false;
+      var b3 = before();
+      saveWorkPlanItem(sheet, gone.item, true);
+      assistantPlanDone(sheet, b3, tr("assistantActDeleted"), "📊 " + gone.item.name);
+      // ↶ puts it back (the usual undo only restores ones still there)
+      var undo2 = assistantDockReply.querySelector(".as-bot:last-child .as-actions button");
+      if (undo2) undo2.addEventListener("click", function () { saveWorkPlanItem(sheet, gone.item, false); refreshWorkPlanIfOpen(); });
+      return true;
+    }
+    return false;
+  }
+
   function assistantSpecial(text) {
     var t = " " + text.replace(/[?؟.!]+$/, "") + " ";
     // progress
@@ -18532,7 +18657,7 @@
         var item = Object.assign({}, hit.item, { progress: p, status: p >= 100 ? "done" : p > 0 ? "prog" : "todo",
           updatedBy: myPhoneNumber || null, updatedAt: Date.now() });
         saveWorkPlanItem(hit.sheet, item, false);
-        assistantPlanDone(hit.sheet, before, tr("assistantProgressDone"), "📊 " + item.name + " – " + p + "%");
+        assistantPlanDone(hit.sheet, before, tr("assistantProgressDone"), "📊 " + item.name + " – " + p + "%", item.id);
         return true;
       }
     }
@@ -18556,7 +18681,7 @@
         saveWorkPlanItem(act.sheet, moved, false);
         wpCascadeDependents(act.sheet, moved);
         assistantPlanDone(act.sheet, before2, tr("assistantMovedDone"),
-          "📊 " + moved.name + ": " + isoToDisplay(moved.start) + " – " + isoToDisplay(moved.end));
+          "📊 " + moved.name + ": " + isoToDisplay(moved.start) + " – " + isoToDisplay(moved.end), moved.id);
         return true;
       }
     }
@@ -18699,6 +18824,8 @@
     if (!text) return;
     assistantBubble("me", text);
     if (assistantShow(text)) return;
+    var ctx = assistantContext();
+    if (ctx.kind === "plan" && assistantPlanCommand(text, ctx)) return;
     if (assistantSpecial(text)) return;
     if (assistantIsQuestion(text)) {
       if (!assistantAnswer(text)) assistantDidntGet();
