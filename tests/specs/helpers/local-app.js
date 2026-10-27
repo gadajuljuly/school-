@@ -73,6 +73,9 @@ async function openLocalApp(page, { native = false, data = null, calendarEvents 
   // only the app's own files - no Supabase, Firebase or CDNs
   await page.route("**/*", (route) => {
     const url = route.request().url();
+    // the real Supabase / Firebase stay out (as when they came from their
+    // CDNs): the tests run on the fake backend
+    if (/\/vendor\/(supabase-js|firebase-)/.test(url)) return route.abort();
     if (url.startsWith("http://localhost")) return route.continue();
     return route.abort();
   });

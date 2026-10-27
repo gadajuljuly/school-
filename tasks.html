@@ -31,10 +31,13 @@
 <link rel="apple-touch-icon" href="tasks-icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700&family=Rubik:wght@600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<!-- the fonts don't hold the page up: it shows at once, they follow -->
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700&family=Rubik:wght@600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700&family=Rubik:wght@600;700&display=swap" rel="stylesheet"></noscript>
+<!-- kept here (and in the offline cache) rather than fetched from their sites on every start -->
+<script src="vendor/supabase-js-2.118.0.js"></script>
+<script src="vendor/firebase-app-compat-10.7.1.js"></script>
+<script src="vendor/firebase-auth-compat-10.7.1.js"></script>
 <link rel="stylesheet" href="tasks.css?v=8c12c7e675">
 </head>
 <body>
