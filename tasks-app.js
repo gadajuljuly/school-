@@ -331,6 +331,24 @@
     workPlanHammockPlaceholder: { he: "למשל: בניין A, חניון, פיתוח", en: "e.g. Building A, parking, landscaping", ar: "مثلاً: مبنى A، موقف، تطوير", ru: "напр.: корпус A, парковка, благоустройство" },
     workPlanHammockMenuTitle: { he: "שיוך לערסל: {name}", en: "Put in a hammock: {name}", ar: "إضافة إلى مجموعة: {name}", ru: "В группу: {name}" },
     workPlanHammockCount: { he: "{n} פעילויות", en: "{n} activities", ar: "{n} أنشطة", ru: "{n} работ" },
+    workPlanBaseline: { he: "📌 קו בסיס", en: "📌 Baseline", ar: "📌 خط الأساس", ru: "📌 Базовый план" },
+    workPlanBaselineLegend: { he: "קו בסיס", en: "Baseline", ar: "خط الأساس", ru: "Базовый план" },
+    workPlanBaselineExplain: { he: "קו בסיס שומר את התאריכים של כל הפעילויות כמו שהם עכשיו. אחר כך הגאנט יראה מתחת לכל פעילות פס אפור של מה שתוכנן, וכמה ימים היא זזה.", en: "A baseline keeps every activity's dates as they are now; the chart then shows a grey bar of what was planned under each one, and how many days it has slipped.", ar: "خط الأساس يحفظ تواريخ كل الأنشطة كما هي الآن؛ بعدها يعرض المخطط تحت كل نشاط شريطاً رمادياً لما خُطط له، وكم يوماً تأخر.", ru: "Базовый план сохраняет текущие даты всех работ; затем под каждой работой видна серая полоса плана и на сколько дней она сдвинулась." },
+    workPlanBaselineSavedOn: { he: "קו הבסיס נשמר ב-{date}", en: "Baseline saved on {date}", ar: "تم حفظ خط الأساس في {date}", ru: "Базовый план сохранён {date}" },
+    workPlanBaselineSave: { he: "📌 שמירת קו בסיס", en: "📌 Save a baseline", ar: "📌 حفظ خط الأساس", ru: "📌 Сохранить базовый план" },
+    workPlanBaselineUpdate: { he: "📌 עדכון קו הבסיס לתוכנית של היום", en: "📌 Update it to today's plan", ar: "📌 تحديثه إلى خطة اليوم", ru: "📌 Обновить по текущему плану" },
+    workPlanBaselineHide: { he: "🙈 הסתרת קו הבסיס", en: "🙈 Hide the baseline", ar: "🙈 إخفاء خط الأساس", ru: "🙈 Скрыть базовый план" },
+    workPlanBaselineShow: { he: "👁 הצגת קו הבסיס", en: "👁 Show the baseline", ar: "👁 إظهار خط الأساس", ru: "👁 Показать базовый план" },
+    workPlanBaselineDelete: { he: "🗑 מחיקת קו הבסיס", en: "🗑 Delete the baseline", ar: "🗑 حذف خط الأساس", ru: "🗑 Удалить базовый план" },
+    workPlanBaselineDeleteConfirm: { he: "למחוק את קו הבסיס?", en: "Delete the baseline?", ar: "حذف خط الأساس؟", ru: "Удалить базовый план?" },
+    workPlanBaselineSavedMsg: { he: "קו הבסיס נשמר", en: "Baseline saved", ar: "تم حفظ خط الأساس", ru: "Базовый план сохранён" },
+    workPlanSlip: { he: "+{n} ימים", en: "+{n} days", ar: "+{n} أيام", ru: "+{n} дн." },
+    workPlanExcelActivity: { he: "פעילות", en: "Activity", ar: "النشاط", ru: "Работа" },
+    workPlanExcelDays: { he: "ימים", en: "Days", ar: "أيام", ru: "Дней" },
+    workPlanExcelDone: { he: "ביצוע", en: "Done", ar: "الإنجاز", ru: "Выполнено" },
+    workPlanExcelBaseStart: { he: "קו בסיס – התחלה", en: "Baseline start", ar: "خط الأساس – البداية", ru: "База – начало" },
+    workPlanExcelBaseEnd: { he: "קו בסיס – סיום", en: "Baseline end", ar: "خط الأساس – النهاية", ru: "База – конец" },
+    workPlanExcelSlip: { he: "סטייה (ימים)", en: "Slip (days)", ar: "الانحراف (أيام)", ru: "Сдвиг (дн.)" },
     workPlanSave: { he: "שמירה", en: "Save", ar: "حفظ", ru: "Сохранить" },
     workPlanDeleteConfirm: { he: "למחוק את הפעילות מהתוכנית?", en: "Delete this activity from the plan?", ar: "حذف هذا النشاط من الخطة؟", ru: "Удалить эту работу из плана?" },
     workPlanSaveError: { he: "השמירה נכשלה. בדוק את החיבור לאינטרנט ונסה שוב.", en: "Saving failed. Check the connection and try again.", ar: "فشل الحفظ. تحقق من الاتصال وحاول مجدداً.", ru: "Не удалось сохранить. Проверьте подключение." },
@@ -1077,7 +1095,7 @@
           data: {
             tasks: sheet.tasks || [], reports: sheet.reports || [], files: [], folders: sheet.folders || null,
             siteLogs: sheet.siteLogs || [], ended: sheet.ended || false, endedDate: sheet.endedDate || null, logoId: sheet.logoId || null,
-            workPlan: sheet.workPlan || [], workHammocks: sheet.workHammocks || []
+            workPlan: sheet.workPlan || [], workHammocks: sheet.workHammocks || [], workBaseline: sheet.workBaseline || null
           },
           data_version: 1,
           members: sheet.members || [],
@@ -4228,6 +4246,7 @@
           siteLogs: privateSheet.siteLogs || [],
           workPlan: privateSheet.workPlan || [],
           workHammocks: privateSheet.workHammocks || [],
+          workBaseline: privateSheet.workBaseline || null,
           ended: privateSheet.ended || false,
           endedDate: privateSheet.endedDate || null,
           logoId: privateSheet.logoId || null,
@@ -10525,6 +10544,7 @@
         if (hammock) name.style.borderRightColor = hammock.color;
         name.appendChild(wpEl("span", "wp-name-text", item.name));
         if (item.by) name.appendChild(wpEl("small", "", item.by));
+        wpSlipLabel(name, g.sheet, item);
         if (!forPdf) wpBindNameLongPress(name, g.sheet, item);
         row.appendChild(name);
         var t = track();
@@ -10569,6 +10589,7 @@
           bar.appendChild(main);
           t.appendChild(bar);
         }
+        wpDrawBaselineBar(t, g.sheet, item, range, dayW);
         row.appendChild(t);
         if (!forPdf) {
           row.addEventListener("click", function () { wpRowTapped(g.sheet, item); });
@@ -10600,6 +10621,8 @@
       wpDrawDependencies(workPlanChart, groups);
     }
     document.getElementById("workPlanCopyWeekBtn").hidden = wpState.zoom !== "week";
+    document.getElementById("workPlanBaselineBtn").hidden = !wpState.sheetId; // per project
+    document.getElementById("wpLegendBaseline").hidden = !(wpState.showBaseline && groups.some(function (g) { return g.sheet.workBaseline; }));
   }
   function refreshWorkPlanIfOpen() {
     if (!workPlanView.hidden && !wpEditing) renderWorkPlan();
@@ -11988,6 +12011,143 @@
       wpFillHammocks(sheet, h.id);
     });
   });
+
+  // ---------------------------------------------------------------------
+  // קו בסיס: a snapshot of a project's plan (each activity's start / end),
+  // kept as workBaseline: { savedAt, savedBy, items: { id: { start, end } } }.
+  // The chart draws it as a thin grey bar under each activity, and an
+  // activity that has slipped past it says by how many days. "Excel" hands
+  // the plan over as a spreadsheet (CSV), baseline and slip included.
+  // ---------------------------------------------------------------------
+  var wpBaselineOverlay = document.getElementById("wpBaselineOverlay");
+  wpState.showBaseline = true;
+
+  function wpBaselineOf(sheet, item) {
+    var b = sheet && sheet.workBaseline;
+    return b && b.items && b.items[item.id] || null;
+  }
+  // days the activity now ends after (+) / before (-) its baseline end
+  function wpSlipDays(sheet, item) {
+    var base = wpBaselineOf(sheet, item);
+    return base ? wpDiff(base.end, item.end) : null;
+  }
+  // under an activity's bar: where it was planned
+  function wpDrawBaselineBar(trackEl, sheet, item, range, dayW) {
+    if (!wpState.showBaseline) return;
+    var base = wpBaselineOf(sheet, item);
+    if (!base) return;
+    var from = Math.max(0, wpDiff(range.start, base.start));
+    var to = Math.min(range.days - 1, wpDiff(range.start, base.end));
+    if (to < 0 || from > range.days - 1) return;
+    var bar = wpEl("div", "wp-base-bar" + (item.end > base.end ? " wp-base-late" : ""));
+    bar.style.right = (from * dayW + 1) + "px";
+    bar.style.width = Math.max(3, (to - from + 1) * dayW - 2) + "px";
+    bar.title = tr("workPlanBaselineLegend") + ": " + isoToDisplay(base.start) + " – " + isoToDisplay(base.end);
+    trackEl.appendChild(bar);
+  }
+  // beside the activity's name: "+3 ימים" when it has slipped
+  function wpSlipLabel(nameEl, sheet, item) {
+    if (!wpState.showBaseline) return;
+    var slip = wpSlipDays(sheet, item);
+    if (slip && slip > 0) nameEl.appendChild(wpEl("small", "wp-slip", tr("workPlanSlip").replace("{n}", slip)));
+  }
+
+  function saveWorkBaseline(sheet, baseline) {
+    sheet.workBaseline = baseline;
+    if (!sheet.shared) { saveData(); renderWorkPlan(); return; }
+    renderWorkPlan();
+    if (!supabaseClient) return;
+    updateSharedSheetDataSafely(sheet.id, function (current) {
+      return Object.assign({}, current, { workBaseline: baseline });
+    }).then(function (newData) {
+      var live = sharedSheets.find(function (s) { return s.id === sheet.id; });
+      if (live) live.workBaseline = newData.workBaseline || null;
+      refreshWorkPlanIfOpen();
+    }, function () {
+      alert(tr("workPlanSaveError"));
+    });
+  }
+  function wpBaselineSheet() {
+    return wpState.sheetId && allSheets().find(function (s) { return s.id === wpState.sheetId; });
+  }
+  function openWpBaseline() {
+    var sheet = wpBaselineSheet();
+    if (!sheet) return;
+    var b = sheet.workBaseline;
+    document.getElementById("wpBaselineText").textContent = b ?
+      tr("workPlanBaselineSavedOn").replace("{date}", new Date(b.savedAt).toLocaleDateString(calLocale(), { day: "numeric", month: "numeric", year: "numeric" })) :
+      tr("workPlanBaselineExplain");
+    document.getElementById("wpBaselineSaveBtn").textContent = tr(b ? "workPlanBaselineUpdate" : "workPlanBaselineSave");
+    var toggle = document.getElementById("wpBaselineToggleBtn");
+    toggle.hidden = !b;
+    toggle.textContent = tr(wpState.showBaseline ? "workPlanBaselineHide" : "workPlanBaselineShow");
+    document.getElementById("wpBaselineDeleteBtn").hidden = !b;
+    wpBaselineOverlay.hidden = false;
+  }
+  document.getElementById("workPlanBaselineBtn").addEventListener("click", openWpBaseline);
+  document.getElementById("wpBaselineSaveBtn").addEventListener("click", function () {
+    wpBaselineOverlay.hidden = true;
+    var sheet = wpBaselineSheet();
+    if (!sheet) return;
+    var items = {};
+    (sheet.workPlan || []).forEach(function (x) { items[x.id] = { start: x.start, end: x.end }; });
+    wpState.showBaseline = true;
+    saveWorkBaseline(sheet, { savedAt: Date.now(), savedBy: myPhoneNumber || null, items: items });
+    showToast(tr("workPlanBaselineSavedMsg"));
+  });
+  document.getElementById("wpBaselineToggleBtn").addEventListener("click", function () {
+    wpBaselineOverlay.hidden = true;
+    wpState.showBaseline = !wpState.showBaseline;
+    renderWorkPlan();
+  });
+  document.getElementById("wpBaselineDeleteBtn").addEventListener("click", function () {
+    wpBaselineOverlay.hidden = true;
+    var sheet = wpBaselineSheet();
+    if (!sheet) return;
+    askConfirm(tr("workPlanBaselineDeleteConfirm"), function () { saveWorkBaseline(sheet, null); });
+  });
+  document.getElementById("wpBaselineCancelBtn").addEventListener("click", function () { wpBaselineOverlay.hidden = true; });
+
+  // ---- Excel ---------------------------------------------------------------------
+  function wpCsvCell(v) {
+    v = v == null ? "" : String(v);
+    return /[",\n\r]/.test(v) ? "\"" + v.replace(/"/g, "\"\"") + "\"" : v;
+  }
+  function wpExcelDate(iso) {
+    if (!iso) return "";
+    var p = iso.split("-");
+    return p[2] + "/" + p[1] + "/" + p[0];
+  }
+  function workPlanExcel() {
+    var groups = wpGroups();
+    if (!groups.some(function (g) { return g.items.length; })) { showToast(tr("workPlanEmpty")); return; }
+    var office = !wpState.sheetId;
+    var head = [tr("workPlanExcelActivity"), tr("workPlanHammock"), tr("workPlanBy"), tr("workPlanFrom"), tr("workPlanTo"),
+      tr("workPlanExcelDays"), tr("workPlanStatus"), tr("workPlanExcelDone"), tr("workPlanStatusLate"),
+      tr("workPlanExcelBaseStart"), tr("workPlanExcelBaseEnd"), tr("workPlanExcelSlip"), tr("workPlanNote")];
+    if (office) head.unshift(tr("shareTaskProject"));
+    var rows = [head];
+    var statusText = { todo: tr("workPlanStatusTodo"), prog: tr("workPlanStatusProg"), done: tr("workPlanStatusDone") };
+    groups.forEach(function (g) {
+      var hams = {};
+      (g.sheet.workHammocks || []).forEach(function (h) { hams[h.id] = h.name; });
+      g.items.forEach(function (x) {
+        var base = wpBaselineOf(g.sheet, x);
+        var row = [x.name, hams[x.hammock] || "", x.by || "", wpExcelDate(x.start), wpExcelDate(x.end),
+          wpDiff(x.start, x.end) + 1, statusText[x.status] || "", (x.status === "done" ? 100 : x.progress || 0) + "%",
+          wpIsLate(x) ? "✓" : "", base ? wpExcelDate(base.start) : "", base ? wpExcelDate(base.end) : "",
+          base ? wpDiff(base.end, x.end) : "", x.note || ""];
+        if (office) row.unshift(g.sheet.name);
+        rows.push(row);
+      });
+    });
+    // with a BOM, so Excel reads the Hebrew right
+    var csv = "﻿" + rows.map(function (r) { return r.map(wpCsvCell).join(","); }).join("\r\n");
+    var sheet = wpBaselineSheet();
+    var name = (sheet ? tr("workPlanTitle") + " " + sheet.name : tr("workPlanOfficeTitle")) + " " + isoToFileNameDate(todayISO()) + ".csv";
+    attemptShare(new Blob([csv], { type: "text/csv;charset=utf-8" }), name, "text/csv");
+  }
+  document.getElementById("workPlanExcelBtn").addEventListener("click", workPlanExcel);
   function closeReportTypeModal() {
     reportTypeOverlay.hidden = true;
     pendingReportDraft = null;
@@ -17905,6 +18065,7 @@
       officeDirectory: d.officeDirectory || null,
       workPlan: d.workPlan || [],
       workHammocks: d.workHammocks || [],
+      workBaseline: d.workBaseline || null,
       ended: ended,
       endedDate: endedDate,
       logoId: logoId,

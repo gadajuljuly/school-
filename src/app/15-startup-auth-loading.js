@@ -221,6 +221,7 @@
       officeDirectory: d.officeDirectory || null,
       workPlan: d.workPlan || [],
       workHammocks: d.workHammocks || [],
+      workBaseline: d.workBaseline || null,
       ended: ended,
       endedDate: endedDate,
       logoId: logoId,

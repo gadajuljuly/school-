@@ -472,3 +472,59 @@ test("hammock (ערסל): made from an activity's settings or a long press on it
   await expect(chart.locator(".wp-hammock-row")).toHaveCount(1);
   await expect.poll(async () => (await serverHammocks(page, "p1")).map((h) => h.name)).toEqual(["בניין A – שלד וגמר"]);
 });
+
+test("baseline (קו בסיס): saved, a slipped activity shows its grey planned bar and +days; Excel export", async ({ page }) => {
+  const plan = [
+    { id: "a1", name: "שלד", start: iso(-4), end: iso(5), status: "prog", progress: 50, by: "צוות טפסנות" },
+    { id: "a2", name: "חשמל", start: iso(6), end: iso(10), status: "todo", progress: 0, by: "" },
+  ];
+  await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [], workPlan: plan }] });
+  await page.locator("#workPlanBtn").click();
+  const chart = page.locator("#workPlanChart");
+  await expect(chart.locator(".wp-base-bar")).toHaveCount(0);
+
+  await page.locator("#workPlanBaselineBtn").click();
+  await expect(page.locator("#wpBaselineText")).toContainText("קו בסיס שומר");
+  await page.locator("#wpBaselineSaveBtn").click();
+  await expect(chart.locator(".wp-base-bar")).toHaveCount(2);
+  await expect(page.locator("#wpLegendBaseline")).toBeVisible();
+  const serverBase = () => page.evaluate(() => window.__backend.tables.shared_projects[0].data.workBaseline);
+  await expect.poll(async () => Object.keys((await serverBase())?.items || {}).sort()).toEqual(["a1", "a2"]);
+
+  // "חשמל" moves 3 days later: its planned bar stays, "+3 ימים" by its name
+  await chart.locator(".wp-row", { hasText: "חשמל" }).click();
+  await page.locator("#wpEnd").fill(iso(13));
+  await page.locator("#workPlanEditForm button[type=submit]").click();
+  const row = chart.locator(".wp-row", { hasText: "חשמל" });
+  await expect(row.locator(".wp-slip")).toHaveText("+3 ימים");
+  await expect(row.locator(".wp-base-bar")).toHaveClass(/wp-base-late/);
+  const actual = await row.locator(".wp-bar").boundingBox(), planned = await row.locator(".wp-base-bar").boundingBox();
+  expect(actual.width).toBeGreaterThan(planned.width + 5);
+  await expect(chart.locator(".wp-row", { hasText: "שלד" }).locator(".wp-slip")).toHaveCount(0);
+
+  // hide / show
+  await page.locator("#workPlanBaselineBtn").click();
+  await expect(page.locator("#wpBaselineText")).toContainText("נשמר");
+  await page.locator("#wpBaselineToggleBtn").click();
+  await expect(chart.locator(".wp-base-bar")).toHaveCount(0);
+  await page.locator("#workPlanBaselineBtn").click();
+  await page.locator("#wpBaselineToggleBtn").click();
+  await expect(chart.locator(".wp-base-bar")).toHaveCount(2);
+
+  // Excel: a CSV with the baseline and the slip
+  const [download] = await Promise.all([page.waitForEvent("download"), page.locator("#workPlanExcelBtn").click()]);
+  const csv = require("fs").readFileSync(await download.path(), "utf8");
+  expect(csv.charCodeAt(0)).toBe(0xfeff);
+  const lines = csv.slice(1).split("\r\n");
+  expect(lines[0]).toContain("קו בסיס – סיום");
+  const elec = lines.find((l) => l.startsWith("חשמל"));
+  expect(elec.split(",").slice(-2)[0]).toBe("3"); // slipped 3 days
+  expect(lines.find((l) => l.startsWith("שלד"))).toContain("50%");
+
+  // delete it
+  await page.locator("#workPlanBaselineBtn").click();
+  await page.locator("#wpBaselineDeleteBtn").click();
+  if (await page.locator("#confirmOverlay").isVisible()) await page.locator("#confirmYesBtn").click();
+  await expect(chart.locator(".wp-base-bar")).toHaveCount(0);
+  await expect.poll(serverBase).toBe(null);
+});

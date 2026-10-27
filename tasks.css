@@ -3266,7 +3266,9 @@
   .modal-btn-danger[hidden] { display: none; }
   .wp-field { display: flex; flex-direction: column; gap: 6px; }
   .wp-field[hidden] { display: none; }
-  .wp-controls { display: flex; justify-content: center; align-items: center; gap: 8px; padding: 0 12px 6px; flex-shrink: 0; }
+  .wp-controls { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px 8px; padding: 0 12px 6px; flex-shrink: 0; }
+  .wp-seg { flex-shrink: 0; }
+  .wp-small-btn { white-space: nowrap; }
   .wp-seg { display: flex; border: 1px solid var(--accent); border-radius: 8px; overflow: hidden; }
   .wp-zoom { border: none; background: transparent; color: var(--accent); font: inherit; font-weight: 700; font-size: 0.85rem; padding: 5px 12px; cursor: pointer; }
   .wp-zoom.on { background: var(--accent); color: var(--accent-contrast); }
@@ -3302,6 +3304,12 @@
   .wp-group em { font-style: normal; color: var(--danger); font-size: 0.8rem; }
   /* ערסל: a hammock row (bold, its colour down the side, a slim summary
      bar with end ticks) and its activities, edged in its colour */
+  /* קו בסיס: where an activity was planned, a thin grey bar along the
+     bottom of its row; slipped ones say by how much */
+  .wp-base-bar { position: absolute; bottom: 2px; height: 4px; border-radius: 2px; background: #8a8f98; opacity: 0.75; z-index: 0; }
+  .wp-base-bar.wp-base-late { background: #c05023; }
+  .wp-slip { color: #c05023 !important; font-weight: 800; }
+  .wp-legend .wp-base-b { height: 4px !important; background: #8a8f98; align-self: center; }
   .wp-hammock-row { background: #f6f8fc; }
   .wp-hammock-row .wp-name { background: #f6f8fc; }
   .wp-hammock-name { border-right: 5px solid #2e4fb8; }

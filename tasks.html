@@ -35,7 +35,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<link rel="stylesheet" href="tasks.css?v=ddd8d0f46a">
+<link rel="stylesheet" href="tasks.css?v=2e4d2958f6">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -169,6 +169,19 @@
         <button type="button" class="modal-btn modal-btn-no" id="wpCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </form>
+  </div>
+</div>
+<div class="modal-overlay" id="wpBaselineOverlay" hidden style="z-index:41">
+  <div class="modal-box" role="alertdialog" aria-modal="true">
+    <p class="modal-message" id="wpBaselineText"></p>
+    <div class="move-task-projects">
+      <button type="button" id="wpBaselineSaveBtn"></button>
+      <button type="button" id="wpBaselineToggleBtn"></button>
+      <button type="button" id="wpBaselineDeleteBtn" data-i18n="workPlanBaselineDelete">🗑 מחיקת קו הבסיס</button>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="modal-btn modal-btn-no" id="wpBaselineCancelBtn" data-i18n="cancelBtn">ביטול</button>
+    </div>
   </div>
 </div>
 <div class="modal-overlay" id="wpHammockMenuOverlay" hidden style="z-index:41">
@@ -1183,6 +1196,8 @@
       </div>
       <button type="button" class="wp-small-btn" id="workPlanTodayBtn" data-i18n="workPlanToday">היום</button>
       <button type="button" class="wp-small-btn" id="workPlanPdfBtn">PDF</button>
+      <button type="button" class="wp-small-btn" id="workPlanExcelBtn">Excel</button>
+      <button type="button" class="wp-small-btn" id="workPlanBaselineBtn" data-i18n="workPlanBaseline">📌 קו בסיס</button>
       <button type="button" class="wp-small-btn" id="workPlanCopyWeekBtn" data-i18n="workPlanCopyWeek" hidden>העתק לשבוע הבא</button>
     </div>
     <div class="wp-nav" id="workPlanNav">
@@ -1199,6 +1214,7 @@
       <span><b class="wp-late-b"></b><span data-i18n="workPlanStatusLate">באיחור</span></span>
       <span><b class="wp-todo"></b><span data-i18n="workPlanStatusTodo">טרם התחיל</span></span>
       <span><b class="wp-today-b"></b><span data-i18n="workPlanToday">היום</span></span>
+      <span id="wpLegendBaseline" hidden><b class="wp-base-b"></b><span data-i18n="workPlanBaselineLegend">קו בסיס</span></span>
     </div>
   </div>
 
@@ -1428,6 +1444,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=5591b3cb12"></script>
+<script src="tasks-app.js?v=2716648114"></script>
 </body>
 </html>

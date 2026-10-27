@@ -169,6 +169,7 @@
         if (hammock) name.style.borderRightColor = hammock.color;
         name.appendChild(wpEl("span", "wp-name-text", item.name));
         if (item.by) name.appendChild(wpEl("small", "", item.by));
+        wpSlipLabel(name, g.sheet, item);
         if (!forPdf) wpBindNameLongPress(name, g.sheet, item);
         row.appendChild(name);
         var t = track();
@@ -213,6 +214,7 @@
           bar.appendChild(main);
           t.appendChild(bar);
         }
+        wpDrawBaselineBar(t, g.sheet, item, range, dayW);
         row.appendChild(t);
         if (!forPdf) {
           row.addEventListener("click", function () { wpRowTapped(g.sheet, item); });
@@ -244,6 +246,8 @@
       wpDrawDependencies(workPlanChart, groups);
     }
     document.getElementById("workPlanCopyWeekBtn").hidden = wpState.zoom !== "week";
+    document.getElementById("workPlanBaselineBtn").hidden = !wpState.sheetId; // per project
+    document.getElementById("wpLegendBaseline").hidden = !(wpState.showBaseline && groups.some(function (g) { return g.sheet.workBaseline; }));
   }
   function refreshWorkPlanIfOpen() {
     if (!workPlanView.hidden && !wpEditing) renderWorkPlan();
