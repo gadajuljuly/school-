@@ -237,11 +237,18 @@
     assistantNoProject: { he: "אין פרויקט פתוח להוסיף אליו", en: "There's no open project to add to", ar: "لا يوجد مشروع مفتوح للإضافة إليه", ru: "Нет открытого проекта" },
     assistantNoSuchTask: { he: "לא מצאתי משימה פתוחה כזו", en: "I couldn't find such an open task", ar: "لم أجد مهمة مفتوحة كهذه", ru: "Не нашёл такую открытую задачу" },
     assistantDidntGet: { he: "לא הבנתי 🙂", en: "I didn't get that 🙂", ar: "لم أفهم 🙂", ru: "Не понял 🙂" },
-    assistantExamples: { he: "אפשר למשל: \"תזכיר לי מחר ב-8 להזמין בטון\", \"משימה לבניין A: לבדוק ברזל ביום ראשון\", \"מה יש לי מחר?\", \"מה באיחור?\"", en: "For example: \"remind me tomorrow at 8 to order concrete\", \"what's on tomorrow?\", \"what's late?\"", ar: "مثلاً: \"ذكرني بكرا الساعة 8 أطلب باطون\"، \"ماذا لدي غداً؟\"، \"ما المتأخر؟\"", ru: "Например: «напомни завтра в 8 заказать бетон», «что завтра?», «что опаздывает?»" },
+    assistantExamples: { he: "אפשר למשל: \"תזכיר לי מחר ב-8 להזמין בטון\", \"משימה לבניין A: לבדוק ברזל ביום ראשון\", \"מה יש לי מחר?\", \"מה באיחור?\", \"עדכן טיח ל-60%\", \"דחה את החשמל ביומיים\", \"שלח לצ'אט של בניין A: הבטון מתעכב\"", en: "For example: \"remind me tomorrow at 8 to order concrete\", \"what's on tomorrow?\", \"what's late?\"", ar: "مثلاً: \"ذكرني بكرا الساعة 8 أطلب باطون\"، \"ماذا لدي غداً؟\"، \"ما المتأخر؟\"", ru: "Например: «напомни завтра в 8 заказать бетон», «что завтра?», «что опаздывает?»" },
     assistantInProject: { he: "בפרויקט {p}", en: "in {p}", ar: "في مشروع {p}", ru: "в проекте {p}" },
     assistantUndo: { he: "↶ ביטול", en: "↶ Undo", ar: "↶ تراجع", ru: "↶ Отменить" },
     assistantUndone: { he: "בוטל", en: "Undone", ar: "تم التراجع", ru: "Отменено" },
     assistantOpen: { he: "פתח באפליקציה", en: "Open in the app", ar: "افتح في التطبيق", ru: "Открыть" },
+    assistantProgressDone: { he: "ההתקדמות עודכנה", en: "Progress updated", ar: "تم تحديث التقدم", ru: "Прогресс обновлён" },
+    assistantMovedDone: { he: "הפעילות הועברה (וגם מה שתלוי בה)", en: "The activity moved (and what depends on it)", ar: "تم نقل النشاط (وما يعتمد عليه)", ru: "Работа перенесена (и зависящие от неё)" },
+    assistantOpenPlan: { he: "פתח את תוכנית העבודה", en: "Open the work plan", ar: "افتح خطة العمل", ru: "Открыть план работ" },
+    assistantSentToChat: { he: "נשלח לצ'אט של {p}", en: "Sent to {p}'s chat", ar: "أُرسل إلى دردشة {p}", ru: "Отправлено в чат {p}" },
+    assistantOpenChat: { he: "פתח את הצ'אט", en: "Open the chat", ar: "افتح الدردشة", ru: "Открыть чат" },
+    assistantWhichChat: { he: "לאיזה צ'אט? למשל: \"שלח לצ'אט של בניין A: הבטון מתעכב\"", en: "Which chat? e.g. \"send to Building A's chat: the concrete is late\"", ar: "لأي دردشة؟ مثلاً: \"أرسل لدردشة مبنى A: الباطون متأخر\"", ru: "В какой чат? Например: «напиши в чат корпуса A: бетон задерживается»" },
+    assistantWhatToSay: { he: "מה לכתוב בהודעה?", en: "What should the message say?", ar: "ماذا أكتب في الرسالة؟", ru: "Что написать в сообщении?" },
     voiceBtnTitle: { he: "פקודה קולית", en: "Voice command", ar: "أمر صوتي", ru: "Голосовая команда" },
     voiceTitle: { he: "פקודה קולית", en: "Voice command", ar: "أمر صوتي", ru: "Голосовая команда" },
     voiceListening: { he: "מקשיב... דבר עכשיו", en: "Listening... speak now", ar: "أستمع... تكلّم الآن", ru: "Слушаю... говорите" },
@@ -17799,11 +17806,132 @@
     });
   }
 
+  // ---- work-plan and chat commands -------------------------------------------
+  // "עדכן טיח ל-60%", "העבר את יציקת התקרה ליום חמישי", "דחה את החשמל
+  // ביומיים", "שלח לצ'אט של בניין A: הבטון מתעכב". True when handled.
+  function assistantFindActivity(words) {
+    var best = null;
+    voiceTargetSheets().forEach(function (sheet) {
+      (sheet.workPlan || []).forEach(function (x) {
+        var score = voiceScoreTask({ text: x.name }, words);
+        if (score > 0 && (!best || score > best.score)) best = { sheet: sheet, item: x, score: score };
+      });
+    });
+    return best;
+  }
+  // a reply saying what changed in the plan, with ↶ (puts every activity
+  // that moved back as it was) and a way to the plan
+  function assistantPlanDone(sheet, before, title, line) {
+    render();
+    assistantBubble("bot", function (el) {
+      assistantAdd(el, "b", "✓ " + title);
+      assistantAdd(el, "div", tr("assistantInProject").replace("{p}", sheet.name) + "\n" + line);
+      var actions = assistantAdd(el, "div", null, "as-actions");
+      var undo = assistantAdd(actions, "button", tr("assistantUndo"));
+      undo.type = "button";
+      undo.addEventListener("click", function () {
+        var now = {};
+        (sheet.workPlan || []).forEach(function (x) { now[x.id] = x; });
+        before.forEach(function (old) {
+          var cur = now[old.id];
+          if (cur && JSON.stringify(cur) !== JSON.stringify(old)) saveWorkPlanItem(sheet, old, false);
+        });
+        render();
+        undo.disabled = true;
+        undo.textContent = tr("assistantUndone");
+      });
+      var open = assistantAdd(actions, "button", tr("assistantOpenPlan"));
+      open.type = "button";
+      open.addEventListener("click", function () {
+        assistantView.hidden = true;
+        data.activeSheetId = sheet.id;
+        render();
+        openWorkPlan();
+      });
+    });
+  }
+  function assistantSpecial(text) {
+    var t = " " + text.replace(/[?؟.!]+$/, "") + " ";
+    // progress
+    var pm = t.match(/^\s*(?:(?:עדכן|תעדכן|עדכני|תעדכני)\s+)?(?:את\s+)?(?:ה?התקדמות\s+(?:של\s+)?)?(.+?)\s*(?:ל|ל-|ב|ב-|על|-)?\s*(\d{1,3})\s*(?:%|אחוז|אחוזים)\s*$/);
+    if (pm && +pm[2] <= 100) {
+      var hit = assistantFindActivity(pm[1]);
+      if (hit) {
+        var before = JSON.parse(JSON.stringify(hit.sheet.workPlan || []));
+        var p = +pm[2];
+        var item = Object.assign({}, hit.item, { progress: p, status: p >= 100 ? "done" : p > 0 ? "prog" : "todo",
+          updatedBy: myPhoneNumber || null, updatedAt: Date.now() });
+        saveWorkPlanItem(hit.sheet, item, false);
+        assistantPlanDone(hit.sheet, before, tr("assistantProgressDone"), "📊 " + item.name + " – " + p + "%");
+        return true;
+      }
+    }
+    // move / postpone an activity
+    var mm = t.match(/^\s*(?:העבר|תעביר|תעבירי|הזז|תזיז|תזיזי|דחה|תדחה|תדחי|הקדם|תקדים)\s+(?:את\s+)?(.+)$/);
+    if (mm) {
+      var rest = " " + mm[1] + " ", shift = null;
+      var later = !/^\s*(?:הקדם|תקדים)/.test(t);
+      rest = rest.replace(/\s(?:ב-?|ל-?)?(?:(\d+)\s+(ימים|יום|שבועות)|(יומיים|שבוע|שבועיים))(?=\s)/, function (m0, n, unit, word) {
+        shift = word ? { "יומיים": 2, "שבוע": 7, "שבועיים": 14 }[word] : +n * (unit === "שבועות" ? 7 : 1);
+        return " ";
+      });
+      var parsed = shift == null ? parseVoiceCommand(rest, [], null, { plan: true, bareWeekday: true }) : null;
+      var words = parsed ? parsed.items.join(" ") : rest;
+      var act = (parsed && parsed.date || shift != null) && assistantFindActivity(words);
+      if (act) {
+        var before2 = JSON.parse(JSON.stringify(act.sheet.workPlan || []));
+        var x = act.item, len = wpDiff(x.start, x.end);
+        var start = shift != null ? addDaysToISO(x.start, later ? shift : -shift) : parsed.date;
+        var moved = Object.assign({}, x, { start: start, end: addDaysToISO(start, len), updatedBy: myPhoneNumber || null, updatedAt: Date.now() });
+        saveWorkPlanItem(act.sheet, moved, false);
+        wpCascadeDependents(act.sheet, moved);
+        assistantPlanDone(act.sheet, before2, tr("assistantMovedDone"),
+          "📊 " + moved.name + ": " + isoToDisplay(moved.start) + " – " + isoToDisplay(moved.end));
+        return true;
+      }
+    }
+    // a message to a project's chat
+    var cm = t.match(/^\s*(?:שלח|תשלח|תשלחי|כתוב|תכתוב|תכתבי)\s+(?:הודעה\s+)?(?:ל|ב)(?:צ['׳]?אט|קבוצה)\s+(?:של\s+)?(?:פרויקט\s+)?(.+)$/);
+    if (cm) {
+      var shared = voiceTargetSheets().filter(function (s) { return s.shared; });
+      var body = cm[1], proj = null, msg = "";
+      var colon = body.match(/^(.+?)\s*[:–-]\s+(.+)$/) || body.match(/^(.+?):(.+)$/);
+      if (colon) {
+        var f = voiceFindSheet(colon[1], shared);
+        if (f) { proj = f.sheet; msg = colon[2]; }
+      }
+      if (!proj) {
+        var f2 = voiceFindSheet(body, shared);
+        if (f2) { proj = f2.sheet; msg = f2.rest; }
+      }
+      msg = (msg || "").replace(/^\s*(?:ש|:)\s*/, "").trim();
+      if (!proj) { assistantBubble("bot", tr("assistantWhichChat")); return true; }
+      if (!msg) { assistantBubble("bot", tr("assistantWhatToSay")); return true; }
+      sendChatMessage(proj.id, msg).then(function () {
+        assistantBubble("bot", function (el) {
+          assistantAdd(el, "b", "✓ " + tr("assistantSentToChat").replace("{p}", proj.name));
+          assistantAdd(el, "div", "💬 " + msg);
+          var actions = assistantAdd(el, "div", null, "as-actions");
+          var open = assistantAdd(actions, "button", tr("assistantOpenChat"));
+          open.type = "button";
+          open.addEventListener("click", function () {
+            assistantView.hidden = true;
+            navigateToTaskLink(proj.id, null, null, true);
+            render();
+          });
+        });
+      }, function () { assistantBubble("bot", tr("chatFileUploadError")); });
+      return true;
+    }
+    return false;
+  }
+
   // a typed or spoken line
   function assistantHandle(text) {
     text = String(text || "").replace(/\s+/g, " ").trim();
     if (!text) return;
     assistantBubble("me", text);
+    if (assistantSpecial(text)) return;
     if (assistantIsQuestion(text)) {
       if (!assistantAnswer(text)) assistantDidntGet();
       return;

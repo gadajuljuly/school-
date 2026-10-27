@@ -87,3 +87,36 @@ test("a command is carried out at once, with undo; a done task; the widget's �
   await expect(page.locator("#assistantView")).toBeHidden();
   await expect(page.locator("#taskList li.task", { hasText: "לסדר את המחסן" })).toBeVisible();
 });
+
+const planOf = (page) => page.evaluate(() => window.__backend.tables.shared_projects[0].data.workPlan);
+
+test("assistant: progress of an activity, moving / postponing one, a message to a project's chat", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, native: true, sheet: SHEET });
+  await openFromWidget(page, "assistant");
+
+  await say(page, "עדכן טיח ל-60%");
+  await expect(bot(page).last()).toContainText("ההתקדמות עודכנה");
+  await expect(bot(page).last()).toContainText("טיח – 60%");
+  await expect.poll(async () => (await planOf(page)).find((x) => x.id === "w2")).toMatchObject({ progress: 60, status: "prog" });
+  // ↶ puts it back
+  await bot(page).last().locator("button", { hasText: "ביטול" }).click();
+  await expect.poll(async () => (await planOf(page)).find((x) => x.id === "w2").progress).toBe(0);
+
+  await say(page, "דחה את יציקת התקרה ביומיים");
+  await expect(bot(page).last()).toContainText("הועברה");
+  await expect.poll(async () => (await planOf(page)).find((x) => x.id === "w1")).toMatchObject({ start: iso(-4), end: iso(1) });
+
+  await say(page, "העבר את הטיח ליום חמישי");
+  const thu = await page.evaluate(() => { const d = new Date(); do { d.setDate(d.getDate() + 1); } while (d.getDay() !== 4); return d.toISOString(); });
+  await expect.poll(async () => (await planOf(page)).find((x) => x.id === "w2").start).toBe(
+    await page.evaluate((s) => { const d = new Date(s); const p = (n) => String(n).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; }, thu));
+  const w2 = (await planOf(page)).find((x) => x.id === "w2");
+  const days = (a, b) => Math.round((new Date(b) - new Date(a)) / 864e5);
+  expect(days(w2.start, w2.end)).toBe(10); // same length
+
+  await say(page, "שלח לצ'אט של בניין A: הבטון מתעכב בשעה");
+  await expect(bot(page).last()).toContainText("נשלח לצ'אט של בניין A");
+  await expect.poll(() => page.evaluate(() => window.__backend.tables.shared_projects[0].messages.map((m) => m.text))).toEqual(["הבטון מתעכב בשעה"]);
+  await bot(page).last().locator("button", { hasText: "פתח את הצ'אט" }).click();
+  await expect(page.locator("#chatView")).toBeVisible();
+});
