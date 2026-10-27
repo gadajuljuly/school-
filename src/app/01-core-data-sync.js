@@ -144,6 +144,7 @@
     if (!Array.isArray(log.works)) log.works = [];
     if (!Array.isArray(log.procurement)) log.procurement = [];
     if (!Array.isArray(log.planned)) log.planned = [];
+    if (!Array.isArray(log.photos)) log.photos = [];
     log.procurement.forEach(function (row) {
       if (typeof row.item !== "string") row.item = "";
       if (typeof row.quantity !== "string") row.quantity = "";

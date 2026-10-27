@@ -936,6 +936,12 @@
     dateEl.className = "pdf-doc-info-date";
     dateEl.textContent = isoToFullDisplay(log.date) + " - " + isoToDayName(log.date);
     doc.appendChild(dateEl);
+    if (log.weather) {
+      var weatherEl = document.createElement("div");
+      weatherEl.className = "pdf-doc-info-date";
+      weatherEl.textContent = tr("diaryWeatherLine").replace("{w}", log.weather);
+      doc.appendChild(weatherEl);
+    }
 
     if (!siteLogAttendanceIsEmpty(log)) {
       var attendanceHeading = document.createElement("div");
@@ -997,6 +1003,7 @@
     }
 
     appendPlannedPdfSection(doc, log);
+    appendDiaryPhotosPdfSection(doc, log);
 
     if (filledProcurement(log).length) {
       var procurementHeading = document.createElement("div");

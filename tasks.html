@@ -35,7 +35,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<link rel="stylesheet" href="tasks.css?v=ab3c4cbcb8">
+<link rel="stylesheet" href="tasks.css?v=5e6c3d6ec6">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -613,6 +613,10 @@
           <div class="library-item" id="siteLogPlanBtn">
             <div class="library-item-thumb"><img src="tasks-work-plan-icon.webp" alt=""></div>
             <div class="library-item-name" data-i18n="workPlanPlannedVsDone">מתוכנן מול ביצוע</div>
+          </div>
+          <div class="library-item" id="siteLogPhotosBtn">
+            <div class="library-item-thumb"><img src="tasks-photos-icon.webp" alt=""></div>
+            <div class="library-item-name" data-i18n="diaryPhotosTile">תמונות</div>
           </div>
         </div>
         <div class="diary-actions-fixed">
@@ -1223,6 +1227,31 @@
     </div>
   </div>
 
+  <div class="report-view" id="diaryPhotosView" hidden>
+    <div class="report-head">
+      <button type="button" class="report-back-btn" id="diaryPhotosBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
+      <div class="report-head-title" id="diaryPhotosTitle"></div>
+    </div>
+    <div class="diary-photos-weather" id="diaryPhotosWeather" hidden></div>
+    <div class="diary-photos-actions" id="diaryPhotosActions">
+      <button type="button" class="site-log-preview-btn" id="diaryPhotosCameraBtn" data-i18n="diaryPhotosCamera">📷 צילום</button>
+      <button type="button" class="site-log-periodic-btn" id="diaryPhotosGalleryBtn" data-i18n="diaryPhotosGallery">🖼 מהגלריה</button>
+    </div>
+    <div class="library-grid diary-photos-grid" id="diaryPhotosGrid"></div>
+    <input type="file" accept="image/*" capture="environment" id="diaryPhotosCameraInput" hidden>
+    <input type="file" accept="image/*" multiple id="diaryPhotosGalleryInput" hidden>
+  </div>
+  <div class="modal-overlay" id="diaryPlaceOverlay" hidden style="z-index:41">
+    <div class="modal-box" role="alertdialog" aria-modal="true">
+      <p class="modal-message" data-i18n="diaryPlaceAsk">באיזה יישוב האתר? (בשביל מזג האוויר על התמונות)</p>
+      <input type="text" id="diaryPlaceInput" maxlength="60" autocomplete="off" class="wp-hammock-name-input">
+      <div class="modal-actions">
+        <button type="button" class="modal-btn modal-btn-no" id="diaryPlaceSkipBtn" data-i18n="diaryPlaceSkip">בלי מזג אוויר</button>
+        <button type="button" class="modal-btn modal-btn-primary" id="diaryPlaceOkBtn" data-i18n="workPlanSave">שמירה</button>
+      </div>
+    </div>
+  </div>
+
   <div class="report-view assistant-view" id="assistantView" hidden>
     <div class="report-head">
       <button type="button" class="report-back-btn" id="assistantBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
@@ -1449,6 +1478,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=4f2fdbe378"></script>
+<script src="tasks-app.js?v=36fe65c2f9"></script>
 </body>
 </html>
