@@ -420,6 +420,7 @@
     skFill_water: { he: "מים", en: "Water", ar: "ماء", ru: "Вода" },
     sketchViewTop: { he: "מבט על", en: "Top view", ar: "منظر علوي", ru: "Вид сверху" },
     sketchViewSide: { he: "מבט צד", en: "Side view", ar: "منظر جانبي", ru: "Вид сбоку" },
+    sketchSqm: { he: "מ״ר", en: "m²", ar: "م²", ru: "м²" },
     sketchFill: { he: "צביעת שטח", en: "Paint an area", ar: "تلوين مساحة", ru: "Заливка области" },
     sketchFillHint: { he: "געו בתוך שטח סגור כדי לצבוע אותו בצבע שנבחר", en: "Tap inside a closed area to paint it in the chosen colour", ar: "المس داخل مساحة مغلقة لتلوينها باللون المختار", ru: "Нажмите внутри замкнутой области, чтобы залить её выбранным цветом" },
     sketchFillOpen: { he: "השטח לא סגור – סגרו את הקווים מסביב ונסו שוב", en: "The area isn't closed - close the lines around it and try again", ar: "المساحة غير مغلقة – أغلق الخطوط حولها وحاول مرة أخرى", ru: "Область не замкнута – замкните линии вокруг и попробуйте снова" },
@@ -15215,6 +15216,11 @@
     var len = skDist(a, b);
     return { x: a.x + Math.cos(near) * len, y: a.y + Math.sin(near) * len };
   }
+  // an area in world units² as "24.5 מ״ר" (by the scale)
+  function skAreaText(areaU) {
+    var upm = skUnitsPerMetre(), m2 = areaU / (upm * upm);
+    return (m2 >= 100 ? m2.toFixed(0) : m2 >= 10 ? m2.toFixed(1) : m2.toFixed(2)) + " " + tr("sketchSqm");
+  }
   function skRealLength(len) {
     if (!sk.scale) return "";
     var v = len / SK_CELL * sk.scale.per; // in the scale's unit
@@ -15417,6 +15423,10 @@
         ctx.globalAlpha = el.type === "fill" ? 1 : 0.55;
         ctx.drawImage(el.pattern ? skFillArt(el, img) : img, ip.x, ip.y, el.w * z, el.h * z);
         ctx.restore();
+      }
+      if (el.type === "fill" && el.areaU && sk.scale) {
+        var mid = P(el.mid);
+        skLabel(ctx, skAreaText(el.areaU), mid.x, mid.y, 0, 12 * Math.max(0.8, z), "#1f1f1f", true);
       }
     }
   }
@@ -15626,9 +15636,11 @@
     var ctx = c.getContext("2d");
     ctx.strokeStyle = "#000";
     ctx.lineCap = ctx.lineJoin = "round";
+    var halfLine = 0;
     walls.forEach(function (el) {
       // a little thicker than drawn, so a hand-drawn corner that almost meets still closes
       ctx.lineWidth = Math.max((el.type === "wall" ? 7 : (el.w || SK_WIDTHS[1])) * k, 1.5) + 3;
+      halfLine = Math.max(halfLine, ctx.lineWidth / 2);
       ctx.beginPath();
       skSegmentsOf(el).forEach(function (sg) {
         ctx.moveTo((sg[0].x - minx) * k, (sg[0].y - miny) * k);
@@ -15658,6 +15670,22 @@
       }
       grow.forEach(function (q2) { area[q2] = 1; });
     }
+    // its size, measured to the middle of its lines, and its middle - for
+    // the m² label when there's a scale
+    var meas = area.slice();
+    for (var mp = 3; mp < Math.round(halfLine); mp++) {
+      var more = [];
+      for (var mq = W; mq < W * H - W; mq++) {
+        if (!meas[mq] && ink[mq] && (meas[mq - 1] || meas[mq + 1] || meas[mq - W] || meas[mq + W])) more.push(mq);
+      }
+      more.forEach(function (q3) { meas[q3] = 1; });
+    }
+    var cnt = 0, sumX = 0, sumY = 0;
+    for (var mm = 0; mm < W * H; mm++) {
+      if (!meas[mm]) continue;
+      var ax = mm % W;
+      cnt++; sumX += ax; sumY += (mm - ax) / W;
+    }
     var x0 = W, y0 = H, x1 = 0, y1 = 0;
     for (var m = 0; m < W * H; m++) {
       if (!area[m]) continue;
@@ -15678,7 +15706,8 @@
       }
     }
     octx.putImageData(img, 0, 0);
-    var el = { type: "fill", id: uid(), src: out.toDataURL("image/png"), p: { x: minx + x0 / k, y: miny + y0 / k }, w: cw / k, h: ch / k, color: sk.color };
+    var el = { type: "fill", id: uid(), src: out.toDataURL("image/png"), p: { x: minx + x0 / k, y: miny + y0 / k }, w: cw / k, h: ch / k, color: sk.color,
+      areaU: cnt / (k * k), mid: { x: minx + (sumX / cnt + 0.5) / k, y: miny + (sumY / cnt + 0.5) / k } };
     if (pattern) {
       el.pattern = pattern;
       if (pattern === "road") el.axis = skAreaAxis(area, W, H, minx, miny, k);

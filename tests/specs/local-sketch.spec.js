@@ -663,3 +663,22 @@ test("sketch background: a picture from the project's library (any folder)", asy
   await list.filter({ hasText: "לוח.png" }).click();
   await expect.poll(async () => (await els(page)).filter((e) => e.type === "image").length).toBe(1);
 });
+
+test("sketch fill: with a scale, a painted area knows its size in m²", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
+  await page.locator("#sketchBtn").click();
+  await page.locator("#sketchScaleBtn").click();
+  await page.locator("#sketchScalePer").fill("100"); // a square (20 units) = 1 m
+  await page.locator("#sketchScaleSaveBtn").click();
+  await page.locator(".sk-tool[data-tool=line]").click();
+  for (const [a, b] of [[[60, 100], [260, 100]], [[260, 100], [260, 200]], [[260, 200], [60, 200]], [[60, 200], [60, 100]]]) await drag(page, a, b);
+  const box = await page.locator("#sketchCanvas").boundingBox();
+  await page.locator(".sk-tool[data-tool=fill]").click();
+  await page.locator(".sk-fill-pick[data-fill=grass]").click();
+  await page.mouse.click(box.x + 160, box.y + 150);
+  const fill = (await els(page)).find((e) => e.type === "fill");
+  const m2 = fill.areaU / 400; // 20 units a metre
+  expect(m2).toBeGreaterThan(49.5); // 10 m x 5 m, measured to the middle of the lines
+  expect(m2).toBeLessThan(50.5);
+  expect(fill.mid.x).toBeCloseTo((await els(page))[0].a.x + 100, -1);
+});
