@@ -3469,6 +3469,7 @@
   .assistant-dock .assistant-form { padding: 6px 8px; border-top: none; }
   .assistant-dock .assistant-form input { height: 40px; }
   .assistant-dock .assistant-mic, .assistant-dock .assistant-send { width: 40px; height: 40px; }
+  .assistant-dock-btn.on { color: var(--accent); }
   .assistant-dock-btn { flex: none; width: 32px; height: 40px; border: none; background: transparent; font-size: 1.05rem; cursor: pointer; color: var(--ink-muted); padding: 0; }
   .as-flash { animation: as-flash 1.6s ease-out 1; }
   /* a task's number while the assistant is open ("סמן את 3...") */

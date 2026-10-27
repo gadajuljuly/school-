@@ -310,6 +310,9 @@
     assistantMeetingSet: { he: "נקבע ביומן של הטלפון", en: "Set in the phone's calendar", ar: "تم التحديد في تقويم الهاتف", ru: "Добавлено в календарь телефона" },
     assistantMeetingMoved: { he: "הפגישה הועברה", en: "Meeting moved", ar: "تم نقل الاجتماع", ru: "Встреча перенесена" },
     assistantNoSuchMeeting: { he: "לא מצאתי פגישה כזו בחודש וחצי הקרובים", en: "I couldn't find such a meeting in the coming weeks", ar: "لم أجد اجتماعاً كهذا في الأسابيع القادمة", ru: "Не нашёл такой встречи в ближайшие недели" },
+    assistantSpeakTitle: { he: "מצב דיבור: הקראת תשובות והקשבה רציפה", en: "Speech mode: answers read aloud, keeps listening", ar: "وضع الكلام: قراءة الإجابات والاستماع المستمر", ru: "Голосовой режим: ответы вслух, продолжает слушать" },
+    assistantVoiceOn: { he: "מצב דיבור פעיל: אקריא את התשובות, ואחרי פקודה קולית אמשיך להקשיב", en: "Speech mode on: answers are read aloud, and after a spoken line I keep listening", ar: "وضع الكلام مفعل: سأقرأ الإجابات وأواصل الاستماع بعد الأمر الصوتي", ru: "Голосовой режим включён: читаю ответы и продолжаю слушать" },
+    assistantVoiceOff: { he: "מצב דיבור כבוי", en: "Speech mode off", ar: "وضع الكلام متوقف", ru: "Голосовой режим выключен" },
     voiceBtnTitle: { he: "פקודה קולית", en: "Voice command", ar: "أمر صوتي", ru: "Голосовая команда" },
     voiceTitle: { he: "פקודה קולית", en: "Voice command", ar: "أمر صوتي", ru: "Голосовая команда" },
     voiceListening: { he: "מקשיב... דבר עכשיו", en: "Listening... speak now", ar: "أستمع... تكلّم الآن", ru: "Слушаю... говорите" },
@@ -18243,6 +18246,7 @@
   }
   function closeAssistant() {
     voiceStopListening();
+    assistantStopSpeaking();
     assistantMicBtn.classList.remove("listening");
     assistantMoveToHistory();
     assistantDock.hidden = true;
@@ -18279,7 +18283,74 @@
     if (who === "me") assistantMoveToHistory();
     assistantDockReply.appendChild(el);
     assistantDockReply.scrollTop = assistantDockReply.scrollHeight;
+    if (who === "bot") assistantSpeakSoon();
     return el;
+  }
+
+  // ---- speech mode (🔊): answers read aloud, and after a spoken line it
+  // listens again - hands-free, until a moment of silence ------------------
+  var ASSISTANT_VOICE_KEY = "itask-assistant-voice";
+  var assistantLastByVoice = false;
+  var assistantSpeakTimer = null;
+  var assistantNativeSpeak = false;
+  if (nativeTaskAlarmPlugin && nativeTaskAlarmPlugin.features) {
+    nativeTaskAlarmPlugin.features().then(function (f) { assistantNativeSpeak = !!(f && f.speak); }, function () {});
+  }
+  function assistantVoiceMode() {
+    try { return localStorage.getItem(ASSISTANT_VOICE_KEY) === "on"; } catch (e) { return false; }
+  }
+  function assistantShowVoiceMode() {
+    var b = document.getElementById("assistantSpeakBtn");
+    b.textContent = assistantVoiceMode() ? "🔊" : "🔇";
+    b.classList.toggle("on", assistantVoiceMode());
+  }
+  document.getElementById("assistantSpeakBtn").addEventListener("click", function () {
+    var on = !assistantVoiceMode();
+    try { localStorage.setItem(ASSISTANT_VOICE_KEY, on ? "on" : "off"); } catch (e) {}
+    assistantShowVoiceMode();
+    if (!on) assistantStopSpeaking();
+    showToast(tr(on ? "assistantVoiceOn" : "assistantVoiceOff"));
+  });
+  assistantShowVoiceMode();
+  // what a bubble says, without its buttons and signs
+  function assistantSpeechText(el) {
+    var c = el.cloneNode(true);
+    c.querySelectorAll(".as-actions, .as-chips, button").forEach(function (b) { b.remove(); });
+    // a pause between lines (a detached copy has no layout, so no innerText)
+    c.querySelectorAll("li, div, p, br, h3, h4").forEach(function (n) { n.after(". "); });
+    return c.textContent.replace(/[\p{Extended_Pictographic}\u{FE0F}↶•→]/gu, " ")
+      .replace(/\s+/g, " ").replace(/(\s*[.:]\s*)+\./g, ".").replace(/^[\s.]+/, "").trim();
+  }
+  function assistantSay(text) {
+    if (assistantNativeSpeak && nativeTaskAlarmPlugin.speak) {
+      return nativeTaskAlarmPlugin.speak({ text: text, lang: voiceSpeechLang() }).catch(function () {});
+    }
+    if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) return Promise.resolve();
+    return new Promise(function (resolve) {
+      var u = new SpeechSynthesisUtterance(text);
+      u.lang = voiceSpeechLang();
+      u.onend = u.onerror = function () { resolve(); };
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(u);
+    });
+  }
+  function assistantStopSpeaking() {
+    clearTimeout(assistantSpeakTimer);
+    if (assistantNativeSpeak && nativeTaskAlarmPlugin.stopSpeaking) nativeTaskAlarmPlugin.stopSpeaking().catch(function () {});
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+  }
+  // the latest answer, once the replies have settled (a "thinking..." first is skipped)
+  function assistantSpeakSoon() {
+    if (!assistantVoiceMode()) return;
+    clearTimeout(assistantSpeakTimer);
+    assistantSpeakTimer = setTimeout(function () {
+      var last = assistantDockReply.querySelector(".as-bot:last-child");
+      if (!last || last.classList.contains("as-thinking") || assistantDock.hidden) return;
+      var byVoice = assistantLastByVoice;
+      assistantSay(assistantSpeechText(last)).then(function () {
+        if (byVoice && assistantVoiceMode() && !assistantDock.hidden && !assistantListening) assistantListen();
+      });
+    }, 250);
   }
   function assistantAdd(el, tag, text, cls) {
     var x = document.createElement(tag);
@@ -19082,6 +19153,7 @@
   }
   document.getElementById("assistantForm").addEventListener("submit", function (e) {
     e.preventDefault();
+    assistantLastByVoice = false;
     var text = assistantInput.value;
     assistantInput.value = "";
     assistantHandle(text);
@@ -19091,12 +19163,16 @@
   var assistantListening = false;
   function assistantListen() {
     if (assistantListening) { voiceStopListening(); return; }
+    assistantStopSpeaking();
     assistantListening = true;
     assistantMicBtn.classList.add("listening");
     assistantInput.placeholder = tr("voiceListening");
     voiceListen().then(function (heard) {
+      // silence ends a hands-free run
+      assistantLastByVoice = !!(heard && heard.trim());
       assistantHandle(heard);
     }, function (err) {
+      assistantLastByVoice = false;
       assistantBubble("bot", tr(err && err.message === "permission" ? "voicePermissionMsg" : "voiceNoSpeech"));
     }).then(function () {
       assistantListening = false;

@@ -297,3 +297,36 @@ test("calendar: set a meeting, move it, undo - in the phone's calendar", async (
   await expect(page.locator("#calView")).toBeVisible();
   await expect(page.locator("#calView")).toContainText("פגישה עם היזם");
 });
+
+test("speech mode 🔊: answers are read aloud; after a spoken line it listens again until silence; typing doesn't", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, native: true, sheet: SHEET });
+  await openFromWidget(page, "assistant");
+  const spoken = () => page.evaluate(() => window.__native.spoken || []);
+  const listens = () => page.evaluate(() => (window.__native.speech || []).length);
+  // off by default: nothing read
+  await say(page, "מה יש לי מחר?");
+  await expect(bot(page).last()).toContainText("להזמין בטון");
+  await page.waitForTimeout(500);
+  expect(await spoken()).toEqual([]);
+
+  await page.locator("#assistantSpeakBtn").click();
+  await expect(page.locator("#assistantSpeakBtn")).toHaveText("🔊");
+  // two spoken lines, then silence: three listens, two answers read
+  await page.evaluate(() => { window.__voiceSay = ["מה יש לי מחר?", "מה באיחור?"]; });
+  await page.locator("#assistantMicBtn").click();
+  await expect.poll(spoken).toHaveLength(2);
+  await expect.poll(listens).toBe(3);
+  const said = await spoken();
+  expect(said[0]).toContain("להזמין בטון");
+  expect(said[1]).toContain("יציקת תקרה");
+  expect(said.join(" ")).not.toMatch(/[⏰⚠📊]/u); // signs aren't read
+  // typed: read, but no listening after it
+  await say(page, "מה יש לי היום?");
+  await expect.poll(spoken).toHaveLength(3);
+  await page.waitForTimeout(500);
+  expect(await listens()).toBe(3);
+  // remembered
+  await page.reload();
+  await openFromWidget(page, "assistant");
+  await expect(page.locator("#assistantSpeakBtn")).toHaveText("🔊");
+});

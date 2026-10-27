@@ -13,8 +13,13 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import androidx.core.content.FileProvider;
 import androidx.core.content.pm.ShortcutManagerCompat;
+import android.speech.tts.TextToSpeech;
+import android.speech.tts.UtteranceProgressListener;
 import java.io.File;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
 import org.json.JSONArray;
 
 // Bridge for tasks.html. Alarms (syncNativeTaskAlarms there): the page sends
@@ -98,7 +103,76 @@ public class ItaskAlarmPlugin extends Plugin {
         JSObject result = new JSObject();
         result.put("quietAlarms", true);
         result.put("assistantWidget", true);
+        result.put("speak", true);
         call.resolve(result);
+    }
+
+    // The assistant's answers read aloud (version 24+): Android's own
+    // text-to-speech (a WebView can't speak). Resolves once it's said, so
+    // the assistant can listen again after it.
+    private TextToSpeech tts = null;
+    private boolean ttsReady = false;
+    private final Map<String, PluginCall> speaking = new HashMap<>();
+
+    @PluginMethod
+    public void speak(PluginCall call) {
+        final String text = call.getString("text", "");
+        final String lang = call.getString("lang", "he-IL");
+        if (text == null || text.trim().isEmpty()) { call.resolve(); return; }
+        if (tts == null) {
+            tts = new TextToSpeech(getContext(), status -> {
+                ttsReady = status == TextToSpeech.SUCCESS;
+                if (ttsReady) {
+                    tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
+                        @Override public void onStart(String id) {}
+                        @Override public void onDone(String id) { finishSpeaking(id); }
+                        @Override public void onError(String id) { finishSpeaking(id); }
+                    });
+                    sayNow(call, text, lang);
+                } else {
+                    call.reject("no text-to-speech");
+                }
+            });
+            return;
+        }
+        if (!ttsReady) { call.reject("no text-to-speech"); return; }
+        sayNow(call, text, lang);
+    }
+
+    private void sayNow(PluginCall call, String text, String lang) {
+        String[] parts = lang.split("-");
+        // Android still knows Hebrew as "iw"
+        String language = "he".equals(parts[0]) ? "iw" : parts[0];
+        tts.setLanguage(parts.length > 1 ? new Locale(language, parts[1]) : new Locale(language));
+        String id = "itask-" + System.nanoTime();
+        synchronized (speaking) {
+            for (PluginCall old : speaking.values()) old.resolve();
+            speaking.clear();
+            speaking.put(id, call);
+        }
+        tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, id);
+    }
+
+    private void finishSpeaking(String id) {
+        PluginCall c;
+        synchronized (speaking) { c = speaking.remove(id); }
+        if (c != null) c.resolve();
+    }
+
+    @PluginMethod
+    public void stopSpeaking(PluginCall call) {
+        if (tts != null) tts.stop();
+        synchronized (speaking) {
+            for (PluginCall old : speaking.values()) old.resolve();
+            speaking.clear();
+        }
+        call.resolve();
+    }
+
+    @Override
+    protected void handleOnDestroy() {
+        if (tts != null) { tts.shutdown(); tts = null; }
+        super.handleOnDestroy();
     }
 
     @PluginMethod

@@ -30,7 +30,10 @@ const NATIVE_FAKE = () => {
         canScheduleExact: () => ok({ value: true }),
         openExactAlarmSettings: () => ok(),
         openFile: (o) => { (native.opened = native.opened || []).push(o); return ok(); },
-        features: () => ok({ quietAlarms: true }),
+        features: () => ok({ quietAlarms: true, speak: true }),
+        // read aloud: what was said, in native.spoken
+        speak: (o) => { (native.spoken = native.spoken || []).push(o.text); return ok({}); },
+        stopSpeaking: () => ok(),
       },
       Filesystem: {
         writeFile: ({ path, data }) => { (native.files = native.files || []).push({ path, size: (data || "").length }); return ok({ uri: "file:///cache/" + path }); },
@@ -38,10 +41,10 @@ const NATIVE_FAKE = () => {
       Share: {
         share: (o) => { (native.shared = native.shared || []).push(o); return ok({}); },
       },
-      // the phone's speech recognizer: "hears" window.__voiceSay
+      // the phone's speech recognizer: "hears" window.__voiceSay (a list: one line per listen)
       SpeechRecognition: {
         requestPermissions: () => ok({ speechRecognition: "granted" }),
-        start: (o) => { (native.speech = native.speech || []).push(o); return ok({ matches: [window.__voiceSay || ""] }); },
+        start: (o) => { (native.speech = native.speech || []).push(o); return ok({ matches: [(Array.isArray(window.__voiceSay) ? window.__voiceSay.shift() : window.__voiceSay) || ""] }); },
         stop: () => ok(),
       },
       ItaskCalendar: {
