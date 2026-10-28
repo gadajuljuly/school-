@@ -219,8 +219,26 @@ test("diary: planned vs done - marking updates the plan, the reason is kept, the
   const rows = page.locator(".wp-diary-row");
   await expect(rows).toHaveCount(2); // today's + the late one; איטום starts tomorrow
   await expect(rows.filter({ hasText: "חשמל" })).toContainText("באיחור");
-  await rows.filter({ hasText: "קירות מרתף" }).locator(".wp-diary-mark[data-result=done]").click();
-  await rows.filter({ hasText: "חשמל" }).locator(".wp-diary-mark[data-result=not]").click();
+  // the % bar: green as far as it's done (right to left in Hebrew); tap / drag along it
+  const wallsBar = rows.filter({ hasText: "קירות מרתף" }).locator(".wp-diary-pct");
+  await expect(wallsBar).toHaveText("40%"); // the plan's so far, faded
+  await expect(wallsBar).not.toHaveClass(/set/);
+  const box = await wallsBar.boundingBox();
+  await wallsBar.click({ position: { x: box.width * 0.4, y: box.height / 2 } });
+  await expect(wallsBar).toHaveText("60%");
+  await expect(wallsBar).toHaveClass(/set/);
+  await expect.poll(async () => (await serverPlan(page, "p1")).find((x) => x.id === "w1").progress).toBe(60);
+  // dragged all the way: done
+  await page.mouse.move(box.x + box.width * 0.5, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * 0.2, box.y + box.height / 2, { steps: 4 });
+  await page.mouse.move(box.x + 1, box.y + box.height / 2, { steps: 4 });
+  await page.mouse.up();
+  await expect(wallsBar).toHaveText("100%");
+  const elecBar = rows.filter({ hasText: "חשמל" }).locator(".wp-diary-pct");
+  const eb = await elecBar.boundingBox();
+  await elecBar.click({ position: { x: eb.width - 5, y: eb.height / 2 } });
+  await expect(elecBar).toHaveText("0%");
   await rows.filter({ hasText: "חשמל" }).locator(".wp-diary-reason").fill("לא הגיע ספק");
   await rows.filter({ hasText: "חשמל" }).locator(".wp-diary-reason").blur();
   await expect.poll(async () => (await serverPlan(page, "p1")).find((x) => x.id === "w1").status).toBe("done");

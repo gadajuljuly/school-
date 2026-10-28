@@ -6,9 +6,11 @@
   // ---------------------------------------------------------------------
 
   // ---- planned vs. done in the diary -----------------------------------
-  // The day's log keeps planned: [{ itemId, name, by, result done|partial|
-  // not, reason }] - a snapshot, so the diary still says what was planned
-  // even if the plan changes later. Marking also updates the plan.
+  // The day's log keeps planned: [{ itemId, name, by, progress, result
+  // done|partial|not, reason }] - a snapshot, so the diary still says what
+  // was planned even if the plan changes later. Each activity has a bar
+  // that fills green with its % done (drag / tap along it); the % also
+  // gives the result (100 done, 0 not, else partial) and updates the plan.
   var siteLogPlanView = document.getElementById("siteLogPlanView");
   var siteLogPlanList = document.getElementById("siteLogPlanList");
   var WP_RESULTS = [
@@ -50,19 +52,15 @@
       if (item.by) name.appendChild(wpEl("small", "", item.by));
       if (!item.gone && wpIsLate(item)) name.appendChild(wpEl("small", "wp-diary-late", tr("workPlanStatusLate")));
       head.appendChild(name);
-      var marks = wpEl("div", "wp-diary-marks");
-      WP_RESULTS.forEach(function (r) {
-        var b = wpEl("button", "wp-diary-mark wp-diary-" + r.key + (entry && entry.result === r.key ? " on" : ""), r.mark);
-        b.type = "button";
-        b.title = tr(r.label);
-        b.setAttribute("data-result", r.key);
-        b.addEventListener("click", function () {
-          setSiteLogPlanResult(sheet, dateISO, item, entry && entry.result === r.key ? null : r.key);
-        });
-        marks.appendChild(b);
-      });
-      head.appendChild(marks);
+      if (entry) {
+        var clear = wpEl("button", "wp-diary-clear", "✕");
+        clear.type = "button";
+        clear.title = tr("workPlanResultClear");
+        clear.addEventListener("click", function () { clearSiteLogPlanEntry(sheet, dateISO, item); });
+        head.appendChild(clear);
+      }
       row.appendChild(head);
+      row.appendChild(wpDiaryPctBar(sheet, dateISO, item, entry));
       if (entry && entry.result !== "done") {
         var reason = document.createElement("input");
         reason.type = "text";
@@ -80,30 +78,103 @@
     });
   }
 
-  function setSiteLogPlanResult(sheet, dateISO, item, result) {
+  // the % bar: green as far as it's done, the number in it. Before it's
+  // marked that day it shows the plan's % so far, faded.
+  function wpDiaryPctBar(sheet, dateISO, item, entry) {
+    var live = !item.gone && (sheet.workPlan || []).find(function (x) { return x.id === item.id; });
+    var planPct = live ? (live.status === "done" ? 100 : live.progress || 0) : 0;
+    var pct = entry ? wpEntryPct(entry) : planPct;
+    var bar = wpEl("div", "wp-diary-pct" + (entry ? " set" : ""));
+    var fill = wpEl("div", "wp-diary-pct-fill");
+    var label = wpEl("span", "wp-diary-pct-num");
+    bar.appendChild(fill);
+    bar.appendChild(label);
+    bar.tabIndex = 0;
+    bar.setAttribute("role", "slider");
+    bar.setAttribute("aria-valuemin", "0");
+    bar.setAttribute("aria-valuemax", "100");
+    bar.title = tr("workPlanDiaryPctTitle");
+    function show(v) {
+      fill.style.width = v + "%";
+      fill.classList.toggle("full", v >= 100);
+      label.textContent = v + "%";
+      bar.setAttribute("aria-valuenow", String(v));
+    }
+    show(pct);
+    // along the bar, from its start side (right in Hebrew), in steps of 5
+    function at(x) {
+      var r = bar.getBoundingClientRect();
+      var rtl = getComputedStyle(bar).direction === "rtl";
+      var f = rtl ? (r.right - x) / r.width : (x - r.left) / r.width;
+      return Math.max(0, Math.min(100, Math.round(f * 20) * 5));
+    }
+    var dragging = false;
+    bar.addEventListener("pointerdown", function (e) {
+      dragging = true;
+      try { bar.setPointerCapture(e.pointerId); } catch (err) {}
+      pct = at(e.clientX);
+      bar.classList.add("set");
+      show(pct);
+    });
+    bar.addEventListener("pointermove", function (e) {
+      if (!dragging) return;
+      pct = at(e.clientX);
+      show(pct);
+    });
+    function end() {
+      if (!dragging) return;
+      dragging = false;
+      setSiteLogPlanPct(sheet, dateISO, item, pct);
+    }
+    bar.addEventListener("pointerup", end);
+    bar.addEventListener("pointercancel", end);
+    bar.addEventListener("keydown", function (e) {
+      var step = { ArrowUp: 5, ArrowRight: 5, ArrowDown: -5, ArrowLeft: -5 }[e.key];
+      if (!step) return;
+      e.preventDefault();
+      if (getComputedStyle(bar).direction === "rtl" && (e.key === "ArrowRight" || e.key === "ArrowLeft")) step = -step;
+      setSiteLogPlanPct(sheet, dateISO, item, Math.max(0, Math.min(100, pct + step)));
+    });
+    return bar;
+  }
+  // an entry's %: its own, or (marked before there was a %) from its result
+  function wpEntryPct(entry) {
+    if (typeof entry.progress === "number") return entry.progress;
+    return entry.result === "done" ? 100 : entry.result === "partial" ? 50 : 0;
+  }
+  function wpPctResult(pct) { return pct >= 100 ? "done" : pct > 0 ? "partial" : "not"; }
+
+  function setSiteLogPlanPct(sheet, dateISO, item, pct) {
     var log = findOrCreateSiteLog(sheet, dateISO);
     if (!Array.isArray(log.planned)) log.planned = [];
     var entry = log.planned.find(function (e) { return e.itemId === item.id; });
-    if (!result) {
-      log.planned = log.planned.filter(function (e) { return e !== entry; });
-    } else if (entry) {
-      entry.result = result;
-    } else {
-      log.planned.push({ itemId: item.id, name: item.name, by: item.by || "", result: result, reason: "" });
+    if (!entry) {
+      entry = { itemId: item.id, name: item.name, by: item.by || "", reason: "" };
+      log.planned.push(entry);
     }
-    // the plan follows: done -> הושלם, partly -> בביצוע
+    entry.progress = pct;
+    entry.result = wpPctResult(pct);
+    // the plan follows: its % and state (a day's 0% leaves it as it is)
     var live = !item.gone && (sheet.workPlan || []).find(function (x) { return x.id === item.id; });
-    if (live && result && result !== "not") {
-      var status = result === "done" ? "done" : "prog";
-      if (live.status !== status) {
+    if (live && pct > 0) {
+      var status = pct >= 100 ? "done" : "prog";
+      var was = live.status === "done" ? 100 : live.progress || 0;
+      if (live.status !== status || was !== pct) {
         saveWorkPlanItem(sheet, Object.assign({}, live, {
           status: status,
-          progress: status === "done" ? 100 : Math.max(live.progress || 0, 10),
+          progress: pct,
           updatedBy: myPhoneNumber || null,
           updatedAt: Date.now()
         }), false);
       }
     }
+    saveData();
+    renderSiteLogPlanList();
+  }
+  // ✕: the day's mark goes (the plan stays as it is)
+  function clearSiteLogPlanEntry(sheet, dateISO, item) {
+    var log = findSiteLog(sheet, dateISO);
+    if (log && Array.isArray(log.planned)) log.planned = log.planned.filter(function (e) { return e.itemId !== item.id; });
     saveData();
     renderSiteLogPlanList();
   }
@@ -122,9 +193,10 @@
   document.getElementById("siteLogPlanBtn").addEventListener("click", openSiteLogPlanView);
   document.getElementById("siteLogPlanBackBtn").addEventListener("click", closeSiteLogPlanView);
 
-  function wpResultLabel(result) {
+  function wpResultLabel(result, entry) {
     var r = WP_RESULTS.find(function (x) { return x.key === result; });
-    return r ? r.mark + " " + tr(r.label) : "";
+    if (!r) return "";
+    return r.mark + " " + tr(r.label) + (entry && typeof entry.progress === "number" && result === "partial" ? " " + entry.progress + "%" : "");
   }
 
   // The diary PDF's "מתוכנן מול ביצוע" table.
@@ -145,7 +217,7 @@
       var tr_ = wpEl("tr");
       tr_.appendChild(wpEl("td", "", e.name));
       tr_.appendChild(wpEl("td", "", e.by || ""));
-      tr_.appendChild(wpEl("td", "wp-pdf-result-" + e.result, wpResultLabel(e.result)));
+      tr_.appendChild(wpEl("td", "wp-pdf-result-" + e.result, wpResultLabel(e.result, e)));
       tr_.appendChild(wpEl("td", "", e.reason || ""));
       tbody.appendChild(tr_);
     });

@@ -316,6 +316,8 @@
     assistantAiNote: { he: "תשובה של הבינה המלאכותית בטלפון (Gemini Nano) - כדאי לבדוק", en: "An answer from the on-phone AI (Gemini Nano) - worth checking", ar: "إجابة من الذكاء الاصطناعي في الهاتف (Gemini Nano) - يُستحسن التحقق", ru: "Ответ ИИ в телефоне (Gemini Nano) - стоит проверить" },
     assistantMenuLabel: { he: "העוזר", en: "Assistant", ar: "المساعد", ru: "Помощник" },
     assistantOpenTitle: { he: "העוזר: פקודה בקול או בהקלדה", en: "Assistant: speak or type a command", ar: "المساعد: أمر صوتي أو كتابي", ru: "Помощник: команда голосом или текстом" },
+    workPlanDiaryPctTitle: { he: "אחוז הביצוע: גרור או לחץ לאורך השדה", en: "% done: drag or tap along the bar", ar: "نسبة الإنجاز: اسحب أو انقر على الشريط", ru: "% выполнения: проведите или нажмите по полосе" },
+    workPlanResultClear: { he: "ניקוי הסימון של היום", en: "Clear today's mark", ar: "مسح علامة اليوم", ru: "Сбросить отметку дня" },
     voiceBtnTitle: { he: "פקודה קולית", en: "Voice command", ar: "أمر صوتي", ru: "Голосовая команда" },
     voiceTitle: { he: "פקודה קולית", en: "Voice command", ar: "أمر صوتي", ru: "Голосовая команда" },
     voiceListening: { he: "מקשיב... דבר עכשיו", en: "Listening... speak now", ar: "أستمع... تكلّم الآن", ru: "Слушаю... говорите" },
