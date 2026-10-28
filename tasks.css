@@ -3520,5 +3520,6 @@
   .sk-color { width: 24px; height: 24px; }
   .sk-width { width: 28px; height: 28px; padding: 0 5px; }
   .sk-sep { margin: 0; }
-  /* the sketch icon: 3mm (~11px) larger each way, no box, floating on a soft shadow */
-  .sketch-btn { width: 47px; height: 47px; padding: 0; border: none; background: transparent; border-radius: 0; filter: drop-shadow(0 3px 4px rgba(44, 42, 36, 0.35)); }
+  /* the sketch icon: 3mm (~11px) larger each way, no box, floating on a soft shadow,
+     and 3mm higher than the middle of the project-name row */
+  .sketch-btn { transform: translateY(calc(-50% - 11px)); width: 47px; height: 47px; padding: 0; border: none; background: transparent; border-radius: 0; filter: drop-shadow(0 3px 4px rgba(44, 42, 36, 0.35)); }
