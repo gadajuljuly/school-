@@ -3352,9 +3352,10 @@
   .wp-diary-name { display: flex; flex-direction: column; min-width: 0; }
   .wp-diary-name small { color: var(--ink-muted); font-size: 0.75rem; }
   .wp-diary-name .wp-diary-late { color: var(--danger); font-weight: 700; }
-  .wp-diary-clear { flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--rule); background: transparent; color: var(--ink-muted); cursor: pointer; padding: 0; }
+  .wp-diary-side { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .wp-diary-clear { flex-shrink: 0; width: 24px; height: 24px; font-size: 0.75rem; border-radius: 50%; border: 1px solid var(--rule); background: transparent; color: var(--ink-muted); cursor: pointer; padding: 0; }
   /* the % bar: green as far as it's done, the number on it; faded until it's marked that day */
-  .wp-diary-pct { position: relative; height: 34px; border: 1.5px dashed var(--rule); border-radius: 9px; background: var(--paper); overflow: hidden; cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none; }
+  .wp-diary-pct { position: relative; width: 120px; flex-shrink: 0; height: 34px; border: 1.5px dashed var(--rule); border-radius: 9px; background: var(--paper); overflow: hidden; cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none; }
   .wp-diary-pct.set { border-style: solid; border-color: var(--plan-green); }
   .wp-diary-pct-fill { position: absolute; top: 0; bottom: 0; inset-inline-start: 0; background: var(--plan-green); opacity: 0.35; transition: width 0.08s; }
   .wp-diary-pct.set .wp-diary-pct-fill { opacity: 0.75; }

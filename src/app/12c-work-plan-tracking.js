@@ -52,15 +52,17 @@
       if (item.by) name.appendChild(wpEl("small", "", item.by));
       if (!item.gone && wpIsLate(item)) name.appendChild(wpEl("small", "wp-diary-late", tr("workPlanStatusLate")));
       head.appendChild(name);
-      if (entry) {
-        var clear = wpEl("button", "wp-diary-clear", "✕");
-        clear.type = "button";
-        clear.title = tr("workPlanResultClear");
-        clear.addEventListener("click", function () { clearSiteLogPlanEntry(sheet, dateISO, item); });
-        head.appendChild(clear);
-      }
+      // beside the name, where the ✓ / ½ / ✗ were: the % bar, and ✕ once it's marked
+      var side = wpEl("div", "wp-diary-side");
+      side.appendChild(wpDiaryPctBar(sheet, dateISO, item, entry));
+      var clear = wpEl("button", "wp-diary-clear", "✕");
+      clear.type = "button";
+      clear.title = tr("workPlanResultClear");
+      clear.style.visibility = entry ? "" : "hidden"; // its place kept, so the bars line up
+      clear.addEventListener("click", function () { clearSiteLogPlanEntry(sheet, dateISO, item); });
+      side.appendChild(clear);
+      head.appendChild(side);
       row.appendChild(head);
-      row.appendChild(wpDiaryPctBar(sheet, dateISO, item, entry));
       if (entry && entry.result !== "done") {
         var reason = document.createElement("input");
         reason.type = "text";
@@ -106,7 +108,10 @@
       var r = bar.getBoundingClientRect();
       var rtl = getComputedStyle(bar).direction === "rtl";
       var f = rtl ? (r.right - x) / r.width : (x - r.left) / r.width;
-      return Math.max(0, Math.min(100, Math.round(f * 20) * 5));
+      // its ends (a finger's width) are 0 and 100
+      if (f < 0.07) return 0;
+      if (f > 0.93) return 100;
+      return Math.max(5, Math.min(95, Math.round(f * 20) * 5));
     }
     var dragging = false;
     bar.addEventListener("pointerdown", function (e) {
