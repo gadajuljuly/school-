@@ -42,11 +42,13 @@
       assistantGreet();
     }
     assistantMicBtn.hidden = !(voiceSpeechPlugin || VoiceWebRecognition);
+    refreshVoiceAiStatus();
     if (ask) { assistantHandle(ask); return; }
     if (listen && !assistantMicBtn.hidden) assistantListen();
     else assistantInput.focus();
   }
   function closeAssistant() {
+    clearTimeout(assistantIdleTimer);
     voiceStopListening();
     assistantStopSpeaking();
     assistantMicBtn.classList.remove("listening");
@@ -85,9 +87,38 @@
     if (who === "me") assistantMoveToHistory();
     assistantDockReply.appendChild(el);
     assistantDockReply.scrollTop = assistantDockReply.scrollHeight;
-    if (who === "bot") assistantSpeakSoon();
+    if (who === "bot") { assistantSpeakSoon(); assistantCloseSoon(); }
+    else clearTimeout(assistantIdleTimer);
     return el;
   }
+
+  // ---- the bar comes when it's called and goes once it's done: a while
+  // after the answer (longer for a longer one), unless it's still in use -
+  // listening, speaking, being typed in, or the conversation is open
+  var assistantIdleTimer = null;
+  var assistantSpeaking = false;
+  function assistantInUse() {
+    return assistantListening || assistantSpeaking || document.activeElement === assistantInput ||
+      !!assistantInput.value.trim() || !assistantView.hidden || !!assistantDockReply.querySelector(".as-thinking");
+  }
+  function assistantCloseSoon(ms) {
+    clearTimeout(assistantIdleTimer);
+    // the greeting waits for a first line
+    if (assistantDock.hidden || !assistantDockReply.querySelector(".as-me")) return;
+    if (ms == null) {
+      var last = assistantDockReply.querySelector(".as-bot:last-child");
+      ms = Math.min(20000, 7000 + 50 * (last ? last.textContent.length : 0));
+    }
+    assistantIdleTimer = setTimeout(function () {
+      if (assistantDock.hidden) return;
+      if (assistantInUse()) { assistantCloseSoon(5000); return; }
+      closeAssistant();
+    }, ms);
+  }
+  // a touch on the bar (an undo, a chip...) gives it more time
+  ["pointerdown", "input"].forEach(function (ev) {
+    assistantDock.addEventListener(ev, function () { if (assistantIdleTimer) assistantCloseSoon(8000); });
+  });
 
   // ---- speech mode (🔊): answers read aloud, and after a spoken line it
   // listens again - hands-free, until a moment of silence ------------------
@@ -149,7 +180,9 @@
       var last = assistantDockReply.querySelector(".as-bot:last-child");
       if (!last || last.classList.contains("as-thinking") || assistantDock.hidden) return;
       var byVoice = assistantLastByVoice;
+      assistantSpeaking = true;
       assistantSay(assistantSpeechText(last)).then(function () {
+        assistantSpeaking = false;
         if (byVoice && assistantVoiceMode() && !assistantDock.hidden && !assistantListening) assistantListen();
       });
     }, 250);
@@ -1027,6 +1060,8 @@
     assistantLastByVoice = false;
     var text = assistantInput.value;
     assistantInput.value = "";
+    // the keyboard goes: the answer shows, then the bar goes too
+    assistantInput.blur();
     assistantHandle(text);
   });
 

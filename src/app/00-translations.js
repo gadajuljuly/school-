@@ -314,6 +314,8 @@
     assistantVoiceOff: { he: "מצב דיבור כבוי", en: "Speech mode off", ar: "وضع الكلام متوقف", ru: "Голосовой режим выключен" },
     assistantAiThinking: { he: "🤖 חושב...", en: "🤖 Thinking...", ar: "🤖 يفكر...", ru: "🤖 Думаю..." },
     assistantAiNote: { he: "תשובה של הבינה המלאכותית בטלפון (Gemini Nano) - כדאי לבדוק", en: "An answer from the on-phone AI (Gemini Nano) - worth checking", ar: "إجابة من الذكاء الاصطناعي في الهاتف (Gemini Nano) - يُستحسن التحقق", ru: "Ответ ИИ в телефоне (Gemini Nano) - стоит проверить" },
+    assistantMenuLabel: { he: "העוזר", en: "Assistant", ar: "المساعد", ru: "Помощник" },
+    assistantOpenTitle: { he: "העוזר: פקודה בקול או בהקלדה", en: "Assistant: speak or type a command", ar: "المساعد: أمر صوتي أو كتابي", ru: "Помощник: команда голосом или текстом" },
     voiceBtnTitle: { he: "פקודה קולית", en: "Voice command", ar: "أمر صوتي", ru: "Голосовая команда" },
     voiceTitle: { he: "פקודה קולית", en: "Voice command", ar: "أمر صوتي", ru: "Голосовая команда" },
     voiceListening: { he: "מקשיב... דבר עכשיו", en: "Listening... speak now", ar: "أستمع... تكلّم الآن", ru: "Слушаю... говорите" },

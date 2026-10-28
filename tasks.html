@@ -38,7 +38,7 @@
 <script src="vendor/supabase-js-2.118.0.js"></script>
 <script src="vendor/firebase-app-compat-10.7.1.js"></script>
 <script src="vendor/firebase-auth-compat-10.7.1.js"></script>
-<link rel="stylesheet" href="tasks.css?v=798aad6446">
+<link rel="stylesheet" href="tasks.css?v=66a66708bc">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -333,50 +333,6 @@
     </form>
   </div>
 </div>
-<div class="modal-overlay" id="voiceOverlay" hidden style="z-index:41">
-  <div class="modal-box cal-editor-box">
-    <form class="cal-form" id="voiceForm">
-      <p class="modal-message" data-i18n="voiceTitle">פקודה קולית</p>
-      <div class="voice-listening" id="voiceListening"><span class="voice-pulse" aria-hidden="true"></span><span id="voiceListeningText"></span></div>
-      <p class="voice-heard" id="voiceHeard" hidden></p>
-      <div id="voiceResult" hidden>
-        <select id="voiceAction">
-          <option value="task" data-i18n="voiceActionTask">משימה חדשה</option>
-          <option value="note" data-i18n="voiceActionNote">מזכרת חדשה</option>
-          <option value="done" data-i18n="voiceActionDone">סימון בוצע</option>
-          <option value="plan" data-i18n="voiceActionPlan">פעילות בתוכנית העבודה</option>
-        </select>
-        <div id="voiceItems"></div>
-        <label data-i18n="shareTaskProject">פרויקט</label>
-        <select id="voiceProject"></select>
-        <div id="voiceDateRow">
-          <label data-i18n="shareTaskDate">תאריך</label>
-          <input type="date" id="voiceDate">
-        </div>
-        <div id="voicePlanRows" hidden>
-          <label data-i18n="workPlanTo">עד תאריך</label>
-          <input type="date" id="voiceEndDate">
-          <label data-i18n="workPlanBy">מבצע</label>
-          <input type="text" id="voiceBy" list="wpByList" maxlength="80" autocomplete="off">
-        </div>
-        <div id="voiceReminderRow">
-          <label data-i18n="voiceReminderLabel">תזכורת בשעה (לא חובה)</label>
-          <div class="voice-reminder-row">
-            <input type="time" id="voiceReminderTime">
-            <button type="button" class="voice-item-del" id="voiceReminderClearBtn" data-i18n-title="deleteBtn" title="מחיקה">✕</button>
-          </div>
-        </div>
-      </div>
-      <p class="voice-source" id="voiceSource" hidden></p>
-      <label class="cal-form-check voice-ai-row" id="voiceAiRow" hidden><input type="checkbox" id="voiceAiToggle"><span id="voiceAiStatus"></span></label>
-      <div class="modal-actions">
-        <button type="submit" class="modal-btn modal-btn-primary" id="voiceSaveBtn" data-i18n="voiceSaveBtn" hidden>אישור</button>
-        <button type="button" class="modal-btn" id="voiceAgainBtn" data-i18n="voiceAgainBtn">שוב 🎤</button>
-        <button type="button" class="modal-btn modal-btn-no" id="voiceCancelBtn" data-i18n="cancelBtn">ביטול</button>
-      </div>
-    </form>
-  </div>
-</div>
 <div class="modal-overlay" id="sketchShareOverlay" hidden style="z-index:41">
   <div class="modal-box" role="alertdialog" aria-modal="true">
     <p class="modal-message" data-i18n="sketchShareHow">איך לשתף את הסקיצה?</p>
@@ -513,6 +469,10 @@
             <label class="cal-form-check"><input type="checkbox" id="morningSummaryToggle" checked><span data-i18n="morningSummaryOn">התראה כל בוקר: מה יש היום</span></label>
             <label class="cal-form-check morning-time-row"><span data-i18n="morningSummaryAt">בשעה</span> <input type="time" id="morningSummaryTime" value="07:00"></label>
           </div>
+          <div class="menu-section" id="voiceAiMenuSection" hidden>
+            <div class="menu-label" data-i18n="assistantMenuLabel">העוזר</div>
+            <label class="cal-form-check voice-ai-row"><input type="checkbox" id="voiceAiToggle"><span id="voiceAiStatus"></span></label>
+          </div>
           <div class="menu-section" id="workPlanNotifMenuSection">
             <div class="menu-label" data-i18n="workPlanNotifLabel">התראות תוכנית עבודה</div>
             <label class="cal-form-check"><input type="checkbox" id="wpNotifyLateToggle" checked><span data-i18n="workPlanNotifLate">פעילות באיחור</span></label>
@@ -587,7 +547,7 @@
       <form class="add-row" id="addForm">
         <span class="row-mark" aria-hidden="true"><svg viewBox="0 0 20 18" xmlns="http://www.w3.org/2000/svg"><path d="M4 3 L16 15 M1.5 3 L6.5 3 M13.5 3 L18.5 3 M1.5 15 L6.5 15 M13.5 15 L18.5 15" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg></span>
         <input type="text" id="taskInput" data-i18n-ph="taskInputPlaceholder" placeholder="חדש..." maxlength="200" required autocomplete="off">
-        <button type="button" class="add-btn voice-btn" id="voiceBtn" data-i18n-title="voiceBtnTitle" title="פקודה קולית" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M8.5 21h7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+        <button type="button" class="add-btn voice-btn" id="voiceBtn" data-i18n-title="assistantOpenTitle" title="העוזר: פקודה בקול או בהקלדה"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M8.5 21h7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
         <button type="submit" class="add-btn" data-i18n-title="addBtnTitle" title="הוספה"><img src="tasks-plus-icon.webp" alt="+"></button>
       </form>
       <div class="empty-state" id="emptyState" style="display:none;">
@@ -1511,6 +1471,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=173a481416"></script>
+<script src="tasks-app.js?v=c6b2c00a13"></script>
 </body>
 </html>

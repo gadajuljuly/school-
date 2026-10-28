@@ -315,6 +315,8 @@
     assistantVoiceOff: { he: "מצב דיבור כבוי", en: "Speech mode off", ar: "وضع الكلام متوقف", ru: "Голосовой режим выключен" },
     assistantAiThinking: { he: "🤖 חושב...", en: "🤖 Thinking...", ar: "🤖 يفكر...", ru: "🤖 Думаю..." },
     assistantAiNote: { he: "תשובה של הבינה המלאכותית בטלפון (Gemini Nano) - כדאי לבדוק", en: "An answer from the on-phone AI (Gemini Nano) - worth checking", ar: "إجابة من الذكاء الاصطناعي في الهاتف (Gemini Nano) - يُستحسن التحقق", ru: "Ответ ИИ в телефоне (Gemini Nano) - стоит проверить" },
+    assistantMenuLabel: { he: "העוזר", en: "Assistant", ar: "المساعد", ru: "Помощник" },
+    assistantOpenTitle: { he: "העוזר: פקודה בקול או בהקלדה", en: "Assistant: speak or type a command", ar: "المساعد: أمر صوتي أو كتابي", ru: "Помощник: команда голосом или текстом" },
     voiceBtnTitle: { he: "פקודה קולית", en: "Voice command", ar: "أمر صوتي", ru: "Голосовая команда" },
     voiceTitle: { he: "פקודה קולית", en: "Voice command", ar: "أمر صوتي", ru: "Голосовая команда" },
     voiceListening: { he: "מקשיב... דבר עכשיו", en: "Listening... speak now", ar: "أستمع... تكلّم الآن", ru: "Слушаю... говорите" },
@@ -15113,12 +15115,13 @@
 
 
   // ---------------------------------------------------------------------
-  // Voice commands: the microphone by the new-task field. The phone's own
-  // recognizer turns speech into text (the SpeechRecognition plugin in
-  // the app, webkitSpeechRecognition in a browser); parseVoiceCommand
-  // turns the text into a command offline, or an on-device model does
-  // (ItaskAI, when the phone has one - see voiceAiParse). Nothing is
-  // saved before the user confirms it in #voiceOverlay.
+  // Voice commands, for the assistant (14f-assistant.js - the microphone by
+  // the new-task field opens it). The phone's own recognizer turns speech
+  // into text (the SpeechRecognition plugin in the app,
+  // webkitSpeechRecognition in a browser); parseVoiceCommand turns the
+  // text into a command offline, or an on-device model does (ItaskAI,
+  // when the phone has one - see voiceAiParse). Its on/off switch is in
+  // the menu.
   // ---------------------------------------------------------------------
   var voiceSpeechPlugin = (
     window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform() &&
@@ -15533,7 +15536,6 @@
     return { he: "he-IL", en: "en-US", ar: "ar-IL", ru: "ru-RU" }[currentLang] || "he-IL";
   }
   var voiceWebRec = null;
-  var voiceListenToken = 0;
   function voiceListen() {
     if (voiceSpeechPlugin) {
       return voiceSpeechPlugin.requestPermissions().then(function (p) {
@@ -15563,32 +15565,11 @@
     if (voiceWebRec) { try { voiceWebRec.abort(); } catch (e) {} voiceWebRec = null; }
   }
 
-  // ---- the confirmation dialog ------------------------------------------
+  // ---- the 🎤 by the new-task field: opens the assistant (עוזר ITASK) ----
   var voiceBtn = document.getElementById("voiceBtn");
-  var voiceOverlay = document.getElementById("voiceOverlay");
-  var voiceListeningRow = document.getElementById("voiceListening");
-  var voiceListeningText = document.getElementById("voiceListeningText");
-  var voiceHeard = document.getElementById("voiceHeard");
-  var voiceResult = document.getElementById("voiceResult");
-  var voiceAction = document.getElementById("voiceAction");
-  var voiceItems = document.getElementById("voiceItems");
-  var voiceProject = document.getElementById("voiceProject");
-  var voiceDate = document.getElementById("voiceDate");
-  var voiceDateRow = document.getElementById("voiceDateRow");
-  var voiceReminderRow = document.getElementById("voiceReminderRow");
-  var voiceReminderTime = document.getElementById("voiceReminderTime");
-  var voicePlanRows = document.getElementById("voicePlanRows");
-  var voiceEndDate = document.getElementById("voiceEndDate");
-  var voiceBy = document.getElementById("voiceBy");
-  var voiceSaveBtn = document.getElementById("voiceSaveBtn");
-  var voiceSource = document.getElementById("voiceSource");
-  var voiceAiRow = document.getElementById("voiceAiRow");
+  var voiceAiSection = document.getElementById("voiceAiMenuSection");
   var voiceAiToggle = document.getElementById("voiceAiToggle");
   var voiceAiStatus = document.getElementById("voiceAiStatus");
-  var voiceItemTexts = [];
-  var voiceDoneQuery = "";
-
-  voiceBtn.hidden = !(voiceSpeechPlugin || VoiceWebRecognition);
 
   function voiceTargetSheets() {
     return allSheets().filter(function (s) { return !s.ended && s.id !== HEAD_OFFICE_SHEET_ID; });
@@ -15615,7 +15596,7 @@
   }
 
   function renderVoiceAiRow() {
-    voiceAiRow.hidden = !voiceAiPlugin;
+    voiceAiSection.hidden = !voiceAiPlugin;
     if (!voiceAiPlugin) return;
     voiceAiToggle.checked = voiceAiEnabled();
     var status = {
@@ -15626,139 +15607,6 @@
       (voiceAiState === "downloading" && voiceAiProgress != null ? " " + voiceAiProgress + "%" : "");
   }
 
-  function renderVoiceItems() {
-    voiceItems.innerHTML = "";
-    var done = voiceAction.value === "done";
-    var plan = voiceAction.value === "plan";
-    voiceDateRow.hidden = done;
-    voiceReminderRow.hidden = done || plan;
-    voicePlanRows.hidden = !plan;
-    if (done) {
-      var sheet = allSheets().find(function (s) { return s.id === voiceProject.value; });
-      var tasks = sheet ? voiceOpenTasks(sheet).slice() : [];
-      tasks.sort(function (a, b) {
-        return voiceScoreTask(b, voiceDoneQuery) - voiceScoreTask(a, voiceDoneQuery) ||
-          String(b.date || "").localeCompare(String(a.date || ""));
-      });
-      var label = document.createElement("label");
-      label.textContent = tr("voiceDoneWhich");
-      voiceItems.appendChild(label);
-      if (!tasks.length) {
-        var none = document.createElement("p");
-        none.className = "voice-empty";
-        none.textContent = tr("voiceNoTaskFound");
-        voiceItems.appendChild(none);
-      } else {
-        var sel = document.createElement("select");
-        sel.id = "voiceDoneTask";
-        tasks.slice(0, 15).forEach(function (t) {
-          var o = document.createElement("option");
-          o.value = t.id;
-          o.textContent = t.text;
-          sel.appendChild(o);
-        });
-        voiceItems.appendChild(sel);
-      }
-      voiceSaveBtn.disabled = !tasks.length;
-      return;
-    }
-    if (!voiceItemTexts.length) voiceItemTexts = [""];
-    voiceItemTexts.forEach(function (txt, i) {
-      var row = document.createElement("div");
-      row.className = "voice-item-row";
-      var input = document.createElement("input");
-      input.type = "text";
-      input.maxLength = 200;
-      input.className = "voice-item-input";
-      input.value = txt;
-      input.addEventListener("input", function () { voiceItemTexts[i] = input.value; });
-      row.appendChild(input);
-      if (voiceItemTexts.length > 1) {
-        var del = document.createElement("button");
-        del.type = "button";
-        del.className = "voice-item-del";
-        del.textContent = "✕";
-        del.title = tr("deleteBtn");
-        del.addEventListener("click", function () {
-          voiceItemTexts.splice(i, 1);
-          renderVoiceItems();
-        });
-        row.appendChild(del);
-      }
-      voiceItems.appendChild(row);
-    });
-    voiceSaveBtn.disabled = false;
-  }
-
-  function showVoiceCommand(heard, cmd) {
-    voiceListeningRow.hidden = true;
-    voiceSource.hidden = !voiceAiPlugin;
-    voiceSource.textContent = tr(cmd.byAi ? "voiceBySourceAi" : "voiceBySourceRules");
-    voiceHeard.textContent = tr("voiceHeardPrefix") + " " + heard;
-    voiceHeard.hidden = false;
-    var sheets = voiceTargetSheets();
-    voiceProject.innerHTML = "";
-    sheets.forEach(function (s) {
-      var o = document.createElement("option");
-      o.value = s.id;
-      o.textContent = (s.shared ? "👥 " : "") + s.name;
-      voiceProject.appendChild(o);
-    });
-    var sheetId = cmd.sheetId;
-    if (!sheetId && cmd.action === "done") {
-      var bestSheet = voiceBestDoneSheet(cmd.items.join(" "));
-      if (bestSheet) sheetId = bestSheet.id;
-    }
-    if (!sheetId && sheets.some(function (s) { return s.id === data.activeSheetId; })) sheetId = data.activeSheetId;
-    if (sheetId) voiceProject.value = sheetId;
-    var peopleSheet = allSheets().find(function (s) { return s.id === voiceProject.value; });
-    if (peopleSheet) wpFillPeople(peopleSheet);
-    voiceAction.value = cmd.action;
-    voiceItemTexts = cmd.action === "done" ? [] : (cmd.items.length ? cmd.items.slice() : [cmd.reminderTime ? tr("voiceReminderDefault") : ""]);
-    voiceDoneQuery = cmd.items.join(" ");
-    voiceDate.value = cmd.date || (state.viewDate >= todayISO() ? state.viewDate : todayISO());
-    voiceReminderTime.value = cmd.reminderTime || "";
-    voiceEndDate.value = cmd.endDate || voiceDate.value;
-    voiceBy.value = cmd.by || "";
-    voiceResult.hidden = false;
-    voiceSaveBtn.hidden = false;
-    renderVoiceItems();
-  }
-
-  function startVoiceCommand() {
-    var token = ++voiceListenToken;
-    voiceListeningRow.hidden = false;
-    voiceListeningText.textContent = tr("voiceListening");
-    voiceHeard.hidden = true;
-    voiceResult.hidden = true;
-    voiceSaveBtn.hidden = true;
-    voiceSource.hidden = true;
-    voiceOverlay.hidden = false;
-    renderVoiceAiRow();
-    refreshVoiceAiStatus();
-    voiceListen().then(function (heard) {
-      if (token !== voiceListenToken) return;
-      heard = (heard || "").trim();
-      if (!heard) {
-        voiceListeningText.textContent = tr("voiceNoSpeech");
-        return;
-      }
-      voiceListeningText.textContent = tr("voiceThinking");
-      var sheets = voiceTargetSheets();
-      var opts = { people: voicePeople() };
-      // the model isn't asked about work-plan activities (date ranges) - the
-      // rules handle those
-      var ai = VOICE_PLAN_RE.test(" " + heard + " ") ? Promise.resolve(null) : voiceAiParse(heard, sheets);
-      return ai.then(function (aiCmd) {
-        if (token !== voiceListenToken) return;
-        showVoiceCommand(heard, aiCmd || parseVoiceCommand(heard, sheets, null, opts));
-      });
-    }).catch(function (err) {
-      if (token !== voiceListenToken) return;
-      voiceListeningText.textContent = tr(err && err.message === "permission" ? "voicePermissionMsg" : "voiceNoSpeech");
-    });
-  }
-
   function voicePeople() {
     var names = [];
     voiceTargetSheets().forEach(function (s) {
@@ -15767,14 +15615,7 @@
     return names;
   }
 
-  function closeVoiceOverlay() {
-    voiceListenToken++;
-    voiceStopListening();
-    voiceOverlay.hidden = true;
-  }
-
-  // Carries out a confirmed command - from this dialog or from the
-  // assistant (עוזר ITASK). c: { action, texts, date, reminderTime,
+  // Carries out a command from the assistant (עוזר ITASK). c: { action, texts, date, reminderTime,
   // endDate, by, doneTaskId }. Resolves { msgKey, undo(), date, taskId },
   // or null when there was nothing to do (or a reminder time already gone
   // - a toast says so).
@@ -15846,53 +15687,12 @@
     });
   }
 
-  function saveVoiceCommand() {
-    var sheet = allSheets().find(function (s) { return s.id === voiceProject.value; });
-    if (!sheet) return;
-    var sel = document.getElementById("voiceDoneTask");
-    var action = voiceAction.value;
-    voiceApplyCommand(sheet, {
-      action: action, texts: voiceItemTexts, date: voiceDate.value, reminderTime: voiceReminderTime.value,
-      endDate: voiceEndDate.value, by: voiceBy.value, doneTaskId: sel && sel.value
-    }).then(function (res) {
-      if (!res) return;
-      closeVoiceOverlay();
-      if (action === "task" || action === "note") {
-        viewingArchive = false;
-        state.viewMode = "tasks";
-        state.showingCompleted = false;
-        data.activeSheetId = sheet.id;
-        state.viewDate = clampViewDate(res.date);
-        saveData();
-      }
-      render();
-      showToast(tr(res.msgKey));
-    });
-  }
-
-  voiceBtn.addEventListener("click", startVoiceCommand);
+  voiceBtn.addEventListener("click", function () { openAssistant(!!(voiceSpeechPlugin || VoiceWebRecognition)); });
+  renderVoiceAiRow();
+  menuBtn.addEventListener("click", refreshVoiceAiStatus);
   voiceAiToggle.addEventListener("change", function () {
     try { localStorage.setItem(VOICE_AI_PREF_KEY, voiceAiToggle.checked ? "on" : "off"); } catch (e) {}
     if (voiceAiToggle.checked && voiceAiState === "downloadable") startVoiceAiDownload();
-  });
-  voiceAction.addEventListener("change", function () {
-    if (voiceAction.value !== "done" && !voiceItemTexts.length) voiceItemTexts = [voiceDoneQuery];
-    renderVoiceItems();
-  });
-  voiceProject.addEventListener("change", function () {
-    if (voiceAction.value === "done") renderVoiceItems();
-  });
-  document.getElementById("voiceForm").addEventListener("submit", function (e) {
-    e.preventDefault();
-    saveVoiceCommand();
-  });
-  document.getElementById("voiceAgainBtn").addEventListener("click", function () {
-    voiceStopListening();
-    startVoiceCommand();
-  });
-  document.getElementById("voiceCancelBtn").addEventListener("click", closeVoiceOverlay);
-  document.getElementById("voiceReminderClearBtn").addEventListener("click", function () {
-    voiceReminderTime.value = "";
   });
 
   // ---------------------------------------------------------------------
@@ -18242,11 +18042,13 @@
       assistantGreet();
     }
     assistantMicBtn.hidden = !(voiceSpeechPlugin || VoiceWebRecognition);
+    refreshVoiceAiStatus();
     if (ask) { assistantHandle(ask); return; }
     if (listen && !assistantMicBtn.hidden) assistantListen();
     else assistantInput.focus();
   }
   function closeAssistant() {
+    clearTimeout(assistantIdleTimer);
     voiceStopListening();
     assistantStopSpeaking();
     assistantMicBtn.classList.remove("listening");
@@ -18285,9 +18087,38 @@
     if (who === "me") assistantMoveToHistory();
     assistantDockReply.appendChild(el);
     assistantDockReply.scrollTop = assistantDockReply.scrollHeight;
-    if (who === "bot") assistantSpeakSoon();
+    if (who === "bot") { assistantSpeakSoon(); assistantCloseSoon(); }
+    else clearTimeout(assistantIdleTimer);
     return el;
   }
+
+  // ---- the bar comes when it's called and goes once it's done: a while
+  // after the answer (longer for a longer one), unless it's still in use -
+  // listening, speaking, being typed in, or the conversation is open
+  var assistantIdleTimer = null;
+  var assistantSpeaking = false;
+  function assistantInUse() {
+    return assistantListening || assistantSpeaking || document.activeElement === assistantInput ||
+      !!assistantInput.value.trim() || !assistantView.hidden || !!assistantDockReply.querySelector(".as-thinking");
+  }
+  function assistantCloseSoon(ms) {
+    clearTimeout(assistantIdleTimer);
+    // the greeting waits for a first line
+    if (assistantDock.hidden || !assistantDockReply.querySelector(".as-me")) return;
+    if (ms == null) {
+      var last = assistantDockReply.querySelector(".as-bot:last-child");
+      ms = Math.min(20000, 7000 + 50 * (last ? last.textContent.length : 0));
+    }
+    assistantIdleTimer = setTimeout(function () {
+      if (assistantDock.hidden) return;
+      if (assistantInUse()) { assistantCloseSoon(5000); return; }
+      closeAssistant();
+    }, ms);
+  }
+  // a touch on the bar (an undo, a chip...) gives it more time
+  ["pointerdown", "input"].forEach(function (ev) {
+    assistantDock.addEventListener(ev, function () { if (assistantIdleTimer) assistantCloseSoon(8000); });
+  });
 
   // ---- speech mode (🔊): answers read aloud, and after a spoken line it
   // listens again - hands-free, until a moment of silence ------------------
@@ -18349,7 +18180,9 @@
       var last = assistantDockReply.querySelector(".as-bot:last-child");
       if (!last || last.classList.contains("as-thinking") || assistantDock.hidden) return;
       var byVoice = assistantLastByVoice;
+      assistantSpeaking = true;
       assistantSay(assistantSpeechText(last)).then(function () {
+        assistantSpeaking = false;
         if (byVoice && assistantVoiceMode() && !assistantDock.hidden && !assistantListening) assistantListen();
       });
     }, 250);
@@ -19227,6 +19060,8 @@
     assistantLastByVoice = false;
     var text = assistantInput.value;
     assistantInput.value = "";
+    // the keyboard goes: the answer shows, then the bar goes too
+    assistantInput.blur();
     assistantHandle(text);
   });
 

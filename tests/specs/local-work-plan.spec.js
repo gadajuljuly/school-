@@ -199,13 +199,7 @@ test("voice: 'תוסיף לתוכנית ... מיום ... עד ..., צוות ...'
   await openWithSharedProject(page, { phone: ME, native: true, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
   await page.evaluate(() => { window.__voiceSay = "תוסיף לתוכנית יציקת תקרה קומה 3 ממחר עד מחרתיים, צוות טפסנות"; });
   await page.locator("#voiceBtn").click();
-  await expect(page.locator("#voiceAction")).toHaveValue("plan");
-  await expect(page.locator(".voice-item-input")).toHaveValue("יציקת תקרה קומה 3");
-  await expect(page.locator("#voiceDate")).toHaveValue(iso(1));
-  await expect(page.locator("#voiceEndDate")).toHaveValue(iso(2));
-  await expect(page.locator("#voiceBy")).toHaveValue("צוות טפסנות");
-  await expect(page.locator("#voiceReminderRow")).toBeHidden();
-  await page.locator("#voiceSaveBtn").click();
+  await expect(page.locator("#assistantDockReply .as-bot").last()).toContainText("✓");
   await expect.poll(async () => (await serverPlan(page, "p1")).map((x) => [x.name, x.start, x.end, x.by]))
     .toEqual([["יציקת תקרה קומה 3", iso(1), iso(2), "צוות טפסנות"]]);
 });
