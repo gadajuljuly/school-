@@ -147,14 +147,21 @@ const FAKE_BACKEND = () => {
   const backend = (window.__backend = { tables, log: [], interfere: null, seq: 0 });
   const clone = (o) => JSON.parse(JSON.stringify(o));
   function from(table) {
-    const st = { table, op: "select", filters: [], payload: null, single: false };
+    const st = { table, op: "select", filters: [], ins: [], cols: null, payload: null, single: false };
     const rows = () => (tables[table] = tables[table] || []);
-    const match = (r) => st.filters.every(([c, v]) => r[c] === v);
+    const match = (r) => st.filters.every(([c, v]) => r[c] === v) && st.ins.every(([c, vs]) => vs.indexOf(r[c]) !== -1);
+    // select("a, b"): only those columns, like the real server
+    const pick = (r) => {
+      if (!st.cols || st.cols.trim() === "*") return r;
+      const o = {};
+      st.cols.split(",").map((c) => c.trim()).forEach((c) => { if (c in r) o[c] = r[c]; });
+      return o;
+    };
     function run() {
       if (backend.interfere && backend.interfere(st, tables)) backend.interfere = null;
-      backend.log.push({ table, op: st.op, filters: st.filters.slice(), payload: st.payload && clone(st.payload) });
+      backend.log.push({ table, op: st.op, cols: st.cols, filters: st.filters.slice(), ins: st.ins.slice(), payload: st.payload && clone(st.payload) });
       if (st.op === "select") {
-        const m = rows().filter(match).map(clone);
+        const m = rows().filter(match).map(clone).map(pick);
         return { data: st.single ? m[0] || null : m, error: null };
       }
       if (st.op === "update") {
@@ -180,9 +187,9 @@ const FAKE_BACKEND = () => {
       return { data: null, error: null };
     }
     const b = {
-      select() { return b; },
+      select(cols) { if (st.op === "select") st.cols = cols || null; return b; },
       eq(c, v) { st.filters.push([c, v]); return b; },
-      neq() { return b; }, in() { return b; }, order() { return b; }, limit() { return b; },
+      neq() { return b; }, in(c, vs) { st.ins.push([c, vs]); return b; }, order() { return b; }, limit() { return b; },
       contains() { return b; }, or() { return b; }, filter() { return b; }, gte() { return b; }, lte() { return b; },
       maybeSingle() { st.single = true; return b; },
       single() { st.single = true; return b; },

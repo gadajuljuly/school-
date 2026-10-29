@@ -467,10 +467,25 @@
     });
   }
 
+  // The open chat checks every 5 seconds - first only its version stamp;
+  // the messages themselves are read only when they've changed.
+  var chatStamps = {}; // sheetId -> "messages_version|updated_at" last read
   function refreshActiveChat() {
     if (!activeChatSheetId || !supabaseClient) return;
-    supabaseClient.from(SHARED_TABLE).select("messages").eq("id", activeChatSheetId).maybeSingle()
+    var sheetId = activeChatSheetId;
+    supabaseClient.from(SHARED_TABLE).select("messages_version, updated_at").eq("id", sheetId).maybeSingle()
+      .then(function (light) {
+        var row = light && light.data;
+        if (!row) return null;
+        var stamp = row.messages_version + "|" + row.updated_at;
+        if (chatStamps[sheetId] === stamp) return null;
+        return supabaseClient.from(SHARED_TABLE).select("messages, messages_version, updated_at").eq("id", sheetId).maybeSingle().then(function (result) {
+          if (result && result.data) chatStamps[sheetId] = result.data.messages_version + "|" + result.data.updated_at;
+          return result;
+        });
+      })
       .then(function (result) {
+        if (!result || sheetId !== activeChatSheetId) return;
         var messages = (result && result.data && result.data.messages) || [];
         var sheet = sharedSheets.find(function (s) { return s.id === activeChatSheetId; });
         if (sheet) sheet.messages = messages;
@@ -833,7 +848,7 @@
         var current = (result && result.data && result.data.messages) || [];
         var msg = { id: uid(), phone: myPhoneNumber, type: "file", fileUrl: fileUrl, fileName: fileName, fileType: fileType, fileSize: fileSize, ts: Date.now(), readBy: [myPhoneNumber] };
         var updated = current.concat([msg]).slice(-200);
-        return supabaseClient.from(SHARED_TABLE).update({ messages: updated }).eq("id", sheetId)
+        return supabaseClient.from(SHARED_TABLE).update({ messages: updated, updated_at: new Date().toISOString() }).eq("id", sheetId)
           .then(function () {
             var sheet = sharedSheets.find(function (s) { return s.id === sheetId; });
             if (sheet) sheet.messages = updated;
