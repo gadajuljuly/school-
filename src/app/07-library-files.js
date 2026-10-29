@@ -137,7 +137,7 @@
           }
         });
         return Promise.all(tasks).then(function () {
-          return supabaseClient.from(SHARED_TABLE).update({ messages: current }).eq("id", sheet.id);
+          return supabaseClient.from(SHARED_TABLE).update({ messages: current, updated_at: new Date().toISOString() }).eq("id", sheet.id);
         }).then(function () {
           sheet.messages = current;
           if (activeChatSheetId === sheet.id) renderChatMessages();
@@ -150,7 +150,7 @@
         var siteLogs = currentData.siteLogs || [];
         migrateSiteLogAttachmentUrls(siteLogs).then(function () {
           var updatedData = Object.assign({}, currentData, { siteLogs: siteLogs });
-          return supabaseClient.from(SHARED_TABLE).update({ data: updatedData }).eq("id", sheet.id);
+          return supabaseClient.from(SHARED_TABLE).update({ data: updatedData, updated_at: new Date().toISOString() }).eq("id", sheet.id);
         }).then(function () {
           sheet.siteLogs = siteLogs;
         });

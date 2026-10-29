@@ -4940,10 +4940,25 @@
     });
   }
 
+  // The open chat checks every 5 seconds - first only its version stamp;
+  // the messages themselves are read only when they've changed.
+  var chatStamps = {}; // sheetId -> "messages_version|updated_at" last read
   function refreshActiveChat() {
     if (!activeChatSheetId || !supabaseClient) return;
-    supabaseClient.from(SHARED_TABLE).select("messages").eq("id", activeChatSheetId).maybeSingle()
+    var sheetId = activeChatSheetId;
+    supabaseClient.from(SHARED_TABLE).select("messages_version, updated_at").eq("id", sheetId).maybeSingle()
+      .then(function (light) {
+        var row = light && light.data;
+        if (!row) return null;
+        var stamp = row.messages_version + "|" + row.updated_at;
+        if (chatStamps[sheetId] === stamp) return null;
+        return supabaseClient.from(SHARED_TABLE).select("messages, messages_version, updated_at").eq("id", sheetId).maybeSingle().then(function (result) {
+          if (result && result.data) chatStamps[sheetId] = result.data.messages_version + "|" + result.data.updated_at;
+          return result;
+        });
+      })
       .then(function (result) {
+        if (!result || sheetId !== activeChatSheetId) return;
         var messages = (result && result.data && result.data.messages) || [];
         var sheet = sharedSheets.find(function (s) { return s.id === activeChatSheetId; });
         if (sheet) sheet.messages = messages;
@@ -5306,7 +5321,7 @@
         var current = (result && result.data && result.data.messages) || [];
         var msg = { id: uid(), phone: myPhoneNumber, type: "file", fileUrl: fileUrl, fileName: fileName, fileType: fileType, fileSize: fileSize, ts: Date.now(), readBy: [myPhoneNumber] };
         var updated = current.concat([msg]).slice(-200);
-        return supabaseClient.from(SHARED_TABLE).update({ messages: updated }).eq("id", sheetId)
+        return supabaseClient.from(SHARED_TABLE).update({ messages: updated, updated_at: new Date().toISOString() }).eq("id", sheetId)
           .then(function () {
             var sheet = sharedSheets.find(function (s) { return s.id === sheetId; });
             if (sheet) sheet.messages = updated;
@@ -5721,7 +5736,7 @@
           }
         });
         return Promise.all(tasks).then(function () {
-          return supabaseClient.from(SHARED_TABLE).update({ messages: current }).eq("id", sheet.id);
+          return supabaseClient.from(SHARED_TABLE).update({ messages: current, updated_at: new Date().toISOString() }).eq("id", sheet.id);
         }).then(function () {
           sheet.messages = current;
           if (activeChatSheetId === sheet.id) renderChatMessages();
@@ -5734,7 +5749,7 @@
         var siteLogs = currentData.siteLogs || [];
         migrateSiteLogAttachmentUrls(siteLogs).then(function () {
           var updatedData = Object.assign({}, currentData, { siteLogs: siteLogs });
-          return supabaseClient.from(SHARED_TABLE).update({ data: updatedData }).eq("id", sheet.id);
+          return supabaseClient.from(SHARED_TABLE).update({ data: updatedData, updated_at: new Date().toISOString() }).eq("id", sheet.id);
         }).then(function () {
           sheet.siteLogs = siteLogs;
         });
@@ -18963,9 +18978,41 @@
   // membership everywhere in the app - task writing (shown in red to
   // everyone else via isHeadOffice), chat, procurement purchase-marking,
   // combined reports, all of it.
+  // Each refresh first reads only a light list - the projects' ids,
+  // names, members and version stamps - and fetches whole rows (tasks,
+  // diary, plans, the chat...) only for those that are new or changed
+  // since the last read. Refetching everything every few seconds on every
+  // open phone used up the server's monthly traffic quota.
+  var SHARED_LIGHT_COLUMNS = "id, name, members, member_names, created_by, data_version, messages_version, updated_at";
+  var sharedRowCache = {}; // id -> the last full row read, as read
+  function sharedRowStamp(row) {
+    return [row.data_version, row.messages_version, row.updated_at, row.name, JSON.stringify(row.members || []), JSON.stringify(row.member_names || {})].join("|");
+  }
+  function fetchSharedRows() {
+    return supabaseClient.from(SHARED_TABLE).select(SHARED_LIGHT_COLUMNS).then(function (light) {
+      if (light && light.error) throw light.error;
+      var list = (light && light.data) || [];
+      var stale = list.filter(function (r) {
+        var cached = sharedRowCache[r.id];
+        return !cached || sharedRowStamp(cached) !== sharedRowStamp(r);
+      }).map(function (r) { return r.id; });
+      var fetched = stale.length ? supabaseClient.from(SHARED_TABLE).select("*").in("id", stale) : Promise.resolve({ data: [] });
+      return fetched.then(function (full) {
+        if (full && full.error) throw full.error;
+        ((full && full.data) || []).forEach(function (row) { sharedRowCache[row.id] = row; });
+        var ids = {};
+        list.forEach(function (r) { ids[r.id] = true; });
+        Object.keys(sharedRowCache).forEach(function (id) { if (!ids[id]) delete sharedRowCache[id]; });
+        // a deep copy each time: the sheets built from it get edited in place
+        return { data: list.filter(function (r) { return sharedRowCache[r.id]; }).map(function (r) {
+          return JSON.parse(JSON.stringify(sharedRowCache[r.id]));
+        }) };
+      });
+    });
+  }
   function loadSharedSheets() {
     if (!supabaseClient || !myPhoneNumber) return Promise.resolve();
-    return supabaseClient.from(SHARED_TABLE).select("*")
+    return fetchSharedRows()
       .then(function (result) {
         var rows = (result && result.data) || [];
         var previousById = {};
@@ -19084,39 +19131,14 @@
     checkPendingOfficeGroupInvites();
   }
 
+  // A light poll (see fetchSharedRows) every 10 seconds while the app is
+  // in front, and on coming back to it. (No realtime subscription: each of
+  // its events carried the whole changed row to every open phone.)
   function startSharedSheetsWatcher() {
-    setInterval(refreshSharedSheetsIfIdle, 20000);
+    setInterval(function () { if (!document.hidden) refreshSharedSheetsIfIdle(); }, 10000);
     document.addEventListener("visibilitychange", function () {
       if (!document.hidden) refreshSharedSheetsIfIdle();
     });
-    subscribeSharedProjectsRealtime();
-  }
-
-  // Pushes shared-project changes (a task, a chat message, a purchase
-  // mark...) to every member's app the moment they happen, instead of
-  // everyone waiting on the periodic poll above - that poll stays in
-  // place as a fallback in case the websocket connection ever drops.
-  // Debounced so a burst of several quick changes (e.g. someone editing
-  // multiple tasks in a row) triggers one refresh, not one per change.
-  var sharedProjectsRealtimeChannel = null;
-  var realtimeRefreshTimer = null;
-  function handleSharedProjectsRealtimeChange(payload) {
-    clearTimeout(realtimeRefreshTimer);
-    realtimeRefreshTimer = setTimeout(function () {
-      // Same guard the polling path uses - don't yank a full task-list
-      // rebuild out from under someone mid-edit; the next poll or
-      // realtime event once they're idle will catch it up.
-      if (!isEditingActively()) loadSharedSheets();
-      var changedId = (payload && payload.new && payload.new.id) || (payload && payload.old && payload.old.id);
-      if (activeChatSheetId && changedId === activeChatSheetId) refreshActiveChat();
-    }, 150);
-  }
-  function subscribeSharedProjectsRealtime() {
-    if (!supabaseClient || !supabaseClient.realtime || sharedProjectsRealtimeChannel) return;
-    sharedProjectsRealtimeChannel = supabaseClient
-      .channel("shared_projects_changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: SHARED_TABLE }, handleSharedProjectsRealtimeChange)
-      .subscribe();
   }
 
   // A fresh backup snapshot is only taken on load, gated by
@@ -19419,6 +19441,7 @@
       checkPendingProjectInvites: checkPendingProjectInvites,
       verifyCalendarLinks: function () { return calVerifyLinks(true); },
       parseVoiceCommand: parseVoiceCommand,
+      loadSharedSheets: loadSharedSheets,
       // another member's change to a shared task arriving (as a refresh would)
       updateSharedTaskForTest: function (sheetId, taskId, mutate) {
         var sheet = sharedSheets.find(function (s) { return s.id === sheetId; });
