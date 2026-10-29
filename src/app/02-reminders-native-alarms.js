@@ -248,6 +248,7 @@
   function syncNativeWidget() {
     if (!nativeTaskAlarmPlugin || dataLoadBlocked || !privateDataSettled) return;
     checkLaunchView();
+    startFloatingTask();
     var projects = openTasksByProject().map(function (group) {
       return {
         id: group.sheet.id,

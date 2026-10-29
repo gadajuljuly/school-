@@ -22,6 +22,9 @@ if exist android\app\src\main\java\com\gadajuljuly\itask\ItaskAIPlugin.kt copy /
 echo === assistant widget in AndroidManifest.xml (added once) ===
 rem the ITASK assistant home-screen bar (version 23): its receiver goes in just before the closing application tag
 powershell -NoProfile -ExecutionPolicy Bypass -Command "$f='android\app\src\main\AndroidManifest.xml'; $x=[IO.File]::ReadAllText($f); if ($x -notmatch 'ItaskAssistantWidget') { $r=[IO.File]::ReadAllText('native-src\manifest-assistant-widget.xml'); $i=$x.LastIndexOf('</application>'); $x=$x.Substring(0,$i)+$r+$x.Substring($i); [IO.File]::WriteAllText($f,$x); Write-Host 'added' } else { Write-Host 'already there' }" || goto :error
+echo === floating task in AndroidManifest.xml (added once) ===
+rem the floating task (version 25): its receiver, and the display-over-other-apps permission
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$f='android\app\src\main\AndroidManifest.xml'; $x=[IO.File]::ReadAllText($f); if ($x -notmatch 'ItaskFloatReceiver') { $r=[IO.File]::ReadAllText('native-src\manifest-float.xml'); $i=$x.LastIndexOf('</application>'); $x=$x.Substring(0,$i)+$r+$x.Substring($i); Write-Host 'receiver added' } if ($x -notmatch 'SYSTEM_ALERT_WINDOW') { $i=$x.IndexOf('<application'); $p=[IO.File]::ReadAllText('native-src\manifest-float-permission.xml'); $x=$x.Substring(0,$i)+$p+$x.Substring($i); Write-Host 'permission added' } [IO.File]::WriteAllText($f,$x)" || goto :error
 
 echo.
 echo Done. Now in Android Studio: raise versionCode/versionName in build.gradle (:app), Sync, then Build ^> Generate Signed App Bundle.

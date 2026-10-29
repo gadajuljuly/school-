@@ -275,6 +275,10 @@
     morningLessPlan: { he: "רק מה שבביצוע ובקרוב", en: "Only what's under way and coming up", ar: "الجاري والقريب فقط", ru: "Только текущее и ближайшее" },
     morningNothingToday: { he: "אין משהו פתוח להיום", en: "Nothing open today", ar: "لا شيء مفتوح اليوم", ru: "На сегодня ничего" },
     morningRange: { he: "{from} עד {to}", en: "{from} to {to}", ar: "{from} حتى {to}", ru: "{from} – {to}" },
+    floatLabel: { he: "הודעה צפה", en: "Floating task", ar: "رسالة عائمة", ru: "Всплывающая задача" },
+    floatOn: { he: "כל רבע שעה, 06:00–18:00: משימה מפרויקט אחר", en: "Every quarter hour, 06:00–18:00: a task from the next project", ar: "كل ربع ساعة، 06:00–18:00: مهمة من مشروع آخر", ru: "Каждые 15 минут, 06:00–18:00: задача из следующего проекта" },
+    floatAllowBtn: { he: "לאישור \"הצגה מעל אפליקציות אחרות\"", en: "Allow \"Display over other apps\"", ar: "السماح بـ\"الظهور فوق التطبيقات الأخرى\"", ru: "Разрешить «Поверх других приложений»" },
+    floatAsk: { he: "כל רבע שעה, בין 06:00 ל-18:00, תקפוץ לכמה שניות משימה פתוחה מפרויקט אחר מעל המסך. לשם כך אנדרואיד צריך אישור חד-פעמי: \"הצגה מעל אפליקציות אחרות\". לפתוח את מסך האישור? (בחר שם ITASK והפעל)", en: "Every quarter hour from 06:00 to 18:00, an open task from the next project pops up over the screen for a few seconds. Android needs a one-time permission for that: \"Display over other apps\". Open it now? (pick ITASK there and switch it on)", ar: "كل ربع ساعة بين 06:00 و-18:00 ستظهر لثوانٍ مهمة مفتوحة من مشروع آخر فوق الشاشة. يحتاج أندرويد لإذن لمرة واحدة: \"الظهور فوق التطبيقات الأخرى\". فتح شاشة الإذن؟ (اختر ITASK وفعّله)", ru: "Каждые 15 минут с 06:00 до 18:00 поверх экрана на несколько секунд появится открытая задача из следующего проекта. Для этого нужно разовое разрешение «Поверх других приложений». Открыть? (выберите ITASK и включите)" },
     voiceBtnTitle: { he: "פקודה קולית", en: "Voice command", ar: "أمر صوتي", ru: "Голосовая команда" },
     voiceListening: { he: "מקשיב... דבר עכשיו", en: "Listening... speak now", ar: "أستمع... تكلّم الآن", ru: "Слушаю... говорите" },
     voiceThinking: { he: "מבין...", en: "Understanding...", ar: "أفهم...", ru: "Разбираю..." },
@@ -1902,6 +1906,7 @@
   function syncNativeWidget() {
     if (!nativeTaskAlarmPlugin || dataLoadBlocked || !privateDataSettled) return;
     checkLaunchView();
+    startFloatingTask();
     var projects = openTasksByProject().map(function (group) {
       return {
         id: group.sheet.id,
@@ -1925,6 +1930,57 @@
     }, morning)).catch(function () { lastNativeWidgetJson = null; });
   }
 
+
+  // ---------------------------------------------------------------------
+  // The floating task (app version 25+, ItaskFloatReceiver): every quarter
+  // hour from 06:00 to 18:00 an open task of the next project shows over
+  // the screen for 8 seconds. It runs on its own once the phone lets ITASK
+  // "display over other apps" - asked for once, when the app first opens
+  // with it; the switch (and that permission, if still missing) is in the
+  // menu. Its tasks are the home-screen widget's list (syncNativeWidget).
+  // ---------------------------------------------------------------------
+  var FLOAT_ASKED_KEY = "itask-float-asked";
+  var floatSupported = false;
+  var floatMenuSection = document.getElementById("floatMenuSection");
+  var floatToggle = document.getElementById("floatToggle");
+  var floatAllowBtn = document.getElementById("floatAllowBtn");
+
+  function refreshFloatStatus(askIfMissing) {
+    if (!floatSupported) return;
+    nativeTaskAlarmPlugin.floatStatus().then(function (st) {
+      floatMenuSection.hidden = false;
+      floatToggle.checked = !!st.on;
+      floatAllowBtn.hidden = !st.on || !!st.canDraw;
+      if (!askIfMissing || !st.on || st.canDraw) return;
+      var asked = false;
+      try { asked = !!localStorage.getItem(FLOAT_ASKED_KEY); localStorage.setItem(FLOAT_ASKED_KEY, "1"); } catch (e) {}
+      if (!asked) askConfirm(tr("floatAsk"), openFloatSettings);
+    }).catch(function () {});
+  }
+  function openFloatSettings() {
+    nativeTaskAlarmPlugin.openFloatSettings().catch(function () {});
+  }
+  // once the app is up (from syncNativeWidget, after the data has loaded)
+  var floatStarted = false;
+  function startFloatingTask() {
+    if (floatStarted || !nativeTaskAlarmPlugin || !nativeTaskAlarmPlugin.features) return;
+    floatStarted = true;
+    nativeTaskAlarmPlugin.features().then(function (f) {
+      floatSupported = !!(f && f.floatingTask);
+      refreshFloatStatus(true);
+    }).catch(function () {});
+  }
+  floatToggle.addEventListener("change", function () {
+    if (!floatSupported) return;
+    nativeTaskAlarmPlugin.setFloatOn({ on: floatToggle.checked }).then(function () {
+      refreshFloatStatus(false);
+    }).catch(function () {});
+  });
+  floatAllowBtn.addEventListener("click", openFloatSettings);
+  // back from the phone's settings
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden) refreshFloatStatus(false);
+  });
   // ---------------------------------------------------------------------
   // לוח שנה: month / week / day / list views over the phone's own
   // calendars, read and written through the native ItaskCalendar plugin

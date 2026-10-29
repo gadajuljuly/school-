@@ -10,6 +10,8 @@
 <uses-permission android:name="android.permission.WRITE_CONTACTS" />
 <uses-permission android:name="android.permission.READ_CALENDAR" />
 <uses-permission android:name="android.permission.WRITE_CALENDAR" />
+<!-- the floating task (version 25) - prepare-android.bat adds this one by itself: -->
+<uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
 <!-- 2) Inside <application ...>, just before its closing </application> tag: -->
 <receiver android:name=".TaskAlarmReceiver" android:exported="false" />
@@ -38,6 +40,9 @@
         android:name="android.appwidget.provider"
         android:resource="@xml/itask_assistant_widget_info" />
 </receiver>
+<!-- the floating task (version 25) - prepare-android.bat adds this one by itself
+     (native-src/manifest-float.xml): -->
+<receiver android:name=".ItaskFloatReceiver" android:exported="false" />
 <service
     android:name=".ItaskWidgetService"
     android:exported="false"

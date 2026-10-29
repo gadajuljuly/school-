@@ -1,0 +1,1 @@
+<receiver android:name=".ItaskFloatReceiver" android:exported="false" />

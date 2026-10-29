@@ -30,10 +30,11 @@ const NATIVE_FAKE = () => {
         canScheduleExact: () => ok({ value: true }),
         openExactAlarmSettings: () => ok(),
         openFile: (o) => { (native.opened = native.opened || []).push(o); return ok(); },
-        features: () => ok({ quietAlarms: true, speak: true }),
-        // read aloud: what was said, in native.spoken
-        speak: (o) => { (native.spoken = native.spoken || []).push(o.text); return ok({}); },
-        stopSpeaking: () => ok(),
+        features: () => ok({ quietAlarms: true, floatingTask: true }),
+        // the floating task: on, and allowed over other apps unless a test says otherwise
+        floatStatus: () => ok({ on: native.floatOn !== false, canDraw: !window.__floatNoPermission }),
+        setFloatOn: ({ on }) => { native.floatOn = on; return ok(); },
+        openFloatSettings: () => { native.floatSettingsOpened = (native.floatSettingsOpened || 0) + 1; return ok(); },
       },
       // the on-phone model, only when a test sets window.__fakeAi(prompt) -> reply
       ...(window.__fakeAi ? { ItaskAI: {

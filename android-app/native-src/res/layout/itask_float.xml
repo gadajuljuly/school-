@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- the floating task: "project: task" on one line, the ITASK mark at its
+     start, cream with a gold border (ItaskFloatReceiver) -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:padding="6dp">
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/itask_float_bg"
+        android:elevation="6dp"
+        android:gravity="center_vertical"
+        android:layoutDirection="rtl"
+        android:orientation="horizontal"
+        android:paddingStart="8dp"
+        android:paddingTop="6dp"
+        android:paddingEnd="14dp"
+        android:paddingBottom="6dp">
+
+        <ImageView
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:contentDescription="@null"
+            android:scaleType="fitCenter"
+            android:src="@drawable/itask_assistant_logo" />
+
+        <TextView
+            android:id="@+id/itask_float_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:ellipsize="end"
+            android:maxWidth="250dp"
+            android:singleLine="true"
+            android:textColor="#2c2a24"
+            android:textDirection="firstStrongRtl"
+            android:textSize="14sp" />
+    </LinearLayout>
+</FrameLayout>

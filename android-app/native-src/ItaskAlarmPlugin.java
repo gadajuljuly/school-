@@ -50,6 +50,7 @@ public class ItaskAlarmPlugin extends Plugin {
     public void load() {
         if (getActivity() != null) takeViewFromIntent(getActivity().getIntent());
         ShortcutManagerCompat.removeDynamicShortcuts(getContext(), Collections.singletonList(OLD_SHORTCUT_ID));
+        ItaskFloatReceiver.schedule(getContext());
     }
 
     @Override
@@ -92,13 +93,41 @@ public class ItaskAlarmPlugin extends Plugin {
 
     // What this build of the app can do, for the page to check before
     // relying on it (version 22+: quiet work-plan notices; 23+: the
-    // "עוזר ITASK" home-screen bar).
+    // home-screen bar; 25+: the floating task).
     @PluginMethod
     public void features(PluginCall call) {
         JSObject result = new JSObject();
         result.put("quietAlarms", true);
         result.put("assistantWidget", true);
+        result.put("floatingTask", true);
         call.resolve(result);
+    }
+
+    // The floating task (ItaskFloatReceiver): on / off, and whether Android
+    // lets it show over other apps; openFloatSettings opens that permission.
+    @PluginMethod
+    public void floatStatus(PluginCall call) {
+        JSObject result = new JSObject();
+        result.put("on", ItaskFloatReceiver.isOn(getContext()));
+        result.put("canDraw", ItaskFloatReceiver.canDraw(getContext()));
+        call.resolve(result);
+    }
+
+    @PluginMethod
+    public void setFloatOn(PluginCall call) {
+        ItaskFloatReceiver.setOn(getContext(), Boolean.TRUE.equals(call.getBoolean("on", true)));
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void openFloatSettings(PluginCall call) {
+        try {
+            getContext().startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:" + getContext().getPackageName())).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        } catch (ActivityNotFoundException e) {
+            // no such screen on this phone
+        }
+        call.resolve();
     }
 
     @PluginMethod
