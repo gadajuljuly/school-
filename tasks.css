@@ -3436,48 +3436,34 @@
   .diary-photos-actions[hidden] { display: none; }
   .diary-photos-grid .library-item-thumb img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
   .diary-photos-grid .library-item-name { font-size: 0.72rem; }
-  .assistant-view { display: flex; flex-direction: column; }
   .morning-time-row input { font: inherit; padding: 2px 6px; border: 1px solid var(--rule); border-radius: 6px; }
-  .assistant-view[hidden] { display: none; }
-  .assistant-title { display: flex; align-items: center; justify-content: center; gap: 8px; }
-  .assistant-title img { width: 26px; height: 26px; border-radius: 7px; }
-  .assistant-messages { flex: 1; overflow-y: auto; padding: 12px 12px 6px; display: flex; flex-direction: column; gap: 8px; background: var(--paper); }
-  .as-msg { max-width: 86%; padding: 8px 12px; border-radius: 14px; font-size: 0.92rem; line-height: 1.4; white-space: pre-wrap; word-break: break-word; }
-  .as-me { align-self: flex-start; background: var(--accent); color: var(--accent-contrast); border-bottom-right-radius: 4px; }
-  .as-bot { align-self: flex-end; background: #fff; color: var(--ink); border: 1px solid var(--rule); border-bottom-left-radius: 4px; }
-  .as-bot b { font-weight: 800; }
-  .as-bot ul { margin: 4px 0 0; padding-inline-start: 18px; }
-  .as-bot li { margin: 2px 0; }
-  .as-group { margin-top: 6px; font-weight: 800; font-size: 0.85rem; color: var(--accent); }
-  .as-thinking { color: var(--ink-muted); font-style: italic; }
-  .as-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-  .as-actions button, .as-chips button { border: 1px solid var(--rule); background: var(--paper); color: var(--ink); border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 0.82rem; font-weight: 700; cursor: pointer; }
-  .as-actions button:disabled { opacity: 0.55; }
-  .as-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-  /* the assistant docked over the app: its latest exchange and its line,
-     right above the icon row (the screens end above it) */
-  .assistant-dock { flex-shrink: 0; display: flex; flex-direction: column; background: var(--paper-alt, #f4efe4); border-top: 2px solid var(--accent); box-shadow: 0 -4px 12px rgba(0,0,0,0.08); position: relative; z-index: 3; }
-  .assistant-dock[hidden] { display: none; }
-  .assistant-dock-reply { max-height: 34vh; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding: 8px 10px 0; }
-  .assistant-dock-reply:empty { display: none; }
-  .assistant-dock .assistant-form { padding: 6px 8px; border-top: none; }
-  .assistant-dock .assistant-form input { height: 40px; }
-  .assistant-dock .assistant-mic, .assistant-dock .assistant-send { width: 40px; height: 40px; }
-  .assistant-dock-btn.on { color: var(--accent); }
-  .as-ai-note { display: block; margin-top: 4px; font-size: 11px; opacity: 0.65; }
-  .assistant-dock-btn { flex: none; width: 32px; height: 40px; border: none; background: transparent; font-size: 1.05rem; cursor: pointer; color: var(--ink-muted); padding: 0; }
-  .as-flash { animation: as-flash 1.6s ease-out 1; }
-  /* a task's number while the assistant is open ("סמן את 3...") */
-  .as-num { position: absolute; inset-inline-start: -2px; top: 50%; transform: translateY(-50%); min-width: 18px; height: 18px; border-radius: 9px; background: var(--accent); color: var(--accent-contrast); font-size: 0.68rem; font-weight: 800; line-height: 18px; text-align: center; padding: 0 3px; z-index: 2; pointer-events: none; }
-  #taskList li.task { position: relative; }
-  @keyframes as-flash { 0%, 40% { box-shadow: 0 0 0 4px #ffd400, 0 0 14px 4px rgba(255,212,0,0.8); } 100% { box-shadow: 0 0 0 0 rgba(255,212,0,0); } }
-  .assistant-form { flex: none; display: flex; align-items: center; gap: 6px; padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--rule); background: var(--paper-alt, #f4efe4); }
-  .assistant-form input { flex: 1; min-width: 0; height: 44px; border: 1px solid var(--rule); border-radius: 22px; padding: 0 16px; font: inherit; font-size: 1rem; background: #fff; }
-  .assistant-mic, .assistant-send { flex: none; width: 44px; height: 44px; border-radius: 50%; border: none; font-size: 1.2rem; cursor: pointer; }
-  .assistant-mic { background: #fff; box-shadow: 0 0 0 1px var(--rule); }
-  .assistant-mic.listening { background: #d32f2f; color: #fff; animation: as-pulse 1s infinite; }
-  .assistant-send { background: var(--accent); color: var(--accent-contrast); transform: scaleX(-1); }
-  @keyframes as-pulse { 50% { box-shadow: 0 0 0 8px rgba(211,47,47,0.2); } }
+  /* דוח בוקר (src/app/14f-morning-report.js) */
+  .morning-view { display: flex; flex-direction: column; }
+  .morning-view[hidden] { display: none; }
+  .morning-body { flex: 1; overflow-y: auto; padding: 8px 12px calc(20px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 12px; }
+  .morning-section { border: 1px solid var(--rule); border-radius: 12px; background: #fff; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+  .morning-section-title { margin: 0 0 2px; font-size: 1rem; font-weight: 800; color: var(--accent); }
+  .morning-attention { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .morning-attention li { display: flex; gap: 8px; align-items: flex-start; font-size: 0.9rem; line-height: 1.35; }
+  .morning-attention small { display: block; color: var(--ink-muted); font-size: 0.78rem; }
+  .morning-att-icon { flex-shrink: 0; width: 20px; text-align: center; }
+  .morning-ok { margin: 0; color: var(--ink-muted); font-size: 0.9rem; }
+  .morning-project { margin-top: 6px; font-weight: 800; font-size: 0.85rem; color: var(--ink-muted); border-bottom: 1px solid var(--rule); padding-bottom: 2px; }
+  .morning-task { display: flex; align-items: center; gap: 10px; padding: 3px 0; }
+  .morning-check { flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--plan-green); background: transparent; color: #fff; font-weight: 800; cursor: pointer; padding: 0; }
+  .morning-task.done .morning-check { background: var(--plan-green); }
+  .morning-task-text { display: flex; flex-direction: column; min-width: 0; font-size: 0.92rem; }
+  .morning-task-text small { color: var(--ink-muted); font-size: 0.75rem; }
+  .morning-task.done .morning-task-text span { text-decoration: line-through; color: var(--ink-muted); }
+  .morning-plan-row { padding: 4px 0; }
+  .morning-more { align-self: center; margin-top: 4px; border: none; background: transparent; color: var(--accent); font: inherit; font-size: 0.85rem; text-decoration: underline; cursor: pointer; }
+  /* the 🎤 by the new-task field, while it listens */
+  .add-row button.add-btn.voice-btn.listening { color: #d32f2f; animation: voice-listen 1s infinite; }
+  @keyframes voice-listen { 50% { transform: scale(1.2); } }
+  /* a toast with ↶ ביטול (a voice command just carried out) */
+  .undo-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 61; max-width: 92vw; display: flex; align-items: center; gap: 12px; background: var(--ink); color: var(--paper); font-size: 0.85rem; padding: 8px 10px 8px 14px; border-radius: 10px; box-shadow: 0 6px 16px var(--shadow); }
+  .undo-toast[hidden] { display: none; }
+  .undo-toast button { flex-shrink: 0; border: none; background: transparent; color: #ffd27a; font: inherit; font-weight: 800; cursor: pointer; padding: 4px 6px; }
   .sk-lib-list { max-height: 55vh; overflow-y: auto; }
   .sk-lib-folder { font-size: 0.8rem; color: var(--ink-muted); padding: 10px 4px; text-align: center; }
   .sk-lib-back { font-weight: 800; color: var(--accent) !important; }

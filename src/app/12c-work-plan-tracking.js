@@ -54,7 +54,7 @@
       head.appendChild(name);
       // beside the name, where the ✓ / ½ / ✗ were: the % bar, and ✕ once it's marked
       var side = wpEl("div", "wp-diary-side");
-      side.appendChild(wpDiaryPctBar(sheet, dateISO, item, entry));
+      side.appendChild(wpDiaryPctBar(sheet, dateISO, item, entry, renderSiteLogPlanList));
       var clear = wpEl("button", "wp-diary-clear", "✕");
       clear.type = "button";
       clear.title = tr("workPlanResultClear");
@@ -80,13 +80,21 @@
     });
   }
 
-  // the % bar: green as far as it's done, the number in it. Before it's
-  // marked that day it shows the plan's % so far, faded.
-  function wpDiaryPctBar(sheet, dateISO, item, entry) {
+  // An activity's % bar for a day (the diary's, the morning report's):
+  // marked that day, its % then; otherwise the plan's % so far, faded.
+  // Setting it records the day and updates the plan; then `after`.
+  function wpDiaryPctBar(sheet, dateISO, item, entry, after) {
     var live = !item.gone && (sheet.workPlan || []).find(function (x) { return x.id === item.id; });
     var planPct = live ? (live.status === "done" ? 100 : live.progress || 0) : 0;
-    var pct = entry ? wpEntryPct(entry) : planPct;
-    var bar = wpEl("div", "wp-diary-pct" + (entry ? " set" : ""));
+    return wpPctBar(entry ? wpEntryPct(entry) : planPct, !!entry, function (pct) {
+      setSiteLogPlanPct(sheet, dateISO, item, pct);
+      after();
+    });
+  }
+  // the bar itself: green as far as it's done, the number in it; tap / drag
+  // along it, or the arrow keys
+  function wpPctBar(pct, set, onSet) {
+    var bar = wpEl("div", "wp-diary-pct" + (set ? " set" : ""));
     var fill = wpEl("div", "wp-diary-pct-fill");
     var label = wpEl("span", "wp-diary-pct-num");
     bar.appendChild(fill);
@@ -129,7 +137,7 @@
     function end() {
       if (!dragging) return;
       dragging = false;
-      setSiteLogPlanPct(sheet, dateISO, item, pct);
+      onSet(pct);
     }
     bar.addEventListener("pointerup", end);
     bar.addEventListener("pointercancel", end);
@@ -138,7 +146,7 @@
       if (!step) return;
       e.preventDefault();
       if (getComputedStyle(bar).direction === "rtl" && (e.key === "ArrowRight" || e.key === "ArrowLeft")) step = -step;
-      setSiteLogPlanPct(sheet, dateISO, item, Math.max(0, Math.min(100, pct + step)));
+      onSet(Math.max(0, Math.min(100, pct + step)));
     });
     return bar;
   }
@@ -174,7 +182,11 @@
       }
     }
     saveData();
-    renderSiteLogPlanList();
+  }
+  // the day's entry for an activity, if it was marked
+  function wpDayEntry(sheet, dateISO, itemId) {
+    var log = findSiteLog(sheet, dateISO);
+    return log && (log.planned || []).find(function (e) { return e.itemId === itemId; }) || null;
   }
   // ✕: the day's mark goes (the plan stays as it is)
   function clearSiteLogPlanEntry(sheet, dateISO, item) {

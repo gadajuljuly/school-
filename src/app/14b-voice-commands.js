@@ -1,12 +1,11 @@
 
   // ---------------------------------------------------------------------
-  // Voice commands, for the assistant (14f-assistant.js - the microphone by
-  // the new-task field opens it). The phone's own recognizer turns speech
-  // into text (the SpeechRecognition plugin in the app,
-  // webkitSpeechRecognition in a browser); parseVoiceCommand turns the
-  // text into a command offline, or an on-device model does (ItaskAI,
-  // when the phone has one - see voiceAiParse). Its on/off switch is in
-  // the menu.
+  // Voice commands: the microphone by the new-task field. The phone's own
+  // recognizer turns speech into text (the SpeechRecognition plugin in
+  // the app, webkitSpeechRecognition in a browser); parseVoiceCommand
+  // turns the text into a command offline, or an on-device model does
+  // (ItaskAI, when the phone has one - see voiceAiParse; its on/off switch
+  // is in the menu). It's carried out at once, with ↶ ביטול in a toast.
   // ---------------------------------------------------------------------
   var voiceSpeechPlugin = (
     window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform() &&
@@ -450,7 +449,7 @@
     if (voiceWebRec) { try { voiceWebRec.abort(); } catch (e) {} voiceWebRec = null; }
   }
 
-  // ---- the 🎤 by the new-task field: opens the assistant (עוזר ITASK) ----
+  // ---- the 🎤 by the new-task field ------------------------------------
   var voiceBtn = document.getElementById("voiceBtn");
   var voiceAiSection = document.getElementById("voiceAiMenuSection");
   var voiceAiToggle = document.getElementById("voiceAiToggle");
@@ -500,7 +499,7 @@
     return names;
   }
 
-  // Carries out a command from the assistant (עוזר ITASK). c: { action, texts, date, reminderTime,
+  // Carries out a heard command. c: { action, texts, date, reminderTime,
   // endDate, by, doneTaskId }. Resolves { msgKey, undo(), date, taskId },
   // or null when there was nothing to do (or a reminder time already gone
   // - a toast says so).
@@ -572,7 +571,97 @@
     });
   }
 
-  voiceBtn.addEventListener("click", function () { openAssistant(!!(voiceSpeechPlugin || VoiceWebRecognition)); });
+  // ---- the 🎤: heard, understood, done - with an undo -------------------
+  var voiceBusy = false;
+  function startVoiceCommand() {
+    if (voiceBusy) { voiceStopListening(); return; }
+    voiceBusy = true;
+    voiceBtn.classList.add("listening");
+    showToast(tr("voiceListening"), 10000);
+    voiceListen().then(function (heard) {
+      heard = String(heard || "").replace(/\s+/g, " ").trim();
+      if (!heard) { showToast(tr("voiceNoSpeech")); return null; }
+      showToast(tr("voiceThinking"), 10000);
+      var sheets = voiceTargetSheets();
+      // the model isn't asked about work-plan activities (date ranges) - the
+      // rules handle those
+      var ai = VOICE_PLAN_RE.test(" " + heard + " ") ? Promise.resolve(null) : voiceAiParse(heard, sheets);
+      return ai.then(function (aiCmd) {
+        return voiceRunCommand(aiCmd || parseVoiceCommand(heard, sheets, null, { people: voicePeople() }));
+      });
+    }).catch(function (err) {
+      showToast(tr(err && err.message === "permission" ? "voicePermissionMsg" : "voiceNoSpeech"));
+    }).then(function () {
+      voiceBusy = false;
+      voiceBtn.classList.remove("listening");
+    });
+  }
+  function voiceRunCommand(cmd) {
+    var sheets = voiceTargetSheets();
+    if (!sheets.length) return null;
+    var sheet = cmd.sheetId && sheets.find(function (s) { return s.id === cmd.sheetId; });
+    var doneTask = null;
+    if (cmd.action === "done") {
+      var query = cmd.items.join(" ");
+      if (!sheet) sheet = voiceBestDoneSheet(query);
+      var best = sheet && voiceOpenTasks(sheet).map(function (t) { return { t: t, s: voiceScoreTask(t, query) }; })
+        .filter(function (x) { return x.s > 0; })
+        .sort(function (a, b) { return b.s - a.s; })[0];
+      if (!best) { showToast(tr("voiceNoSuchTask")); return null; }
+      doneTask = best.t;
+    }
+    if (!sheet) sheet = sheets.find(function (s) { return s.id === data.activeSheetId; }) || sheets[0];
+    var texts = cmd.items.length ? cmd.items.slice() : (cmd.reminderTime ? [tr("voiceReminderDefault")] : []);
+    if (cmd.action !== "done" && !texts.length) { showToast(tr("voiceNoSpeech")); return null; }
+    var date = cmd.date || (state.viewDate >= todayISO() ? state.viewDate : todayISO());
+    return voiceApplyCommand(sheet, {
+      action: cmd.action, texts: texts, date: date, reminderTime: cmd.reminderTime,
+      endDate: cmd.endDate, by: cmd.by, doneTaskId: doneTask && doneTask.id
+    }).then(function (res) {
+      if (!res) return;
+      if (cmd.action === "task" || cmd.action === "note") {
+        // where it went
+        viewingArchive = false;
+        state.viewMode = "tasks";
+        state.showingCompleted = false;
+        data.activeSheetId = sheet.id;
+        state.viewDate = clampViewDate(res.date);
+        saveData();
+      }
+      render();
+      var what = doneTask ? doneTask.text : texts.join(", ");
+      var when = cmd.action === "done" ? "" : (res.date && res.date !== todayISO() ? " · " + isoToDisplay(res.date) : "") +
+        (cmd.reminderTime && cmd.action !== "plan" ? " ⏰ " + cmd.reminderTime : "");
+      showUndoToast(tr(res.msgKey) + ": " + what + when + (sheets.length > 1 ? " · " + sheet.name : ""), function () {
+        res.undo();
+        render();
+      });
+    });
+  }
+  voiceBtn.hidden = !(voiceSpeechPlugin || VoiceWebRecognition);
+  voiceBtn.addEventListener("click", startVoiceCommand);
+
+  // a toast with ↶ ביטול
+  var undoToast = document.getElementById("undoToast");
+  var undoToastAction = null, undoToastTimer = null;
+  function showUndoToast(text, undo) {
+    appToastEl.classList.remove("app-toast-visible");
+    document.getElementById("undoToastText").textContent = text;
+    undoToastAction = undo;
+    undoToast.hidden = false;
+    clearTimeout(undoToastTimer);
+    undoToastTimer = setTimeout(hideUndoToast, 8000);
+  }
+  function hideUndoToast() {
+    clearTimeout(undoToastTimer);
+    undoToast.hidden = true;
+    undoToastAction = null;
+  }
+  document.getElementById("undoToastBtn").addEventListener("click", function () {
+    var undo = undoToastAction;
+    hideUndoToast();
+    if (undo) { undo(); showToast(tr("voiceUndoneMsg")); }
+  });
   renderVoiceAiRow();
   menuBtn.addEventListener("click", refreshVoiceAiStatus);
   voiceAiToggle.addEventListener("change", function () {

@@ -187,7 +187,7 @@
       });
     });
     if (flagged) saveData();
-    alarms = alarms.concat(workPlanNativeAlarms(), assistantMorningAlarms());
+    alarms = alarms.concat(workPlanNativeAlarms(), morningAlarms());
     var json = JSON.stringify(alarms);
     if (json === lastNativeTaskAlarmsJson) return;
     lastNativeTaskAlarmsJson = json;
@@ -219,8 +219,8 @@
   function openLaunchView(view, text) {
     if (view === "share") { openShareTaskModal(text); return; }
     if (view === "workplan") { openWorkPlan(); return; }
-    if (view === "assistant" || view === "assistant-listen") { openAssistant(view === "assistant-listen"); return; }
-    if (view === "assistant-today") { openAssistant(false, tr("assistantChipToday")); return; }
+    // ("assistant..." - the widget and notifications of app versions 23-24)
+    if (view === "morning" || (view && view.indexOf("assistant") === 0)) { openMorningReport(); return; }
     if (!view || view.indexOf("task|") !== 0) return;
     var parts = view.split("|");
     closeMoveTask();
@@ -258,13 +258,16 @@
         })
       };
     });
-    var json = JSON.stringify(projects);
+    // the morning-report widget's line (as of today - it shows its plain
+    // title on a later day, until the app opens again)
+    var morning = { morningDate: todayISO(), morningLine: morningSummaryText(todayISO()) || tr("morningNothingToday") };
+    var json = JSON.stringify([projects, morning]);
     if (json === lastNativeWidgetJson) return;
     lastNativeWidgetJson = json;
-    nativeTaskAlarmPlugin.setWidgetData({
+    nativeTaskAlarmPlugin.setWidgetData(Object.assign({
       projects: projects,
       title: tr("focusViewTitle"),
       emptyText: tr("focusViewEmpty")
-    }).catch(function () { lastNativeWidgetJson = null; });
+    }, morning)).catch(function () { lastNativeWidgetJson = null; });
   }
 

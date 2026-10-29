@@ -1,10 +1,9 @@
 const { test, expect } = require("@playwright/test");
 const { openLocalApp } = require("./helpers/local-app");
 
-// Voice commands: the microphone by the new-task field opens the assistant
-// and listens -> the phone's speech recognizer (faked: it "hears"
-// window.__voiceSay) -> the offline parser (or the on-phone model) -> done
-// at once, with an undo. The bar goes by itself once it's done.
+// Voice commands: the microphone by the new-task field -> the phone's
+// speech recognizer (faked: it "hears" window.__voiceSay) -> the offline
+// parser (or the on-phone model) -> done at once, ↶ ביטול in a toast.
 test.use({ viewport: { width: 390, height: 800 }, serviceWorkers: "block" });
 
 const sheet = (id, name, tasks = []) => ({ id, name, tasks, reports: [], files: [] });
@@ -13,12 +12,10 @@ const DATA = { activeSheetId: "a", sheets: [sheet("a", "אולם ספורט"), s
 function ymd(d) {
   return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
 }
-const bot = (page) => page.locator("#assistantDockReply .as-bot");
+const toast = (page) => page.locator("#undoToast");
 async function say(page, text) {
   await page.evaluate((t) => { window.__voiceSay = t; }, text);
-  if (await page.locator("#assistantDock").isVisible()) await page.locator("#assistantMicBtn").click();
-  else await page.locator("#voiceBtn").click();
-  await expect(page.locator("#assistantDockReply .as-me").last()).toHaveText(text);
+  await page.locator("#voiceBtn").click();
 }
 const stored = (page) => page.evaluate(() => JSON.parse(localStorage.getItem("daily-tasks-sheets-v1")));
 
@@ -42,26 +39,29 @@ test("the parser understands Hebrew tasks, projects, days and times", async ({ p
   expect(await parse("ذكرني بكرة الساعة 8 اتصل بالمقاول")).toMatchObject({ items: ["اتصل بالمقاول"], date: "2026-10-19", reminderTime: "08:00" });
 });
 
-test("🎤 opens the assistant listening: a spoken task with a project, day and time is added there with a reminder", async ({ page }) => {
+test("a spoken task with a project, day and time is added there with a reminder", async ({ page }) => {
   await openLocalApp(page, { native: true, data: DATA });
   await say(page, "תזכיר לי מחר בעשר להזמין בטון בפרויקט רמת גן");
-  await expect(bot(page).last()).toContainText("✓");
+  await expect(toast(page)).toContainText("להזמין בטון");
+  await expect(toast(page)).toContainText("⏰ 10:00");
+  await expect(toast(page)).toContainText("רמת גן");
   expect(await page.evaluate(() => window.__native.speech[0].language)).toBe("he-IL");
   const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
-  await expect.poll(async () => ((await stored(page)) || DATA).sheets.find((s) => s.id === "r").tasks.length).toBe(1);
   const task = (await stored(page)).sheets.find((s) => s.id === "r").tasks[0];
   expect(task).toMatchObject({ text: "להזמין בטון", type: "task", date: ymd(tomorrow), reminder: { type: "time", time: "10:00" } });
+  // shown where it went
+  await expect(page.locator("#taskList li.task", { hasText: "להזמין בטון" })).toBeVisible();
   // the native alarm was handed to the phone
   await expect.poll(() => page.evaluate(() => window.__native.alarms.filter((a) => !a.id.startsWith("morning:")).length)).toBe(1);
 });
 
-test("several tasks in one line; ↶ takes them back", async ({ page }) => {
+test("several tasks in one line; ↶ ביטול takes them back", async ({ page }) => {
   await openLocalApp(page, { native: true, data: DATA });
   await say(page, "שלוש משימות לחולון להזמין בטון לבדוק ברזל ולתאם משאבה");
-  await expect(bot(page).last()).toContainText("✓");
-  await expect.poll(async () => ((await stored(page)) || DATA).sheets.find((s) => s.id === "h").tasks.map((t) => t.text))
-    .toEqual(["להזמין בטון", "לבדוק ברזל", "לתאם משאבה"]);
-  await bot(page).last().locator("button", { hasText: "ביטול" }).click();
+  await expect(toast(page)).toContainText("להזמין בטון, לבדוק ברזל, לתאם משאבה");
+  expect((await stored(page)).sheets.find((s) => s.id === "h").tasks.map((t) => t.text)).toEqual(["להזמין בטון", "לבדוק ברזל", "לתאם משאבה"]);
+  await toast(page).locator("button").click();
+  await expect(toast(page)).toBeHidden();
   await expect.poll(async () => (await stored(page)).sheets.find((s) => s.id === "h").tasks).toHaveLength(0);
 });
 
@@ -74,9 +74,13 @@ test("\"סמן בוצע\" finds the open task the words fit, in whichever projec
   ];
   await openLocalApp(page, { native: true, data });
   await say(page, "סמן בוצע הזמנת ברזל");
-  await expect(bot(page).last()).toContainText("✓");
-  await expect.poll(async () => ((await stored(page)) || data).sheets.find((s) => s.id === "r").tasks.find((t) => t.id === "t2").status).toBe(2);
-  expect((await stored(page)).sheets.find((s) => s.id === "r").tasks.find((t) => t.id === "t1").status).toBe(0);
+  await expect(toast(page)).toContainText("הזמנת ברזל לקומה 2");
+  const tasks = (await stored(page)).sheets.find((s) => s.id === "r").tasks;
+  expect(tasks.find((t) => t.id === "t2").status).toBe(2);
+  expect(tasks.find((t) => t.id === "t1").status).toBe(0);
+  // nothing fits: said so, nothing changed
+  await say(page, "סמן בוצע לצבוע את הגדר");
+  await expect(page.locator("#appToast")).toContainText("לא מצאתי");
 });
 
 test("an on-device model's answer is used when the phone has one, and can be switched off in the menu", async ({ page }) => {
@@ -94,19 +98,20 @@ test("an on-device model's answer is used when the phone has one, and can be swi
   await page.reload();
   await page.locator("#appRoot").waitFor({ state: "visible" });
   await say(page, "תזכיר לי מחר בעשר להזמין בטון");
-  await expect.poll(async () => ((await stored(page)) || DATA).sheets.find((s) => s.id === "h").tasks.map((t) => [t.type, t.text]))
-    .toEqual([["note", "לבדוק את המשאבה"]]);
+  await expect(toast(page)).toContainText("לבדוק את המשאבה");
+  expect((await stored(page)).sheets.find((s) => s.id === "h").tasks.map((t) => [t.type, t.text])).toEqual([["note", "לבדוק את המשאבה"]]);
   expect(await page.evaluate(() => window.__aiPrompt)).toContain("רמת גן");
 
   // switched off (in the menu) -> the built-in parser, and it stays off
-  await page.locator("#assistantDockCloseBtn").click();
   await page.locator("#menuBtn").click();
   await expect(page.locator("#voiceAiMenuSection")).toBeVisible();
   await expect(page.locator("#voiceAiStatus")).toContainText("פעיל");
   await page.locator("#voiceAiToggle").uncheck();
   await page.locator("#menuBtn").click();
   await say(page, "תזכיר לי מחר בעשר להזמין בטון");
-  await expect.poll(async () => (await stored(page)).sheets.find((s) => s.id === "a").tasks.map((t) => [t.text, t.reminder && t.reminder.time]))
+  await expect(toast(page)).toContainText("להזמין בטון");
+  // (into the project on screen - חולון, where the note went)
+  expect((await stored(page)).sheets.find((s) => s.id === "h").tasks.filter((t) => t.type === "task").map((t) => [t.text, t.reminder && t.reminder.time]))
     .toEqual([["להזמין בטון", "10:00"]]);
 });
 
@@ -128,37 +133,18 @@ test("a model the phone can download is fetched in the background, meanwhile the
   });
   await page.reload();
   await page.locator("#appRoot").waitFor({ state: "visible" });
-  await say(page, "להזמין בטון");
-  await expect(bot(page).last()).toContainText("✓");
-  await say(page, "לבדוק ברזל");
-  await expect(bot(page).last()).toContainText("✓");
-  expect(await page.evaluate(() => window.__aiDownloads)).toBe(1);
-  await page.locator("#assistantDockCloseBtn").click();
   await page.locator("#menuBtn").click();
   await expect(page.locator("#voiceAiStatus")).toContainText("מוריד את המודל... 25%");
+  await page.locator("#menuBtn").click();
+  await say(page, "להזמין בטון");
+  await expect(toast(page)).toContainText("להזמין בטון");
+  await page.locator("#menuBtn").click();
+  await page.locator("#menuBtn").click();
+  expect(await page.evaluate(() => window.__aiDownloads)).toBe(1);
 });
 
-test("no speech recognizer: 🎤 still opens the assistant, for typing; the bar goes by itself after the answer", async ({ page }) => {
+test("the microphone is hidden where there's no speech recognizer", async ({ page }) => {
   await page.addInitScript(() => { delete window.webkitSpeechRecognition; delete window.SpeechRecognition; });
-  await openLocalApp(page, { data: DATA });
-  await page.clock.install();
-  await page.locator("#voiceBtn").click();
-  await expect(page.locator("#assistantDock")).toBeVisible();
-  await expect(page.locator("#assistantMicBtn")).toBeHidden();
-  await expect(page.locator("#assistantInput")).toBeFocused();
-  // the greeting alone doesn't close it
-  await page.clock.runFor(30000);
-  await expect(page.locator("#assistantDock")).toBeVisible();
-  await page.locator("#assistantInput").fill("להזמין בטון");
-  await page.locator("#assistantSendBtn").click();
-  await expect(bot(page).last()).toContainText("✓");
-  await expect(page.locator("#assistantInput")).not.toBeFocused();
-  // a touch gives it more time
-  await page.clock.runFor(5000);
-  await bot(page).last().click();
-  await page.clock.runFor(6000);
-  await expect(page.locator("#assistantDock")).toBeVisible();
-  await page.clock.runFor(3000);
-  await expect(page.locator("#assistantDock")).toBeHidden();
-  await expect(page.locator("#taskList li.task", { hasText: "להזמין בטון" })).toBeVisible();
+  await openLocalApp(page);
+  await expect(page.locator("#voiceBtn")).toBeHidden();
 });

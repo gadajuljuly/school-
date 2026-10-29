@@ -199,7 +199,7 @@ test("voice: 'תוסיף לתוכנית ... מיום ... עד ..., צוות ...'
   await openWithSharedProject(page, { phone: ME, native: true, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
   await page.evaluate(() => { window.__voiceSay = "תוסיף לתוכנית יציקת תקרה קומה 3 ממחר עד מחרתיים, צוות טפסנות"; });
   await page.locator("#voiceBtn").click();
-  await expect(page.locator("#assistantDockReply .as-bot").last()).toContainText("✓");
+  await expect(page.locator("#undoToast")).toContainText("יציקת תקרה קומה 3");
   await expect.poll(async () => (await serverPlan(page, "p1")).map((x) => [x.name, x.start, x.end, x.by]))
     .toEqual([["יציקת תקרה קומה 3", iso(1), iso(2), "צוות טפסנות"]]);
 });
@@ -582,7 +582,7 @@ test("actuals: started / finished dates kept; done early brings what follows for
   await expect.poll(async () => (await item("b2")).start).toBe(iso(1));
 });
 
-test("forecast: an activity under way shows where its pace leads; tapping the tail replans by it; the assistant knows", async ({ page }) => {
+test("forecast: an activity under way shows where its pace leads; tapping the tail replans by it; the morning report warns", async ({ page }) => {
   const plan = [
     // 40% after 6 days (today included): 9 more days -> today+9, planned today+2
     { id: "c1", name: "שלד", start: iso(-5), end: iso(2), status: "prog", progress: 40, by: "", actualStart: iso(-5) },
@@ -594,12 +594,11 @@ test("forecast: an activity under way shows where its pace leads; tapping the ta
   const shown = iso(9).split("-").reverse().slice(0, 2).join("/");
   await expect(row.locator(".wp-forecast-label")).toHaveText("צפי: " + shown);
   await expect(row.locator(".wp-forecast")).toBeVisible();
-  // the assistant answers from the same numbers
-  await page.evaluate(() => window.__native.listeners.launchView({ view: "assistant" }));
-  await page.locator("#assistantInput").fill("מתי צפוי להסתיים השלד?");
-  await page.locator("#assistantSendBtn").click();
-  await expect(page.locator("#assistantDockReply .as-bot").last()).toContainText("צפויה להסתיים ב-" + shown + " – 7 ימים אחרי המתוכנן");
-  await page.locator("#assistantDockCloseBtn").click();
+  // the morning report warns from the same numbers
+  await page.evaluate(() => window.__native.listeners.launchView({ view: "morning" }));
+  await expect(page.locator(".morning-attention")).toContainText("שלד: לפי הקצב תסתיים ב-" + shown + ", 7 ימים אחרי התכנון");
+  await expect(page.locator(".morning-attention")).toContainText("ותגרור את: חשמל");
+  await page.locator("#morningBackBtn").click();
   // replan by it: the end moves, and what's linked after it follows
   await row.locator(".wp-forecast").click();
   await expect(page.locator("#confirmOverlay")).toContainText(shown);

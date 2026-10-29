@@ -6,7 +6,7 @@ const { openLocalApp, longPress, addTask } = require("./helpers/local-app");
 // (ItaskAlarm.setAlarms) and calendar (ItaskCalendar), and the icons shown.
 test.use({ viewport: { width: 390, height: 800 }, serviceWorkers: "block" });
 
-// the task reminders (not the morning summaries, tested in local-assistant)
+// the task reminders (not the morning summaries, tested in local-morning-report)
 const alarms = (page) => page.evaluate(() => window.__native.alarms.filter((a) => !a.id.startsWith("morning:")));
 const pad = (n) => String(n).padStart(2, "0");
 function inDays(days, hh, mm) {

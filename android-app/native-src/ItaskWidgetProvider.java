@@ -30,6 +30,7 @@ public class ItaskWidgetProvider extends AppWidgetProvider {
     static void saveAndRefresh(Context c, String json) {
         c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_DATA, json).apply();
         refresh(c);
+        ItaskAssistantWidget.refresh(c); // the morning-report bar's line
     }
 
     private static void refresh(Context c) {

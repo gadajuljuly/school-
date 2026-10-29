@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="itask_assistant_label">Помощник ITASK</string>
-    <string name="itask_assistant_hint">Что сделать?</string>
-    <string name="itask_assistant_mic">Голосовая команда</string>
-    <string name="itask_assistant_description">Напишите или скажите, что сделать – задачу, напоминание, или что сегодня</string>
+    <string name="itask_assistant_label">Утренний отчёт ITASK</string>
+    <string name="itask_morning_title">Утренний отчёт</string>
+    <string name="itask_assistant_hint">Что сегодня – нажмите для отчёта</string>
+    <string name="itask_assistant_description">Сегодня одним взглядом: задачи, задержки и планы работ</string>
 </resources>

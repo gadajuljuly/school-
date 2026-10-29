@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- עוזר ITASK: a pill-shaped bar like Google's - the ITASK mark, the
-     prompt, and a microphone at the other end -->
+<!-- דוח בוקר: a pill-shaped bar - the ITASK mark, the title and today's line -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/itask_assistant_bar"
     android:layout_width="match_parent"
@@ -11,7 +10,7 @@
     android:gravity="center_vertical"
     android:orientation="horizontal"
     android:paddingStart="10dp"
-    android:paddingEnd="6dp">
+    android:paddingEnd="14dp">
 
     <ImageView
         android:layout_width="38dp"
@@ -20,23 +19,30 @@
         android:scaleType="fitCenter"
         android:src="@drawable/itask_assistant_logo" />
 
-    <TextView
+    <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:layout_marginStart="12dp"
-        android:ellipsize="end"
-        android:maxLines="1"
-        android:text="@string/itask_assistant_hint"
-        android:textColor="#5f6368"
-        android:textSize="17sp" />
+        android:orientation="vertical">
 
-    <ImageView
-        android:id="@+id/itask_assistant_mic"
-        android:layout_width="46dp"
-        android:layout_height="46dp"
-        android:contentDescription="@string/itask_assistant_mic"
-        android:padding="10dp"
-        android:scaleType="fitCenter"
-        android:src="@drawable/itask_assistant_mic" />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:text="@string/itask_morning_title"
+            android:textColor="#202124"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/itask_morning_line"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="@string/itask_assistant_hint"
+            android:textColor="#5f6368"
+            android:textSize="13sp" />
+    </LinearLayout>
 </LinearLayout>
