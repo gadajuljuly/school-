@@ -1,8 +1,8 @@
 
   // ---------------------------------------------------------------------
-  // The floating task (app version 25+, ItaskFloatReceiver): every quarter
-  // hour from 06:00 to 18:00 an open task of the next project shows over
-  // the screen for 8 seconds. It runs on its own once the phone lets ITASK
+  // The floating task (app version 25+, ItaskFloatReceiver): an open task
+  // of the next project shows over the screen for 8 seconds - every quarter
+  // hour from 06:00 to 18:00, every half hour the rest of the day. It runs on its own once the phone lets ITASK
   // "display over other apps" - asked for once, when the app first opens
   // with it; the switch (and that permission, if still missing) is in the
   // menu. Its tasks are the home-screen widget's list (syncNativeWidget).

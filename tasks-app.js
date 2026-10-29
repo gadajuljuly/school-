@@ -276,9 +276,9 @@
     morningNothingToday: { he: "אין משהו פתוח להיום", en: "Nothing open today", ar: "لا شيء مفتوح اليوم", ru: "На сегодня ничего" },
     morningRange: { he: "{from} עד {to}", en: "{from} to {to}", ar: "{from} حتى {to}", ru: "{from} – {to}" },
     floatLabel: { he: "הודעה צפה", en: "Floating task", ar: "رسالة عائمة", ru: "Всплывающая задача" },
-    floatOn: { he: "כל רבע שעה, 06:00–18:00: משימה מפרויקט אחר", en: "Every quarter hour, 06:00–18:00: a task from the next project", ar: "كل ربع ساعة، 06:00–18:00: مهمة من مشروع آخر", ru: "Каждые 15 минут, 06:00–18:00: задача из следующего проекта" },
+    floatOn: { he: "משימה מפרויקט אחר: כל רבע שעה בין 06:00 ל-18:00, וכל חצי שעה בשאר השעות", en: "A task from the next project: every quarter hour 06:00–18:00, every half hour otherwise", ar: "مهمة من مشروع آخر: كل ربع ساعة 06:00–18:00، وكل نصف ساعة في باقي الساعات", ru: "Задача из следующего проекта: каждые 15 минут с 06:00 до 18:00, иначе каждые 30 минут" },
     floatAllowBtn: { he: "לאישור \"הצגה מעל אפליקציות אחרות\"", en: "Allow \"Display over other apps\"", ar: "السماح بـ\"الظهور فوق التطبيقات الأخرى\"", ru: "Разрешить «Поверх других приложений»" },
-    floatAsk: { he: "כל רבע שעה, בין 06:00 ל-18:00, תקפוץ לכמה שניות משימה פתוחה מפרויקט אחר מעל המסך. לשם כך אנדרואיד צריך אישור חד-פעמי: \"הצגה מעל אפליקציות אחרות\". לפתוח את מסך האישור? (בחר שם ITASK והפעל)", en: "Every quarter hour from 06:00 to 18:00, an open task from the next project pops up over the screen for a few seconds. Android needs a one-time permission for that: \"Display over other apps\". Open it now? (pick ITASK there and switch it on)", ar: "كل ربع ساعة بين 06:00 و-18:00 ستظهر لثوانٍ مهمة مفتوحة من مشروع آخر فوق الشاشة. يحتاج أندرويد لإذن لمرة واحدة: \"الظهور فوق التطبيقات الأخرى\". فتح شاشة الإذن؟ (اختر ITASK وفعّله)", ru: "Каждые 15 минут с 06:00 до 18:00 поверх экрана на несколько секунд появится открытая задача из следующего проекта. Для этого нужно разовое разрешение «Поверх других приложений». Открыть? (выберите ITASK и включите)" },
+    floatAsk: { he: "משימה פתוחה מפרויקט אחר תקפוץ לכמה שניות מעל המסך: כל רבע שעה בין 06:00 ל-18:00, וכל חצי שעה בשאר השעות. לשם כך אנדרואיד צריך אישור חד-פעמי: \"הצגה מעל אפליקציות אחרות\". לפתוח את מסך האישור? (בחר שם ITASK והפעל)", en: "An open task from the next project pops up over the screen for a few seconds: every quarter hour 06:00–18:00, every half hour otherwise. Android needs a one-time permission for that: \"Display over other apps\". Open it now? (pick ITASK there and switch it on)", ar: "ستظهر لثوانٍ مهمة مفتوحة من مشروع آخر فوق الشاشة: كل ربع ساعة 06:00–18:00، وكل نصف ساعة في باقي الساعات. يحتاج أندرويد لإذن لمرة واحدة: \"الظهور فوق التطبيقات الأخرى\". فتح شاشة الإذن؟ (اختر ITASK وفعّله)", ru: "Поверх экрана на несколько секунд появится открытая задача из следующего проекта: каждые 15 минут с 06:00 до 18:00, иначе каждые 30 минут. Нужно разовое разрешение «Поверх других приложений». Открыть? (выберите ITASK и включите)" },
     voiceBtnTitle: { he: "פקודה קולית", en: "Voice command", ar: "أمر صوتي", ru: "Голосовая команда" },
     voiceListening: { he: "מקשיב... דבר עכשיו", en: "Listening... speak now", ar: "أستمع... تكلّم الآن", ru: "Слушаю... говорите" },
     voiceThinking: { he: "מבין...", en: "Understanding...", ar: "أفهم...", ru: "Разбираю..." },
@@ -1932,9 +1932,9 @@
 
 
   // ---------------------------------------------------------------------
-  // The floating task (app version 25+, ItaskFloatReceiver): every quarter
-  // hour from 06:00 to 18:00 an open task of the next project shows over
-  // the screen for 8 seconds. It runs on its own once the phone lets ITASK
+  // The floating task (app version 25+, ItaskFloatReceiver): an open task
+  // of the next project shows over the screen for 8 seconds - every quarter
+  // hour from 06:00 to 18:00, every half hour the rest of the day. It runs on its own once the phone lets ITASK
   // "display over other apps" - asked for once, when the app first opens
   // with it; the switch (and that permission, if still missing) is in the
   // menu. Its tasks are the home-screen widget's list (syncNativeWidget).
