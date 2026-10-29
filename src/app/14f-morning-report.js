@@ -190,7 +190,7 @@
         var row = morningEl("div", "wp-diary-head morning-plan-row");
         var name = morningEl("div", "wp-diary-name");
         name.appendChild(morningEl("b", "", item.name));
-        var sub = [isoToDisplay(item.start) + " – " + isoToDisplay(item.end)];
+        var sub = [tr("morningRange").replace("{from}", isoToDisplay(item.start)).replace("{to}", isoToDisplay(item.end))];
         if (item.by) sub.push(item.by);
         name.appendChild(morningEl("small", "", sub.join(" · ")));
         if (wpIsLate(item)) name.appendChild(morningEl("small", "wp-diary-late", tr("workPlanStatusLate")));

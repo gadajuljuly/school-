@@ -274,6 +274,7 @@
     morningWholePlan: { he: "הצג את כל התוכנית", en: "Show the whole plan", ar: "اعرض الخطة كاملة", ru: "Показать весь план" },
     morningLessPlan: { he: "רק מה שבביצוע ובקרוב", en: "Only what's under way and coming up", ar: "الجاري والقريب فقط", ru: "Только текущее и ближайшее" },
     morningNothingToday: { he: "אין משהו פתוח להיום", en: "Nothing open today", ar: "لا شيء مفتوح اليوم", ru: "На сегодня ничего" },
+    morningRange: { he: "{from} עד {to}", en: "{from} to {to}", ar: "{from} حتى {to}", ru: "{from} – {to}" },
     voiceBtnTitle: { he: "פקודה קולית", en: "Voice command", ar: "أمر صوتي", ru: "Голосовая команда" },
     voiceListening: { he: "מקשיב... דבר עכשיו", en: "Listening... speak now", ar: "أستمع... تكلّم الآن", ru: "Слушаю... говорите" },
     voiceThinking: { he: "מבין...", en: "Understanding...", ar: "أفهم...", ru: "Разбираю..." },
@@ -18322,7 +18323,7 @@
         var row = morningEl("div", "wp-diary-head morning-plan-row");
         var name = morningEl("div", "wp-diary-name");
         name.appendChild(morningEl("b", "", item.name));
-        var sub = [isoToDisplay(item.start) + " – " + isoToDisplay(item.end)];
+        var sub = [tr("morningRange").replace("{from}", isoToDisplay(item.start)).replace("{to}", isoToDisplay(item.end))];
         if (item.by) sub.push(item.by);
         name.appendChild(morningEl("small", "", sub.join(" · ")));
         if (wpIsLate(item)) name.appendChild(morningEl("small", "wp-diary-late", tr("workPlanStatusLate")));

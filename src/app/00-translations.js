@@ -273,6 +273,7 @@
     morningWholePlan: { he: "הצג את כל התוכנית", en: "Show the whole plan", ar: "اعرض الخطة كاملة", ru: "Показать весь план" },
     morningLessPlan: { he: "רק מה שבביצוע ובקרוב", en: "Only what's under way and coming up", ar: "الجاري والقريب فقط", ru: "Только текущее и ближайшее" },
     morningNothingToday: { he: "אין משהו פתוח להיום", en: "Nothing open today", ar: "لا شيء مفتوح اليوم", ru: "На сегодня ничего" },
+    morningRange: { he: "{from} עד {to}", en: "{from} to {to}", ar: "{from} حتى {to}", ru: "{from} – {to}" },
     voiceBtnTitle: { he: "פקודה קולית", en: "Voice command", ar: "أمر صوتي", ru: "Голосовая команда" },
     voiceListening: { he: "מקשיב... דבר עכשיו", en: "Listening... speak now", ar: "أستمع... تكلّم الآن", ru: "Слушаю... говорите" },
     voiceThinking: { he: "מבין...", en: "Understanding...", ar: "أفهم...", ru: "Разбираю..." },
