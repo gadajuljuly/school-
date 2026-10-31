@@ -6,7 +6,11 @@
   //   items:    [{ id, code, chapter, name, unit, qty, price, cost, progress }]
   //             - a BOQ item: quantity x unit price is its contract value;
   //               cost is its cost budget; progress its % done
-  //   expenses: [{ id, date, supplier, supplierCode, invoice, itemId, amount, note, by, at }]
+  //   expenses: [{ id, date, supplier, supplierCode, invoice, itemId, amount, note, by, at, billId }]
+  //   generalBudget: { category: amount } - the project's own costs (overheads,
+  //             insurance...) that sit on no BOQ item
+  //   subcontracts, bills: the subcontractors' contracts and partial bills
+  //             (11d-subcontract-bills.js); an approved bill's expenses carry its billId
   // } - every amount before VAT; supplier code and invoice number are there
   // for Priority later. The tile shows only to whoever may see that money:
   // the project's owner (the user, for a private project; its creator, for
@@ -20,7 +24,13 @@
   var budgetFormFields = document.getElementById("budgetFormFields");
   var FINANCE_TABLE = "project_finance";
   var BUDGET_OVER_MARGIN = 10; // cost used may run this many points ahead of the work done
-  var budget = { sheet: null, owner: null, data: null, version: 0, tab: "items", error: false };
+  // an expense's type (subcontractors': from their approved bills, 11d)
+  var BUDGET_CATEGORIES = ["subcontractors", "materials", "labor", "equipment", "overhead", "insurance", "other"];
+  function budgetCategoryLabel(cat) {
+    return tr("budgetCat_" + (BUDGET_CATEGORIES.indexOf(cat) !== -1 ? cat : "other"));
+  }
+  // tab: items | subs | expenses; subId / billId: a subcontractor / bill open in "subs"
+  var budget = { sheet: null, owner: null, data: null, version: 0, tab: "items", error: false, subId: null, billId: null, billDraft: null };
 
   // whose money a project's is, when this phone may see it (else null)
   function budgetOwnerFor(sheet) {
@@ -57,6 +67,19 @@
     if (!cost) return false;
     return actual > cost || actual * 100 / cost > budgetNum(item.progress) + BUDGET_OVER_MARGIN;
   }
+  // by type: all that was spent, and the general (no BOQ item) part against its budget
+  function budgetByCategory() {
+    var out = {};
+    BUDGET_CATEGORIES.forEach(function (c) {
+      out[c] = { spent: 0, general: 0, budget: budgetNum(budget.data.generalBudget[c]) };
+    });
+    budget.data.expenses.forEach(function (e) {
+      var c = out[e.category] ? e.category : "other";
+      out[c].spent += budgetNum(e.amount);
+      if (!budget.data.items.some(function (i) { return i.id === e.itemId; })) out[c].general += budgetNum(e.amount);
+    });
+    return out;
+  }
   function budgetTotals() {
     var t = { contract: 0, cost: 0, actual: 0, earned: 0, forecast: 0 };
     budget.data.items.forEach(function (item) {
@@ -66,18 +89,23 @@
       t.earned += contract * Math.min(100, budgetNum(item.progress)) / 100;
       t.forecast += budgetItemForecast(item, actual);
     });
-    budget.data.expenses.forEach(function (e) {
-      t.actual += budgetNum(e.amount);
-      if (!budget.data.items.some(function (i) { return i.id === e.itemId; })) t.forecast += budgetNum(e.amount);
+    budget.data.expenses.forEach(function (e) { t.actual += budgetNum(e.amount); });
+    // the project's own costs: their budget, or what's been spent if more
+    var cats = budgetByCategory();
+    BUDGET_CATEGORIES.forEach(function (c) {
+      t.cost += cats[c].budget;
+      t.forecast += Math.max(cats[c].budget, cats[c].general);
     });
     return t;
   }
 
   // ---- the server ------------------------------------------------------------
-  function budgetEmpty() { return { items: [], expenses: [] }; }
+  function budgetEmpty() { return { items: [], expenses: [], subcontracts: [], bills: [], generalBudget: {} }; }
   function budgetNormalize(d) {
     d = d || {};
-    return { items: Array.isArray(d.items) ? d.items : [], expenses: Array.isArray(d.expenses) ? d.expenses : [] };
+    var list = function (k) { return Array.isArray(d[k]) ? d[k] : []; };
+    return { items: list("items"), expenses: list("expenses"), subcontracts: list("subcontracts"), bills: list("bills"),
+      generalBudget: d.generalBudget && typeof d.generalBudget === "object" ? d.generalBudget : {} };
   }
   function budgetRow() {
     return supabaseClient.from(FINANCE_TABLE).select("data, data_version")
@@ -181,14 +209,20 @@
     budgetBody.appendChild(bEl("p", "budget-note", tr("budgetBeforeVat")));
     // the tabs
     var tabs = bEl("div", "budget-tabs");
-    [["items", "budgetTabItems"], ["expenses", "budgetTabExpenses"]].forEach(function (x) {
+    [["items", "budgetTabItems"], ["subs", "budgetTabSubs"], ["expenses", "budgetTabExpenses"]].forEach(function (x) {
       var b = bEl("button", budget.tab === x[0] ? "on" : "", tr(x[1]));
       b.type = "button";
-      b.addEventListener("click", function () { budget.tab = x[0]; renderBudget(); });
+      b.addEventListener("click", function () {
+        budget.tab = x[0];
+        budget.subId = budget.billId = budget.billDraft = null;
+        renderBudget();
+      });
       tabs.appendChild(b);
     });
     budgetBody.appendChild(tabs);
-    if (budget.tab === "items") renderBudgetItems(); else renderBudgetExpenses();
+    if (budget.tab === "items") renderBudgetItems();
+    else if (budget.tab === "subs") renderBudgetSubs();
+    else renderBudgetExpenses();
   }
   function budgetActions(buttons) {
     var row = bEl("div", "budget-actions");
@@ -259,8 +293,44 @@
   function budgetItemLabel(item) {
     return [item.code, item.name].filter(Boolean).join(" ");
   }
+  // by type: spent, and the project's own (no BOQ item) costs against their budget - tap to set it
+  function renderBudgetCategories() {
+    var cats = budgetByCategory();
+    var sec = bEl("section", "budget-chapter");
+    var head = bEl("div", "budget-chapter-head");
+    head.appendChild(bEl("b", "", tr("budgetByType")));
+    head.appendChild(bEl("small", "", tr("budgetByTypeHint")));
+    sec.appendChild(head);
+    BUDGET_CATEGORIES.forEach(function (c) {
+      var x = cats[c];
+      if (c === "subcontractors" && !x.spent) return;
+      var over = x.budget ? x.general > x.budget : false;
+      var row = bEl("div", "budget-cat" + (over ? " over" : ""));
+      row.appendChild(bEl("span", "budget-name", budgetCategoryLabel(c)));
+      row.appendChild(bEl("b", "budget-amount", budgetMoney(x.spent)));
+      if (c !== "subcontractors") {
+        row.appendChild(bEl("small", "budget-item-nums", x.budget
+          ? tr("budgetGeneralVs").replace("{spent}", budgetMoney(x.general)).replace("{budget}", budgetMoney(x.budget))
+          : tr("budgetSetGeneral")));
+        row.addEventListener("click", function () { budgetGeneralForm(c); });
+      }
+      sec.appendChild(row);
+    });
+    budgetBody.appendChild(sec);
+  }
+  function budgetGeneralForm(cat) {
+    budgetForm(tr("budgetGeneralTitle").replace("{type}", budgetCategoryLabel(cat)), [
+      { key: "amount", label: tr("budgetGeneralAmount"), value: budget.data.generalBudget[cat], type: "number" }
+    ], function (v) {
+      var amount = budgetNum(v.amount);
+      budgetChange(function (d) {
+        if (amount) d.generalBudget[cat] = amount; else delete d.generalBudget[cat];
+      });
+    }, null);
+  }
   function renderBudgetExpenses() {
     budgetActions([["budgetAddExpense", function () { budgetExpenseForm(null); }, "primary"]]);
+    renderBudgetCategories();
     var list = budget.data.expenses.slice().sort(function (a, b) { return String(b.date).localeCompare(String(a.date)) || (b.at || 0) - (a.at || 0); });
     if (!list.length) { budgetBody.appendChild(bEl("p", "team-empty", tr("budgetNoExpenses"))); return; }
     list.forEach(function (e) {
@@ -271,10 +341,20 @@
       top.appendChild(bEl("b", "budget-amount", budgetMoney(budgetNum(e.amount))));
       row.appendChild(top);
       row.appendChild(bEl("small", "budget-item-nums", [isoToDisplay(e.date),
+        budgetCategoryLabel(e.category),
         e.invoice ? tr("budgetInvoiceShort") + " " + e.invoice : "",
         item ? budgetItemLabel(item) : tr("budgetUnassigned")].filter(Boolean).join(" · ")));
       if (e.note) row.appendChild(bEl("small", "budget-item-nums", e.note));
-      row.addEventListener("click", function () { budgetExpenseForm(e); });
+      // a subcontractor's approved bill's: it's changed there
+      var bill = e.billId && budget.data.bills.find(function (b) { return b.id === e.billId; });
+      row.addEventListener("click", function () {
+        if (!bill) { budgetExpenseForm(e); return; }
+        budget.tab = "subs";
+        budget.subId = bill.subId;
+        budget.billId = bill.id;
+        budget.billDraft = null;
+        renderBudget();
+      });
       budgetBody.appendChild(row);
     });
   }
@@ -363,6 +443,8 @@
     });
     budgetForm(tr(exp ? "budgetEditExpense" : "budgetAddExpense"), [
       { key: "date", label: tr("shareTaskDate"), value: e.date, type: "date" },
+      { key: "category", label: tr("budgetCategory"), value: e.category || "materials",
+        options: BUDGET_CATEGORIES.filter(function (c) { return c !== "subcontractors"; }).map(function (c) { return [c, budgetCategoryLabel(c)]; }) },
       { key: "supplier", label: tr("budgetSupplier"), value: e.supplier },
       { key: "supplierCode", label: tr("budgetSupplierCode"), value: e.supplierCode },
       { key: "invoice", label: tr("budgetInvoice"), value: e.invoice },
@@ -373,7 +455,7 @@
     ], function (v) {
       if (!budgetNum(v.amount)) { alert(tr("budgetNeedAmount")); return false; }
       var rec = Object.assign({}, e, {
-        id: e.id || uid(), date: v.date || todayISO(), supplier: v.supplier, supplierCode: v.supplierCode,
+        id: e.id || uid(), date: v.date || todayISO(), category: v.category || "other", supplier: v.supplier, supplierCode: v.supplierCode,
         invoice: v.invoice, itemId: v.itemId || null, amount: budgetNum(v.amount), note: v.note,
         by: e.by || myPhoneNumber || null, at: e.at || Date.now()
       });
@@ -538,7 +620,7 @@
     var sheet = activeSheet();
     var owner = budgetOwnerFor(sheet);
     if (!owner) return;
-    budget = { sheet: sheet, owner: owner, data: null, version: 0, tab: "items", error: false };
+    budget = { sheet: sheet, owner: owner, data: null, version: 0, tab: "items", error: false, subId: null, billId: null, billDraft: null };
     document.getElementById("budgetProjectName").textContent = sheet.name;
     budgetBody.innerHTML = "";
     budgetView.hidden = false;

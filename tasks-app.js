@@ -344,6 +344,72 @@
     budgetImportNone: { he: "לא מצאתי סעיפים בקובץ. צריכה להיות בו שורת כותרות עם עמודות כמו: סעיף, תיאור, יחידה, כמות, מחיר.", en: "No items found. The file needs a header row with columns like: item, description, unit, quantity, price.", ar: "لم أجد بنوداً. يجب أن يحتوي الملف على صف عناوين: بند، وصف، وحدة، كمية، سعر.", ru: "Позиции не найдены. Нужна строка заголовков: позиция, описание, ед., количество, цена." },
     budgetImportConfirm: { he: "נמצאו {n} סעיפים. להוסיף אותם?", en: "{n} items found. Add them?", ar: "وُجد {n} بنداً. إضافتها؟", ru: "Найдено позиций: {n}. Добавить?" },
     budgetForecastCost: { he: "עלות צפויה", en: "Forecast cost", ar: "التكلفة المتوقعة", ru: "Прогноз затрат" },
+    budgetTabSubs: { he: "קבלני משנה", en: "Subcontractors", ar: "مقاولو الباطن", ru: "Субподрядчики" },
+    subAdd: { he: "＋ קבלן משנה", en: "＋ Subcontractor", ar: "＋ مقاول باطن", ru: "＋ Субподрядчик" },
+    subNone: { he: "עדיין אין קבלני משנה", en: "No subcontractors yet", ar: "لا مقاولي باطن بعد", ru: "Субподрядчиков пока нет" },
+    subApprovedSoFar: { he: "אושר מצטבר", en: "Approved to date", ar: "المعتمد تراكمياً", ru: "Утверждено всего" },
+    subPaid: { he: "לתשלום עד היום", en: "Payable to date", ar: "المستحق حتى اليوم", ru: "К оплате всего" },
+    subRetentionHeld: { he: "עיכבון", en: "Retention", ar: "المحتجز", ru: "Удержание" },
+    subPendingBills: { he: "{n} חשבונות ממתינים לאישור", en: "{n} bills waiting for approval", ar: "{n} حسابات بانتظار الاعتماد", ru: "Счетов ждут утверждения: {n}" },
+    subAll: { he: "כל קבלני המשנה", en: "All subcontractors", ar: "كل مقاولي الباطن", ru: "Все субподрядчики" },
+    subEditTerms: { he: "עריכת פרטים", en: "Edit details", ar: "تعديل التفاصيل", ru: "Изменить данные" },
+    subContract: { he: "חוזה", en: "Contract", ar: "العقد", ru: "Договор" },
+    subAdvanceLeft: { he: "יתרת מקדמה", en: "Advance left", ar: "رصيد السلفة", ru: "Остаток аванса" },
+    subLines: { he: "סעיפי החוזה", en: "Contract items", ar: "بنود العقد", ru: "Позиции договора" },
+    subAddLine: { he: "＋ סעיף לחוזה", en: "＋ Contract item", ar: "＋ بند للعقد", ru: "＋ Позиция договора" },
+    subEditLine: { he: "עריכת סעיף בחוזה", en: "Edit contract item", ar: "تعديل بند العقد", ru: "Изменить позицию договора" },
+    subNoLines: { he: "הוסף לחוזה את הסעיפים מכתב הכמויות שהקבלן מבצע, עם המחיר שלו", en: "Add the BOQ items this contractor does, at their price", ar: "أضف بنود جدول الكميات التي ينفذها المقاول بسعره", ru: "Добавьте позиции сметы, которые выполняет подрядчик, по его цене" },
+    subItemGone: { he: "(סעיף שנמחק)", en: "(deleted item)", ar: "(بند محذوف)", ru: "(удалённая позиция)" },
+    subBills: { he: "חשבונות חלקיים", en: "Partial bills", ar: "الحسابات الجزئية", ru: "Промежуточные счета" },
+    subNewBill: { he: "＋ חשבון חדש", en: "＋ New bill", ar: "＋ حساب جديد", ru: "＋ Новый счёт" },
+    subNoBills: { he: "עדיין אין חשבונות", en: "No bills yet", ar: "لا حسابات بعد", ru: "Счетов пока нет" },
+    subBillName: { he: "חשבון חלקי {n}", en: "Partial bill {n}", ar: "حساب جزئي {n}", ru: "Промежуточный счёт {n}" },
+    subApprovedBy: { he: "✓ אושר ע\"י {who} ב-{date}", en: "✓ Approved by {who} on {date}", ar: "✓ اعتمده {who} في {date}", ru: "✓ Утвердил {who} {date}" },
+    subDraft: { he: "טיוטה – ממתין לאישור", en: "Draft – waiting for approval", ar: "مسودة – بانتظار الاعتماد", ru: "Черновик – ждёт утверждения" },
+    subLineInfo: { he: "בחוזה: {qty} {unit} × {price} · מצטבר קודם: {prev}", en: "Contract: {qty} {unit} × {price} · previous: {prev}", ar: "بالعقد: {qty} {unit} × {price} · التراكمي السابق: {prev}", ru: "По договору: {qty} {unit} × {price} · ранее: {prev}" },
+    subAsked: { he: "מצטבר שהקבלן ביקש", en: "Cumulative asked", ar: "التراكمي المطلوب", ru: "Запрошено всего" },
+    subApprovedQty: { he: "מצטבר מאושר", en: "Cumulative approved", ar: "التراكمي المعتمد", ru: "Утверждено всего" },
+    subOverContract: { he: "מעבר לכמות בחוזה", en: "Over the contract quantity", ar: "أكثر من كمية العقد", ru: "Больше объёма по договору" },
+    subAheadOfWork: { he: "{pct}% מאושר, אבל הסעיף בוצע רק {done}%", en: "{pct}% approved, but the item is only {done}% done", ar: "معتمد {pct}% لكن البند منجز {done}% فقط", ru: "Утверждено {pct}%, а выполнено лишь {done}%" },
+    subAskedTotal: { he: "הקבלן ביקש (מצטבר)", en: "Contractor asked (cumulative)", ar: "طلب المقاول (تراكمي)", ru: "Запросил подрядчик (всего)" },
+    subCumulative: { he: "מצטבר מאושר", en: "Approved cumulative", ar: "التراكمي المعتمد", ru: "Утверждено нарастающим" },
+    subPrevious: { he: "פחות חשבונות קודמים", en: "Less previous bills", ar: "ناقص الحسابات السابقة", ru: "Минус прошлые счета" },
+    subThisBill: { he: "בחשבון זה", en: "This bill", ar: "في هذا الحساب", ru: "В этом счёте" },
+    subRetention: { he: "פחות עיכבון", en: "Less retention", ar: "ناقص المحتجز", ru: "Минус удержание" },
+    subAdvanceRecovery: { he: "פחות קיזוז מקדמה", en: "Less advance recovered", ar: "ناقص خصم السلفة", ru: "Минус зачёт аванса" },
+    subToPay: { he: "לתשלום", en: "To pay", ar: "للدفع", ru: "К оплате" },
+    subPdf: { he: "PDF לשליחה", en: "PDF to send", ar: "PDF للإرسال", ru: "PDF для отправки" },
+    subUnapprove: { he: "ביטול אישור", en: "Undo approval", ar: "إلغاء الاعتماد", ru: "Отменить утверждение" },
+    subSaveDraft: { he: "שמירת טיוטה", en: "Save draft", ar: "حفظ المسودة", ru: "Сохранить черновик" },
+    subApprove: { he: "אישור החשבון", en: "Approve the bill", ar: "اعتماد الحساب", ru: "Утвердить счёт" },
+    subDeleteDraft: { he: "מחיקת טיוטה", en: "Delete draft", ar: "حذف المسودة", ru: "Удалить черновик" },
+    subDraftSaved: { he: "הטיוטה נשמרה", en: "Draft saved", ar: "تم حفظ المسودة", ru: "Черновик сохранён" },
+    subApproveConfirm: { he: "לאשר את חשבון {n}? לתשלום: {sum}. אחרי האישור החשבון ננעל והסכום נרשם בתקציב.", en: "Approve bill {n}? To pay: {sum}. Once approved it's locked and goes into the budget.", ar: "اعتماد الحساب {n}؟ للدفع: {sum}. بعد الاعتماد يُقفل ويُسجل في الميزانية.", ru: "Утвердить счёт {n}? К оплате: {sum}. После утверждения он блокируется и попадает в бюджет." },
+    subApprovedMsg: { he: "החשבון אושר ונרשם בתקציב", en: "The bill is approved and in the budget", ar: "تم اعتماد الحساب وتسجيله في الميزانية", ru: "Счёт утверждён и внесён в бюджет" },
+    subUnapproveConfirm: { he: "לבטל את האישור של חשבון {n}? הוא יחזור לטיוטה והסכום יוסר מהתקציב.", en: "Undo bill {n}'s approval? It goes back to a draft and leaves the budget.", ar: "إلغاء اعتماد الحساب {n}؟ سيعود مسودة ويُزال من الميزانية.", ru: "Отменить утверждение счёта {n}? Он станет черновиком и уйдёт из бюджета." },
+    subName: { he: "שם הקבלן", en: "Contractor's name", ar: "اسم المقاول", ru: "Имя подрядчика" },
+    subRetentionPct: { he: "עיכבון (%)", en: "Retention (%)", ar: "المحتجز (%)", ru: "Удержание (%)" },
+    subAdvanceField: { he: "מקדמה ששולמה (₪)", en: "Advance paid (₪)", ar: "السلفة المدفوعة (₪)", ru: "Выплаченный аванс (₪)" },
+    subAdvanceRecoveryPct: { he: "קיזוז מקדמה מכל חשבון (%)", en: "Advance recovered from each bill (%)", ar: "خصم السلفة من كل حساب (%)", ru: "Зачёт аванса из каждого счёта (%)" },
+    subNeedName: { he: "צריך שם קבלן", en: "A contractor's name is needed", ar: "يلزم اسم المقاول", ru: "Нужно имя подрядчика" },
+    subNeedItems: { he: "קודם צריך סעיפים בכתב הכמויות", en: "Add BOQ items first", ar: "أضف بنود جدول الكميات أولاً", ru: "Сначала добавьте позиции сметы" },
+    subLineQty: { he: "כמות בחוזה", en: "Contract quantity", ar: "كمية العقد", ru: "Объём по договору" },
+    subLinePrice: { he: "מחיר יחידה לקבלן (₪)", en: "Contractor's unit price (₪)", ar: "سعر الوحدة للمقاول (₪)", ru: "Цена за ед. подрядчику (₪)" },
+    subPrevCumQty: { he: "מצטבר קודם", en: "Previous cumulative", ar: "التراكمي السابق", ru: "Ранее всего" },
+    budgetCat_subcontractors: { he: "קבלני משנה", en: "Subcontractors", ar: "مقاولو الباطن", ru: "Субподрядчики" },
+    budgetCat_materials: { he: "חומרים", en: "Materials", ar: "مواد", ru: "Материалы" },
+    budgetCat_labor: { he: "כוח אדם (פועלים)", en: "Labor (workers)", ar: "قوى عاملة (عمال)", ru: "Рабочая сила" },
+    budgetCat_equipment: { he: "כלים מושכרים", en: "Rented equipment", ar: "معدات مستأجرة", ru: "Аренда техники" },
+    budgetCat_overhead: { he: "תקורות", en: "Overheads", ar: "مصاريف عامة", ru: "Накладные расходы" },
+    budgetCat_insurance: { he: "ביטוחים", en: "Insurance", ar: "تأمينات", ru: "Страхование" },
+    budgetCat_other: { he: "אחר", en: "Other", ar: "أخرى", ru: "Прочее" },
+    budgetCategory: { he: "סוג הוצאה", en: "Expense type", ar: "نوع المصروف", ru: "Тип расхода" },
+    budgetByType: { he: "לפי סוג הוצאה", en: "By expense type", ar: "حسب نوع المصروف", ru: "По типу расходов" },
+    budgetByTypeHint: { he: "לחיצה: תקציב כללי לסוג", en: "Tap: a general budget for the type", ar: "اضغط: ميزانية عامة للنوع", ru: "Нажмите: общий бюджет типа" },
+    budgetGeneralVs: { he: "כללי (לא משויך לסעיף): {spent} מתוך {budget}", en: "General (no item): {spent} of {budget}", ar: "عام (بدون بند): {spent} من {budget}", ru: "Общие (без позиции): {spent} из {budget}" },
+    budgetSetGeneral: { he: "לא נקבע תקציב כללי", en: "No general budget set", ar: "لم تُحدد ميزانية عامة", ru: "Общий бюджет не задан" },
+    budgetGeneralTitle: { he: "תקציב כללי – {type}", en: "General budget – {type}", ar: "ميزانية عامة – {type}", ru: "Общий бюджет – {type}" },
+    budgetGeneralAmount: { he: "סכום לפרויקט, לפני מע\"מ (₪) – להוצאות שלא משויכות לסעיף", en: "For the project, before VAT (₪) – for costs on no item", ar: "للمشروع قبل الضريبة (₪) – لمصاريف بدون بند", ru: "На проект без НДС (₪) – для расходов без позиции" },
     voiceBtnTitle: { he: "פקודה קולית", en: "Voice command", ar: "أمر صوتي", ru: "Голосовая команда" },
     voiceListening: { he: "מקשיב... דבר עכשיו", en: "Listening... speak now", ar: "أستمع... تكلّم الآن", ru: "Слушаю... говорите" },
     voiceThinking: { he: "מבין...", en: "Understanding...", ar: "أفهم...", ru: "Разбираю..." },
@@ -10310,7 +10376,11 @@
   //   items:    [{ id, code, chapter, name, unit, qty, price, cost, progress }]
   //             - a BOQ item: quantity x unit price is its contract value;
   //               cost is its cost budget; progress its % done
-  //   expenses: [{ id, date, supplier, supplierCode, invoice, itemId, amount, note, by, at }]
+  //   expenses: [{ id, date, supplier, supplierCode, invoice, itemId, amount, note, by, at, billId }]
+  //   generalBudget: { category: amount } - the project's own costs (overheads,
+  //             insurance...) that sit on no BOQ item
+  //   subcontracts, bills: the subcontractors' contracts and partial bills
+  //             (11d-subcontract-bills.js); an approved bill's expenses carry its billId
   // } - every amount before VAT; supplier code and invoice number are there
   // for Priority later. The tile shows only to whoever may see that money:
   // the project's owner (the user, for a private project; its creator, for
@@ -10324,7 +10394,13 @@
   var budgetFormFields = document.getElementById("budgetFormFields");
   var FINANCE_TABLE = "project_finance";
   var BUDGET_OVER_MARGIN = 10; // cost used may run this many points ahead of the work done
-  var budget = { sheet: null, owner: null, data: null, version: 0, tab: "items", error: false };
+  // an expense's type (subcontractors': from their approved bills, 11d)
+  var BUDGET_CATEGORIES = ["subcontractors", "materials", "labor", "equipment", "overhead", "insurance", "other"];
+  function budgetCategoryLabel(cat) {
+    return tr("budgetCat_" + (BUDGET_CATEGORIES.indexOf(cat) !== -1 ? cat : "other"));
+  }
+  // tab: items | subs | expenses; subId / billId: a subcontractor / bill open in "subs"
+  var budget = { sheet: null, owner: null, data: null, version: 0, tab: "items", error: false, subId: null, billId: null, billDraft: null };
 
   // whose money a project's is, when this phone may see it (else null)
   function budgetOwnerFor(sheet) {
@@ -10361,6 +10437,19 @@
     if (!cost) return false;
     return actual > cost || actual * 100 / cost > budgetNum(item.progress) + BUDGET_OVER_MARGIN;
   }
+  // by type: all that was spent, and the general (no BOQ item) part against its budget
+  function budgetByCategory() {
+    var out = {};
+    BUDGET_CATEGORIES.forEach(function (c) {
+      out[c] = { spent: 0, general: 0, budget: budgetNum(budget.data.generalBudget[c]) };
+    });
+    budget.data.expenses.forEach(function (e) {
+      var c = out[e.category] ? e.category : "other";
+      out[c].spent += budgetNum(e.amount);
+      if (!budget.data.items.some(function (i) { return i.id === e.itemId; })) out[c].general += budgetNum(e.amount);
+    });
+    return out;
+  }
   function budgetTotals() {
     var t = { contract: 0, cost: 0, actual: 0, earned: 0, forecast: 0 };
     budget.data.items.forEach(function (item) {
@@ -10370,18 +10459,23 @@
       t.earned += contract * Math.min(100, budgetNum(item.progress)) / 100;
       t.forecast += budgetItemForecast(item, actual);
     });
-    budget.data.expenses.forEach(function (e) {
-      t.actual += budgetNum(e.amount);
-      if (!budget.data.items.some(function (i) { return i.id === e.itemId; })) t.forecast += budgetNum(e.amount);
+    budget.data.expenses.forEach(function (e) { t.actual += budgetNum(e.amount); });
+    // the project's own costs: their budget, or what's been spent if more
+    var cats = budgetByCategory();
+    BUDGET_CATEGORIES.forEach(function (c) {
+      t.cost += cats[c].budget;
+      t.forecast += Math.max(cats[c].budget, cats[c].general);
     });
     return t;
   }
 
   // ---- the server ------------------------------------------------------------
-  function budgetEmpty() { return { items: [], expenses: [] }; }
+  function budgetEmpty() { return { items: [], expenses: [], subcontracts: [], bills: [], generalBudget: {} }; }
   function budgetNormalize(d) {
     d = d || {};
-    return { items: Array.isArray(d.items) ? d.items : [], expenses: Array.isArray(d.expenses) ? d.expenses : [] };
+    var list = function (k) { return Array.isArray(d[k]) ? d[k] : []; };
+    return { items: list("items"), expenses: list("expenses"), subcontracts: list("subcontracts"), bills: list("bills"),
+      generalBudget: d.generalBudget && typeof d.generalBudget === "object" ? d.generalBudget : {} };
   }
   function budgetRow() {
     return supabaseClient.from(FINANCE_TABLE).select("data, data_version")
@@ -10485,14 +10579,20 @@
     budgetBody.appendChild(bEl("p", "budget-note", tr("budgetBeforeVat")));
     // the tabs
     var tabs = bEl("div", "budget-tabs");
-    [["items", "budgetTabItems"], ["expenses", "budgetTabExpenses"]].forEach(function (x) {
+    [["items", "budgetTabItems"], ["subs", "budgetTabSubs"], ["expenses", "budgetTabExpenses"]].forEach(function (x) {
       var b = bEl("button", budget.tab === x[0] ? "on" : "", tr(x[1]));
       b.type = "button";
-      b.addEventListener("click", function () { budget.tab = x[0]; renderBudget(); });
+      b.addEventListener("click", function () {
+        budget.tab = x[0];
+        budget.subId = budget.billId = budget.billDraft = null;
+        renderBudget();
+      });
       tabs.appendChild(b);
     });
     budgetBody.appendChild(tabs);
-    if (budget.tab === "items") renderBudgetItems(); else renderBudgetExpenses();
+    if (budget.tab === "items") renderBudgetItems();
+    else if (budget.tab === "subs") renderBudgetSubs();
+    else renderBudgetExpenses();
   }
   function budgetActions(buttons) {
     var row = bEl("div", "budget-actions");
@@ -10563,8 +10663,44 @@
   function budgetItemLabel(item) {
     return [item.code, item.name].filter(Boolean).join(" ");
   }
+  // by type: spent, and the project's own (no BOQ item) costs against their budget - tap to set it
+  function renderBudgetCategories() {
+    var cats = budgetByCategory();
+    var sec = bEl("section", "budget-chapter");
+    var head = bEl("div", "budget-chapter-head");
+    head.appendChild(bEl("b", "", tr("budgetByType")));
+    head.appendChild(bEl("small", "", tr("budgetByTypeHint")));
+    sec.appendChild(head);
+    BUDGET_CATEGORIES.forEach(function (c) {
+      var x = cats[c];
+      if (c === "subcontractors" && !x.spent) return;
+      var over = x.budget ? x.general > x.budget : false;
+      var row = bEl("div", "budget-cat" + (over ? " over" : ""));
+      row.appendChild(bEl("span", "budget-name", budgetCategoryLabel(c)));
+      row.appendChild(bEl("b", "budget-amount", budgetMoney(x.spent)));
+      if (c !== "subcontractors") {
+        row.appendChild(bEl("small", "budget-item-nums", x.budget
+          ? tr("budgetGeneralVs").replace("{spent}", budgetMoney(x.general)).replace("{budget}", budgetMoney(x.budget))
+          : tr("budgetSetGeneral")));
+        row.addEventListener("click", function () { budgetGeneralForm(c); });
+      }
+      sec.appendChild(row);
+    });
+    budgetBody.appendChild(sec);
+  }
+  function budgetGeneralForm(cat) {
+    budgetForm(tr("budgetGeneralTitle").replace("{type}", budgetCategoryLabel(cat)), [
+      { key: "amount", label: tr("budgetGeneralAmount"), value: budget.data.generalBudget[cat], type: "number" }
+    ], function (v) {
+      var amount = budgetNum(v.amount);
+      budgetChange(function (d) {
+        if (amount) d.generalBudget[cat] = amount; else delete d.generalBudget[cat];
+      });
+    }, null);
+  }
   function renderBudgetExpenses() {
     budgetActions([["budgetAddExpense", function () { budgetExpenseForm(null); }, "primary"]]);
+    renderBudgetCategories();
     var list = budget.data.expenses.slice().sort(function (a, b) { return String(b.date).localeCompare(String(a.date)) || (b.at || 0) - (a.at || 0); });
     if (!list.length) { budgetBody.appendChild(bEl("p", "team-empty", tr("budgetNoExpenses"))); return; }
     list.forEach(function (e) {
@@ -10575,10 +10711,20 @@
       top.appendChild(bEl("b", "budget-amount", budgetMoney(budgetNum(e.amount))));
       row.appendChild(top);
       row.appendChild(bEl("small", "budget-item-nums", [isoToDisplay(e.date),
+        budgetCategoryLabel(e.category),
         e.invoice ? tr("budgetInvoiceShort") + " " + e.invoice : "",
         item ? budgetItemLabel(item) : tr("budgetUnassigned")].filter(Boolean).join(" · ")));
       if (e.note) row.appendChild(bEl("small", "budget-item-nums", e.note));
-      row.addEventListener("click", function () { budgetExpenseForm(e); });
+      // a subcontractor's approved bill's: it's changed there
+      var bill = e.billId && budget.data.bills.find(function (b) { return b.id === e.billId; });
+      row.addEventListener("click", function () {
+        if (!bill) { budgetExpenseForm(e); return; }
+        budget.tab = "subs";
+        budget.subId = bill.subId;
+        budget.billId = bill.id;
+        budget.billDraft = null;
+        renderBudget();
+      });
       budgetBody.appendChild(row);
     });
   }
@@ -10667,6 +10813,8 @@
     });
     budgetForm(tr(exp ? "budgetEditExpense" : "budgetAddExpense"), [
       { key: "date", label: tr("shareTaskDate"), value: e.date, type: "date" },
+      { key: "category", label: tr("budgetCategory"), value: e.category || "materials",
+        options: BUDGET_CATEGORIES.filter(function (c) { return c !== "subcontractors"; }).map(function (c) { return [c, budgetCategoryLabel(c)]; }) },
       { key: "supplier", label: tr("budgetSupplier"), value: e.supplier },
       { key: "supplierCode", label: tr("budgetSupplierCode"), value: e.supplierCode },
       { key: "invoice", label: tr("budgetInvoice"), value: e.invoice },
@@ -10677,7 +10825,7 @@
     ], function (v) {
       if (!budgetNum(v.amount)) { alert(tr("budgetNeedAmount")); return false; }
       var rec = Object.assign({}, e, {
-        id: e.id || uid(), date: v.date || todayISO(), supplier: v.supplier, supplierCode: v.supplierCode,
+        id: e.id || uid(), date: v.date || todayISO(), category: v.category || "other", supplier: v.supplier, supplierCode: v.supplierCode,
         invoice: v.invoice, itemId: v.itemId || null, amount: budgetNum(v.amount), note: v.note,
         by: e.by || myPhoneNumber || null, at: e.at || Date.now()
       });
@@ -10842,7 +10990,7 @@
     var sheet = activeSheet();
     var owner = budgetOwnerFor(sheet);
     if (!owner) return;
-    budget = { sheet: sheet, owner: owner, data: null, version: 0, tab: "items", error: false };
+    budget = { sheet: sheet, owner: owner, data: null, version: 0, tab: "items", error: false, subId: null, billId: null, billDraft: null };
     document.getElementById("budgetProjectName").textContent = sheet.name;
     budgetBody.innerHTML = "";
     budgetView.hidden = false;
@@ -10850,6 +10998,440 @@
   }
   siteLogBudgetBtn.addEventListener("click", openBudgetView);
   document.getElementById("budgetBackBtn").addEventListener("click", function () { budgetView.hidden = true; });
+
+  // ---------------------------------------------------------------------
+  // קבלני משנה, in the budget control (11c-budget.js): each subcontractor's
+  // contract - BOQ items at their own prices, retention (עיכבון) and an
+  // advance (מקדמה) recovered from their bills - and their partial bills
+  // (חשבון חלקי מצטבר). The engineer types a bill in from what the
+  // contractor handed over: per item the cumulative quantity asked and the
+  // one approved. Approving it (one engineer is enough) locks it: what's
+  // due this time is the approved cumulative value, less the previous
+  // bills', less retention and the advance recovered - and the period's
+  // value goes into the budget as expenses on those BOQ items. Kept in
+  // project_finance.data as
+  //   subcontracts: [{ id, name, phone, supplierCode, retentionPct, advance,
+  //                    advanceRecoveryPct, lines: [{ id, itemId, qty, price }] }]
+  //   bills: [{ id, subId, no, date, status draft|approved, note,
+  //             lines: { lineId: { asked, approved } }, approvedBy, approvedAt, totals }]
+  // All amounts before VAT.
+  // ---------------------------------------------------------------------
+  var SUB_AHEAD_MARGIN = 10; // approved % of a line may run this far ahead of its item's work
+
+  function subOf(d, id) { return d.subcontracts.find(function (s) { return s.id === id; }); }
+  function subBills(d, sub) {
+    return d.bills.filter(function (b) { return b.subId === sub.id; }).sort(function (a, b) { return a.no - b.no; });
+  }
+  function subLastApproved(d, sub, beforeNo) {
+    var approved = subBills(d, sub).filter(function (b) { return b.status === "approved" && (beforeNo == null || b.no < beforeNo); });
+    return approved[approved.length - 1] || null;
+  }
+  function subContractValue(sub) {
+    return sub.lines.reduce(function (s, l) { return s + budgetNum(l.qty) * budgetNum(l.price); }, 0);
+  }
+  // what a bill comes to (an approved one keeps the totals it was approved with)
+  function billCalc(d, sub, bill) {
+    var prev = subLastApproved(d, sub, bill.no);
+    var lines = sub.lines.map(function (l) {
+      var prevCum = prev && prev.lines[l.id] ? budgetNum(prev.lines[l.id].approved) : 0;
+      var own = bill.lines[l.id] || {};
+      var asked = own.asked != null && own.asked !== "" ? budgetNum(own.asked) : prevCum;
+      var approved = own.approved != null && own.approved !== "" ? budgetNum(own.approved) : asked;
+      var price = budgetNum(l.price);
+      return { line: l, prevCum: prevCum, asked: asked, approved: approved, cumValue: approved * price, period: (approved - prevCum) * price };
+    });
+    var cumulative = lines.reduce(function (s, x) { return s + x.cumValue; }, 0);
+    var asked = lines.reduce(function (s, x) { return s + x.asked * budgetNum(x.line.price); }, 0);
+    var prevCumulative = lines.reduce(function (s, x) { return s + x.prevCum * budgetNum(x.line.price); }, 0);
+    var gross = cumulative - prevCumulative;
+    var retention = gross * budgetNum(sub.retentionPct) / 100;
+    var recoveredBefore = subBills(d, sub).filter(function (b) { return b.status === "approved" && b.no < bill.no; })
+      .reduce(function (s, b) { return s + budgetNum(b.totals && b.totals.advance); }, 0);
+    var advanceLeft = Math.max(0, budgetNum(sub.advance) - recoveredBefore);
+    var advance = Math.min(advanceLeft, Math.max(0, gross * budgetNum(sub.advanceRecoveryPct) / 100));
+    var totals = bill.status === "approved" && bill.totals ? bill.totals : {
+      asked: asked, cumulative: cumulative, previous: prevCumulative, gross: gross,
+      retention: retention, advance: advance, toPay: gross - retention - advance
+    };
+    return { lines: lines, totals: totals };
+  }
+  function subSummary(d, sub) {
+    var approved = subBills(d, sub).filter(function (b) { return b.status === "approved"; });
+    var last = approved[approved.length - 1];
+    var sum = function (k) { return approved.reduce(function (s, b) { return s + budgetNum(b.totals && b.totals[k]); }, 0); };
+    return {
+      contract: subContractValue(sub), approved: last ? budgetNum(last.totals.cumulative) : 0,
+      paid: sum("toPay"), retention: sum("retention"), advanceLeft: Math.max(0, budgetNum(sub.advance) - sum("advance"))
+    };
+  }
+
+  // ---- the subcontractors' list ---------------------------------------------
+  function renderBudgetSubs() {
+    if (budget.billId) { renderSubBill(); return; }
+    if (budget.subId) { renderSubDetail(); return; }
+    budgetActions([["subAdd", function () { subForm(null); }, "primary"]]);
+    var d = budget.data;
+    if (!d.subcontracts.length) { budgetBody.appendChild(bEl("p", "team-empty", tr("subNone"))); return; }
+    d.subcontracts.forEach(function (sub) {
+      var s = subSummary(d, sub);
+      var row = bEl("div", "budget-expense sub-row");
+      var top = bEl("div", "budget-item-top");
+      top.appendChild(bEl("span", "budget-name", sub.name));
+      top.appendChild(bEl("b", "budget-amount", budgetMoney(s.contract)));
+      row.appendChild(top);
+      row.appendChild(bEl("small", "budget-item-nums", [tr("subApprovedSoFar") + " " + budgetMoney(s.approved),
+        tr("subPaid") + " " + budgetMoney(s.paid), tr("subRetentionHeld") + " " + budgetMoney(s.retention)].join(" · ")));
+      var pending = subBills(d, sub).filter(function (b) { return b.status !== "approved"; }).length;
+      if (pending) row.appendChild(bEl("small", "budget-warn", tr("subPendingBills").replace("{n}", pending)));
+      row.addEventListener("click", function () { budget.subId = sub.id; renderBudget(); });
+      budgetBody.appendChild(row);
+    });
+  }
+  function subBack(to) {
+    var b = bEl("button", "sub-back", "→ " + to);
+    b.type = "button";
+    return b;
+  }
+
+  // ---- one subcontractor: terms, contract lines, bills -------------------------
+  function renderSubDetail() {
+    var d = budget.data, sub = subOf(d, budget.subId);
+    if (!sub) { budget.subId = null; renderBudget(); return; }
+    var back = subBack(tr("subAll"));
+    back.addEventListener("click", function () { budget.subId = null; renderBudget(); });
+    budgetBody.appendChild(back);
+    var s = subSummary(d, sub);
+    var head = bEl("div", "budget-chapter");
+    var h = bEl("div", "budget-chapter-head");
+    h.appendChild(bEl("b", "", sub.name));
+    var edit = bEl("button", "sub-edit", tr("subEditTerms"));
+    edit.type = "button";
+    edit.addEventListener("click", function () { subForm(sub); });
+    h.appendChild(edit);
+    head.appendChild(h);
+    [[tr("subContract"), budgetMoney(s.contract)], [tr("subApprovedSoFar"), budgetMoney(s.approved)],
+      [tr("subPaid"), budgetMoney(s.paid)], [tr("subRetentionHeld"), budgetMoney(s.retention) + " (" + budgetNum(sub.retentionPct) + "%)"],
+      [tr("subAdvanceLeft"), budgetMoney(s.advanceLeft) + (budgetNum(sub.advance) ? " / " + budgetMoney(budgetNum(sub.advance)) : "")]].forEach(function (x) {
+      var line = bEl("div", "sub-term");
+      line.appendChild(bEl("small", "", x[0]));
+      line.appendChild(bEl("b", "", x[1]));
+      head.appendChild(line);
+    });
+    budgetBody.appendChild(head);
+
+    // the contract's lines
+    var lines = bEl("section", "budget-chapter");
+    var lh = bEl("div", "budget-chapter-head");
+    lh.appendChild(bEl("b", "", tr("subLines")));
+    var addLine = bEl("button", "sub-edit", tr("subAddLine"));
+    addLine.type = "button";
+    addLine.addEventListener("click", function () { subLineForm(sub, null); });
+    lh.appendChild(addLine);
+    lines.appendChild(lh);
+    if (!sub.lines.length) lines.appendChild(bEl("p", "team-empty", tr("subNoLines")));
+    sub.lines.forEach(function (l) {
+      var item = d.items.find(function (i) { return i.id === l.itemId; });
+      var row = bEl("div", "budget-item");
+      var top = bEl("div", "budget-item-top");
+      top.appendChild(bEl("span", "budget-code", item ? item.code || "" : ""));
+      top.appendChild(bEl("span", "budget-name", item ? item.name : tr("subItemGone")));
+      row.appendChild(top);
+      row.appendChild(bEl("small", "budget-item-nums", budgetNum(l.qty) + " " + (item && item.unit || "") + " × " +
+        budgetMoney(budgetNum(l.price)) + " = " + budgetMoney(budgetNum(l.qty) * budgetNum(l.price))));
+      row.addEventListener("click", function () { subLineForm(sub, l); });
+      lines.appendChild(row);
+    });
+    budgetBody.appendChild(lines);
+
+    // its bills
+    var bills = bEl("section", "budget-chapter");
+    var bh = bEl("div", "budget-chapter-head");
+    bh.appendChild(bEl("b", "", tr("subBills")));
+    if (sub.lines.length) {
+      var nb = bEl("button", "sub-edit", tr("subNewBill"));
+      nb.type = "button";
+      nb.addEventListener("click", function () { subNewBill(sub); });
+      bh.appendChild(nb);
+    }
+    bills.appendChild(bh);
+    var list = subBills(d, sub);
+    if (!list.length) bills.appendChild(bEl("p", "team-empty", tr("subNoBills")));
+    list.slice().reverse().forEach(function (b) {
+      var c = billCalc(d, sub, b);
+      var row = bEl("div", "budget-item");
+      var top = bEl("div", "budget-item-top");
+      top.appendChild(bEl("span", "budget-name", tr("subBillName").replace("{n}", b.no)));
+      top.appendChild(bEl("b", "budget-amount", budgetMoney(c.totals.toPay)));
+      row.appendChild(top);
+      row.appendChild(bEl("small", b.status === "approved" ? "sub-approved" : "budget-warn",
+        isoToDisplay(b.date) + " · " + (b.status === "approved"
+          ? tr("subApprovedBy").replace("{who}", teamPersonName(b.approvedBy, "")).replace("{date}", isoToDisplay(String(b.approvedAt || "").slice(0, 10)))
+          : tr("subDraft"))));
+      row.addEventListener("click", function () { budget.billId = b.id; budget.billDraft = null; renderBudget(); });
+      bills.appendChild(row);
+    });
+    budgetBody.appendChild(bills);
+  }
+
+  // ---- a bill ----------------------------------------------------------------
+  function subNewBill(sub) {
+    var d = budget.data;
+    var open = subBills(d, sub).find(function (b) { return b.status !== "approved"; });
+    if (open) { budget.billId = open.id; budget.billDraft = null; renderBudget(); return; }
+    var bills = subBills(d, sub);
+    var bill = { id: uid(), subId: sub.id, no: bills.length ? bills[bills.length - 1].no + 1 : 1, date: todayISO(), status: "draft", lines: {}, note: "" };
+    budget.billId = bill.id;
+    budget.billDraft = JSON.parse(JSON.stringify(bill));
+    budgetChange(budgetUpsert("bills", bill));
+  }
+  function renderSubBill() {
+    var d = budget.data;
+    var saved = d.bills.find(function (b) { return b.id === budget.billId; });
+    var sub = saved && subOf(d, saved.subId);
+    if (!saved || !sub) { budget.billId = null; renderBudget(); return; }
+    var locked = saved.status === "approved";
+    if (!budget.billDraft || budget.billDraft.id !== saved.id || locked) budget.billDraft = JSON.parse(JSON.stringify(saved));
+    var bill = budget.billDraft;
+    var back = subBack(sub.name);
+    back.addEventListener("click", function () { budget.billId = null; budget.billDraft = null; renderBudget(); });
+    budgetBody.appendChild(back);
+    var head = bEl("div", "budget-chapter-head sub-bill-head");
+    head.appendChild(bEl("b", "", tr("subBillName").replace("{n}", bill.no) + " – " + sub.name));
+    head.appendChild(bEl("small", locked ? "sub-approved" : "budget-warn", locked
+      ? tr("subApprovedBy").replace("{who}", teamPersonName(bill.approvedBy, "")).replace("{date}", isoToDisplay(String(bill.approvedAt || "").slice(0, 10)))
+      : tr("subDraft")));
+    budgetBody.appendChild(head);
+
+    var calc = billCalc(d, sub, bill);
+    var table = bEl("div", "sub-bill-lines");
+    calc.lines.forEach(function (x) {
+      var item = d.items.find(function (i) { return i.id === x.line.itemId; });
+      var row = bEl("div", "sub-bill-line");
+      var top = bEl("div", "budget-item-top");
+      top.appendChild(bEl("span", "budget-code", item ? item.code || "" : ""));
+      top.appendChild(bEl("span", "budget-name", item ? item.name : tr("subItemGone")));
+      row.appendChild(top);
+      row.appendChild(bEl("small", "budget-item-nums", tr("subLineInfo").replace("{qty}", budgetNum(x.line.qty))
+        .replace("{unit}", item && item.unit || "").replace("{price}", budgetMoney(budgetNum(x.line.price))).replace("{prev}", x.prevCum)));
+      var inputs = bEl("div", "sub-bill-inputs");
+      [["asked", "subAsked", x.asked], ["approved", "subApprovedQty", x.approved]].forEach(function (f) {
+        var lab = bEl("label", "");
+        lab.appendChild(bEl("small", "", tr(f[1])));
+        var inp = bEl("input");
+        inp.type = "number";
+        inp.step = "any";
+        inp.inputMode = "decimal";
+        inp.value = f[2];
+        inp.disabled = locked;
+        inp.setAttribute("data-line", x.line.id);
+        inp.setAttribute("data-field", f[0]);
+        inp.addEventListener("change", function () {
+          var own = bill.lines[x.line.id] = bill.lines[x.line.id] || {};
+          own[f[0]] = budgetNum(inp.value);
+          // the approved follows what's asked until the engineer sets it
+          if (f[0] === "asked" && own.approvedSet !== true) own.approved = own.asked;
+          if (f[0] === "approved") own.approvedSet = true;
+          renderBudget();
+        });
+        lab.appendChild(inp);
+        inputs.appendChild(lab);
+      });
+      inputs.appendChild(bEl("b", "sub-bill-cum", budgetMoney(x.cumValue)));
+      row.appendChild(inputs);
+      // more than the contract, or ahead of the work done on the item
+      var warn = [];
+      if (budgetNum(x.line.qty) && x.approved > budgetNum(x.line.qty)) warn.push(tr("subOverContract"));
+      var pct = budgetNum(x.line.qty) ? x.approved * 100 / budgetNum(x.line.qty) : 0;
+      if (item && pct > budgetNum(item.progress) + SUB_AHEAD_MARGIN) {
+        warn.push(tr("subAheadOfWork").replace("{pct}", Math.round(pct)).replace("{done}", Math.round(budgetNum(item.progress))));
+      }
+      if (warn.length) row.appendChild(bEl("small", "budget-warn", "⚠ " + warn.join(" · ")));
+      table.appendChild(row);
+    });
+    budgetBody.appendChild(table);
+
+    var t = calc.totals;
+    var sum = bEl("div", "sub-bill-totals");
+    [[tr("subAskedTotal"), t.asked], [tr("subCumulative"), t.cumulative], [tr("subPrevious"), -t.previous],
+      [tr("subThisBill"), t.gross], [tr("subRetention") + " (" + budgetNum(sub.retentionPct) + "%)", -t.retention],
+      [tr("subAdvanceRecovery"), -t.advance], [tr("subToPay"), t.toPay]].forEach(function (x, k, all) {
+      var line = bEl("div", "sub-total-line" + (k === all.length - 1 ? " final" : ""));
+      line.appendChild(bEl("span", "", x[0]));
+      line.appendChild(bEl("b", "", budgetMoney(x[1])));
+      sum.appendChild(line);
+    });
+    sum.appendChild(bEl("small", "budget-note", tr("budgetBeforeVat")));
+    budgetBody.appendChild(sum);
+
+    if (locked) {
+      var actions = [["subPdf", function () { subBillPdf(sub, saved); }, "primary"]];
+      var last = subLastApproved(d, sub);
+      if (last && last.id === saved.id) actions.push(["subUnapprove", function () { subUnapprove(sub, saved); }]);
+      budgetActions(actions);
+    } else {
+      budgetActions([["subSaveDraft", function () { subSaveDraft(bill); }],
+        ["subApprove", function () { subApprove(sub, bill); }, "primary"],
+        ["subDeleteDraft", function () {
+          askConfirm(tr("budgetDeleteConfirm"), function () {
+            var id = bill.id;
+            budget.billId = null;
+            budget.billDraft = null;
+            budgetChange(budgetRemove("bills", id));
+          });
+        }]]);
+    }
+  }
+  function subSaveDraft(bill) {
+    var rec = JSON.parse(JSON.stringify(bill));
+    budgetChange(function (d) {
+      var cur = d.bills.find(function (b) { return b.id === rec.id; });
+      if (cur && cur.status === "approved") return; // approved meanwhile, elsewhere
+      budgetUpsert("bills", rec)(d);
+    });
+    showToast(tr("subDraftSaved"));
+  }
+  // approved: locked with its totals, and the period's value into the budget
+  function subApprove(sub, bill) {
+    var draft = JSON.parse(JSON.stringify(bill));
+    askConfirm(tr("subApproveConfirm").replace("{n}", draft.no).replace("{sum}", budgetMoney(billCalc(budget.data, sub, draft).totals.toPay)), function () {
+      var who = myPhoneNumber || null, at = new Date().toISOString();
+      budgetChange(function (d) {
+        var s = subOf(d, sub.id);
+        var cur = d.bills.find(function (b) { return b.id === draft.id; });
+        if (!s || !cur || cur.status === "approved") return;
+        var rec = JSON.parse(JSON.stringify(draft));
+        var calc = billCalc(d, s, rec);
+        calc.lines.forEach(function (x) { rec.lines[x.line.id] = { asked: x.asked, approved: x.approved }; });
+        rec.status = "approved";
+        rec.approvedBy = who;
+        rec.approvedAt = at;
+        rec.totals = calc.totals;
+        budgetUpsert("bills", rec)(d);
+        calc.lines.forEach(function (x) {
+          if (!x.period) return;
+          d.expenses.push({ id: rec.id + ":" + x.line.id, date: rec.date, category: "subcontractors", supplier: s.name, supplierCode: s.supplierCode || "",
+            invoice: tr("subBillName").replace("{n}", rec.no), itemId: x.line.itemId, amount: Math.round(x.period * 100) / 100,
+            note: "", billId: rec.id, by: who, at: Date.now() });
+        });
+      });
+      showToast(tr("subApprovedMsg"));
+    });
+  }
+  // a mistake: the latest approved bill back to a draft, its expenses out of the budget
+  function subUnapprove(sub, bill) {
+    askConfirm(tr("subUnapproveConfirm").replace("{n}", bill.no), function () {
+      budgetChange(function (d) {
+        var cur = d.bills.find(function (b) { return b.id === bill.id; });
+        if (!cur) return;
+        cur.status = "draft";
+        delete cur.totals;
+        delete cur.approvedBy;
+        delete cur.approvedAt;
+        d.expenses = d.expenses.filter(function (e) { return e.billId !== bill.id; });
+      });
+    });
+  }
+
+  // ---- the forms: a subcontractor's terms, a contract line ---------------------
+  function subForm(sub) {
+    var s = sub || {};
+    budgetForm(tr(sub ? "subEditTerms" : "subAdd"), [
+      { key: "name", label: tr("subName"), value: s.name },
+      { key: "phone", label: tr("teamPhonePh"), value: s.phone, type: "tel" },
+      { key: "supplierCode", label: tr("budgetSupplierCode"), value: s.supplierCode },
+      { key: "retentionPct", label: tr("subRetentionPct"), value: s.retentionPct, type: "number" },
+      { key: "advance", label: tr("subAdvanceField"), value: s.advance, type: "number" },
+      { key: "advanceRecoveryPct", label: tr("subAdvanceRecoveryPct"), value: s.advanceRecoveryPct, type: "number" }
+    ], function (v) {
+      if (!v.name) { alert(tr("subNeedName")); return false; }
+      var rec = Object.assign({ lines: [] }, s, {
+        id: s.id || uid(), name: v.name, phone: v.phone, supplierCode: v.supplierCode,
+        retentionPct: Math.max(0, Math.min(100, budgetNum(v.retentionPct))), advance: budgetNum(v.advance),
+        advanceRecoveryPct: Math.max(0, Math.min(100, budgetNum(v.advanceRecoveryPct)))
+      });
+      if (!sub) budget.subId = rec.id;
+      budgetChange(function (d) {
+        var cur = subOf(d, rec.id);
+        budgetUpsert("subcontracts", Object.assign({}, rec, { lines: cur ? cur.lines : rec.lines }))(d);
+      });
+    }, sub && !budget.data.bills.some(function (b) { return b.subId === sub.id; }) ? function () {
+      budget.subId = null;
+      budgetChange(budgetRemove("subcontracts", sub.id));
+    } : null);
+  }
+  function subLineForm(sub, line) {
+    var d = budget.data;
+    if (!d.items.length) { alert(tr("subNeedItems")); return; }
+    var l = line || {};
+    var items = d.items.slice().sort(function (a, b) {
+      return String(a.code || "").localeCompare(String(b.code || ""), undefined, { numeric: true });
+    });
+    budgetForm(tr(line ? "subEditLine" : "subAddLine"), [
+      { key: "itemId", label: tr("budgetItemField"), value: l.itemId || items[0].id,
+        options: items.map(function (i) { return [i.id, budgetItemLabel(i)]; }) },
+      { key: "qty", label: tr("subLineQty"), value: l.qty, type: "number" },
+      { key: "price", label: tr("subLinePrice"), value: l.price, type: "number" }
+    ], function (v) {
+      var item = d.items.find(function (i) { return i.id === v.itemId; });
+      var rec = { id: l.id || uid(), itemId: v.itemId, qty: v.qty === "" && item ? budgetNum(item.qty) : budgetNum(v.qty), price: budgetNum(v.price) };
+      budgetChange(function (dd) {
+        var s = subOf(dd, sub.id);
+        if (!s) return;
+        var i = s.lines.findIndex(function (x) { return x.id === rec.id; });
+        if (i >= 0) s.lines[i] = rec; else s.lines.push(rec);
+      });
+    }, line && !d.bills.some(function (b) { return b.subId === sub.id && b.lines[line.id]; }) ? function () {
+      budgetChange(function (dd) {
+        var s = subOf(dd, sub.id);
+        if (s) s.lines = s.lines.filter(function (x) { return x.id !== line.id; });
+      });
+    } : null);
+  }
+
+  // ---- the approved bill as a PDF ------------------------------------------------
+  function subBillPdf(sub, bill) {
+    var d = budget.data, calc = billCalc(d, sub, bill), t = calc.totals;
+    var doc = bEl("div", "pdf-doc");
+    doc.dir = RTL_LANGS[currentLang] ? "rtl" : "ltr";
+    doc.appendChild(buildPdfDocTitleElement(budget.sheet, budget.sheet.name));
+    doc.appendChild(bEl("div", "pdf-doc-info-title", tr("subBillName").replace("{n}", bill.no) + " – " + sub.name));
+    doc.appendChild(bEl("div", "pdf-doc-info-date", isoToFullDisplay(bill.date)));
+    var table = bEl("table", "pdf-doc-table");
+    var head = bEl("tr");
+    ["budgetCode", "budgetName", "budgetUnit", "subLineQty", "subLinePrice", "subPrevCumQty", "subApprovedQty", "subCumulative", "subThisBill"].forEach(function (k) {
+      head.appendChild(bEl("th", "", tr(k)));
+    });
+    var thead = bEl("thead");
+    thead.appendChild(head);
+    table.appendChild(thead);
+    var tbody = bEl("tbody");
+    calc.lines.forEach(function (x) {
+      var item = d.items.find(function (i) { return i.id === x.line.itemId; }) || {};
+      var tr_ = bEl("tr");
+      [item.code || "", item.name || "", item.unit || "", budgetNum(x.line.qty), budgetMoney(budgetNum(x.line.price)), x.prevCum, x.approved,
+        budgetMoney(x.cumValue), budgetMoney(x.period)].forEach(function (v) { tr_.appendChild(bEl("td", "", String(v))); });
+      tbody.appendChild(tr_);
+    });
+    table.appendChild(tbody);
+    doc.appendChild(table);
+    var sums = bEl("table", "pdf-doc-table sub-pdf-totals");
+    [[tr("subCumulative"), t.cumulative], [tr("subPrevious"), -t.previous], [tr("subThisBill"), t.gross],
+      [tr("subRetention") + " (" + budgetNum(sub.retentionPct) + "%)", -t.retention], [tr("subAdvanceRecovery"), -t.advance],
+      [tr("subToPay"), t.toPay]].forEach(function (x) {
+      var r = bEl("tr");
+      r.appendChild(bEl("td", "", x[0]));
+      r.appendChild(bEl("td", "", budgetMoney(x[1])));
+      sums.appendChild(r);
+    });
+    doc.appendChild(sums);
+    doc.appendChild(bEl("div", "pdf-doc-info-date", tr("budgetBeforeVat") + " · " +
+      tr("subApprovedBy").replace("{who}", teamPersonName(bill.approvedBy, "")).replace("{date}", isoToDisplay(String(bill.approvedAt || "").slice(0, 10)))));
+    var fileName = tr("subBillName").replace("{n}", bill.no) + " " + sub.name + " " + budget.sheet.name + ".pdf";
+    showToast(tr("workPlanPdfMsg"));
+    buildPdfBlobFromElement(doc, fileName).then(function (r) {
+      attemptShare(r.blob, r.fileName, "application/pdf");
+    }, function () { alert(tr("teamSaveError")); });
+  }
   // Every active shared project this account can act on - its own real
   // memberships plus (full read/write, via office_groups.sql) any project
   // whose member is in a group this account created or is the named Head

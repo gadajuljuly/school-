@@ -3480,6 +3480,28 @@
   .budget-bar.used.over .budget-bar-fill { background: var(--danger); }
   .budget-item.over .budget-name { color: var(--danger); }
   .budget-warn { color: var(--danger); font-size: 0.78rem; font-weight: 700; }
+  .sub-back { border: none; background: transparent; color: var(--accent); font: inherit; font-size: 0.9rem; padding: 4px 0 8px; cursor: pointer; }
+  .sub-edit { border: 1px solid var(--accent); background: transparent; color: var(--accent); border-radius: 8px; padding: 3px 8px; font: inherit; font-size: 0.78rem; cursor: pointer; flex-shrink: 0; }
+  .sub-term { display: flex; justify-content: space-between; padding: 3px 0; font-size: 0.88rem; }
+  .sub-term small { color: var(--ink-muted); }
+  .sub-approved { color: var(--plan-green); font-size: 0.78rem; font-weight: 700; }
+  .sub-bill-head { margin-bottom: 8px; flex-wrap: wrap; }
+  .sub-bill-lines { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+  .sub-bill-line { border: 1px solid var(--rule); border-radius: 10px; background: #fff; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; }
+  .sub-bill-inputs { display: flex; gap: 8px; align-items: flex-end; }
+  .sub-bill-inputs label { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .sub-bill-inputs small { font-size: 0.7rem; color: var(--ink-muted); }
+  .sub-bill-inputs input { width: 100%; box-sizing: border-box; border: 1px solid var(--rule); border-radius: 8px; padding: 6px; font: inherit; }
+  .sub-bill-inputs input:disabled { background: var(--paper-alt); color: var(--ink); }
+  .sub-bill-cum { flex-shrink: 0; min-width: 80px; text-align: left; padding-bottom: 6px; }
+  .sub-bill-totals { border: 1px solid var(--rule); border-radius: 12px; background: #fff; padding: 8px 12px; margin-bottom: 10px; }
+  .sub-total-line { display: flex; justify-content: space-between; padding: 3px 0; font-size: 0.9rem; }
+  .sub-total-line.final { border-top: 2px solid var(--ink); margin-top: 4px; padding-top: 6px; font-size: 1.05rem; }
+  .sub-total-line.final b { color: var(--plan-green); }
+  .budget-cat { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; padding: 7px 0; border-bottom: 1px solid var(--rule); cursor: pointer; }
+  .budget-cat:last-child { border-bottom: none; }
+  .budget-cat .budget-item-nums { flex-basis: 100%; }
+  .budget-cat.over .budget-item-nums { color: var(--danger); font-weight: 700; }
   .budget-form-fields { display: flex; flex-direction: column; gap: 4px; max-height: 60vh; overflow-y: auto; }
   /* הצוות (src/app/10b-team.js) */
   .team-view { display: flex; flex-direction: column; }
