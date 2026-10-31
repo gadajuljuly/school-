@@ -38,7 +38,7 @@
 <script src="vendor/supabase-js-2.118.0.js"></script>
 <script src="vendor/firebase-app-compat-10.7.1.js"></script>
 <script src="vendor/firebase-auth-compat-10.7.1.js"></script>
-<link rel="stylesheet" href="tasks.css?v=240dbb24f9">
+<link rel="stylesheet" href="tasks.css?v=b5d2dafc54">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -343,6 +343,47 @@
         <button type="submit" class="modal-btn modal-btn-primary" data-i18n="voiceSaveBtn">אישור</button>
         <button type="button" class="modal-btn modal-btn-no" id="budgetFormDeleteBtn" data-i18n="deleteBtn" hidden>מחיקה</button>
         <button type="button" class="modal-btn modal-btn-no" id="budgetFormCancelBtn" data-i18n="cancelBtn">ביטול</button>
+      </div>
+    </form>
+  </div>
+</div>
+<div class="modal-overlay" id="budgetReportOverlay" hidden style="z-index:41">
+  <div class="modal-box cal-editor-box">
+    <form class="cal-form" id="budgetReportForm">
+      <p class="modal-message" data-i18n="brTitle">דוחות</p>
+      <div class="br-kinds">
+        <label class="cal-form-check"><input type="radio" name="brKind" value="pnl" checked><span data-i18n="brPnl">רווח והפסד</span></label>
+        <label class="cal-form-check"><input type="radio" name="brKind" value="expenses"><span data-i18n="brExpenses">הוצאות לפי בחירה</span></label>
+        <label class="cal-form-check"><input type="radio" name="brKind" value="subs"><span data-i18n="brSubs">קבלני משנה – חוזים וחשבונות</span></label>
+      </div>
+      <div id="brTypesRow">
+        <label data-i18n="brTypes">סוגי הוצאות</label>
+        <div class="br-types" id="brTypes"></div>
+      </div>
+      <label data-i18n="brPeriod">תקופה</label>
+      <select id="brPeriod">
+        <option value="all" data-i18n="brAll">מתחילת הפרויקט</option>
+        <option value="month" data-i18n="brThisMonth">החודש</option>
+        <option value="lastMonth" data-i18n="brLastMonth">החודש הקודם</option>
+        <option value="custom" data-i18n="brCustom">טווח תאריכים</option>
+      </select>
+      <div class="br-dates" id="brDates" hidden>
+        <input type="date" id="brFrom">
+        <input type="date" id="brTo">
+      </div>
+      <div id="brGroupRow">
+        <label data-i18n="brGroupBy">קיבוץ</label>
+        <select id="brGroupBy">
+          <option value="category" data-i18n="brByType">לפי סוג הוצאה</option>
+          <option value="supplier" data-i18n="brBySupplier">לפי ספק / קבלן</option>
+          <option value="item" data-i18n="brByItem">לפי סעיף בכתב הכמויות</option>
+          <option value="month" data-i18n="brByMonth">לפי חודש</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button type="submit" class="modal-btn modal-btn-primary" data-i18n="brPdf">PDF</button>
+        <button type="button" class="modal-btn" id="brExcelBtn" data-i18n="brExcel">אקסל</button>
+        <button type="button" class="modal-btn modal-btn-no" id="brCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </form>
   </div>
@@ -1526,6 +1567,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=8072a8420b"></script>
+<script src="tasks-app.js?v=336ab8134d"></script>
 </body>
 </html>

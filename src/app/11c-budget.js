@@ -207,6 +207,10 @@
     card(tr("budgetForecastProfit"), budgetMoney(t.contract - t.forecast), t.contract - t.forecast < t.contract - t.cost ? "over" : "good");
     budgetBody.appendChild(sum);
     budgetBody.appendChild(bEl("p", "budget-note", tr("budgetBeforeVat")));
+    var reports = bEl("button", "budget-reports-btn", tr("brTitleBtn"));
+    reports.type = "button";
+    reports.addEventListener("click", openBudgetReports);
+    budgetBody.appendChild(reports);
     // the tabs
     var tabs = bEl("div", "budget-tabs");
     [["items", "budgetTabItems"], ["subs", "budgetTabSubs"], ["expenses", "budgetTabExpenses"]].forEach(function (x) {

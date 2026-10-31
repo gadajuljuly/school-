@@ -211,3 +211,76 @@ test("expense types: insurance / overheads with a general budget of their own, c
   await fill(page, { category: "חומרים", supplier: "בטון הצפון", itemId: "02.010 יסודות", amount: 1000 });
   await expect(page.locator(".budget-cat", { hasText: "חומרים" })).toContainText("1,000 ₪");
 });
+
+const REPORT_DATA = {
+  items: [
+    { id: "i1", code: "01.010", chapter: "01 עפר", name: "חפירה", unit: "מ\"ק", qty: 100, price: 50, cost: 3000, progress: 50 },
+    { id: "i2", code: "02.010", chapter: "02 בטון", name: "יסודות", unit: "מ\"ק", qty: 10, price: 1000, cost: 8000, progress: 20 },
+  ],
+  generalBudget: { insurance: 1000 },
+  expenses: [
+    { id: "e1", date: "2026-09-10", category: "materials", supplier: "בטון הצפון", itemId: "i2", amount: 2000 },
+    { id: "e2", date: "2026-10-05", category: "labor", supplier: "פועלים", itemId: "i1", amount: 700 },
+    { id: "e3", date: "2026-10-06", category: "materials", supplier: "בטון הצפון", itemId: "i2", amount: 500 },
+    { id: "e4", date: "2026-10-07", category: "insurance", supplier: "הראל", amount: 900 },
+    { id: "b1:l1", date: "2026-10-08", category: "subcontractors", supplier: "עפר בע\"מ", invoice: "חשבון חלקי 1", itemId: "i1", amount: 1500, billId: "b1" },
+  ],
+  subcontracts: [{ id: "s1", name: "עפר בע\"מ", retentionPct: 5, advance: 0, advanceRecoveryPct: 0, lines: [{ id: "l1", itemId: "i1", qty: 100, price: 30 }] }],
+  bills: [{ id: "b1", subId: "s1", no: 1, date: "2026-10-08", status: "approved", approvedBy: ME, approvedAt: "2026-10-08T10:00:00Z",
+    lines: { l1: { asked: 50, approved: 50 } }, totals: { asked: 1500, cumulative: 1500, previous: 0, gross: 1500, retention: 75, advance: 0, toPay: 1425 } }],
+};
+async function openReports(page) {
+  // in a browser (not the phone app) the files download, so their text can be read
+  await openWithSharedProject(page, { phone: ME, sheet: SHEET });
+  await page.evaluate((data) => { window.__backend.tables.project_finance = [{ owner_phone: "+972500000001", project_id: "p1", data_version: 1, data }]; }, REPORT_DATA);
+  await page.locator("#calendarFabBtn").click();
+  await page.locator("#siteLogBudgetBtn").click();
+  await expect(page.locator(".budget-item")).toHaveCount(2);
+  await page.locator(".budget-reports-btn").click();
+  await expect(page.locator("#budgetReportOverlay")).toBeVisible();
+}
+async function excel(page) {
+  const [download] = await Promise.all([page.waitForEvent("download"), page.locator("#brExcelBtn").click()]);
+  const fs = require("fs");
+  return { name: download.suggestedFilename(), text: fs.readFileSync(await download.path(), "utf8").replace(/^﻿/, "") };
+}
+
+test("reports: profit and loss - contract, work done, costs by type and chapter, the forecast", async ({ page }) => {
+  await openReports(page);
+  const { text } = await excel(page);
+  expect(text.split("\r\n")[0]).toContain("רווח והפסד – בניין A");
+  // earned: 5,000 x 50% + 10,000 x 20% = 4,500; spent 5,600 -> -1,100
+  expect(text).toContain("ערך מה שבוצע,\"4,500 ₪\"");
+  expect(text).toContain("הוצאות בפועל,\"5,600 ₪\"");
+  expect(text).toMatch(/רווח לפי ביצוע,"‎?-1,100 ₪/);
+  expect(text).toContain("קבלני משנה,\"1,500 ₪\",26.8%");
+  expect(text).toContain("01 עפר,\"5,000 ₪\",\"2,500 ₪\",\"3,000 ₪\",\"2,200 ₪\",300 ₪");
+  expect(text).toContain("ביטוחים,\"1,000 ₪\",900 ₪,100 ₪");
+});
+
+test("reports: expenses of the types picked, in a period, grouped by supplier; subcontractors' bills", async ({ page }) => {
+  await openReports(page);
+  await page.locator("input[name=brKind][value=expenses]").check();
+  // materials and labor only, October, by supplier
+  for (const t of ["קבלני משנה", "כלים מושכרים", "תקורות", "ביטוחים", "אחר"]) {
+    await page.locator("#brTypes label", { hasText: t }).locator("input").uncheck();
+  }
+  await page.locator("#brPeriod").selectOption("custom");
+  await page.locator("#brFrom").fill("2026-10-01");
+  await page.locator("#brTo").fill("2026-10-31");
+  await page.locator("#brGroupBy").selectOption("supplier");
+  const { text } = await excel(page);
+  expect(text.split("\r\n")[0]).toContain("דוח הוצאות – חומרים, כוח אדם (פועלים)");
+  expect(text).toContain("01/10/2026 – 31/10/2026");
+  expect(text).toContain("בטון הצפון,500 ₪");   // September's 2,000 is out of the period
+  expect(text).toContain("פועלים,700 ₪");
+  expect(text).toContain("\"סה\"\"כ\",\"1,200 ₪\",100%");
+  expect(text).not.toContain("הראל");
+
+  // the subcontractors' report
+  await page.locator(".budget-reports-btn").click();
+  await page.locator("input[name=brKind][value=subs]").check();
+  const subs = await excel(page);
+  expect(subs.text).toContain("\"עפר בע\"\"מ\",\"3,000 ₪\",\"1,500 ₪\",\"1,500 ₪\",\"1,425 ₪\",75 ₪");
+  expect(subs.text).toContain("1,08/10/2026,\"1,500 ₪\",\"1,500 ₪\",75 ₪,0 ₪,\"1,425 ₪\"");
+});

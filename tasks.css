@@ -3502,6 +3502,13 @@
   .budget-cat:last-child { border-bottom: none; }
   .budget-cat .budget-item-nums { flex-basis: 100%; }
   .budget-cat.over .budget-item-nums { color: var(--danger); font-weight: 700; }
+  .budget-reports-btn { display: block; width: 100%; margin: 0 0 10px; border: 1px solid var(--accent); background: #fff; color: var(--accent); border-radius: 10px; padding: 9px; font: inherit; font-weight: 700; cursor: pointer; }
+  .br-kinds { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
+  .br-types { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; }
+  .br-dates { display: flex; gap: 6px; }
+  .br-dates input { flex: 1; min-width: 0; }
+  #brTypesRow[hidden], #brGroupRow[hidden], .br-dates[hidden], #brPeriod[hidden], label[hidden] { display: none; }
+  .pdf-doc-table tr.br-total td { font-weight: 800; border-top: 2px solid #333; }
   .budget-form-fields { display: flex; flex-direction: column; gap: 4px; max-height: 60vh; overflow-y: auto; }
   /* הצוות (src/app/10b-team.js) */
   .team-view { display: flex; flex-direction: column; }
