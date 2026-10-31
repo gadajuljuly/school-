@@ -38,7 +38,7 @@
 <script src="vendor/supabase-js-2.118.0.js"></script>
 <script src="vendor/firebase-app-compat-10.7.1.js"></script>
 <script src="vendor/firebase-auth-compat-10.7.1.js"></script>
-<link rel="stylesheet" href="tasks.css?v=bb2d5f6024">
+<link rel="stylesheet" href="tasks.css?v=63a0da79c9">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -491,6 +491,11 @@
               <option value="on" data-i18n="chatNotifOn">פעיל</option>
             </select>
             <p class="reminder-status" id="chatNotifStatus" hidden></p>
+          </div>
+          <div class="menu-section" id="teamMenuSection">
+            <div class="menu-label" data-i18n="teamMenuLabel">צוות</div>
+            <button type="button" id="teamBtn" data-i18n="teamBtn">מהנדסים ומנהלי עבודה</button>
+            <p class="team-my-roles" id="teamMyRoles" hidden></p>
           </div>
           <div class="menu-section">
             <div class="menu-label" data-i18n="menuLabelAllProjects">כל הפרויקטים</div>
@@ -1256,6 +1261,28 @@
     <div class="morning-body" id="morningBody"></div>
   </div>
 
+  <div class="report-view team-view" id="teamView" hidden>
+    <div class="report-head">
+      <button type="button" class="report-back-btn" id="teamBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
+      <div class="report-head-title" data-i18n="teamTitle">הצוות</div>
+    </div>
+    <div class="team-body">
+      <section class="team-section">
+        <h3 data-i18n="teamEngineers">מהנדסים</h3>
+        <p class="team-hint" data-i18n="teamEngineersHint">רואים ועורכים את הנתונים הכספיים של הפרויקטים</p>
+        <div class="team-list" id="teamEngineerList"></div>
+        <div class="team-add" data-role="engineer"></div>
+      </section>
+      <section class="team-section">
+        <h3 data-i18n="teamSiteManagers">מנהלי עבודה</h3>
+        <p class="team-hint" data-i18n="teamSiteManagersHint">בלי גישה לנתונים הכספיים</p>
+        <div class="team-list" id="teamSiteManagerList"></div>
+        <div class="team-add" data-role="site_manager"></div>
+      </section>
+      <p class="team-error" id="teamError" hidden></p>
+    </div>
+  </div>
+
   <div class="report-view" id="libraryView" hidden>
     <div class="report-head">
       <button type="button" class="report-back-btn" id="libraryBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
@@ -1469,6 +1496,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=b39ebe56c2"></script>
+<script src="tasks-app.js?v=b4a3c01148"></script>
 </body>
 </html>

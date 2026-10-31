@@ -47,6 +47,15 @@ const NATIVE_FAKE = () => {
       Share: {
         share: (o) => { (native.shared = native.shared || []).push(o); return ok({}); },
       },
+      // the phone's contacts: pickContact hands over window.__pickContact ({ name, tel })
+      Contacts: {
+        checkPermissions: () => ok({ contacts: "granted" }),
+        requestPermissions: () => ok({ contacts: "granted" }),
+        getContacts: () => ok({ contacts: [] }),
+        pickContact: () => window.__pickContact
+          ? ok({ contact: { name: { display: window.__pickContact.name }, phones: [{ number: window.__pickContact.tel }] } })
+          : Promise.reject(new Error("cancelled")),
+      },
       // the phone's speech recognizer: "hears" window.__voiceSay (a list: one line per listen)
       SpeechRecognition: {
         requestPermissions: () => ok({ speechRecognition: "granted" }),

@@ -197,6 +197,7 @@
     }
     loadSharedSheets();
     loadMyOfficeGroups();
+    loadTeam();
     checkPendingProjectInvites();
     checkPendingOfficeGroupInvites();
   }
@@ -761,6 +762,8 @@
       checkPendingProjectInvites: checkPendingProjectInvites,
       verifyCalendarLinks: function () { return calVerifyLinks(true); },
       parseVoiceCommand: parseVoiceCommand,
+      loadTeam: loadTeam,
+      financeOwnerPhones: function () { return financeOwnerPhones(); },
       loadSharedSheets: loadSharedSheets,
       // another member's change to a shared task arriving (as a refresh would)
       updateSharedTaskForTest: function (sheetId, taskId, mutate) {

@@ -277,6 +277,28 @@
     floatOn: { he: "משימה מפרויקט אחר: כל רבע שעה בין 06:00 ל-18:00, וכל חצי שעה בשאר השעות", en: "A task from the next project: every quarter hour 06:00–18:00, every half hour otherwise", ar: "مهمة من مشروع آخر: كل ربع ساعة 06:00–18:00، وكل نصف ساعة في باقي الساعات", ru: "Задача из следующего проекта: каждые 15 минут с 06:00 до 18:00, иначе каждые 30 минут" },
     floatAllowBtn: { he: "לאישור \"הצגה מעל אפליקציות אחרות\"", en: "Allow \"Display over other apps\"", ar: "السماح بـ\"الظهور فوق التطبيقات الأخرى\"", ru: "Разрешить «Поверх других приложений»" },
     floatAsk: { he: "משימה פתוחה מפרויקט אחר תקפוץ לכמה שניות מעל המסך: כל רבע שעה בין 06:00 ל-18:00, וכל חצי שעה בשאר השעות. לשם כך אנדרואיד צריך אישור חד-פעמי: \"הצגה מעל אפליקציות אחרות\". לפתוח את מסך האישור? (בחר שם ITASK והפעל)", en: "An open task from the next project pops up over the screen for a few seconds: every quarter hour 06:00–18:00, every half hour otherwise. Android needs a one-time permission for that: \"Display over other apps\". Open it now? (pick ITASK there and switch it on)", ar: "ستظهر لثوانٍ مهمة مفتوحة من مشروع آخر فوق الشاشة: كل ربع ساعة 06:00–18:00، وكل نصف ساعة في باقي الساعات. يحتاج أندرويد لإذن لمرة واحدة: \"الظهور فوق التطبيقات الأخرى\". فتح شاشة الإذن؟ (اختر ITASK وفعّله)", ru: "Поверх экрана на несколько секунд появится открытая задача из следующего проекта: каждые 15 минут с 06:00 до 18:00, иначе каждые 30 минут. Нужно разовое разрешение «Поверх других приложений». Открыть? (выберите ITASK и включите)" },
+    teamMenuLabel: { he: "צוות", en: "Team", ar: "الفريق", ru: "Команда" },
+    teamBtn: { he: "מהנדסים ומנהלי עבודה", en: "Engineers and site managers", ar: "مهندسون ومديرو عمل", ru: "Инженеры и прорабы" },
+    teamTitle: { he: "הצוות", en: "The team", ar: "الفريق", ru: "Команда" },
+    teamEngineers: { he: "מהנדסים", en: "Engineers", ar: "المهندسون", ru: "Инженеры" },
+    teamEngineersHint: { he: "רואים ועורכים את הנתונים הכספיים של הפרויקטים", en: "See and edit the projects' finances", ar: "يرون ويعدّلون البيانات المالية للمشاريع", ru: "Видят и редактируют финансы проектов" },
+    teamSiteManagers: { he: "מנהלי עבודה", en: "Site managers", ar: "مديرو العمل", ru: "Прорабы" },
+    teamSiteManagersHint: { he: "בלי גישה לנתונים הכספיים", en: "No access to the finances", ar: "بدون وصول إلى البيانات المالية", ru: "Без доступа к финансам" },
+    teamFromContacts: { he: "＋ מאנשי הקשר", en: "＋ From contacts", ar: "＋ من جهات الاتصال", ru: "＋ Из контактов" },
+    teamTypeNumber: { he: "＋ הקלדת מספר", en: "＋ Type a number", ar: "＋ كتابة رقم", ru: "＋ Ввести номер" },
+    teamNamePh: { he: "שם", en: "Name", ar: "الاسم", ru: "Имя" },
+    teamPhonePh: { he: "מספר טלפון", en: "Phone number", ar: "رقم الهاتف", ru: "Номер телефона" },
+    teamAddBtn: { he: "הוספה", en: "Add", ar: "إضافة", ru: "Добавить" },
+    teamEmpty: { he: "עדיין אין אף אחד", en: "No one yet", ar: "لا أحد بعد", ru: "Пока никого" },
+    teamMakeEngineer: { he: "העבר למהנדסים", en: "Make engineer", ar: "انقل إلى المهندسين", ru: "Сделать инженером" },
+    teamMakeSiteManager: { he: "העבר למנהלי עבודה", en: "Make site manager", ar: "انقل إلى مديري العمل", ru: "Сделать прорабом" },
+    teamRemoveConfirm: { he: "להסיר את {name} מהצוות?", en: "Remove {name} from the team?", ar: "إزالة {name} من الفريق؟", ru: "Удалить {name} из команды?" },
+    teamBadPhone: { he: "מספר טלפון לא תקין", en: "Invalid phone number", ar: "رقم هاتف غير صالح", ru: "Неверный номер телефона" },
+    teamAlready: { he: "{name} כבר בצוות", en: "{name} is already on the team", ar: "{name} موجود في الفريق", ru: "{name} уже в команде" },
+    teamSaveError: { he: "לא הצלחתי לשמור. בדוק את החיבור לאינטרנט ונסה שוב.", en: "Couldn't save. Check the connection and try again.", ar: "تعذر الحفظ. تحقق من الاتصال وحاول مجدداً.", ru: "Не удалось сохранить. Проверьте подключение и попробуйте снова." },
+    teamLoadError: { he: "לא הצלחתי לטעון את הצוות (ייתכן שצריך להריץ את team_and_finance.sql ב-Supabase)", en: "Couldn't load the team (team_and_finance.sql may need to be run in Supabase)", ar: "تعذر تحميل الفريق (قد يلزم تشغيل team_and_finance.sql في Supabase)", ru: "Не удалось загрузить команду (возможно, нужно запустить team_and_finance.sql в Supabase)" },
+    teamIAmEngineer: { he: "אתה מהנדס בצוות של {name}", en: "You're an engineer on {name}'s team", ar: "أنت مهندس في فريق {name}", ru: "Вы инженер в команде {name}" },
+    teamIAmSiteManager: { he: "אתה מנהל עבודה בצוות של {name}", en: "You're a site manager on {name}'s team", ar: "أنت مدير عمل في فريق {name}", ru: "Вы прораб в команде {name}" },
     voiceBtnTitle: { he: "פקודה קולית", en: "Voice command", ar: "أمر صوتي", ru: "Голосовая команда" },
     voiceListening: { he: "מקשיב... דבר עכשיו", en: "Listening... speak now", ar: "أستمع... تكلّم الآن", ru: "Слушаю... говорите" },
     voiceThinking: { he: "מבין...", en: "Understanding...", ar: "أفهم...", ru: "Разбираю..." },
@@ -8222,6 +8244,193 @@
     if (e.target === logoPickerOverlay) closeLogoPickerModal();
   });
 
+
+  // ---------------------------------------------------------------------
+  // הצוות: the engineers and site managers a user keeps, by phone number
+  // (typed in, or picked from the phone's contacts) - the team_roles table,
+  // see supabase/sql/team_and_finance.sql. Engineers see and edit the
+  // projects' finances (project_finance); site managers don't. The server
+  // enforces it (RLS); here the list is kept, and the app learns which
+  // teams this phone is on (teamMemberships) - so it knows whose finances
+  // it may show (financeOwnerPhones).
+  // ---------------------------------------------------------------------
+  var TEAM_TABLE = "team_roles";
+  var teamView = document.getElementById("teamView");
+  var teamError = document.getElementById("teamError");
+  var myTeam = [];          // { phone, name, role } - the people on my team
+  var teamMemberships = []; // { owner, role } - the teams I'm on
+
+  // whose finances this phone may see: its own, and those of the teams it's an engineer on
+  function financeOwnerPhones() {
+    if (!myPhoneNumber) return [];
+    return [myPhoneNumber].concat(teamMemberships.filter(function (m) { return m.role === "engineer"; })
+      .map(function (m) { return m.owner; }));
+  }
+
+  function loadTeam() {
+    if (!supabaseClient || !myPhoneNumber) return Promise.resolve();
+    return supabaseClient.from(TEAM_TABLE).select("owner_phone, phone, name, role").then(function (result) {
+      if (result && result.error) throw result.error;
+      var rows = (result && result.data) || [];
+      myTeam = rows.filter(function (r) { return r.owner_phone === myPhoneNumber; })
+        .map(function (r) { return { phone: r.phone, name: r.name || "", role: r.role }; });
+      teamMemberships = rows.filter(function (r) { return r.phone === myPhoneNumber && r.owner_phone !== myPhoneNumber; })
+        .map(function (r) { return { owner: r.owner_phone, role: r.role }; });
+      teamError.hidden = true;
+      renderTeamMyRoles();
+      if (!teamView.hidden) renderTeam();
+    }).catch(function () {
+      teamError.textContent = tr("teamLoadError");
+      teamError.hidden = false;
+    });
+  }
+
+  function teamPersonName(phone, stored) {
+    return getDeviceContactName(phone) || stored || teamLocalPhone(phone);
+  }
+  function teamLocalPhone(phone) {
+    return String(phone || "").replace(/^\+972/, "0");
+  }
+
+  // in the menu, under the button: the teams this phone is on
+  function renderTeamMyRoles() {
+    var el = document.getElementById("teamMyRoles");
+    el.textContent = teamMemberships.map(function (m) {
+      return tr(m.role === "engineer" ? "teamIAmEngineer" : "teamIAmSiteManager").replace("{name}", teamPersonName(m.owner, ""));
+    }).join("\n");
+    el.hidden = !teamMemberships.length;
+  }
+
+  function teamEl(tag, cls, text) {
+    var el = document.createElement(tag);
+    if (cls) el.className = cls;
+    if (text != null) el.textContent = text;
+    return el;
+  }
+  function renderTeam() {
+    [["engineer", "teamEngineerList", "teamMakeSiteManager", "site_manager"],
+      ["site_manager", "teamSiteManagerList", "teamMakeEngineer", "engineer"]].forEach(function (g) {
+      var list = document.getElementById(g[1]);
+      list.innerHTML = "";
+      var people = myTeam.filter(function (p) { return p.role === g[0]; });
+      if (!people.length) list.appendChild(teamEl("p", "team-empty", tr("teamEmpty")));
+      people.forEach(function (p) {
+        var row = teamEl("div", "team-row");
+        var who = teamEl("div", "team-who");
+        who.appendChild(teamEl("b", "", teamPersonName(p.phone, p.name)));
+        who.appendChild(teamEl("small", "", teamLocalPhone(p.phone)));
+        row.appendChild(who);
+        var move = teamEl("button", "", tr(g[2]));
+        move.type = "button";
+        move.addEventListener("click", function () { teamSetRole(p, g[3]); });
+        row.appendChild(move);
+        var del = teamEl("button", "team-del", "✕");
+        del.type = "button";
+        del.title = tr("deleteBtn");
+        del.addEventListener("click", function () {
+          askConfirm(tr("teamRemoveConfirm").replace("{name}", teamPersonName(p.phone, p.name)), function () { teamRemove(p); });
+        });
+        row.appendChild(del);
+        list.appendChild(row);
+      });
+    });
+  }
+
+  function teamFailed() {
+    alert(tr("teamSaveError"));
+    loadTeam();
+  }
+  function teamAdd(rawPhone, name, role) {
+    var phone = normalizePhoneDigits(rawPhone);
+    if (!phone) { alert(tr("teamBadPhone")); return false; }
+    var existing = myTeam.find(function (p) { return p.phone === phone; });
+    if (existing) { showToast(tr("teamAlready").replace("{name}", teamPersonName(phone, existing.name))); return true; }
+    var person = { phone: phone, name: (name || "").trim(), role: role };
+    myTeam.push(person);
+    renderTeam();
+    supabaseClient.from(TEAM_TABLE).insert({ owner_phone: myPhoneNumber, phone: phone, name: person.name || null, role: role })
+      .then(function (r) { if (r && r.error) teamFailed(); }, teamFailed);
+    return true;
+  }
+  function teamSetRole(person, role) {
+    person.role = role;
+    renderTeam();
+    supabaseClient.from(TEAM_TABLE).update({ role: role }).eq("owner_phone", myPhoneNumber).eq("phone", person.phone)
+      .then(function (r) { if (r && r.error) teamFailed(); }, teamFailed);
+  }
+  function teamRemove(person) {
+    myTeam = myTeam.filter(function (p) { return p !== person; });
+    renderTeam();
+    supabaseClient.from(TEAM_TABLE).delete().eq("owner_phone", myPhoneNumber).eq("phone", person.phone)
+      .then(function (r) { if (r && r.error) teamFailed(); }, teamFailed);
+  }
+
+  // each list's add buttons: from the phone's contacts, or typed in
+  function teamPickContacts(role) {
+    if (capacitorContactsAvailable) {
+      pickOneNativeContact().then(function (picked) { if (picked) teamAdd(picked.tel, picked.name, role); });
+      return;
+    }
+    navigator.contacts.select(["name", "tel"], { multiple: true }).then(function (contacts) {
+      contacts.forEach(function (c) {
+        var tel = (c.tel && c.tel[0]) || "";
+        if (tel) teamAdd(tel, (c.name && c.name[0]) || "", role);
+      });
+    }).catch(function () {});
+  }
+  function teamTypeForm(box, role) {
+    var old = box.querySelector(".team-type");
+    if (old) { old.remove(); return; }
+    var form = teamEl("form", "team-type");
+    var name = teamEl("input");
+    name.placeholder = tr("teamNamePh");
+    name.maxLength = 60;
+    var phone = teamEl("input");
+    phone.type = "tel";
+    phone.placeholder = tr("teamPhonePh");
+    phone.maxLength = 20;
+    var save = teamEl("button", "", tr("teamAddBtn"));
+    save.type = "submit";
+    form.appendChild(name);
+    form.appendChild(phone);
+    form.appendChild(save);
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      if (teamAdd(phone.value, name.value, role)) form.remove();
+    });
+    box.appendChild(form);
+    name.focus();
+  }
+  Array.prototype.forEach.call(teamView.querySelectorAll(".team-add"), function (box) {
+    var role = box.getAttribute("data-role");
+    if (contactPickerSupported) {
+      var pick = teamEl("button", "", tr("teamFromContacts"));
+      pick.type = "button";
+      pick.className = "team-pick-btn";
+      pick.setAttribute("data-i18n", "teamFromContacts");
+      pick.addEventListener("click", function () { teamPickContacts(role); });
+      box.appendChild(pick);
+    }
+    var type = teamEl("button", "", tr("teamTypeNumber"));
+    type.type = "button";
+    type.className = "team-type-btn";
+    type.setAttribute("data-i18n", "teamTypeNumber");
+    type.addEventListener("click", function () { teamTypeForm(box, role); });
+    box.appendChild(type);
+  });
+
+  function openTeamView() {
+    loadDeviceContactsIfNeeded();
+    renderTeam();
+    teamView.hidden = false;
+    loadTeam();
+  }
+  document.getElementById("teamBtn").addEventListener("click", function () {
+    state.menuOpen = false;
+    render();
+    openTeamView();
+  });
+  document.getElementById("teamBackBtn").addEventListener("click", function () { teamView.hidden = true; });
   var sheetReportsList = document.getElementById("sheetReportsList");
   var tasksFabBtn = document.getElementById("tasksFabBtn");
 
@@ -18925,6 +19134,7 @@
     }
     loadSharedSheets();
     loadMyOfficeGroups();
+    loadTeam();
     checkPendingProjectInvites();
     checkPendingOfficeGroupInvites();
   }
@@ -19489,6 +19699,8 @@
       checkPendingProjectInvites: checkPendingProjectInvites,
       verifyCalendarLinks: function () { return calVerifyLinks(true); },
       parseVoiceCommand: parseVoiceCommand,
+      loadTeam: loadTeam,
+      financeOwnerPhones: function () { return financeOwnerPhones(); },
       loadSharedSheets: loadSharedSheets,
       // another member's change to a shared task arriving (as a refresh would)
       updateSharedTaskForTest: function (sheetId, taskId, mutate) {
