@@ -300,3 +300,38 @@ for (const [file, what] of [["boq.pdf", "a PDF"], ["boq-visual.pdf", "a PDF whos
     await expect(page.locator(".budget-card").first()).toContainText("52,200 ₪");
   });
 }
+
+test("the client: bills filled in from the % done, approved by the client with retention, payments received; cash flow", async ({ page }) => {
+  await openSeeded(page); // i1: 100 x 50, 60% done; i2: 10 x 1,000, 20% done
+  await page.locator(".budget-tabs button", { hasText: "מזמין" }).click();
+  await page.locator(".sub-edit", { hasText: "עיכבון ומקדמה" }).click();
+  await fill(page, { retentionPct: 5 });
+  await page.locator(".sub-edit", { hasText: "＋ חשבון חדש" }).click();
+  // filled in from the work done: 60 and 2
+  const asked = page.locator(".sub-bill-line input[data-field=asked]");
+  await expect(asked.nth(0)).toHaveValue("60");
+  await expect(asked.nth(1)).toHaveValue("2");
+  await expect(totals(page)).toContainText("הוגש למזמין (מצטבר)5,000 ₪");
+  // the client's supervisor approved 55 of the 60
+  await setQty(page, "approved", 55);
+  await expect(totals(page)).toContainText("לקבל4,513 ₪"); // 4,750 - 5%
+  await page.locator(".budget-actions button", { hasText: "אושר ע\"י המזמין" }).click();
+  await page.locator("#confirmYesBtn").click();
+  await expect(page.locator(".sub-bill-head")).toContainText("✓ אושר");
+  // no expense: it's income
+  await expect.poll(() => page.evaluate(() => window.__backend.tables.project_finance[0].data.expenses.length)).toBe(0);
+
+  await page.locator(".sub-back").click();
+  await page.locator(".sub-edit", { hasText: "＋ תקבול" }).click();
+  await fill(page, { amount: 4000, billId: "חשבון חלקי 1" });
+  const head = page.locator(".budget-chapter").first();
+  await expect(head).toContainText("4,750 ₪");   // approved: 55 x 50 + 2 x 1,000
+  await expect(head).toContainText("4,000 ₪");   // received
+  await expect(head).toContainText("513 ₪");     // still to collect: 4,512.5 - 4,000
+  await expect(page.locator(".budget-card", { hasText: "התקבל מהמזמין" })).toContainText("4,000 ₪");
+
+  // the next bill starts from what was approved
+  await page.locator(".sub-edit", { hasText: "＋ חשבון חדש" }).click();
+  await expect(page.locator(".sub-bill-line").first()).toContainText("מצטבר קודם: 55");
+  await expect(asked.nth(0)).toHaveValue("60");
+});

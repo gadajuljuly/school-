@@ -119,3 +119,31 @@ test("nothing on: the report says so", async ({ page }) => {
   await expect(page.locator("#morningBody")).toContainText("אין משימות פתוחות להיום");
   await expect(page.locator(".morning-plan-row")).toHaveCount(0);
 });
+
+test("budget overruns in שים לב - for whoever may see the money", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, native: true, sheet: { id: "p1", name: "בניין A", members: [ME], tasks: [] } });
+  await page.evaluate(() => {
+    window.__backend.tables.project_finance = [
+      { owner_phone: "+972500000001", project_id: "p1", data_version: 1, data: {
+        items: [{ id: "i1", code: "02.010", name: "יסודות", qty: 10, price: 1000, cost: 1000, progress: 10 },
+          { id: "i2", code: "03.010", name: "טיח", qty: 10, price: 100, cost: 1000, progress: 50 }],
+        generalBudget: { insurance: 500 },
+        expenses: [{ id: "e1", date: "2026-10-01", category: "materials", itemId: "i1", amount: 600 },
+          { id: "e2", date: "2026-10-01", category: "materials", itemId: "i2", amount: 400 },
+          { id: "e3", date: "2026-10-01", category: "insurance", amount: 800 }] } },
+      // someone else's money for the same project id: not this phone's to see
+      { owner_phone: "+972509999999", project_id: "p1", data_version: 1, data: {
+        items: [{ id: "x", code: "99", name: "של אחר", qty: 1, price: 1, cost: 10, progress: 0 }],
+        expenses: [{ id: "y", category: "materials", itemId: "x", amount: 100 }] } },
+    ];
+  });
+  await openReport(page);
+  const att = page.locator(".morning-attention");
+  // 60% spent for 10% done -> at that pace 6,000: 5,000 over
+  await expect(att).toContainText("02.010 יסודות: נוצל 60% מהתקציב, בוצע רק 10%");
+  await expect(att).toContainText("חריגה צפויה: 5,000 ₪");
+  await expect(att).toContainText("ביטוחים: מעבר לתקציב");
+  await expect(att).toContainText("חריגה צפויה: 300 ₪");
+  await expect(att).not.toContainText("טיח"); // 40% spent, 50% done: fine
+  await expect(att).not.toContainText("של אחר");
+});

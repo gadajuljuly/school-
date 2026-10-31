@@ -4,7 +4,9 @@
   // morning notification and the home-screen widget.
   //   1. שים לב: only what needs acting on - activities late, ones whose
   //      pace runs past their end (and what's linked after them), tasks
-  //      left from earlier days, the day's reminders.
+  //      left from earlier days, the day's reminders; and, for whoever may
+  //      see the money (11c-budget.js), BOQ items whose spending runs ahead
+  //      of their work and general costs past their budget.
   //   2. the open tasks (today's and earlier), by project, each with the
   //      task list's mark - tapped, it moves on as it does there.
   //   3. the work plans, one under the other: what's under way, late or
@@ -18,9 +20,48 @@
   // marked here: they stay on the report (ticked) until it's closed
   var morningTouched = {};
 
+  // the projects' money, read when the report opens: [{ sheet, data }]
+  var morningMoney = [];
+  function loadMorningMoney() {
+    var owners = financeOwnerPhones();
+    if (!supabaseClient || !owners.length) return;
+    supabaseClient.from(FINANCE_TABLE).select("owner_phone, project_id, data").in("owner_phone", owners).then(function (r) {
+      if (!r || r.error) return;
+      morningMoney = (r.data || []).map(function (row) {
+        var sheet = voiceTargetSheets().find(function (sh) { return sh.id === row.project_id && budgetOwnerFor(sh) === row.owner_phone; });
+        return sheet ? { sheet: sheet, data: budgetNormalize(row.data) } : null;
+      }).filter(Boolean);
+      if (!morningView.hidden && morningMoney.length) renderMorningReport();
+    }, function () {});
+  }
+  // a project's budget overruns, as lines for שים לב
+  function morningMoneyLines(m) {
+    var d = m.data, out = [];
+    d.items.forEach(function (item) {
+      var actual = d.expenses.reduce(function (s2, e) { return e.itemId === item.id ? s2 + budgetNum(e.amount) : s2; }, 0);
+      if (!budgetItemOver(item, actual)) return;
+      var over = budgetItemForecast(item, actual) - budgetNum(item.cost);
+      out.push({ text: tr("morningBudgetItem").replace("{name}", [item.code, item.name].filter(Boolean).join(" "))
+        .replace("{used}", Math.round(actual * 100 / budgetNum(item.cost))).replace("{done}", Math.round(budgetNum(item.progress))),
+        sub: over > 0 ? tr("morningBudgetOver").replace("{sum}", budgetMoney(over)) : "" });
+    });
+    BUDGET_CATEGORIES.forEach(function (c) {
+      var limit = budgetNum(d.generalBudget[c]);
+      if (!limit) return;
+      var spent = d.expenses.reduce(function (s2, e) {
+        var onItem = d.items.some(function (i) { return i.id === e.itemId; });
+        return (e.category || "other") === c && !onItem ? s2 + budgetNum(e.amount) : s2;
+      }, 0);
+      if (spent > limit) out.push({ text: tr("morningBudgetGeneral").replace("{type}", budgetCategoryLabel(c)), sub: tr("morningBudgetOver").replace("{sum}", budgetMoney(spent - limit)) });
+    });
+    return out;
+  }
+
   function openMorningReport() {
     morningMore = { tasks: false, plan: false };
     morningTouched = {};
+    morningMoney = [];
+    loadMorningMoney();
     renderMorningReport();
     morningView.hidden = false;
     morningBody.scrollTop = 0;
@@ -113,6 +154,9 @@
     if (older) add("🕓", tr("morningOlderTasks").replace("{n}", older));
     reminders.sort(function (a, b) { return a.time < b.time ? -1 : 1; }).forEach(function (r) {
       add("⏰", r.time + " " + r.text + where(r.sheet));
+    });
+    morningMoney.forEach(function (m) {
+      morningMoneyLines(m).forEach(function (x) { add("💰", x.text + where(m.sheet), x.sub); });
     });
     if (!list.children.length) {
       sec.appendChild(morningEl("p", "morning-ok", tr("morningAllGood")));

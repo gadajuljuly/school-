@@ -18,7 +18,12 @@
   // ---------------------------------------------------------------------
   var SUB_AHEAD_MARGIN = 10; // approved % of a line may run this far ahead of its item's work
 
-  function subOf(d, id) { return d.subcontracts.find(function (s) { return s.id === id; }); }
+  // (the client's bills - 11f-client-bills.js - are these same bills, of a "client"
+  // stand-in: every BOQ item at its price to the client)
+  function subOf(d, id) {
+    if (id === CLIENT_ID) return clientSub(d);
+    return d.subcontracts.find(function (s) { return s.id === id; });
+  }
   function subBills(d, sub) {
     return d.bills.filter(function (b) { return b.subId === sub.id; }).sort(function (a, b) { return a.no - b.no; });
   }
@@ -180,6 +185,7 @@
     if (open) { budget.billId = open.id; budget.billDraft = null; renderBudget(); return; }
     var bills = subBills(d, sub);
     var bill = { id: uid(), subId: sub.id, no: bills.length ? bills[bills.length - 1].no + 1 : 1, date: todayISO(), status: "draft", lines: {}, note: "" };
+    if (sub.id === CLIENT_ID) clientPrefill(d, sub, bill);
     budget.billId = bill.id;
     budget.billDraft = JSON.parse(JSON.stringify(bill));
     budgetChange(budgetUpsert("bills", bill));
@@ -192,6 +198,7 @@
     var locked = saved.status === "approved";
     if (!budget.billDraft || budget.billDraft.id !== saved.id || locked) budget.billDraft = JSON.parse(JSON.stringify(saved));
     var bill = budget.billDraft;
+    var isClient = sub.id === CLIENT_ID;
     var back = subBack(sub.name);
     back.addEventListener("click", function () { budget.billId = null; budget.billDraft = null; renderBudget(); });
     budgetBody.appendChild(back);
@@ -214,7 +221,7 @@
       row.appendChild(bEl("small", "budget-item-nums", tr("subLineInfo").replace("{qty}", budgetNum(x.line.qty))
         .replace("{unit}", item && item.unit || "").replace("{price}", budgetMoney(budgetNum(x.line.price))).replace("{prev}", x.prevCum)));
       var inputs = bEl("div", "sub-bill-inputs");
-      [["asked", "subAsked", x.asked], ["approved", "subApprovedQty", x.approved]].forEach(function (f) {
+      [["asked", isClient ? "clientAsked" : "subAsked", x.asked], ["approved", isClient ? "clientApprovedQty" : "subApprovedQty", x.approved]].forEach(function (f) {
         var lab = bEl("label", "");
         lab.appendChild(bEl("small", "", tr(f[1])));
         var inp = bEl("input");
@@ -252,9 +259,9 @@
 
     var t = calc.totals;
     var sum = bEl("div", "sub-bill-totals");
-    [[tr("subAskedTotal"), t.asked], [tr("subCumulative"), t.cumulative], [tr("subPrevious"), -t.previous],
+    [[tr(isClient ? "clientAskedTotal" : "subAskedTotal"), t.asked], [tr("subCumulative"), t.cumulative], [tr("subPrevious"), -t.previous],
       [tr("subThisBill"), t.gross], [tr("subRetention") + " (" + budgetNum(sub.retentionPct) + "%)", -t.retention],
-      [tr("subAdvanceRecovery"), -t.advance], [tr("subToPay"), t.toPay]].forEach(function (x, k, all) {
+      [tr("subAdvanceRecovery"), -t.advance], [tr(isClient ? "clientToReceive" : "subToPay"), t.toPay]].forEach(function (x, k, all) {
       var line = bEl("div", "sub-total-line" + (k === all.length - 1 ? " final" : ""));
       line.appendChild(bEl("span", "", x[0]));
       line.appendChild(bEl("b", "", budgetMoney(x[1])));
@@ -270,7 +277,9 @@
       budgetActions(actions);
     } else {
       budgetActions([["subSaveDraft", function () { subSaveDraft(bill); }],
-        ["subApprove", function () { subApprove(sub, bill); }, "primary"],
+        [isClient ? "clientApprove" : "subApprove", function () { subApprove(sub, bill); }, "primary"]].concat(isClient
+        // the bill as handed in, to send the client
+        ? [["clientPdfDraft", function () { subBillPdf(sub, bill, true); }]] : []).concat([
         ["subDeleteDraft", function () {
           askConfirm(tr("budgetDeleteConfirm"), function () {
             var id = bill.id;
@@ -278,7 +287,7 @@
             budget.billDraft = null;
             budgetChange(budgetRemove("bills", id));
           });
-        }]]);
+        }]]));
     }
   }
   function subSaveDraft(bill) {
@@ -293,7 +302,8 @@
   // approved: locked with its totals, and the period's value into the budget
   function subApprove(sub, bill) {
     var draft = JSON.parse(JSON.stringify(bill));
-    askConfirm(tr("subApproveConfirm").replace("{n}", draft.no).replace("{sum}", budgetMoney(billCalc(budget.data, sub, draft).totals.toPay)), function () {
+    var isClient = sub.id === CLIENT_ID;
+    askConfirm(tr(isClient ? "clientApproveConfirm" : "subApproveConfirm").replace("{n}", draft.no).replace("{sum}", budgetMoney(billCalc(budget.data, sub, draft).totals.toPay)), function () {
       var who = myPhoneNumber || null, at = new Date().toISOString();
       budgetChange(function (d) {
         var s = subOf(d, sub.id);
@@ -307,6 +317,8 @@
         rec.approvedAt = at;
         rec.totals = calc.totals;
         budgetUpsert("bills", rec)(d);
+        // a subcontractor's: its cost into the budget (the client's is income - 11f)
+        if (isClient) return;
         calc.lines.forEach(function (x) {
           if (!x.period) return;
           d.expenses.push({ id: rec.id + ":" + x.line.id, date: rec.date, category: "subcontractors", supplier: s.name, supplierCode: s.supplierCode || "",
@@ -314,7 +326,7 @@
             note: "", billId: rec.id, by: who, at: Date.now() });
         });
       });
-      showToast(tr("subApprovedMsg"));
+      showToast(tr(isClient ? "clientApprovedMsg" : "subApprovedMsg"));
     });
   }
   // a mistake: the latest approved bill back to a draft, its expenses out of the budget
@@ -389,8 +401,14 @@
   }
 
   // ---- the approved bill as a PDF ------------------------------------------------
-  function subBillPdf(sub, bill) {
-    var d = budget.data, calc = billCalc(d, sub, bill), t = calc.totals;
+  // asAsked: a draft, at the quantities handed in (the client's bill, to send them)
+  function subBillPdf(sub, bill, asAsked) {
+    var d = budget.data;
+    if (asAsked) {
+      bill = JSON.parse(JSON.stringify(bill));
+      billCalc(d, sub, bill).lines.forEach(function (x) { bill.lines[x.line.id] = { asked: x.asked, approved: x.asked }; });
+    }
+    var calc = billCalc(d, sub, bill), t = calc.totals;
     var doc = bEl("div", "pdf-doc");
     doc.dir = RTL_LANGS[currentLang] ? "rtl" : "ltr";
     doc.appendChild(buildPdfDocTitleElement(budget.sheet, budget.sheet.name));
@@ -417,15 +435,15 @@
     var sums = bEl("table", "pdf-doc-table sub-pdf-totals");
     [[tr("subCumulative"), t.cumulative], [tr("subPrevious"), -t.previous], [tr("subThisBill"), t.gross],
       [tr("subRetention") + " (" + budgetNum(sub.retentionPct) + "%)", -t.retention], [tr("subAdvanceRecovery"), -t.advance],
-      [tr("subToPay"), t.toPay]].forEach(function (x) {
+      [tr(sub.id === CLIENT_ID ? "clientToReceive" : "subToPay"), t.toPay]].forEach(function (x) {
       var r = bEl("tr");
       r.appendChild(bEl("td", "", x[0]));
       r.appendChild(bEl("td", "", budgetMoney(x[1])));
       sums.appendChild(r);
     });
     doc.appendChild(sums);
-    doc.appendChild(bEl("div", "pdf-doc-info-date", tr("budgetBeforeVat") + " · " +
-      tr("subApprovedBy").replace("{who}", teamPersonName(bill.approvedBy, "")).replace("{date}", isoToDisplay(String(bill.approvedAt || "").slice(0, 10)))));
+    doc.appendChild(bEl("div", "pdf-doc-info-date", tr("budgetBeforeVat") + (bill.status === "approved" ? " · " +
+      tr("subApprovedBy").replace("{who}", teamPersonName(bill.approvedBy, "")).replace("{date}", isoToDisplay(String(bill.approvedAt || "").slice(0, 10))) : "")));
     var fileName = tr("subBillName").replace("{n}", bill.no) + " " + sub.name + " " + budget.sheet.name + ".pdf";
     showToast(tr("workPlanPdfMsg"));
     buildPdfBlobFromElement(doc, fileName).then(function (r) {

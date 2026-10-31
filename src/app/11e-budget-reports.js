@@ -7,6 +7,8 @@
   //     in a period, grouped by type / supplier / BOQ item / month.
   //   - קבלני משנה: each one's contract, approved, payable, retention and
   //     advance, with their approved bills in the period.
+  //   - תזרים מזומנים: by month, what came in from the client against what
+  //     was spent, and the running balance.
   // Each report is built once as { title, period, sections: [{ heading,
   // columns, rows, total }] } and then drawn into either. Amounts before VAT.
   // ---------------------------------------------------------------------
@@ -89,7 +91,10 @@
         [tr("budgetCostBudget"), budgetMoney(t.cost)],
         [tr("budgetForecastCost"), budgetMoney(t.forecast)],
         [tr("budgetPlannedProfit"), budgetMoney(t.contract - t.cost) + (t.contract ? " (" + brPct(t.contract - t.cost, t.contract) + ")" : "")],
-        [tr("budgetForecastProfit"), budgetMoney(t.contract - t.forecast) + (t.contract ? " (" + brPct(t.contract - t.forecast, t.contract) + ")" : "")]
+        [tr("budgetForecastProfit"), budgetMoney(t.contract - t.forecast) + (t.contract ? " (" + brPct(t.contract - t.forecast, t.contract) + ")" : "")],
+        [tr("clientApprovedSoFar"), budgetMoney(clientSummary(d).approved)],
+        [tr("clientReceived"), budgetMoney(clientSummary(d).received)],
+        [tr("clientOpen"), budgetMoney(clientSummary(d).open)]
       ]
     }, {
       heading: tr("budgetByType"), columns: [tr("budgetCategory"), tr("budgetActual"), tr("brShare")],
@@ -205,9 +210,35 @@
     return { title: tr("brSubs"), period: brRangeLabel(range), sections: sections, empty: !d.subcontracts.length };
   }
 
+  function brCash(range) {
+    var d = budget.data, months = {};
+    var add = function (date, k, v) {
+      if (!date || !brInRange(date, range)) return;
+      var m = date.slice(0, 7);
+      months[m] = months[m] || { in: 0, out: 0 };
+      months[m][k] += v;
+    };
+    d.receipts.forEach(function (r) { add(r.date, "in", budgetNum(r.amount)); });
+    d.expenses.forEach(function (e) { add(e.date, "out", budgetNum(e.amount)); });
+    var keys = Object.keys(months).sort(), run = 0, tin = 0, tout = 0;
+    var rows = keys.map(function (m) {
+      var x = months[m];
+      run += x.in - x.out;
+      tin += x.in;
+      tout += x.out;
+      return [m.slice(5, 7) + "/" + m.slice(0, 4), budgetMoney(x.in), budgetMoney(x.out), budgetMoney(x.in - x.out), budgetMoney(run)];
+    });
+    return {
+      title: tr("brCash"), period: brRangeLabel(range), empty: !keys.length,
+      sections: [{ heading: tr("brByMonth"), columns: [tr("brMonth"), tr("clientReceived"), tr("budgetActual"), tr("brNet"), tr("brRunning")],
+        rows: rows, total: [tr("brTotal"), budgetMoney(tin), budgetMoney(tout), budgetMoney(tin - tout), ""] }]
+    };
+  }
+
   function brBuild() {
     var kind = brKind(), range = brRange();
     if (kind === "pnl") return brPnl();
+    if (kind === "cash") return brCash(range);
     if (kind === "subs") return brSubs(range);
     var types = Array.prototype.filter.call(document.querySelectorAll("#brTypes input"), function (c) { return c.checked; })
       .map(function (c) { return c.value; });

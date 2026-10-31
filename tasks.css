@@ -3452,7 +3452,7 @@
   .budget-card.good b { color: var(--plan-green); }
   .budget-note { margin: 6px 0 10px; font-size: 0.75rem; color: var(--ink-muted); text-align: center; }
   .budget-tabs { display: flex; gap: 6px; margin-bottom: 8px; }
-  .budget-tabs button { flex: 1; border: 1px solid var(--rule); background: var(--paper); border-radius: 10px; padding: 8px; font: inherit; font-size: 0.9rem; cursor: pointer; color: var(--ink); }
+  .budget-tabs button { flex: 1; min-width: 0; border: 1px solid var(--rule); background: var(--paper); border-radius: 10px; padding: 8px 4px; font: inherit; font-size: 0.82rem; cursor: pointer; color: var(--ink); }
   .budget-tabs button.on { background: var(--accent); color: var(--accent-contrast); border-color: var(--accent); font-weight: 700; }
   .budget-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
   .budget-actions button { border: 1px solid var(--accent); background: transparent; color: var(--accent); border-radius: 8px; padding: 6px 10px; font: inherit; font-size: 0.85rem; cursor: pointer; }

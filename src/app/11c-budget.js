@@ -9,6 +9,8 @@
   //   expenses: [{ id, date, supplier, supplierCode, invoice, itemId, amount, note, by, at, billId }]
   //   generalBudget: { category: amount } - the project's own costs (overheads,
   //             insurance...) that sit on no BOQ item
+  //   client, receipts: the client's bill terms and the money that came in
+  //             (11f-client-bills.js; the client's bills are among `bills`)
   //   subcontracts, bills: the subcontractors' contracts and partial bills
   //             (11d-subcontract-bills.js); an approved bill's expenses carry its billId
   // } - every amount before VAT; supplier code and invoice number are there
@@ -29,7 +31,7 @@
   function budgetCategoryLabel(cat) {
     return tr("budgetCat_" + (BUDGET_CATEGORIES.indexOf(cat) !== -1 ? cat : "other"));
   }
-  // tab: items | subs | expenses; subId / billId: a subcontractor / bill open in "subs"
+  // tab: items | client | subs | expenses; subId / billId: a subcontractor / bill open there
   var budget = { sheet: null, owner: null, data: null, version: 0, tab: "items", error: false, subId: null, billId: null, billDraft: null };
 
   // whose money a project's is, when this phone may see it (else null)
@@ -100,12 +102,13 @@
   }
 
   // ---- the server ------------------------------------------------------------
-  function budgetEmpty() { return { items: [], expenses: [], subcontracts: [], bills: [], generalBudget: {} }; }
+  function budgetEmpty() { return { items: [], expenses: [], subcontracts: [], bills: [], generalBudget: {}, client: {}, receipts: [] }; }
   function budgetNormalize(d) {
     d = d || {};
     var list = function (k) { return Array.isArray(d[k]) ? d[k] : []; };
     return { items: list("items"), expenses: list("expenses"), subcontracts: list("subcontracts"), bills: list("bills"),
-      generalBudget: d.generalBudget && typeof d.generalBudget === "object" ? d.generalBudget : {} };
+      generalBudget: d.generalBudget && typeof d.generalBudget === "object" ? d.generalBudget : {},
+      client: d.client && typeof d.client === "object" ? d.client : {}, receipts: list("receipts") };
   }
   function budgetRow() {
     return supabaseClient.from(FINANCE_TABLE).select("data, data_version")
@@ -205,6 +208,9 @@
     card(tr("budgetEarned"), budgetMoney(t.earned));
     card(tr("budgetPlannedProfit"), budgetMoney(t.contract - t.cost), t.contract - t.cost < 0 ? "over" : "");
     card(tr("budgetForecastProfit"), budgetMoney(t.contract - t.forecast), t.contract - t.forecast < t.contract - t.cost ? "over" : "good");
+    var cs = clientSummary(budget.data);
+    card(tr("clientApprovedSoFar"), budgetMoney(cs.approved));
+    card(tr("clientReceived"), budgetMoney(cs.received), cs.open > 0 ? "" : "good");
     budgetBody.appendChild(sum);
     budgetBody.appendChild(bEl("p", "budget-note", tr("budgetBeforeVat")));
     var reports = bEl("button", "budget-reports-btn", tr("brTitleBtn"));
@@ -213,7 +219,7 @@
     budgetBody.appendChild(reports);
     // the tabs
     var tabs = bEl("div", "budget-tabs");
-    [["items", "budgetTabItems"], ["subs", "budgetTabSubs"], ["expenses", "budgetTabExpenses"]].forEach(function (x) {
+    [["items", "budgetTabItems"], ["client", "budgetTabClient"], ["subs", "budgetTabSubs"], ["expenses", "budgetTabExpenses"]].forEach(function (x) {
       var b = bEl("button", budget.tab === x[0] ? "on" : "", tr(x[1]));
       b.type = "button";
       b.addEventListener("click", function () {
@@ -226,6 +232,7 @@
     budgetBody.appendChild(tabs);
     if (budget.tab === "items") renderBudgetItems();
     else if (budget.tab === "subs") renderBudgetSubs();
+    else if (budget.tab === "client") renderBudgetClient();
     else renderBudgetExpenses();
   }
   function budgetActions(buttons) {

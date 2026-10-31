@@ -445,6 +445,38 @@
     brBillNo: { he: "חשבון", en: "Bill", ar: "الحساب", ru: "Счёт" },
     brPickTypes: { he: "בחר לפחות סוג הוצאה אחד", en: "Pick at least one expense type", ar: "اختر نوع مصروف واحداً على الأقل", ru: "Выберите хотя бы один тип" },
     brNothing: { he: "אין נתונים לדוח הזה", en: "Nothing for this report", ar: "لا بيانات لهذا التقرير", ru: "Нет данных для отчёта" },
+    budgetTabClient: { he: "מזמין", en: "Client", ar: "المالك", ru: "Заказчик" },
+    clientName: { he: "המזמין", en: "The client", ar: "المالك", ru: "Заказчик" },
+    clientTerms: { he: "עיכבון ומקדמה", en: "Retention and advance", ar: "المحتجز والسلفة", ru: "Удержание и аванс" },
+    clientApprovedSoFar: { he: "אושר ע\"י המזמין (מצטבר)", en: "Approved by the client (to date)", ar: "المعتمد من المالك (تراكمي)", ru: "Утверждено заказчиком (всего)" },
+    clientDue: { he: "לגבייה לפי חשבונות", en: "Due by the bills", ar: "المستحق حسب الحسابات", ru: "К получению по счетам" },
+    clientReceived: { he: "התקבל מהמזמין", en: "Received from the client", ar: "المستلم من المالك", ru: "Получено от заказчика" },
+    clientOpen: { he: "יתרה לגבייה", en: "Still to collect", ar: "المتبقي للتحصيل", ru: "Осталось получить" },
+    clientRetentionHeld: { he: "עיכבון אצל המזמין", en: "Retention held by the client", ar: "المحتجز لدى المالك", ru: "Удержание у заказчика" },
+    clientBills: { he: "חשבונות למזמין", en: "Bills to the client", ar: "حسابات للمالك", ru: "Счета заказчику" },
+    clientBillApproved: { he: "✓ אושר ע\"י המזמין", en: "✓ Approved by the client", ar: "✓ اعتمده المالك", ru: "✓ Утверждён заказчиком" },
+    clientBillDraft: { he: "הוגש – ממתין לאישור המזמין", en: "Submitted – waiting for the client", ar: "مقدم – بانتظار المالك", ru: "Подан – ждёт заказчика" },
+    clientReceipts: { he: "תקבולים", en: "Payments received", ar: "المقبوضات", ru: "Поступления" },
+    clientAddReceipt: { he: "＋ תקבול", en: "＋ Payment", ar: "＋ مقبوض", ru: "＋ Поступление" },
+    clientEditReceipt: { he: "עריכת תקבול", en: "Edit payment", ar: "تعديل مقبوض", ru: "Изменить поступление" },
+    clientNoReceipts: { he: "עדיין לא התקבל כסף", en: "Nothing received yet", ar: "لم يُستلم شيء بعد", ru: "Пока ничего не получено" },
+    clientForBill: { he: "עבור חשבון", en: "For bill", ar: "عن الحساب", ru: "За счёт" },
+    clientRetentionPct: { he: "עיכבון שהמזמין מחזיק (%)", en: "Retention the client holds (%)", ar: "المحتجز لدى المالك (%)", ru: "Удержание заказчика (%)" },
+    clientAdvanceField: { he: "מקדמה שהתקבלה מהמזמין (₪)", en: "Advance received from the client (₪)", ar: "السلفة المستلمة من المالك (₪)", ru: "Аванс от заказчика (₪)" },
+    clientAsked: { he: "מצטבר שהוגש", en: "Cumulative submitted", ar: "التراكمي المقدم", ru: "Подано всего" },
+    clientApprovedQty: { he: "מצטבר שאושר", en: "Cumulative approved", ar: "التراكمي المعتمد", ru: "Утверждено всего" },
+    clientAskedTotal: { he: "הוגש למזמין (מצטבר)", en: "Submitted to the client (cumulative)", ar: "المقدم للمالك (تراكمي)", ru: "Подано заказчику (всего)" },
+    clientToReceive: { he: "לקבל", en: "To receive", ar: "للاستلام", ru: "К получению" },
+    clientApprove: { he: "אושר ע\"י המזמין", en: "Approved by the client", ar: "اعتمده المالك", ru: "Утверждён заказчиком" },
+    clientPdfDraft: { he: "PDF להגשה", en: "PDF to submit", ar: "PDF للتقديم", ru: "PDF для подачи" },
+    clientApproveConfirm: { he: "לרשום את חשבון {n} כמאושר ע\"י המזמין? לקבל: {sum}. אחרי זה החשבון ננעל.", en: "Record bill {n} as approved by the client? To receive: {sum}. It's locked after that.", ar: "تسجيل الحساب {n} كمعتمد من المالك؟ للاستلام: {sum}. بعدها يُقفل.", ru: "Отметить счёт {n} как утверждённый заказчиком? К получению: {sum}. После этого он блокируется." },
+    clientApprovedMsg: { he: "החשבון נרשם כמאושר", en: "The bill is recorded as approved", ar: "تم تسجيل الحساب كمعتمد", ru: "Счёт отмечен как утверждённый" },
+    brCash: { he: "תזרים מזומנים", en: "Cash flow", ar: "التدفق النقدي", ru: "Денежный поток" },
+    brNet: { he: "נטו", en: "Net", ar: "الصافي", ru: "Нетто" },
+    brRunning: { he: "מצטבר", en: "Running", ar: "تراكمي", ru: "Нарастающим" },
+    morningBudgetItem: { he: "{name}: נוצל {used}% מהתקציב, בוצע רק {done}%", en: "{name}: {used}% of the budget spent, only {done}% done", ar: "{name}: صُرف {used}% من الميزانية، والمنجز {done}% فقط", ru: "{name}: потрачено {used}% бюджета, выполнено лишь {done}%" },
+    morningBudgetOver: { he: "חריגה צפויה: {sum}", en: "Expected overrun: {sum}", ar: "تجاوز متوقع: {sum}", ru: "Ожидаемый перерасход: {sum}" },
+    morningBudgetGeneral: { he: "{type}: מעבר לתקציב", en: "{type}: over budget", ar: "{type}: تجاوز الميزانية", ru: "{type}: сверх бюджета" },
     voiceBtnTitle: { he: "פקודה קולית", en: "Voice command", ar: "أمر صوتي", ru: "Голосовая команда" },
     voiceListening: { he: "מקשיב... דבר עכשיו", en: "Listening... speak now", ar: "أستمع... تكلّم الآن", ru: "Слушаю... говорите" },
     voiceThinking: { he: "מבין...", en: "Understanding...", ar: "أفهم...", ru: "Разбираю..." },
@@ -10414,6 +10446,8 @@
   //   expenses: [{ id, date, supplier, supplierCode, invoice, itemId, amount, note, by, at, billId }]
   //   generalBudget: { category: amount } - the project's own costs (overheads,
   //             insurance...) that sit on no BOQ item
+  //   client, receipts: the client's bill terms and the money that came in
+  //             (11f-client-bills.js; the client's bills are among `bills`)
   //   subcontracts, bills: the subcontractors' contracts and partial bills
   //             (11d-subcontract-bills.js); an approved bill's expenses carry its billId
   // } - every amount before VAT; supplier code and invoice number are there
@@ -10434,7 +10468,7 @@
   function budgetCategoryLabel(cat) {
     return tr("budgetCat_" + (BUDGET_CATEGORIES.indexOf(cat) !== -1 ? cat : "other"));
   }
-  // tab: items | subs | expenses; subId / billId: a subcontractor / bill open in "subs"
+  // tab: items | client | subs | expenses; subId / billId: a subcontractor / bill open there
   var budget = { sheet: null, owner: null, data: null, version: 0, tab: "items", error: false, subId: null, billId: null, billDraft: null };
 
   // whose money a project's is, when this phone may see it (else null)
@@ -10505,12 +10539,13 @@
   }
 
   // ---- the server ------------------------------------------------------------
-  function budgetEmpty() { return { items: [], expenses: [], subcontracts: [], bills: [], generalBudget: {} }; }
+  function budgetEmpty() { return { items: [], expenses: [], subcontracts: [], bills: [], generalBudget: {}, client: {}, receipts: [] }; }
   function budgetNormalize(d) {
     d = d || {};
     var list = function (k) { return Array.isArray(d[k]) ? d[k] : []; };
     return { items: list("items"), expenses: list("expenses"), subcontracts: list("subcontracts"), bills: list("bills"),
-      generalBudget: d.generalBudget && typeof d.generalBudget === "object" ? d.generalBudget : {} };
+      generalBudget: d.generalBudget && typeof d.generalBudget === "object" ? d.generalBudget : {},
+      client: d.client && typeof d.client === "object" ? d.client : {}, receipts: list("receipts") };
   }
   function budgetRow() {
     return supabaseClient.from(FINANCE_TABLE).select("data, data_version")
@@ -10610,6 +10645,9 @@
     card(tr("budgetEarned"), budgetMoney(t.earned));
     card(tr("budgetPlannedProfit"), budgetMoney(t.contract - t.cost), t.contract - t.cost < 0 ? "over" : "");
     card(tr("budgetForecastProfit"), budgetMoney(t.contract - t.forecast), t.contract - t.forecast < t.contract - t.cost ? "over" : "good");
+    var cs = clientSummary(budget.data);
+    card(tr("clientApprovedSoFar"), budgetMoney(cs.approved));
+    card(tr("clientReceived"), budgetMoney(cs.received), cs.open > 0 ? "" : "good");
     budgetBody.appendChild(sum);
     budgetBody.appendChild(bEl("p", "budget-note", tr("budgetBeforeVat")));
     var reports = bEl("button", "budget-reports-btn", tr("brTitleBtn"));
@@ -10618,7 +10656,7 @@
     budgetBody.appendChild(reports);
     // the tabs
     var tabs = bEl("div", "budget-tabs");
-    [["items", "budgetTabItems"], ["subs", "budgetTabSubs"], ["expenses", "budgetTabExpenses"]].forEach(function (x) {
+    [["items", "budgetTabItems"], ["client", "budgetTabClient"], ["subs", "budgetTabSubs"], ["expenses", "budgetTabExpenses"]].forEach(function (x) {
       var b = bEl("button", budget.tab === x[0] ? "on" : "", tr(x[1]));
       b.type = "button";
       b.addEventListener("click", function () {
@@ -10631,6 +10669,7 @@
     budgetBody.appendChild(tabs);
     if (budget.tab === "items") renderBudgetItems();
     else if (budget.tab === "subs") renderBudgetSubs();
+    else if (budget.tab === "client") renderBudgetClient();
     else renderBudgetExpenses();
   }
   function budgetActions(buttons) {
@@ -11135,7 +11174,12 @@
   // ---------------------------------------------------------------------
   var SUB_AHEAD_MARGIN = 10; // approved % of a line may run this far ahead of its item's work
 
-  function subOf(d, id) { return d.subcontracts.find(function (s) { return s.id === id; }); }
+  // (the client's bills - 11f-client-bills.js - are these same bills, of a "client"
+  // stand-in: every BOQ item at its price to the client)
+  function subOf(d, id) {
+    if (id === CLIENT_ID) return clientSub(d);
+    return d.subcontracts.find(function (s) { return s.id === id; });
+  }
   function subBills(d, sub) {
     return d.bills.filter(function (b) { return b.subId === sub.id; }).sort(function (a, b) { return a.no - b.no; });
   }
@@ -11297,6 +11341,7 @@
     if (open) { budget.billId = open.id; budget.billDraft = null; renderBudget(); return; }
     var bills = subBills(d, sub);
     var bill = { id: uid(), subId: sub.id, no: bills.length ? bills[bills.length - 1].no + 1 : 1, date: todayISO(), status: "draft", lines: {}, note: "" };
+    if (sub.id === CLIENT_ID) clientPrefill(d, sub, bill);
     budget.billId = bill.id;
     budget.billDraft = JSON.parse(JSON.stringify(bill));
     budgetChange(budgetUpsert("bills", bill));
@@ -11309,6 +11354,7 @@
     var locked = saved.status === "approved";
     if (!budget.billDraft || budget.billDraft.id !== saved.id || locked) budget.billDraft = JSON.parse(JSON.stringify(saved));
     var bill = budget.billDraft;
+    var isClient = sub.id === CLIENT_ID;
     var back = subBack(sub.name);
     back.addEventListener("click", function () { budget.billId = null; budget.billDraft = null; renderBudget(); });
     budgetBody.appendChild(back);
@@ -11331,7 +11377,7 @@
       row.appendChild(bEl("small", "budget-item-nums", tr("subLineInfo").replace("{qty}", budgetNum(x.line.qty))
         .replace("{unit}", item && item.unit || "").replace("{price}", budgetMoney(budgetNum(x.line.price))).replace("{prev}", x.prevCum)));
       var inputs = bEl("div", "sub-bill-inputs");
-      [["asked", "subAsked", x.asked], ["approved", "subApprovedQty", x.approved]].forEach(function (f) {
+      [["asked", isClient ? "clientAsked" : "subAsked", x.asked], ["approved", isClient ? "clientApprovedQty" : "subApprovedQty", x.approved]].forEach(function (f) {
         var lab = bEl("label", "");
         lab.appendChild(bEl("small", "", tr(f[1])));
         var inp = bEl("input");
@@ -11369,9 +11415,9 @@
 
     var t = calc.totals;
     var sum = bEl("div", "sub-bill-totals");
-    [[tr("subAskedTotal"), t.asked], [tr("subCumulative"), t.cumulative], [tr("subPrevious"), -t.previous],
+    [[tr(isClient ? "clientAskedTotal" : "subAskedTotal"), t.asked], [tr("subCumulative"), t.cumulative], [tr("subPrevious"), -t.previous],
       [tr("subThisBill"), t.gross], [tr("subRetention") + " (" + budgetNum(sub.retentionPct) + "%)", -t.retention],
-      [tr("subAdvanceRecovery"), -t.advance], [tr("subToPay"), t.toPay]].forEach(function (x, k, all) {
+      [tr("subAdvanceRecovery"), -t.advance], [tr(isClient ? "clientToReceive" : "subToPay"), t.toPay]].forEach(function (x, k, all) {
       var line = bEl("div", "sub-total-line" + (k === all.length - 1 ? " final" : ""));
       line.appendChild(bEl("span", "", x[0]));
       line.appendChild(bEl("b", "", budgetMoney(x[1])));
@@ -11387,7 +11433,9 @@
       budgetActions(actions);
     } else {
       budgetActions([["subSaveDraft", function () { subSaveDraft(bill); }],
-        ["subApprove", function () { subApprove(sub, bill); }, "primary"],
+        [isClient ? "clientApprove" : "subApprove", function () { subApprove(sub, bill); }, "primary"]].concat(isClient
+        // the bill as handed in, to send the client
+        ? [["clientPdfDraft", function () { subBillPdf(sub, bill, true); }]] : []).concat([
         ["subDeleteDraft", function () {
           askConfirm(tr("budgetDeleteConfirm"), function () {
             var id = bill.id;
@@ -11395,7 +11443,7 @@
             budget.billDraft = null;
             budgetChange(budgetRemove("bills", id));
           });
-        }]]);
+        }]]));
     }
   }
   function subSaveDraft(bill) {
@@ -11410,7 +11458,8 @@
   // approved: locked with its totals, and the period's value into the budget
   function subApprove(sub, bill) {
     var draft = JSON.parse(JSON.stringify(bill));
-    askConfirm(tr("subApproveConfirm").replace("{n}", draft.no).replace("{sum}", budgetMoney(billCalc(budget.data, sub, draft).totals.toPay)), function () {
+    var isClient = sub.id === CLIENT_ID;
+    askConfirm(tr(isClient ? "clientApproveConfirm" : "subApproveConfirm").replace("{n}", draft.no).replace("{sum}", budgetMoney(billCalc(budget.data, sub, draft).totals.toPay)), function () {
       var who = myPhoneNumber || null, at = new Date().toISOString();
       budgetChange(function (d) {
         var s = subOf(d, sub.id);
@@ -11424,6 +11473,8 @@
         rec.approvedAt = at;
         rec.totals = calc.totals;
         budgetUpsert("bills", rec)(d);
+        // a subcontractor's: its cost into the budget (the client's is income - 11f)
+        if (isClient) return;
         calc.lines.forEach(function (x) {
           if (!x.period) return;
           d.expenses.push({ id: rec.id + ":" + x.line.id, date: rec.date, category: "subcontractors", supplier: s.name, supplierCode: s.supplierCode || "",
@@ -11431,7 +11482,7 @@
             note: "", billId: rec.id, by: who, at: Date.now() });
         });
       });
-      showToast(tr("subApprovedMsg"));
+      showToast(tr(isClient ? "clientApprovedMsg" : "subApprovedMsg"));
     });
   }
   // a mistake: the latest approved bill back to a draft, its expenses out of the budget
@@ -11506,8 +11557,14 @@
   }
 
   // ---- the approved bill as a PDF ------------------------------------------------
-  function subBillPdf(sub, bill) {
-    var d = budget.data, calc = billCalc(d, sub, bill), t = calc.totals;
+  // asAsked: a draft, at the quantities handed in (the client's bill, to send them)
+  function subBillPdf(sub, bill, asAsked) {
+    var d = budget.data;
+    if (asAsked) {
+      bill = JSON.parse(JSON.stringify(bill));
+      billCalc(d, sub, bill).lines.forEach(function (x) { bill.lines[x.line.id] = { asked: x.asked, approved: x.asked }; });
+    }
+    var calc = billCalc(d, sub, bill), t = calc.totals;
     var doc = bEl("div", "pdf-doc");
     doc.dir = RTL_LANGS[currentLang] ? "rtl" : "ltr";
     doc.appendChild(buildPdfDocTitleElement(budget.sheet, budget.sheet.name));
@@ -11534,15 +11591,15 @@
     var sums = bEl("table", "pdf-doc-table sub-pdf-totals");
     [[tr("subCumulative"), t.cumulative], [tr("subPrevious"), -t.previous], [tr("subThisBill"), t.gross],
       [tr("subRetention") + " (" + budgetNum(sub.retentionPct) + "%)", -t.retention], [tr("subAdvanceRecovery"), -t.advance],
-      [tr("subToPay"), t.toPay]].forEach(function (x) {
+      [tr(sub.id === CLIENT_ID ? "clientToReceive" : "subToPay"), t.toPay]].forEach(function (x) {
       var r = bEl("tr");
       r.appendChild(bEl("td", "", x[0]));
       r.appendChild(bEl("td", "", budgetMoney(x[1])));
       sums.appendChild(r);
     });
     doc.appendChild(sums);
-    doc.appendChild(bEl("div", "pdf-doc-info-date", tr("budgetBeforeVat") + " · " +
-      tr("subApprovedBy").replace("{who}", teamPersonName(bill.approvedBy, "")).replace("{date}", isoToDisplay(String(bill.approvedAt || "").slice(0, 10)))));
+    doc.appendChild(bEl("div", "pdf-doc-info-date", tr("budgetBeforeVat") + (bill.status === "approved" ? " · " +
+      tr("subApprovedBy").replace("{who}", teamPersonName(bill.approvedBy, "")).replace("{date}", isoToDisplay(String(bill.approvedAt || "").slice(0, 10))) : "")));
     var fileName = tr("subBillName").replace("{n}", bill.no) + " " + sub.name + " " + budget.sheet.name + ".pdf";
     showToast(tr("workPlanPdfMsg"));
     buildPdfBlobFromElement(doc, fileName).then(function (r) {
@@ -11558,6 +11615,8 @@
   //     in a period, grouped by type / supplier / BOQ item / month.
   //   - קבלני משנה: each one's contract, approved, payable, retention and
   //     advance, with their approved bills in the period.
+  //   - תזרים מזומנים: by month, what came in from the client against what
+  //     was spent, and the running balance.
   // Each report is built once as { title, period, sections: [{ heading,
   // columns, rows, total }] } and then drawn into either. Amounts before VAT.
   // ---------------------------------------------------------------------
@@ -11640,7 +11699,10 @@
         [tr("budgetCostBudget"), budgetMoney(t.cost)],
         [tr("budgetForecastCost"), budgetMoney(t.forecast)],
         [tr("budgetPlannedProfit"), budgetMoney(t.contract - t.cost) + (t.contract ? " (" + brPct(t.contract - t.cost, t.contract) + ")" : "")],
-        [tr("budgetForecastProfit"), budgetMoney(t.contract - t.forecast) + (t.contract ? " (" + brPct(t.contract - t.forecast, t.contract) + ")" : "")]
+        [tr("budgetForecastProfit"), budgetMoney(t.contract - t.forecast) + (t.contract ? " (" + brPct(t.contract - t.forecast, t.contract) + ")" : "")],
+        [tr("clientApprovedSoFar"), budgetMoney(clientSummary(d).approved)],
+        [tr("clientReceived"), budgetMoney(clientSummary(d).received)],
+        [tr("clientOpen"), budgetMoney(clientSummary(d).open)]
       ]
     }, {
       heading: tr("budgetByType"), columns: [tr("budgetCategory"), tr("budgetActual"), tr("brShare")],
@@ -11756,9 +11818,35 @@
     return { title: tr("brSubs"), period: brRangeLabel(range), sections: sections, empty: !d.subcontracts.length };
   }
 
+  function brCash(range) {
+    var d = budget.data, months = {};
+    var add = function (date, k, v) {
+      if (!date || !brInRange(date, range)) return;
+      var m = date.slice(0, 7);
+      months[m] = months[m] || { in: 0, out: 0 };
+      months[m][k] += v;
+    };
+    d.receipts.forEach(function (r) { add(r.date, "in", budgetNum(r.amount)); });
+    d.expenses.forEach(function (e) { add(e.date, "out", budgetNum(e.amount)); });
+    var keys = Object.keys(months).sort(), run = 0, tin = 0, tout = 0;
+    var rows = keys.map(function (m) {
+      var x = months[m];
+      run += x.in - x.out;
+      tin += x.in;
+      tout += x.out;
+      return [m.slice(5, 7) + "/" + m.slice(0, 4), budgetMoney(x.in), budgetMoney(x.out), budgetMoney(x.in - x.out), budgetMoney(run)];
+    });
+    return {
+      title: tr("brCash"), period: brRangeLabel(range), empty: !keys.length,
+      sections: [{ heading: tr("brByMonth"), columns: [tr("brMonth"), tr("clientReceived"), tr("budgetActual"), tr("brNet"), tr("brRunning")],
+        rows: rows, total: [tr("brTotal"), budgetMoney(tin), budgetMoney(tout), budgetMoney(tin - tout), ""] }]
+    };
+  }
+
   function brBuild() {
     var kind = brKind(), range = brRange();
     if (kind === "pnl") return brPnl();
+    if (kind === "cash") return brCash(range);
     if (kind === "subs") return brSubs(range);
     var types = Array.prototype.filter.call(document.querySelectorAll("#brTypes input"), function (c) { return c.checked; })
       .map(function (c) { return c.value; });
@@ -11822,6 +11910,152 @@
   });
   document.getElementById("brExcelBtn").addEventListener("click", function () { brMake(brCsv); });
   document.getElementById("brCancelBtn").addEventListener("click", function () { budgetReportOverlay.hidden = true; });
+
+  // ---------------------------------------------------------------------
+  // The client (המזמין), in the budget control: the income side. Its
+  // partial bills are the subcontractors' kind (11d-subcontract-bills.js),
+  // of a stand-in "client" whose contract is every BOQ item at its price to
+  // the client - with retention and an advance, if the client holds them.
+  // A new bill comes filled in from each item's % done; "approved" is what
+  // the client's supervisor approved. Money that came in is kept as
+  // receipts. Kept in project_finance.data as
+  //   client:   { retentionPct, advance, advanceRecoveryPct }
+  //   bills:    the client's bills among the others, subId "client"
+  //   receipts: [{ id, date, amount, billId, note, by, at }]
+  // Amounts before VAT.
+  // ---------------------------------------------------------------------
+  var CLIENT_ID = "client";
+
+  function clientSub(d) {
+    var c = d.client || {};
+    return {
+      id: CLIENT_ID, name: tr("clientName"), retentionPct: c.retentionPct, advance: c.advance, advanceRecoveryPct: c.advanceRecoveryPct,
+      lines: d.items.map(function (i) { return { id: i.id, itemId: i.id, qty: i.qty, price: i.price }; })
+    };
+  }
+  // a new client bill: each item at its % done (never below what's been approved before)
+  function clientPrefill(d, sub, bill) {
+    var prev = subLastApproved(d, sub, bill.no);
+    d.items.forEach(function (i) {
+      var done = Math.round(budgetNum(i.qty) * Math.min(100, budgetNum(i.progress))) / 100;
+      var before = prev && prev.lines[i.id] ? budgetNum(prev.lines[i.id].approved) : 0;
+      bill.lines[i.id] = { asked: Math.max(done, before) };
+    });
+  }
+  function clientSummary(d) {
+    var sub = clientSub(d), s = subSummary(d, sub);
+    var received = d.receipts.reduce(function (sum, r) { return sum + budgetNum(r.amount); }, 0);
+    return { approved: s.approved, due: s.paid, retention: s.retention, advanceLeft: s.advanceLeft, received: received, open: s.paid - received };
+  }
+
+  function renderBudgetClient() {
+    var d = budget.data;
+    if (budget.billId) { renderSubBill(); return; }
+    var sub = clientSub(d), s = clientSummary(d);
+    var head = bEl("div", "budget-chapter");
+    var h = bEl("div", "budget-chapter-head");
+    h.appendChild(bEl("b", "", tr("clientName")));
+    var edit = bEl("button", "sub-edit", tr("clientTerms"));
+    edit.type = "button";
+    edit.addEventListener("click", clientTermsForm);
+    h.appendChild(edit);
+    head.appendChild(h);
+    [[tr("budgetContract"), budgetMoney(subContractValue(sub))], [tr("clientApprovedSoFar"), budgetMoney(s.approved)],
+      [tr("clientDue"), budgetMoney(s.due)], [tr("clientReceived"), budgetMoney(s.received)],
+      [tr("clientOpen"), budgetMoney(s.open)],
+      [tr("clientRetentionHeld"), budgetMoney(s.retention) + " (" + budgetNum(sub.retentionPct) + "%)"]].forEach(function (x) {
+      var line = bEl("div", "sub-term");
+      line.appendChild(bEl("small", "", x[0]));
+      line.appendChild(bEl("b", "", x[1]));
+      head.appendChild(line);
+    });
+    budgetBody.appendChild(head);
+
+    // bills
+    var bills = bEl("section", "budget-chapter");
+    var bh = bEl("div", "budget-chapter-head");
+    bh.appendChild(bEl("b", "", tr("clientBills")));
+    if (d.items.length) {
+      var nb = bEl("button", "sub-edit", tr("subNewBill"));
+      nb.type = "button";
+      nb.addEventListener("click", function () { subNewBill(sub); });
+      bh.appendChild(nb);
+    }
+    bills.appendChild(bh);
+    var list = subBills(d, sub);
+    if (!d.items.length) bills.appendChild(bEl("p", "team-empty", tr("subNeedItems")));
+    else if (!list.length) bills.appendChild(bEl("p", "team-empty", tr("subNoBills")));
+    list.slice().reverse().forEach(function (b) {
+      var c = billCalc(d, sub, b);
+      var row = bEl("div", "budget-item");
+      var top = bEl("div", "budget-item-top");
+      top.appendChild(bEl("span", "budget-name", tr("subBillName").replace("{n}", b.no)));
+      top.appendChild(bEl("b", "budget-amount", budgetMoney(c.totals.toPay)));
+      row.appendChild(top);
+      row.appendChild(bEl("small", b.status === "approved" ? "sub-approved" : "budget-warn",
+        isoToDisplay(b.date) + " · " + tr(b.status === "approved" ? "clientBillApproved" : "clientBillDraft")));
+      row.addEventListener("click", function () { budget.billId = b.id; budget.billDraft = null; renderBudget(); });
+      bills.appendChild(row);
+    });
+    budgetBody.appendChild(bills);
+
+    // money that came in
+    var rec = bEl("section", "budget-chapter");
+    var rh = bEl("div", "budget-chapter-head");
+    rh.appendChild(bEl("b", "", tr("clientReceipts")));
+    var nr = bEl("button", "sub-edit", tr("clientAddReceipt"));
+    nr.type = "button";
+    nr.addEventListener("click", function () { clientReceiptForm(null); });
+    rh.appendChild(nr);
+    rec.appendChild(rh);
+    if (!d.receipts.length) rec.appendChild(bEl("p", "team-empty", tr("clientNoReceipts")));
+    d.receipts.slice().sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); }).forEach(function (r) {
+      var bill = d.bills.find(function (b) { return b.id === r.billId; });
+      var row = bEl("div", "budget-item");
+      var top = bEl("div", "budget-item-top");
+      top.appendChild(bEl("span", "budget-name", isoToDisplay(r.date)));
+      top.appendChild(bEl("b", "budget-amount", budgetMoney(budgetNum(r.amount))));
+      row.appendChild(top);
+      var sub2 = [bill ? tr("subBillName").replace("{n}", bill.no) : "", r.note || ""].filter(Boolean).join(" · ");
+      if (sub2) row.appendChild(bEl("small", "budget-item-nums", sub2));
+      row.addEventListener("click", function () { clientReceiptForm(r); });
+      rec.appendChild(row);
+    });
+    budgetBody.appendChild(rec);
+  }
+
+  function clientTermsForm() {
+    var c = budget.data.client || {};
+    budgetForm(tr("clientTerms"), [
+      { key: "retentionPct", label: tr("clientRetentionPct"), value: c.retentionPct, type: "number" },
+      { key: "advance", label: tr("clientAdvanceField"), value: c.advance, type: "number" },
+      { key: "advanceRecoveryPct", label: tr("subAdvanceRecoveryPct"), value: c.advanceRecoveryPct, type: "number" }
+    ], function (v) {
+      var terms = {
+        retentionPct: Math.max(0, Math.min(100, budgetNum(v.retentionPct))), advance: budgetNum(v.advance),
+        advanceRecoveryPct: Math.max(0, Math.min(100, budgetNum(v.advanceRecoveryPct)))
+      };
+      budgetChange(function (d) { d.client = terms; });
+    }, null);
+  }
+  function clientReceiptForm(receipt) {
+    var d = budget.data, r = receipt || { date: todayISO() };
+    var approved = subBills(d, clientSub(d)).filter(function (b) { return b.status === "approved"; });
+    budgetForm(tr(receipt ? "clientEditReceipt" : "clientAddReceipt"), [
+      { key: "date", label: tr("shareTaskDate"), value: r.date, type: "date" },
+      { key: "amount", label: tr("budgetAmount"), value: r.amount, type: "number" },
+      { key: "billId", label: tr("clientForBill"), value: r.billId || "",
+        options: [["", "—"]].concat(approved.map(function (b) { return [b.id, tr("subBillName").replace("{n}", b.no)]; })) },
+      { key: "note", label: tr("budgetNote"), value: r.note }
+    ], function (v) {
+      if (!budgetNum(v.amount)) { alert(tr("budgetNeedAmount")); return false; }
+      var rec = Object.assign({}, r, {
+        id: r.id || uid(), date: v.date || todayISO(), amount: budgetNum(v.amount), billId: v.billId || null, note: v.note,
+        by: r.by || myPhoneNumber || null, at: r.at || Date.now()
+      });
+      budgetChange(budgetUpsert("receipts", rec));
+    }, receipt ? function () { budgetChange(budgetRemove("receipts", receipt.id)); } : null);
+  }
   // Every active shared project this account can act on - its own real
   // memberships plus (full read/write, via office_groups.sql) any project
   // whose member is in a group this account created or is the named Head
@@ -19967,7 +20201,9 @@
   // morning notification and the home-screen widget.
   //   1. שים לב: only what needs acting on - activities late, ones whose
   //      pace runs past their end (and what's linked after them), tasks
-  //      left from earlier days, the day's reminders.
+  //      left from earlier days, the day's reminders; and, for whoever may
+  //      see the money (11c-budget.js), BOQ items whose spending runs ahead
+  //      of their work and general costs past their budget.
   //   2. the open tasks (today's and earlier), by project, each with the
   //      task list's mark - tapped, it moves on as it does there.
   //   3. the work plans, one under the other: what's under way, late or
@@ -19981,9 +20217,48 @@
   // marked here: they stay on the report (ticked) until it's closed
   var morningTouched = {};
 
+  // the projects' money, read when the report opens: [{ sheet, data }]
+  var morningMoney = [];
+  function loadMorningMoney() {
+    var owners = financeOwnerPhones();
+    if (!supabaseClient || !owners.length) return;
+    supabaseClient.from(FINANCE_TABLE).select("owner_phone, project_id, data").in("owner_phone", owners).then(function (r) {
+      if (!r || r.error) return;
+      morningMoney = (r.data || []).map(function (row) {
+        var sheet = voiceTargetSheets().find(function (sh) { return sh.id === row.project_id && budgetOwnerFor(sh) === row.owner_phone; });
+        return sheet ? { sheet: sheet, data: budgetNormalize(row.data) } : null;
+      }).filter(Boolean);
+      if (!morningView.hidden && morningMoney.length) renderMorningReport();
+    }, function () {});
+  }
+  // a project's budget overruns, as lines for שים לב
+  function morningMoneyLines(m) {
+    var d = m.data, out = [];
+    d.items.forEach(function (item) {
+      var actual = d.expenses.reduce(function (s2, e) { return e.itemId === item.id ? s2 + budgetNum(e.amount) : s2; }, 0);
+      if (!budgetItemOver(item, actual)) return;
+      var over = budgetItemForecast(item, actual) - budgetNum(item.cost);
+      out.push({ text: tr("morningBudgetItem").replace("{name}", [item.code, item.name].filter(Boolean).join(" "))
+        .replace("{used}", Math.round(actual * 100 / budgetNum(item.cost))).replace("{done}", Math.round(budgetNum(item.progress))),
+        sub: over > 0 ? tr("morningBudgetOver").replace("{sum}", budgetMoney(over)) : "" });
+    });
+    BUDGET_CATEGORIES.forEach(function (c) {
+      var limit = budgetNum(d.generalBudget[c]);
+      if (!limit) return;
+      var spent = d.expenses.reduce(function (s2, e) {
+        var onItem = d.items.some(function (i) { return i.id === e.itemId; });
+        return (e.category || "other") === c && !onItem ? s2 + budgetNum(e.amount) : s2;
+      }, 0);
+      if (spent > limit) out.push({ text: tr("morningBudgetGeneral").replace("{type}", budgetCategoryLabel(c)), sub: tr("morningBudgetOver").replace("{sum}", budgetMoney(spent - limit)) });
+    });
+    return out;
+  }
+
   function openMorningReport() {
     morningMore = { tasks: false, plan: false };
     morningTouched = {};
+    morningMoney = [];
+    loadMorningMoney();
     renderMorningReport();
     morningView.hidden = false;
     morningBody.scrollTop = 0;
@@ -20076,6 +20351,9 @@
     if (older) add("🕓", tr("morningOlderTasks").replace("{n}", older));
     reminders.sort(function (a, b) { return a.time < b.time ? -1 : 1; }).forEach(function (r) {
       add("⏰", r.time + " " + r.text + where(r.sheet));
+    });
+    morningMoney.forEach(function (m) {
+      morningMoneyLines(m).forEach(function (x) { add("💰", x.text + where(m.sheet), x.sub); });
     });
     if (!list.children.length) {
       sec.appendChild(morningEl("p", "morning-ok", tr("morningAllGood")));
