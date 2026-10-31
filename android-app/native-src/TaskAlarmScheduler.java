@@ -91,7 +91,7 @@ public final class TaskAlarmScheduler {
             JSONObject a = alarms.optJSONObject(i);
             if (a == null) continue;
             if (!id.equals(a.optString("id"))) { next.put(a); continue; }
-            if (a.optBoolean("quiet")) showQuiet(c, id, a.optString("title"), a.optString("body"), a.optString("view", "workplan"));
+            if (a.optBoolean("quiet")) showQuiet(c, id, a.optString("title"), a.optString("body"), a.optString("view", viewFor(id)));
             else showRinging(c, id, a.optString("title"), a.optString("body"));
             markFired(c, id, a.optLong("at", 0));
             long repeatMinutes = a.optLong("repeatMinutes", 0);
@@ -104,8 +104,45 @@ public final class TaskAlarmScheduler {
         scheduleAllAndSave(c, next);
     }
 
+    // "נודניק" (the button, or a side button while it rings): quiet until
+    // then, with a silent notification that says so and can turn it off
+    // meanwhile - before, a snoozed reminder had nothing on screen to stop.
     static void snooze(Context c, String id, String title, String body) {
         snoozeFor(c, id, title, body, SNOOZE_MS);
+        showSnoozed(c, id, title, body, System.currentTimeMillis() + SNOOZE_MS);
+    }
+
+    private static final String SNOOZED_CHANNEL_ID = "task_alarm_snoozed";
+    private static int snoozedNoticeId(String id) {
+        return (baseId(id) + ":snoozed").hashCode();
+    }
+    private static void showSnoozed(Context c, String id, String title, String body, long until) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                c.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        NotificationManager nm = c.getSystemService(NotificationManager.class);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && nm.getNotificationChannel(SNOOZED_CHANNEL_ID) == null) {
+            NotificationChannel channel = new NotificationChannel(SNOOZED_CHANNEL_ID, "תזכורת בנודניק",
+                    NotificationManager.IMPORTANCE_LOW);
+            channel.setDescription("תזכורת שהושתקה לכמה דקות – אפשר לכבות אותה מכאן");
+            channel.setSound(null, null);
+            channel.enableVibration(false);
+            nm.createNotificationChannel(channel);
+        }
+        String time = new java.text.SimpleDateFormat("HH:mm", java.util.Locale.US).format(new java.util.Date(until));
+        String base = baseId(id);
+        Notification n = new NotificationCompat.Builder(c, SNOOZED_CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+                .setContentTitle("נודניק עד " + time + " – " + title)
+                .setContentText(body)
+                .setContentIntent(openFor(c, id))
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setOngoing(true)
+                .setTimeoutAfter(Math.max(1000, until - System.currentTimeMillis()))
+                .addAction(0, "כבה", actionIntent(c, ACTION_STOP, base, title, body))
+                .build();
+        nm.notify(snoozedNoticeId(id), n);
     }
 
     static synchronized void snoozeFor(Context c, String id, String title, String body, long delayMs) {
@@ -131,6 +168,7 @@ public final class TaskAlarmScheduler {
 
     static void stopRinging(Context c, String id) {
         c.getSystemService(NotificationManager.class).cancel(id.hashCode());
+        c.getSystemService(NotificationManager.class).cancel(snoozedNoticeId(id));
         TaskAlarmRingingService.stopIfRinging(c, id);
     }
 
@@ -247,6 +285,26 @@ public final class TaskAlarmScheduler {
         return PendingIntent.getBroadcast(c, 0, i, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
+    // Where tapping a reminder's notification goes: a task's ("sheetId:taskId",
+    // a calendar link's ":cal" too) opens that task - the app finds its day;
+    // the work plan's and the morning summary's carry their own view.
+    static String viewFor(String id) {
+        String base = baseId(id);
+        if (base.startsWith("morning:")) return "morning";
+        if (base.startsWith("plan-")) {
+            String[] p = base.split(":");
+            return p.length >= 3 ? "workplan|" + p[1] + "|" + p[2] : "workplan";
+        }
+        String[] p = base.split(":");
+        return p.length >= 2 ? "task|" + p[0] + "||" + p[1] : null;
+    }
+    // each reminder its own tap (a shared request code made them overwrite
+    // each other's target)
+    static PendingIntent openFor(Context c, String id) {
+        return PendingIntent.getActivity(c, ("open:" + baseId(id)).hashCode(), ItaskAlarmPlugin.openAppIntent(c, viewFor(id)),
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
     static Intent launchIntent(Context c) {
         Intent i = c.getPackageManager().getLaunchIntentForPackage(c.getPackageName());
         if (i == null) i = new Intent(c, MainActivity.class);
@@ -261,14 +319,14 @@ public final class TaskAlarmScheduler {
     // service can't start (e.g. an inexact alarm, without the exact-alarm
     // permission, isn't allowed to start a foreground service).
     private static void showRinging(Context c, String id, String title, String body) {
+        c.getSystemService(NotificationManager.class).cancel(snoozedNoticeId(id)); // ringing again: the snooze is over
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                 c.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             return;
         }
         if (TaskAlarmRingingService.start(c, id, title, body)) return;
         ensureChannel(c);
-        PendingIntent open = PendingIntent.getActivity(c, 0, launchIntent(c),
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent open = openFor(c, id);
         Notification n = new NotificationCompat.Builder(c, CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
                 .setContentTitle(title)
@@ -278,6 +336,7 @@ public final class TaskAlarmScheduler {
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setContentIntent(open)
                 .setDeleteIntent(actionIntent(c, ACTION_STOP, id, title, body))
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setAutoCancel(true)
                 .setTimeoutAfter(RING_TIMEOUT_MS)
                 .addAction(0, "נודניק 5 דק׳", actionIntent(c, ACTION_SNOOZE, id, title, body))
@@ -289,8 +348,8 @@ public final class TaskAlarmScheduler {
 
     private static final String QUIET_CHANNEL_ID = "work_plan_notices";
 
-    // view: where tapping it opens the app ("workplan", or "assistant-today"
-    // for the morning summary - version 24+)
+    // view: where tapping it opens the app - the alarm's own ("workplan|sheetId|itemId",
+    // "morning"...), else viewFor(id)
     private static void showQuiet(Context c, String id, String title, String body, String view) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                 c.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {

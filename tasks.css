@@ -3642,3 +3642,6 @@
   /* the sketch icon: 3mm (~11px) larger each way, no box, floating on a soft shadow,
      and 3mm higher than the middle of the project-name row */
   .sketch-btn { transform: translateY(calc(-50% - 11px)); width: 47px; height: 47px; padding: 0; border: none; background: transparent; border-radius: 0; filter: drop-shadow(0 3px 4px rgba(44, 42, 36, 0.35)); }
+  /* what a tapped notification pointed at, picked out for a moment */
+  .link-flash { animation: link-flash 1.3s ease-out 2; }
+  @keyframes link-flash { 0%, 40% { box-shadow: 0 0 0 4px #ffd400, 0 0 14px 4px rgba(255,212,0,0.8); } 100% { box-shadow: none; } }

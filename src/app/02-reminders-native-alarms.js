@@ -209,6 +209,22 @@
     });
   }
 
+  function openWorkPlanLink(sheetId, itemId) {
+    if (sheetId && allSheets().some(function (sh) { return sh.id === sheetId; })) {
+      data.activeSheetId = sheetId;
+      showTaskListForLink();
+    }
+    openWorkPlan();
+    if (!itemId) return;
+    setTimeout(function () {
+      var bar = document.querySelector('#workPlanView [data-id="' + itemId + '"]');
+      if (!bar) return;
+      bar.scrollIntoView({ block: "center", inline: "center" });
+      bar.classList.add("link-flash");
+      setTimeout(function () { bar.classList.remove("link-flash"); }, 2600);
+    }, 150);
+  }
+
   // Native app: text shared into ITASK from another app (a WhatsApp
   // message...) arrives as view "share" with its text - see
   // openShareTaskModal. Tapping the home-screen widget starts the app with
@@ -218,7 +234,8 @@
   // notification. ("focus", from app versions before 15, just opens the app.)
   function openLaunchView(view, text) {
     if (view === "share") { openShareTaskModal(text); return; }
-    if (view === "workplan") { openWorkPlan(); return; }
+    // "workplan|sheetId|itemId": that project's plan, the activity picked out
+    if (view === "workplan" || (view && view.indexOf("workplan|") === 0)) { openWorkPlanLink(view.split("|")[1], view.split("|")[2]); return; }
     // ("assistant..." - the widget and notifications of app versions 23-24)
     if (view === "morning" || (view && view.indexOf("assistant") === 0)) { openMorningReport(); return; }
     if (!view || view.indexOf("task|") !== 0) return;

@@ -2179,6 +2179,22 @@
     });
   }
 
+  function openWorkPlanLink(sheetId, itemId) {
+    if (sheetId && allSheets().some(function (sh) { return sh.id === sheetId; })) {
+      data.activeSheetId = sheetId;
+      showTaskListForLink();
+    }
+    openWorkPlan();
+    if (!itemId) return;
+    setTimeout(function () {
+      var bar = document.querySelector('#workPlanView [data-id="' + itemId + '"]');
+      if (!bar) return;
+      bar.scrollIntoView({ block: "center", inline: "center" });
+      bar.classList.add("link-flash");
+      setTimeout(function () { bar.classList.remove("link-flash"); }, 2600);
+    }, 150);
+  }
+
   // Native app: text shared into ITASK from another app (a WhatsApp
   // message...) arrives as view "share" with its text - see
   // openShareTaskModal. Tapping the home-screen widget starts the app with
@@ -2188,7 +2204,8 @@
   // notification. ("focus", from app versions before 15, just opens the app.)
   function openLaunchView(view, text) {
     if (view === "share") { openShareTaskModal(text); return; }
-    if (view === "workplan") { openWorkPlan(); return; }
+    // "workplan|sheetId|itemId": that project's plan, the activity picked out
+    if (view === "workplan" || (view && view.indexOf("workplan|") === 0)) { openWorkPlanLink(view.split("|")[1], view.split("|")[2]); return; }
     // ("assistant..." - the widget and notifications of app versions 23-24)
     if (view === "morning" || (view && view.indexOf("assistant") === 0)) { openMorningReport(); return; }
     if (!view || view.indexOf("task|") !== 0) return;
@@ -14902,12 +14919,12 @@
         var title = tr("workPlanTitle") + " – " + sheet.name;
         var lateAt = wpAt(addDaysToISO(item.end, 1), 8);
         if (late && !summarised && lateAt > now) {
-          alarms.push({ id: "plan-late:" + sheet.id + ":" + item.id, title: title, quiet: true, at: lateAt,
+          alarms.push({ id: "plan-late:" + sheet.id + ":" + item.id, title: title, quiet: true, at: lateAt, view: "workplan|" + sheet.id + "|" + item.id,
             body: tr("workPlanNoticeLate").replace("{name}", item.name).replace("{date}", isoToDisplay(item.end)) });
         }
         var startAt = wpAt(addDaysToISO(item.start, -1), 16);
         if (soon && item.status === "todo" && startAt > now) {
-          alarms.push({ id: "plan-start:" + sheet.id + ":" + item.id, title: title, quiet: true, at: startAt,
+          alarms.push({ id: "plan-start:" + sheet.id + ":" + item.id, title: title, quiet: true, at: startAt, view: "workplan|" + sheet.id + "|" + item.id,
             body: tr("workPlanNoticeStart").replace("{name}", item.name + (item.by ? ", " + item.by : "")) });
         }
       });
@@ -14924,7 +14941,7 @@
         if (n) lateProjects++;
       });
       if (lateItems) {
-        alarms.push({ id: "plan-office:" + nextISO, title: tr("workPlanOfficeTitle"), quiet: true, at: wpAt(nextISO, 8),
+        alarms.push({ id: "plan-office:" + nextISO, title: tr("workPlanOfficeTitle"), quiet: true, view: "workplan|" + HEAD_OFFICE_SHEET_ID, at: wpAt(nextISO, 8),
           body: tr("workPlanLateBannerOffice").replace("{n}", lateItems).replace("{p}", lateProjects) });
       }
     }
@@ -17759,14 +17776,27 @@
     }
   }
 
+  // A tapped notification / link: that project, on the task list (whatever
+  // screen was open), on the task's own day when no date came with it.
   function navigateToTaskLink(sheetId, date, taskId, chat) {
     if (sheetId) data.activeSheetId = sheetId;
+    if (!chat && (sheetId || taskId)) showTaskListForLink();
+    var sheet = taskId && allSheets().find(function (s) { return s.id === data.activeSheetId; });
+    var task = sheet && (sheet.tasks || []).find(function (t) { return t.id === taskId; });
+    if (!date && task && task.date) date = task.date;
+    if (task && task.status === 2) state.showingCompleted = true;
     if (date) state.viewDate = clampViewDate(date);
     if (taskId) state.highlightTaskId = taskId;
     if (chat && sheetId) {
       pendingOpenChatSheetId = sheetId;
       tryOpenPendingChat();
     }
+  }
+
+  // every screen over the list closed - as the ITASK button at the bottom does
+  function showTaskListForLink() {
+    Array.prototype.forEach.call(document.querySelectorAll(".report-view"), function (v) { v.hidden = true; });
+    tasksFabBtn.click();
   }
 
   function applyTaskLinkFromURL() {

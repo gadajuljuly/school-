@@ -861,14 +861,27 @@
     }
   }
 
+  // A tapped notification / link: that project, on the task list (whatever
+  // screen was open), on the task's own day when no date came with it.
   function navigateToTaskLink(sheetId, date, taskId, chat) {
     if (sheetId) data.activeSheetId = sheetId;
+    if (!chat && (sheetId || taskId)) showTaskListForLink();
+    var sheet = taskId && allSheets().find(function (s) { return s.id === data.activeSheetId; });
+    var task = sheet && (sheet.tasks || []).find(function (t) { return t.id === taskId; });
+    if (!date && task && task.date) date = task.date;
+    if (task && task.status === 2) state.showingCompleted = true;
     if (date) state.viewDate = clampViewDate(date);
     if (taskId) state.highlightTaskId = taskId;
     if (chat && sheetId) {
       pendingOpenChatSheetId = sheetId;
       tryOpenPendingChat();
     }
+  }
+
+  // every screen over the list closed - as the ITASK button at the bottom does
+  function showTaskListForLink() {
+    Array.prototype.forEach.call(document.querySelectorAll(".report-view"), function (v) { v.hidden = true; });
+    tasksFabBtn.click();
   }
 
   function applyTaskLinkFromURL() {

@@ -716,12 +716,12 @@
         var title = tr("workPlanTitle") + " – " + sheet.name;
         var lateAt = wpAt(addDaysToISO(item.end, 1), 8);
         if (late && !summarised && lateAt > now) {
-          alarms.push({ id: "plan-late:" + sheet.id + ":" + item.id, title: title, quiet: true, at: lateAt,
+          alarms.push({ id: "plan-late:" + sheet.id + ":" + item.id, title: title, quiet: true, at: lateAt, view: "workplan|" + sheet.id + "|" + item.id,
             body: tr("workPlanNoticeLate").replace("{name}", item.name).replace("{date}", isoToDisplay(item.end)) });
         }
         var startAt = wpAt(addDaysToISO(item.start, -1), 16);
         if (soon && item.status === "todo" && startAt > now) {
-          alarms.push({ id: "plan-start:" + sheet.id + ":" + item.id, title: title, quiet: true, at: startAt,
+          alarms.push({ id: "plan-start:" + sheet.id + ":" + item.id, title: title, quiet: true, at: startAt, view: "workplan|" + sheet.id + "|" + item.id,
             body: tr("workPlanNoticeStart").replace("{name}", item.name + (item.by ? ", " + item.by : "")) });
         }
       });
@@ -738,7 +738,7 @@
         if (n) lateProjects++;
       });
       if (lateItems) {
-        alarms.push({ id: "plan-office:" + nextISO, title: tr("workPlanOfficeTitle"), quiet: true, at: wpAt(nextISO, 8),
+        alarms.push({ id: "plan-office:" + nextISO, title: tr("workPlanOfficeTitle"), quiet: true, view: "workplan|" + HEAD_OFFICE_SHEET_ID, at: wpAt(nextISO, 8),
           body: tr("workPlanLateBannerOffice").replace("{n}", lateItems).replace("{p}", lateProjects) });
       }
     }

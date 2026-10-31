@@ -32,8 +32,11 @@ import androidx.core.content.ContextCompat;
 // until "כבה"/"נודניק". The service itself may only run a few minutes
 // (shortService), so after RING_MS it hands over to an exact alarm that
 // starts it again moments later - the chiming just carries on until it's
-// turned off. Like an alarm clock, pressing any of the phone's side buttons
-// (power, volume up/down) while it rings snoozes it for 5 minutes. A short
+// turned off. Like an alarm clock, a side button while it rings snoozes it
+// for 5 minutes: volume up/down, or power pressed to turn the screen OFF -
+// not the screen coming ON (that's someone picking the phone up to press
+// "כבה", which used to snooze it from under their finger). Its
+// notification, "כבה" included, shows on the lock screen too. A short
 // foreground service, because a broadcast receiver can't keep a player
 // alive; starting it from an exact alarm is allowed.
 public class TaskAlarmRingingService extends Service {
@@ -170,7 +173,7 @@ public class TaskAlarmRingingService extends Service {
         handler.postDelayed(chime, CHIME_INTERVAL_MS);
     }
 
-    // Power button: the screen turning off or on. Volume buttons: an active
+    // Power button: the screen turning off (not on - see above). Volume buttons: an active
     // media session with its own (remote) volume control receives the volume
     // keys even from the lock screen, instead of them changing a volume.
     private void listenForSideButtons() {
@@ -183,7 +186,6 @@ public class TaskAlarmRingingService extends Service {
                 }
             };
             IntentFilter filter = new IntentFilter(Intent.ACTION_SCREEN_OFF);
-            filter.addAction(Intent.ACTION_SCREEN_ON);
             if (Build.VERSION.SDK_INT >= 33) {
                 registerReceiver(powerKey, filter, Context.RECEIVER_NOT_EXPORTED);
             } else {
@@ -239,8 +241,7 @@ public class TaskAlarmRingingService extends Service {
 
     private Notification buildNotification(String id, String title, String body) {
         ensureChannel();
-        PendingIntent open = PendingIntent.getActivity(this, 0, TaskAlarmScheduler.launchIntent(this),
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent open = TaskAlarmScheduler.openFor(this, id);
         return new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
                 .setContentTitle(title)
@@ -250,6 +251,7 @@ public class TaskAlarmRingingService extends Service {
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setContentIntent(open)
                 .setDeleteIntent(TaskAlarmScheduler.actionIntent(this, TaskAlarmScheduler.ACTION_STOP, id, title, body))
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setOngoing(true)
                 .addAction(0, "נודניק 5 דק׳", TaskAlarmScheduler.actionIntent(this, TaskAlarmScheduler.ACTION_SNOOZE, id, title, body))
                 .addAction(0, "כבה", TaskAlarmScheduler.actionIntent(this, TaskAlarmScheduler.ACTION_STOP, id, title, body))
