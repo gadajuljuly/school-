@@ -396,7 +396,9 @@ test("P&L analysis: headline tiles, what the numbers say, and the charts", async
   await expect(ring.locator(".pnl-ring-legend")).toContainText("רווח1,500 ₪12%");
   await expect(ring.locator(".pnl-ring-legend")).toContainText("קבלני משנה7,000 ₪56%");
   await expect(ring.locator(".pnl-ring-legend")).toContainText("חומרים4,000 ₪32%");
-  expect(new Set(await ring.locator("path").evaluateAll((ps) => ps.map((p) => p.getAttribute("fill")))).size).toBe(3);
+  // the pie's top: three slices, three colours (the walls in front are their shades)
+  expect(new Set(await ring.locator("path").evaluateAll((ps) => ps.map((p) => p.getAttribute("fill")).filter((f) => f.startsWith("#")))).size).toBe(3);
+  await expect(ring.locator(".pnl-ring-total")).toContainText("12,500 ₪");
   await expect(page.locator(".pnl-section", { hasText: "רווח לפי פרק" }).locator("rect[fill='#eb6834']")).toHaveCount(1); // 02 בטון, at a loss
   await page.locator(".pnl-hit").first().click();
   await expect(page.locator(".pnl-readout")).toContainText("09/2026");

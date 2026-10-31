@@ -3537,6 +3537,8 @@
   .pnl-ring-legend span { flex: 1; min-width: 0; }
   .pnl-ring-legend b { font-weight: 700; }
   .pnl-ring-legend small { width: 40px; text-align: left; color: var(--ink-muted); }
+  .pnl-ring-total { margin: 0 0 6px; font-size: 0.85rem; color: var(--ink-muted); }
+  .pnl-ring-total b { color: var(--ink); }
   .pnl-ring-note { margin: 6px 0 0; font-size: 0.8rem; color: var(--danger); }
   .pnl-readout { margin: 6px 0 0; font-size: 0.8rem; color: var(--ink-muted); min-height: 1.2em; }
   .pnl-hit { cursor: pointer; }

@@ -8,7 +8,7 @@
   //   - costs by type (ranked bars, one hue);
   //   - profit on the work done by chapter (diverging around zero);
   //   - work done against budget used, by chapter;
-  //   - a ring of the value of the work done: every cost type and the profit.
+  //   - a 3D pie of the value of the work done: every cost type and the profit.
   // Colors: blue / orange (validated together for color-blind reading),
   // gray hairlines; every bar is labelled, and a tap on the time chart
   // reads that month's values out. The same, with the charts, as a PDF.
@@ -184,26 +184,55 @@
   // order - never by size), the profit first in blue
   var PNL_SLICE_COLORS = { profit: "#2a78d6", subcontractors: "#eb6834", materials: "#1baf7a", labor: "#eda100",
     equipment: "#e87ba4", overhead: "#008300", insurance: "#6250d6", other: "#e34948" };
-  function pnlRing(slices, centerTop, centerBottom) {
-    var size = 200, cx = size / 2, cy = size / 2, rOut = 92, rIn = 58;
+  // a 3D pie: the top an ellipse cut into slices, and in front the side
+  // walls of the slices that face the reader, a shade darker; each big
+  // slice carries its % (a tilted pie makes front slices look bigger - the
+  // legend beside it holds the exact amounts)
+  function pnlShade(hex, f) {
+    var n = parseInt(hex.slice(1), 16);
+    var c = [n >> 16, (n >> 8) & 255, n & 255].map(function (v) { return Math.round(v * f); });
+    return "rgb(" + c.join(",") + ")";
+  }
+  function pnlPie3d(slices) {
+    var w = 240, h = 170, cx = w / 2, cy = 70, rx = 110, ry = 60, depth = 22;
     var total = slices.reduce(function (s2, x) { return s2 + x.value; }, 0) || 1;
-    var out = ['<svg viewBox="0 0 ' + size + " " + size + '" width="200" height="200" role="img" direction="ltr" style="direction:ltr" font-family="inherit">'];
-    var a = -Math.PI / 2;
-    var pt = function (r, ang) { return (cx + r * Math.cos(ang)).toFixed(2) + " " + (cy + r * Math.sin(ang)).toFixed(2); };
+    var pt = function (t, dy) { return (cx + rx * Math.cos(t)).toFixed(2) + " " + (cy + (dy || 0) + ry * Math.sin(t)).toFixed(2); };
+    var out = ['<svg viewBox="0 0 ' + w + " " + h + '" width="240" height="170" role="img" direction="ltr" style="direction:ltr" font-family="inherit">'];
+    // the angles: from the top, clockwise
+    var a = -Math.PI / 2, parts = [];
     slices.forEach(function (x) {
       var sweep = x.value / total * Math.PI * 2;
-      if (sweep <= 0) return;
+      if (sweep > 0) parts.push({ x: x, a: a, b: a + sweep });
+      a += sweep;
+    });
+    // the walls facing the reader: each slice's stretch of the front half (0..π)
+    parts.forEach(function (p) {
+      [[0, Math.PI], [2 * Math.PI, 3 * Math.PI]].forEach(function (front) {
+        var a1 = Math.max(p.a, front[0]), b1 = Math.min(p.b, front[1]);
+        if (b1 <= a1) return;
+        out.push('<path d="M' + pt(a1) + " A" + rx + " " + ry + " 0 0 1 " + pt(b1) + " L" + pt(b1, depth) +
+          " A" + rx + " " + ry + " 0 0 0 " + pt(a1, depth) + 'Z" fill="' + pnlShade(p.x.color, 0.72) + '" stroke="' +
+          pnlShade(p.x.color, 0.62) + '" stroke-width="0.6"/>');
+      });
+    });
+    // the top
+    parts.forEach(function (p) {
+      var sweep = p.b - p.a;
       if (sweep >= Math.PI * 2 - 1e-6) {
-        out.push('<circle cx="' + cx + '" cy="' + cy + '" r="' + ((rOut + rIn) / 2) + '" fill="none" stroke="' + x.color + '" stroke-width="' + (rOut - rIn) + '"><title>' + pnlEsc(x.title) + "</title></circle>");
+        out.push('<ellipse cx="' + cx + '" cy="' + cy + '" rx="' + rx + '" ry="' + ry + '" fill="' + p.x.color + '"><title>' + pnlEsc(p.x.title) + "</title></ellipse>");
         return;
       }
-      var b = a + sweep, large = sweep > Math.PI ? 1 : 0;
-      out.push('<path d="M' + pt(rOut, a) + " A" + rOut + " " + rOut + " 0 " + large + " 1 " + pt(rOut, b) + " L" + pt(rIn, b) +
-        " A" + rIn + " " + rIn + " 0 " + large + " 0 " + pt(rIn, a) + 'Z" fill="' + x.color + '" stroke="#fff" stroke-width="2" stroke-linejoin="round"><title>' + pnlEsc(x.title) + "</title></path>");
-      a = b;
+      out.push('<path d="M' + cx + " " + cy + " L" + pt(p.a) + " A" + rx + " " + ry + " 0 " + (sweep > Math.PI ? 1 : 0) + " 1 " + pt(p.b) +
+        'Z" fill="' + p.x.color + '" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"><title>' + pnlEsc(p.x.title) + "</title></path>");
     });
-    out.push('<text x="' + cx + '" y="' + (cy - 2) + '" text-anchor="middle" font-size="16" font-weight="800" fill="' + PNL_INK + '">' + pnlEsc(centerTop) + "</text>");
-    out.push('<text x="' + cx + '" y="' + (cy + 16) + '" text-anchor="middle" font-size="10" fill="' + PNL_MUTED + '">' + pnlEsc(centerBottom) + "</text>");
+    // the % on each slice big enough to hold it
+    parts.forEach(function (p) {
+      var share = (p.b - p.a) / (Math.PI * 2) * 100;
+      if (share < 6) return;
+      var m = (p.a + p.b) / 2;
+      out.push('<text x="' + (cx + rx * 0.62 * Math.cos(m)).toFixed(1) + '" y="' + (cy + ry * 0.62 * Math.sin(m) + 4).toFixed(1) +
+        '" text-anchor="middle" font-size="11" font-weight="800" fill="#fff" stroke="rgba(0,0,0,0.35)" stroke-width="2" paint-order="stroke">' + Math.round(share) + "%</text>");
+    });
     out.push("</svg>");
     return out.join("");
   }
@@ -224,8 +253,9 @@
       return '<div><i style="background:' + v.color + '"></i><span>' + pnlEsc(v.label) + "</span><b>" + pnlEsc(budgetMoney(v.value)) + "</b><small>" + pnlPct(v.value, total) + "%</small></div>";
     }).join("") + "</div>";
     var note = profit < 0 ? '<p class="pnl-ring-note">' + pnlEsc(tr("pnlRingLoss").replace("{sum}", budgetMoney(-profit))) + "</p>" : "";
+    var caption = '<p class="pnl-ring-total">' + pnlEsc(tr(profit > 0 ? "pnlRingCenter" : "pnlRingCenterCosts")) + ": <b>" + pnlEsc(budgetMoney(total)) + "</b></p>";
     return { title: tr(profit > 0 ? "pnlChartRing" : "pnlChartRingCosts"),
-      html: '<div class="pnl-ring">' + pnlRing(slices, pnlShort(total), tr(profit > 0 ? "pnlRingCenter" : "pnlRingCenterCosts")) + legend + "</div>" + note };
+      html: caption + '<div class="pnl-ring">' + pnlPie3d(slices) + legend + "</div>" + note };
   }
   function pnlLegend(items) {
     return '<div class="pnl-legend">' + items.map(function (it) {
