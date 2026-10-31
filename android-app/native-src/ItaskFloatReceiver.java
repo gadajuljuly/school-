@@ -21,6 +21,8 @@ import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.WindowManager;
+import android.view.animation.AccelerateInterpolator;
+import android.view.animation.DecelerateInterpolator;
 import android.widget.TextView;
 
 import org.json.JSONArray;
@@ -35,7 +37,8 @@ import java.util.Locale;
 
 // The floating task (version 25): round the clock - every quarter hour from
 // 06:00 to 18:00, every half hour through the evening and night - a small bar - "project: task" - shows over whatever is on screen for 8
-// seconds, then goes. Each time it's the next open task (today's and
+// seconds, then goes - sliding in from the right edge of the screen and
+// back out to it, like a ticker. Each time it's the next open task (today's and
 // earlier) of the next project, round and round: the 1st task of every
 // project, then the 2nd of every project... It reads the same open-tasks
 // list the home-screen widget gets from the app (ItaskWidgetProvider), and
@@ -48,6 +51,7 @@ public class ItaskFloatReceiver extends BroadcastReceiver {
     private static final String KEY_LAST = "lastTask";
     private static final int DAY_FROM = 6, DAY_TO = 18; // every 15 minutes; else every 30
     private static final long SHOW_MS = 8000;
+    private static final long SLIDE_IN_MS = 700, SLIDE_OUT_MS = 600;
     private static final int REQUEST_CODE = 7301;
 
     private static SharedPreferences prefs(Context c) {
@@ -167,8 +171,11 @@ public class ItaskFloatReceiver extends BroadcastReceiver {
                 PixelFormat.TRANSLUCENT);
         lp.gravity = Gravity.TOP | Gravity.RIGHT;
         float dp = c.getResources().getDisplayMetrics().density;
-        lp.x = Math.round(6 * dp);
+        lp.x = 0; // against the right edge: the card comes in from there
         lp.y = Math.round(30 * dp);
+        final View card = view.findViewById(R.id.itask_float_card);
+        // off screen until it's measured, then in from the right
+        card.setTranslationX(c.getResources().getDisplayMetrics().widthPixels);
 
         final boolean[] gone = { false };
         final Runnable remove = new Runnable() {
@@ -178,6 +185,15 @@ public class ItaskFloatReceiver extends BroadcastReceiver {
                 gone[0] = true;
                 try { wm.removeView(view); } catch (Exception e) { /* already gone */ }
                 pending.finish();
+            }
+        };
+        // back out to the right, then away
+        final Runnable slideOut = new Runnable() {
+            @Override
+            public void run() {
+                if (gone[0]) return;
+                card.animate().translationX(card.getWidth() + 16 * dp).setDuration(SLIDE_OUT_MS)
+                        .setInterpolator(new AccelerateInterpolator()).withEndAction(remove).start();
             }
         };
         view.setOnClickListener(new View.OnClickListener() {
@@ -193,6 +209,14 @@ public class ItaskFloatReceiver extends BroadcastReceiver {
             pending.finish();
             return;
         }
-        new Handler(Looper.getMainLooper()).postDelayed(remove, SHOW_MS);
+        view.post(new Runnable() {
+            @Override
+            public void run() {
+                card.setTranslationX(card.getWidth() + 16 * dp);
+                card.animate().translationX(0).setDuration(SLIDE_IN_MS)
+                        .setInterpolator(new DecelerateInterpolator()).start();
+            }
+        });
+        new Handler(Looper.getMainLooper()).postDelayed(slideOut, SLIDE_IN_MS + SHOW_MS);
     }
 }

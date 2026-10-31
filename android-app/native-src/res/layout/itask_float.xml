@@ -1,12 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- the floating task: "project: task" on one line, the ITASK mark at its
-     start, cream with a gold border (ItaskFloatReceiver) -->
+     start, cream with a gold border (ItaskFloatReceiver). The window sits
+     against the screen's right edge, so the card slides in and out there. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:padding="6dp">
+    android:paddingLeft="6dp"
+    android:paddingTop="6dp"
+    android:paddingRight="10dp"
+    android:paddingBottom="6dp">
 
     <LinearLayout
+        android:id="@+id/itask_float_card"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:background="@drawable/itask_float_bg"
