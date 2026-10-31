@@ -76,3 +76,38 @@ test("on someone else's team: the menu says so, and their finances become this p
   // whose money: mine, and the team I'm an engineer on (not the site-manager one)
   expect(await page.evaluate(() => window.__hooks.financeOwnerPhones())).toEqual([ "+972500000001", "+972509999999" ]);
 });
+
+test("the diary's בקרה תקציבית tile: for the project's owner and the engineers on their team only", async ({ page }) => {
+  const BOSS = "+972509999999";
+  await openWithSharedProject(page, { phone: ME, native: true, sheets: [
+    { id: "mine", name: "שלי", members: [ME], tasks: [] },
+    { id: "boss", name: "של הבוס", members: [ME, BOSS], tasks: [], createdBy: BOSS },
+  ] });
+  const tile = page.locator("#siteLogBudgetBtn");
+  const diaryOf = async (name) => {
+    await page.locator(".sheet-tab", { hasText: name }).click();
+    await page.locator("#calendarFabBtn").click();
+  };
+  // the boss's project, before being on the boss's team: no tile
+  await page.locator("#calendarFabBtn").click();
+  await expect(page.locator("#diaryView")).toBeVisible();
+  await expect(tile).toBeHidden();
+  // my own project: the tile, and its screen
+  await diaryOf("שלי");
+  await expect(tile).toBeVisible();
+  await tile.click();
+  await expect(page.locator("#budgetView")).toBeVisible();
+  await expect(page.locator("#budgetProjectName")).toHaveText("שלי");
+  await page.locator("#budgetBackBtn").click();
+
+  // made an engineer on the boss's team: the boss's project has it too
+  await page.evaluate((boss) => {
+    window.__backend.tables.team_roles = [{ owner_phone: boss, phone: "+972500000001", name: "", role: "engineer" }];
+    return window.__hooks.loadTeam();
+  }, BOSS);
+  await diaryOf("של הבוס");
+  await expect(tile).toBeVisible();
+  // ...but not as a site manager
+  await page.evaluate(() => { window.__backend.tables.team_roles[0].role = "site_manager"; return window.__hooks.loadTeam(); });
+  await expect(tile).toBeHidden();
+});

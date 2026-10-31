@@ -483,6 +483,7 @@
       // which day's log the icons below point to, same as it always did.
       activeSiteLogDate = state.viewDate;
       updateSiteLogCloseShareButtons();
+      updateBudgetTile();
       return;
     }
     if (libraryMode) {

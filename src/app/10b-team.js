@@ -33,6 +33,7 @@
       teamError.hidden = true;
       renderTeamMyRoles();
       if (!teamView.hidden) renderTeam();
+      if (state.viewMode === "diary") updateBudgetTile();
     }).catch(function () {
       teamError.textContent = tr("teamLoadError");
       teamError.hidden = false;

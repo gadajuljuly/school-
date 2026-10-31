@@ -299,6 +299,8 @@
     teamLoadError: { he: "לא הצלחתי לטעון את הצוות (ייתכן שצריך להריץ את team_and_finance.sql ב-Supabase)", en: "Couldn't load the team (team_and_finance.sql may need to be run in Supabase)", ar: "تعذر تحميل الفريق (قد يلزم تشغيل team_and_finance.sql في Supabase)", ru: "Не удалось загрузить команду (возможно, нужно запустить team_and_finance.sql в Supabase)" },
     teamIAmEngineer: { he: "אתה מהנדס בצוות של {name}", en: "You're an engineer on {name}'s team", ar: "أنت مهندس في فريق {name}", ru: "Вы инженер в команде {name}" },
     teamIAmSiteManager: { he: "אתה מנהל עבודה בצוות של {name}", en: "You're a site manager on {name}'s team", ar: "أنت مدير عمل في فريق {name}", ru: "Вы прораб в команде {name}" },
+    budgetTile: { he: "בקרה תקציבית", en: "Budget control", ar: "الرقابة على الميزانية", ru: "Контроль бюджета" },
+    budgetComingSoon: { he: "כאן תהיה הבקרה התקציבית של הפרויקט: תקציב לפי פרקים, הוצאות עם צילום חשבונית, וביצוע מול תקציב. המסך בבנייה.", en: "The project's budget control will be here: budget by chapters, expenses with the invoice photo, and actual vs budget. Being built.", ar: "هنا ستكون الرقابة على ميزانية المشروع: الميزانية حسب البنود، المصروفات مع صورة الفاتورة، والفعلي مقابل الميزانية. قيد الإنشاء.", ru: "Здесь будет контроль бюджета проекта: бюджет по разделам, расходы с фото счёта и факт против бюджета. В разработке." },
     voiceBtnTitle: { he: "פקודה קולית", en: "Voice command", ar: "أمر صوتي", ru: "Голосовая команда" },
     voiceListening: { he: "מקשיב... דבר עכשיו", en: "Listening... speak now", ar: "أستمع... تكلّم الآن", ru: "Слушаю... говорите" },
     voiceThinking: { he: "מבין...", en: "Understanding...", ar: "أفهم...", ru: "Разбираю..." },
@@ -8279,6 +8281,7 @@
       teamError.hidden = true;
       renderTeamMyRoles();
       if (!teamView.hidden) renderTeam();
+      if (state.viewMode === "diary") updateBudgetTile();
     }).catch(function () {
       teamError.textContent = tr("teamLoadError");
       teamError.hidden = false;
@@ -10256,6 +10259,41 @@
     });
     doc.appendChild(grid);
   }
+
+  // ---------------------------------------------------------------------
+  // בקרה תקציבית: a project's money (project_finance - see
+  // supabase/sql/team_and_finance.sql), from its tile in the diary. The
+  // tile shows only to whoever may see that money: the project's owner -
+  // the user, for a private project; its creator, for a shared one - and
+  // the engineers on the owner's team (financeOwnerPhones, 10b-team.js).
+  // ---------------------------------------------------------------------
+  var budgetView = document.getElementById("budgetView");
+  var siteLogBudgetBtn = document.getElementById("siteLogBudgetBtn");
+
+  // whose money a project's is, when this phone may see it (else null)
+  function budgetOwnerFor(sheet) {
+    if (!sheet || !myPhoneNumber) return null;
+    var owner = sheet.shared ? sheet.createdBy : myPhoneNumber;
+    return owner && financeOwnerPhones().indexOf(owner) !== -1 ? owner : null;
+  }
+  function updateBudgetTile() {
+    siteLogBudgetBtn.hidden = !budgetOwnerFor(activeSheet());
+  }
+
+  function openBudgetView() {
+    var sheet = activeSheet();
+    if (!budgetOwnerFor(sheet)) return;
+    document.getElementById("budgetProjectName").textContent = sheet.name;
+    var body = document.getElementById("budgetBody");
+    body.innerHTML = "";
+    var soon = document.createElement("p");
+    soon.className = "budget-soon";
+    soon.textContent = tr("budgetComingSoon");
+    body.appendChild(soon);
+    budgetView.hidden = false;
+  }
+  siteLogBudgetBtn.addEventListener("click", openBudgetView);
+  document.getElementById("budgetBackBtn").addEventListener("click", function () { budgetView.hidden = true; });
   // Every active shared project this account can act on - its own real
   // memberships plus (full read/write, via office_groups.sql) any project
   // whose member is in a group this account created or is the named Head
@@ -14962,6 +15000,7 @@
       // which day's log the icons below point to, same as it always did.
       activeSiteLogDate = state.viewDate;
       updateSiteLogCloseShareButtons();
+      updateBudgetTile();
       return;
     }
     if (libraryMode) {

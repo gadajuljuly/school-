@@ -38,7 +38,7 @@
 <script src="vendor/supabase-js-2.118.0.js"></script>
 <script src="vendor/firebase-app-compat-10.7.1.js"></script>
 <script src="vendor/firebase-auth-compat-10.7.1.js"></script>
-<link rel="stylesheet" href="tasks.css?v=63a0da79c9">
+<link rel="stylesheet" href="tasks.css?v=b4f2cc9826">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -591,6 +591,10 @@
           <div class="library-item" id="siteLogPlanBtn">
             <div class="library-item-thumb"><img src="tasks-work-plan-icon.webp" alt=""></div>
             <div class="library-item-name" data-i18n="workPlanPlannedVsDone">מתוכנן מול ביצוע</div>
+          </div>
+          <div class="library-item" id="siteLogBudgetBtn" hidden>
+            <div class="library-item-thumb"><img src="tasks-budget-icon.webp" alt=""></div>
+            <div class="library-item-name" data-i18n="budgetTile">בקרה תקציבית</div>
           </div>
           <div class="library-item" id="siteLogPhotosBtn">
             <div class="library-item-thumb"><img src="tasks-photos-icon.webp" alt=""></div>
@@ -1261,6 +1265,17 @@
     <div class="morning-body" id="morningBody"></div>
   </div>
 
+  <div class="report-view budget-view" id="budgetView" hidden>
+    <div class="report-head">
+      <button type="button" class="report-back-btn" id="budgetBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
+      <div class="report-head-title">
+        <div class="site-log-header-project" id="budgetProjectName"></div>
+        <div data-i18n="budgetTile">בקרה תקציבית</div>
+      </div>
+    </div>
+    <div class="budget-body" id="budgetBody"></div>
+  </div>
+
   <div class="report-view team-view" id="teamView" hidden>
     <div class="report-head">
       <button type="button" class="report-back-btn" id="teamBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
@@ -1496,6 +1511,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=b4a3c01148"></script>
+<script src="tasks-app.js?v=4bf5ceed43"></script>
 </body>
 </html>
