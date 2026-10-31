@@ -7,7 +7,8 @@
   //   - income approved by the client against costs, cumulative by month;
   //   - costs by type (ranked bars, one hue);
   //   - profit on the work done by chapter (diverging around zero);
-  //   - work done against budget used, by chapter.
+  //   - work done against budget used, by chapter;
+  //   - a ring of the value of the work done: every cost type and the profit.
   // Colors: blue / orange (validated together for color-blind reading),
   // gray hairlines; every bar is labelled, and a tap on the time chart
   // reads that month's values out. The same, with the charts, as a PDF.
@@ -179,6 +180,53 @@
     out.push("</svg>");
     return out.join("");
   }
+  // the ring's slices: a fixed colour per cost type (the validated palette's
+  // order - never by size), the profit first in blue
+  var PNL_SLICE_COLORS = { profit: "#2a78d6", subcontractors: "#eb6834", materials: "#1baf7a", labor: "#eda100",
+    equipment: "#e87ba4", overhead: "#008300", insurance: "#6250d6", other: "#e34948" };
+  function pnlRing(slices, centerTop, centerBottom) {
+    var size = 200, cx = size / 2, cy = size / 2, rOut = 92, rIn = 58;
+    var total = slices.reduce(function (s2, x) { return s2 + x.value; }, 0) || 1;
+    var out = ['<svg viewBox="0 0 ' + size + " " + size + '" width="200" height="200" role="img" direction="ltr" style="direction:ltr" font-family="inherit">'];
+    var a = -Math.PI / 2;
+    var pt = function (r, ang) { return (cx + r * Math.cos(ang)).toFixed(2) + " " + (cy + r * Math.sin(ang)).toFixed(2); };
+    slices.forEach(function (x) {
+      var sweep = x.value / total * Math.PI * 2;
+      if (sweep <= 0) return;
+      if (sweep >= Math.PI * 2 - 1e-6) {
+        out.push('<circle cx="' + cx + '" cy="' + cy + '" r="' + ((rOut + rIn) / 2) + '" fill="none" stroke="' + x.color + '" stroke-width="' + (rOut - rIn) + '"><title>' + pnlEsc(x.title) + "</title></circle>");
+        return;
+      }
+      var b = a + sweep, large = sweep > Math.PI ? 1 : 0;
+      out.push('<path d="M' + pt(rOut, a) + " A" + rOut + " " + rOut + " 0 " + large + " 1 " + pt(rOut, b) + " L" + pt(rIn, b) +
+        " A" + rIn + " " + rIn + " 0 " + large + " 0 " + pt(rIn, a) + 'Z" fill="' + x.color + '" stroke="#fff" stroke-width="2" stroke-linejoin="round"><title>' + pnlEsc(x.title) + "</title></path>");
+      a = b;
+    });
+    out.push('<text x="' + cx + '" y="' + (cy - 2) + '" text-anchor="middle" font-size="16" font-weight="800" fill="' + PNL_INK + '">' + pnlEsc(centerTop) + "</text>");
+    out.push('<text x="' + cx + '" y="' + (cy + 16) + '" text-anchor="middle" font-size="10" fill="' + PNL_MUTED + '">' + pnlEsc(centerBottom) + "</text>");
+    out.push("</svg>");
+    return out.join("");
+  }
+  function pnlRingSection(x) {
+    var t = x.t, profit = t.earned - t.actual;
+    var slices = [];
+    if (profit > 0) slices.push({ key: "profit", label: tr("pnlProfit"), value: profit });
+    BUDGET_CATEGORIES.forEach(function (c) {
+      if (x.cats[c].spent) slices.push({ key: c, label: budgetCategoryLabel(c), value: x.cats[c].spent });
+    });
+    var total = slices.reduce(function (s2, v) { return s2 + v.value; }, 0);
+    if (!total) return null;
+    slices.forEach(function (v) {
+      v.color = PNL_SLICE_COLORS[v.key];
+      v.title = v.label + ": " + budgetMoney(v.value) + " (" + pnlPct(v.value, total) + "%)";
+    });
+    var legend = '<div class="pnl-ring-legend">' + slices.map(function (v) {
+      return '<div><i style="background:' + v.color + '"></i><span>' + pnlEsc(v.label) + "</span><b>" + pnlEsc(budgetMoney(v.value)) + "</b><small>" + pnlPct(v.value, total) + "%</small></div>";
+    }).join("") + "</div>";
+    var note = profit < 0 ? '<p class="pnl-ring-note">' + pnlEsc(tr("pnlRingLoss").replace("{sum}", budgetMoney(-profit))) + "</p>" : "";
+    return { title: tr(profit > 0 ? "pnlChartRing" : "pnlChartRingCosts"),
+      html: '<div class="pnl-ring">' + pnlRing(slices, pnlShort(total), tr(profit > 0 ? "pnlRingCenter" : "pnlRingCenterCosts")) + legend + "</div>" + note };
+  }
   function pnlLegend(items) {
     return '<div class="pnl-legend">' + items.map(function (it) {
       return '<span><i style="background:' + it.color + '"></i>' + pnlEsc(it.label) + "</span>";
@@ -201,6 +249,8 @@
     s.push({ title: tr("pnlWhatItSays"), html: '<ul class="pnl-insights">' + pnlInsights(x).map(function (i) {
       return '<li class="' + (i.good ? "good" : "bad") + '"><span>' + (i.good ? "✓" : "⚠") + "</span>" + pnlEsc(i.text) + "</li>";
     }).join("") + "</ul>" });
+    var ring = pnlRingSection(x);
+    if (ring) s.push(ring);
     if (x.timeline.length) {
       s.push({ title: tr("pnlChartTime"), chart: "time", html: pnlLegend([{ color: PNL_BLUE, label: tr("pnlIncomeApproved") }, { color: PNL_ORANGE, label: tr("pnlCostsCum") }]) +
         pnlLines(x.timeline, [{ key: "income", color: PNL_BLUE }, { key: "cost", color: PNL_ORANGE }]) + '<p class="pnl-readout"></p>' });

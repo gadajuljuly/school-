@@ -3529,6 +3529,15 @@
   .pnl-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 0.78rem; color: var(--ink); margin-bottom: 6px; }
   .pnl-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-inline-end: 5px; vertical-align: -1px; }
   .pnl-section svg { display: block; overflow: visible; }
+  .pnl-ring { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 16px; }
+  .pnl-ring svg { flex-shrink: 0; }
+  .pnl-ring-legend { flex: 1; min-width: 170px; display: flex; flex-direction: column; gap: 5px; font-size: 0.82rem; }
+  .pnl-ring-legend div { display: flex; align-items: center; gap: 6px; }
+  .pnl-ring-legend i { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+  .pnl-ring-legend span { flex: 1; min-width: 0; }
+  .pnl-ring-legend b { font-weight: 700; }
+  .pnl-ring-legend small { width: 40px; text-align: left; color: var(--ink-muted); }
+  .pnl-ring-note { margin: 6px 0 0; font-size: 0.8rem; color: var(--danger); }
   .pnl-readout { margin: 6px 0 0; font-size: 0.8rem; color: var(--ink-muted); min-height: 1.2em; }
   .pnl-hit { cursor: pointer; }
   .budget-form-fields { display: flex; flex-direction: column; gap: 4px; max-height: 60vh; overflow-y: auto; }

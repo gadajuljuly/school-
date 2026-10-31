@@ -390,7 +390,13 @@ test("P&L analysis: headline tiles, what the numbers say, and the charts", async
   await expect(says).toContainText("פרקים בהפסד (הוצאו יותר מערך מה שבוצע): 02 בטון");
   await expect(says).toContainText("נותרו 2,000 ₪ לגבייה");
   // the charts: the time line (two months), costs by type, profit / done-vs-used by chapter
-  await expect(page.locator(".pnl-section svg")).toHaveCount(4);
+  await expect(page.locator(".pnl-section svg")).toHaveCount(5);
+  // the ring: the work done (12,500) = the profit and each cost type, each its own colour
+  const ring = page.locator(".pnl-section", { hasText: "לאן הולך כל שקל" });
+  await expect(ring.locator(".pnl-ring-legend")).toContainText("רווח1,500 ₪12%");
+  await expect(ring.locator(".pnl-ring-legend")).toContainText("קבלני משנה7,000 ₪56%");
+  await expect(ring.locator(".pnl-ring-legend")).toContainText("חומרים4,000 ₪32%");
+  expect(new Set(await ring.locator("path").evaluateAll((ps) => ps.map((p) => p.getAttribute("fill")))).size).toBe(3);
   await expect(page.locator(".pnl-section", { hasText: "רווח לפי פרק" }).locator("rect[fill='#eb6834']")).toHaveCount(1); // 02 בטון, at a loss
   await page.locator(".pnl-hit").first().click();
   await expect(page.locator(".pnl-readout")).toContainText("09/2026");
