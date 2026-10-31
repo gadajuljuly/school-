@@ -38,7 +38,7 @@
 <script src="vendor/supabase-js-2.118.0.js"></script>
 <script src="vendor/firebase-app-compat-10.7.1.js"></script>
 <script src="vendor/firebase-auth-compat-10.7.1.js"></script>
-<link rel="stylesheet" href="tasks.css?v=b4f2cc9826">
+<link rel="stylesheet" href="tasks.css?v=ee5e7447a6">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -333,6 +333,21 @@
     </form>
   </div>
 </div>
+<div class="modal-overlay" id="budgetFormOverlay" hidden style="z-index:41">
+  <div class="modal-box cal-editor-box">
+    <form class="cal-form" id="budgetForm">
+      <p class="modal-message" id="budgetFormTitle"></p>
+      <div class="budget-form-fields" id="budgetFormFields"></div>
+      <datalist id="budgetChapterList"></datalist>
+      <div class="modal-actions">
+        <button type="submit" class="modal-btn modal-btn-primary" data-i18n="voiceSaveBtn">אישור</button>
+        <button type="button" class="modal-btn modal-btn-no" id="budgetFormDeleteBtn" data-i18n="deleteBtn" hidden>מחיקה</button>
+        <button type="button" class="modal-btn modal-btn-no" id="budgetFormCancelBtn" data-i18n="cancelBtn">ביטול</button>
+      </div>
+    </form>
+  </div>
+</div>
+<input type="file" id="budgetCsvInput" accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
 <div class="modal-overlay" id="sketchShareOverlay" hidden style="z-index:41">
   <div class="modal-box" role="alertdialog" aria-modal="true">
     <p class="modal-message" data-i18n="sketchShareHow">איך לשתף את הסקיצה?</p>
@@ -1511,6 +1526,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=4bf5ceed43"></script>
+<script src="tasks-app.js?v=9465c158ed"></script>
 </body>
 </html>
