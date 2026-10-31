@@ -31,7 +31,8 @@
   function budgetCategoryLabel(cat) {
     return tr("budgetCat_" + (BUDGET_CATEGORIES.indexOf(cat) !== -1 ? cat : "other"));
   }
-  // tab: items | client | subs | expenses; subId / billId: a subcontractor / bill open there
+  // tab: items | client | subs | expenses; subId / billId: a subcontractor / bill open
+  // there; analysis: the P&L analysis shown instead (11g-pnl-analysis.js)
   var budget = { sheet: null, owner: null, data: null, version: 0, tab: "items", error: false, subId: null, billId: null, billDraft: null };
 
   // whose money a project's is, when this phone may see it (else null)
@@ -192,6 +193,7 @@
   function renderBudget() {
     if (budgetView.hidden || !budget.data) return;
     budgetBody.innerHTML = "";
+    if (budget.analysis) { renderPnlAnalysis(); return; }
     if (budget.error) budgetBody.appendChild(bEl("p", "team-error", tr("budgetLoadError")));
     var t = budgetTotals();
     // the summary
@@ -216,7 +218,13 @@
     var reports = bEl("button", "budget-reports-btn", tr("brTitleBtn"));
     reports.type = "button";
     reports.addEventListener("click", openBudgetReports);
-    budgetBody.appendChild(reports);
+    var analysis = bEl("button", "budget-reports-btn", tr("pnlTitleBtn"));
+    analysis.type = "button";
+    analysis.addEventListener("click", function () { budget.analysis = true; renderBudget(); budgetBody.scrollTop = 0; });
+    var row = bEl("div", "budget-reports-row");
+    row.appendChild(analysis);
+    row.appendChild(reports);
+    budgetBody.appendChild(row);
     // the tabs
     var tabs = bEl("div", "budget-tabs");
     [["items", "budgetTabItems"], ["client", "budgetTabClient"], ["subs", "budgetTabSubs"], ["expenses", "budgetTabExpenses"]].forEach(function (x) {

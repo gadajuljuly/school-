@@ -3509,6 +3509,28 @@
   .br-dates input { flex: 1; min-width: 0; }
   #brTypesRow[hidden], #brGroupRow[hidden], .br-dates[hidden], #brPeriod[hidden], label[hidden] { display: none; }
   .pdf-doc-table tr.br-total td { font-weight: 800; border-top: 2px solid #333; }
+  .budget-reports-row { display: flex; gap: 8px; margin-bottom: 10px; }
+  .budget-reports-row .budget-reports-btn { margin: 0; flex: 1; }
+  /* ניתוח רווח והפסד (src/app/11g-pnl-analysis.js) */
+  .pnl-title { margin: 0 0 2px; font-size: 1.1rem; color: var(--accent); }
+  .pnl-section { border: 1px solid var(--rule); border-radius: 12px; background: #fff; padding: 10px 12px; margin-bottom: 10px; }
+  .pnl-section h4 { margin: 0 0 8px; font-size: 0.95rem; color: var(--ink); }
+  .pnl-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .pnl-tile { border: 1px solid var(--rule); border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; }
+  .pnl-tile small { color: var(--ink-muted); font-size: 0.75rem; }
+  .pnl-tile b { font-size: 1.15rem; }
+  .pnl-tile span { color: var(--ink-muted); font-size: 0.75rem; }
+  .pnl-tile.bad b { color: var(--danger); }
+  .pnl-insights { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .pnl-insights li { display: flex; gap: 8px; font-size: 0.88rem; line-height: 1.4; }
+  .pnl-insights li span { flex-shrink: 0; width: 18px; text-align: center; font-weight: 800; }
+  .pnl-insights li.good span { color: var(--plan-green); }
+  .pnl-insights li.bad span { color: var(--danger); }
+  .pnl-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 0.78rem; color: var(--ink); margin-bottom: 6px; }
+  .pnl-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-inline-end: 5px; vertical-align: -1px; }
+  .pnl-section svg { display: block; overflow: visible; }
+  .pnl-readout { margin: 6px 0 0; font-size: 0.8rem; color: var(--ink-muted); min-height: 1.2em; }
+  .pnl-hit { cursor: pointer; }
   .budget-form-fields { display: flex; flex-direction: column; gap: 4px; max-height: 60vh; overflow-y: auto; }
   /* הצוות (src/app/10b-team.js) */
   .team-view { display: flex; flex-direction: column; }

@@ -236,7 +236,7 @@ async function openReports(page) {
   await page.locator("#calendarFabBtn").click();
   await page.locator("#siteLogBudgetBtn").click();
   await expect(page.locator(".budget-item")).toHaveCount(2);
-  await page.locator(".budget-reports-btn").click();
+  await page.locator(".budget-reports-btn", { hasText: "דוחות" }).click();
   await expect(page.locator("#budgetReportOverlay")).toBeVisible();
 }
 async function excel(page) {
@@ -278,7 +278,7 @@ test("reports: expenses of the types picked, in a period, grouped by supplier; s
   expect(text).not.toContain("הראל");
 
   // the subcontractors' report
-  await page.locator(".budget-reports-btn").click();
+  await page.locator(".budget-reports-btn", { hasText: "דוחות" }).click();
   await page.locator("input[name=brKind][value=subs]").check();
   const subs = await excel(page);
   expect(subs.text).toContain("\"עפר בע\"\"מ\",\"3,000 ₪\",\"1,500 ₪\",\"1,500 ₪\",\"1,425 ₪\",75 ₪");
@@ -362,3 +362,40 @@ for (const [file, what] of [["approved-bill.pdf", "its cumulative quantities"], 
     await expect(totals(page)).toContainText("מצטבר מאושר5,200 ₪");
   });
 }
+
+test("P&L analysis: headline tiles, what the numbers say, and the charts", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, native: true, sheet: SHEET });
+  await page.evaluate((data) => { window.__backend.tables.project_finance = [{ owner_phone: "+972500000001", project_id: "p1", data_version: 1, data }]; }, {
+    items: [
+      { id: "i1", code: "01.010", chapter: "01 עפר", name: "חפירה", qty: 100, price: 100, cost: 8000, progress: 100 },
+      { id: "i2", code: "02.010", chapter: "02 בטון", name: "יסודות", qty: 10, price: 1000, cost: 8000, progress: 25 },
+    ],
+    expenses: [
+      { id: "e1", date: "2026-09-10", category: "subcontractors", itemId: "i1", amount: 7000 },
+      { id: "e2", date: "2026-10-05", category: "materials", itemId: "i2", amount: 4000 },
+    ],
+    bills: [{ id: "c1", subId: "client", no: 1, date: "2026-10-01", status: "approved", lines: {}, totals: { cumulative: 12000, toPay: 12000, gross: 12000, retention: 0, advance: 0, previous: 0, asked: 12000 } }],
+    receipts: [{ id: "r1", date: "2026-10-20", amount: 10000 }],
+  });
+  await page.locator("#calendarFabBtn").click();
+  await page.locator("#siteLogBudgetBtn").click();
+  await page.locator(".budget-reports-btn", { hasText: "ניתוח רווח והפסד" }).click();
+  // earned 10,000 + 2,500 = 12,500; spent 11,000 -> 1,500 (12%)
+  await expect(page.locator(".pnl-tile").first()).toContainText("1,500 ₪");
+  const says = page.locator(".pnl-insights");
+  await expect(says).toContainText("עבודה בשווי 12,500 ₪ והוצאו 11,000 ₪ – רווח של 1,500 ₪ (12%)");
+  // budget of the work done: 8,000 + 2,000 = 10,000 against 11,000 spent
+  await expect(says).toContainText("הוצאו 1.10 ₪");
+  await expect(says).toContainText("הסעיפים שמובילים לחריגה: 02.010 יסודות");
+  await expect(says).toContainText("פרקים בהפסד (הוצאו יותר מערך מה שבוצע): 02 בטון");
+  await expect(says).toContainText("נותרו 2,000 ₪ לגבייה");
+  // the charts: the time line (two months), costs by type, profit / done-vs-used by chapter
+  await expect(page.locator(".pnl-section svg")).toHaveCount(4);
+  await expect(page.locator(".pnl-section", { hasText: "רווח לפי פרק" }).locator("rect[fill='#eb6834']")).toHaveCount(1); // 02 בטון, at a loss
+  await page.locator(".pnl-hit").first().click();
+  await expect(page.locator(".pnl-readout")).toContainText("09/2026");
+  await expect(page.locator(".pnl-readout")).toContainText("עלויות 7,000 ₪");
+  // as a PDF
+  await page.locator(".budget-actions button", { hasText: "PDF של הניתוח" }).click();
+  await expect.poll(() => page.evaluate(() => (window.__native.files || []).map((f) => f.path)), { timeout: 20000 }).toEqual([expect.stringContaining("ניתוח רווח והפסד")]);
+});
