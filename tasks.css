@@ -3452,8 +3452,8 @@
   .morning-ok { margin: 0; color: var(--ink-muted); font-size: 0.9rem; }
   .morning-project { margin-top: 6px; font-weight: 800; font-size: 0.85rem; color: var(--ink-muted); border-bottom: 1px solid var(--rule); padding-bottom: 2px; }
   .morning-task { display: flex; align-items: center; gap: 10px; padding: 3px 0; }
-  .morning-check { flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--plan-green); background: transparent; color: #fff; font-weight: 800; cursor: pointer; padding: 0; }
-  .morning-task.done .morning-check { background: var(--plan-green); }
+  .morning-mark { width: 30px; height: 28px; padding: 4px 5px; border: none; background: transparent; cursor: pointer; }
+  .morning-task.done .morning-mark { opacity: 0.5; }
   .morning-task-text { display: flex; flex-direction: column; min-width: 0; font-size: 0.92rem; }
   .morning-task-text small { color: var(--ink-muted); font-size: 0.75rem; }
   .morning-task.done .morning-task-text span { text-decoration: line-through; color: var(--ink-muted); }

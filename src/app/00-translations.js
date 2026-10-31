@@ -261,8 +261,6 @@
     morningOlderTasks: { he: "{n} משימות מימים קודמים שעוד לא בוצעו", en: "{n} tasks from earlier days still open", ar: "{n} مهام من أيام سابقة لم تُنجز", ru: "{n} задач с прошлых дней не выполнены" },
     morningAllGood: { he: "✓ אין משהו דחוף", en: "✓ Nothing urgent", ar: "✓ لا شيء عاجل", ru: "✓ Ничего срочного" },
     morningTasksTitle: { he: "משימות", en: "Tasks", ar: "المهام", ru: "Задачи" },
-    morningMarkDone: { he: "סמן בוצע", en: "Mark done", ar: "تم", ru: "Выполнено" },
-    morningUndone: { he: "בטל סימון", en: "Unmark", ar: "إلغاء", ru: "Снять отметку" },
     morningFrom: { he: "מ-{date}", en: "from {date}", ar: "من {date}", ru: "с {date}" },
     morningNoTasks: { he: "אין משימות פתוחות להיום", en: "No open tasks for today", ar: "لا مهام مفتوحة لليوم", ru: "Нет открытых задач на сегодня" },
     morningMoreTasks: { he: "הצג גם את השבוע הקרוב", en: "Show the coming week too", ar: "اعرض الأسبوع القادم أيضاً", ru: "Показать и ближайшую неделю" },

@@ -73,11 +73,16 @@ test("the report: what needs attention, then every project's open tasks to tick,
   await expect(tasks).toHaveCount(2);
   await expect(tasks.first()).toContainText("לתאם משאבה");
   await expect(tasks.first()).toContainText("מ-" + shown(-2));
+  // the task list's X mark: partly done, done (stays on the report), open again
   const iron = tasks.filter({ hasText: "לבדוק ברזל" });
-  await iron.locator(".morning-check").click();
-  await expect(iron).toHaveClass(/done/); // stays, ticked
+  await expect(iron.locator(".row-mark svg")).toBeVisible();
+  await iron.locator(".row-mark").click();
+  await expect(iron).toHaveClass(/partial/);
+  await expect.poll(async () => (await server(page)).tasks.find((t) => t.id === "t1").status).toBe(1);
+  await iron.locator(".row-mark").click();
+  await expect(iron).toHaveClass(/done/);
   await expect.poll(async () => (await server(page)).tasks.find((t) => t.id === "t1").status).toBe(2);
-  await iron.locator(".morning-check").click();
+  await iron.locator(".row-mark").click();
   await expect.poll(async () => (await server(page)).tasks.find((t) => t.id === "t1").status).toBe(0);
   await page.locator(".morning-more", { hasText: "הצג גם את השבוע הקרוב" }).click();
   await expect(tasks).toHaveCount(3);

@@ -5,7 +5,8 @@
   //   1. שים לב: only what needs acting on - activities late, ones whose
   //      pace runs past their end (and what's linked after them), tasks
   //      left from earlier days, the day's reminders.
-  //   2. the open tasks (today's and earlier), by project - tap to mark done.
+  //   2. the open tasks (today's and earlier), by project, each with the
+  //      task list's mark - tapped, it moves on as it does there.
   //   3. the work plans, one under the other: what's under way, late or
   //      starting soon, each with its % bar. Setting a % also marks it in
   //      that day's diary (מתוכנן מול ביצוע).
@@ -121,16 +122,6 @@
   }
 
   // ---- 2. the tasks ------------------------------------------------------
-  function morningSetDone(sheet, t, done) {
-    var wasDone = t.status === 2;
-    t.status = done ? 2 : 0;
-    if (t.planItemId) workPlanTaskStatusChanged(sheet, t);
-    if (t.planRef) workPlanRefStatusChanged(t);
-    saveData();
-    if (sheet.shared && t.type === "task" && wasDone !== (t.status === 2)) {
-      sendChatSystemMessage(sheet.id, t.status === 2 ? "done" : "undone", t.text, myPhoneNumber);
-    }
-  }
   function morningRenderTasks(today) {
     var sec = morningSection("morningTasksTitle");
     var until = morningMore.tasks ? addDaysToISO(today, 7) : today;
@@ -145,16 +136,18 @@
       any = true;
       sec.appendChild(morningEl("div", "morning-project", (sheet.shared ? "👥 " : "") + sheet.name));
       tasks.forEach(function (t) {
-        var row = morningEl("div", "morning-task" + (t.status === 2 ? " done" : ""));
-        var check = morningEl("button", "morning-check", t.status === 2 ? "✓" : "");
-        check.type = "button";
-        check.title = tr(t.status === 2 ? "morningUndone" : "morningMarkDone");
-        check.addEventListener("click", function () {
+        var row = morningEl("div", "morning-task" + (t.status === 1 ? " partial" : t.status === 2 ? " done" : ""));
+        // the task list's own mark: a tap moves it on - partly done, done, open again
+        var mark = morningEl("button", "row-mark morning-mark");
+        mark.type = "button";
+        mark.title = tr({ 0: "statusPartial", 1: "statusDone", 2: "statusReset" }[t.status || 0]);
+        mark.innerHTML = rowMarkSvg(t.status || 0);
+        mark.addEventListener("click", function () {
           morningTouched["t:" + t.id] = true;
-          morningSetDone(sheet, t, t.status !== 2);
+          cycleStatus(t.id, sheet);
           renderMorningReport();
         });
-        row.appendChild(check);
+        row.appendChild(mark);
         var text = morningEl("div", "morning-task-text");
         text.appendChild(morningEl("span", "", t.text));
         var meta = [];
