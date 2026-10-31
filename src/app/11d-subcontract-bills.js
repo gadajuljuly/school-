@@ -279,7 +279,8 @@
       budgetActions([["subSaveDraft", function () { subSaveDraft(bill); }],
         [isClient ? "clientApprove" : "subApprove", function () { subApprove(sub, bill); }, "primary"]].concat(isClient
         // the bill as handed in, to send the client
-        ? [["clientPdfDraft", function () { subBillPdf(sub, bill, true); }]] : []).concat([
+        ? [["clientPdfDraft", function () { subBillPdf(sub, bill, true); }],
+          ["clientUploadApproved", function () { document.getElementById("clientBillInput").click(); }]] : []).concat([
         ["subDeleteDraft", function () {
           askConfirm(tr("budgetDeleteConfirm"), function () {
             var id = bill.id;

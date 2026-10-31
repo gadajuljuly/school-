@@ -335,3 +335,30 @@ test("the client: bills filled in from the % done, approved by the client with r
   await expect(page.locator(".sub-bill-line").first()).toContainText("מצטבר קודם: 55");
   await expect(asked.nth(0)).toHaveValue("60");
 });
+
+for (const [file, what] of [["approved-bill.pdf", "its cumulative quantities"], ["approved-bill-amounts.pdf", "only cumulative amounts, Hebrew stored backwards"]]) {
+  test(`the client's approved bill from a PDF (${what}): each item's approved cumulative quantity filled in`, async ({ page }) => {
+    await openSeeded(page); // i1 01.010 at 50; i2 02.010 at 1,000
+    await page.locator(".budget-tabs button", { hasText: "מזמין" }).click();
+    await page.locator(".sub-edit", { hasText: "＋ חשבון חדש" }).click();
+    const dialog = new Promise((resolve) => page.once("dialog", (d) => resolve(d.message())));
+    await page.locator("#clientBillInput").setInputFiles(path.join(__dirname, "../fixtures/" + file));
+    const message = await dialog;
+    expect(message).toContain("עודכנו 2 סעיפים");
+    if (file === "approved-bill.pdf") expect(message).toContain("לא נמצאו בכתב הכמויות: 09.999");
+    const approved = page.locator(".sub-bill-line input[data-field=approved]");
+    await expect(approved.nth(0)).toHaveValue("55");
+    await expect(approved.nth(1)).toHaveValue("2.5");
+    await expect(totals(page)).toContainText("מצטבר מאושר5,250 ₪");
+    // saved as the draft; a hand fix still works, then approved
+    await expect.poll(() => page.evaluate(() => {
+      const b = window.__backend.tables.project_finance[0].data.bills[0];
+      return b && [b.lines.i1.approved, b.lines.i2.approved];
+    })).toEqual([55, 2.5]);
+    await setQty(page, "approved", 54);
+    await page.locator(".budget-actions button", { hasText: "אושר ע\"י המזמין" }).click();
+    await page.locator("#confirmYesBtn").click();
+    await expect(page.locator(".sub-bill-head")).toContainText("✓ אושר");
+    await expect(totals(page)).toContainText("מצטבר מאושר5,200 ₪");
+  });
+}

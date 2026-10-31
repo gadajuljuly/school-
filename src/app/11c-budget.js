@@ -625,12 +625,12 @@
     }).then(function (pages) { return [].concat.apply([], pages); });
   }
   var BUDGET_HEBREW = /[\u0590-\u05FF]/;
-  function budgetPdfRows(lines, turnHebrew) {
+  // headerText(all the line's text): whether it's the table's header line
+  // (a BOQ's, by default: a quantity and a description)
+  function budgetPdfRows(lines, turnHebrew, headerText) {
     var text = function (wd) { return turnHebrew && BUDGET_HEBREW.test(wd.str) ? wd.str.split("").reverse().join("") : wd.str; };
-    var isHeader = function (line) {
-      var all = line.words.map(text).join(" ");
-      return BUDGET_CSV_COLUMNS.qty.test(all) && BUDGET_CSV_COLUMNS.name.test(all);
-    };
+    headerText = headerText || function (all) { return BUDGET_CSV_COLUMNS.qty.test(all) && BUDGET_CSV_COLUMNS.name.test(all); };
+    var isHeader = function (line) { return headerText(line.words.map(text).join(" ")); };
     var columns = null, rows = [];
     lines.forEach(function (line) {
       if (isHeader(line)) {
