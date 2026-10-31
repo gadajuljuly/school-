@@ -588,7 +588,85 @@
       });
     });
   }
+  // A BOQ in a PDF: no table there, only text placed on the page. Its words
+  // (PDF.js, as the sketch's PDF backgrounds use) are put back into lines
+  // by height, the header line gives the columns, and each word goes to
+  // the nearest column. Hebrew that the PDF holds in display order comes
+  // out backwards - if no header is found, the Hebrew is turned around and
+  // tried again.
+  function budgetPdfLines(buf) {
+    return skLoadPdf().then(function (pdfjs) {
+      return pdfjs.getDocument({ data: new Uint8Array(buf) }).promise;
+    }).then(function (pdf) {
+      var pages = [];
+      for (var n = 1; n <= pdf.numPages; n++) pages.push(n);
+      return Promise.all(pages.map(function (n) {
+        return pdf.getPage(n).then(function (page) { return page.getTextContent(); }).then(function (content) {
+          var words = content.items.filter(function (it) { return String(it.str || "").trim(); }).map(function (it) {
+            var h = Math.abs(it.transform[3]) || 10;
+            return { str: String(it.str).trim(), x: it.transform[4], w: it.width || 0, y: it.transform[5], h: h };
+          }).sort(function (a, b) { return b.y - a.y || b.x - a.x; });
+          var lines = [];
+          words.forEach(function (wd) {
+            var line = lines.find(function (l) { return Math.abs(l.y - wd.y) <= Math.max(2, wd.h * 0.45); });
+            if (!line) lines.push(line = { y: wd.y, words: [] });
+            line.words.push(wd);
+          });
+          return lines;
+        });
+      }));
+    }).then(function (pages) { return [].concat.apply([], pages); });
+  }
+  var BUDGET_HEBREW = /[\u0590-\u05FF]/;
+  function budgetPdfRows(lines, turnHebrew) {
+    var text = function (wd) { return turnHebrew && BUDGET_HEBREW.test(wd.str) ? wd.str.split("").reverse().join("") : wd.str; };
+    var isHeader = function (line) {
+      var all = line.words.map(text).join(" ");
+      return BUDGET_CSV_COLUMNS.qty.test(all) && BUDGET_CSV_COLUMNS.name.test(all);
+    };
+    var columns = null, rows = [];
+    lines.forEach(function (line) {
+      if (isHeader(line)) {
+        // the header's words, those close together as one column (right to left)
+        var hw = line.words.slice().sort(function (a, b) { return b.x - a.x; });
+        columns = [];
+        hw.forEach(function (wd) {
+          var last = columns[columns.length - 1];
+          if (last && last.left - (wd.x + wd.w) < wd.h * 0.6) {
+            last.left = Math.min(last.left, wd.x);
+            last.label += " " + text(wd); // (the next word, read right to left)
+          } else columns.push({ left: wd.x, right: wd.x + wd.w, label: text(wd) });
+        });
+        columns.forEach(function (c) { c.x = (c.left + c.right) / 2; });
+        rows.push(columns.map(function (c) { return c.label; }));
+        return;
+      }
+      if (!columns) return;
+      var cells = columns.map(function () { return []; });
+      line.words.forEach(function (wd) {
+        var mid = wd.x + wd.w / 2, best = 0;
+        columns.forEach(function (c, k) { if (Math.abs(c.x - mid) < Math.abs(columns[best].x - mid)) best = k; });
+        cells[best].push(wd);
+      });
+      rows.push(cells.map(function (ws) {
+        return ws.sort(function (a, b) { return b.x - a.x; }).map(text).join(" ");
+      }));
+    });
+    return columns ? rows : null;
+  }
+  function budgetPdfImport(buf) {
+    return budgetPdfLines(buf).then(function (lines) {
+      var items = null;
+      [false, true].some(function (turn) {
+        var rows = budgetPdfRows(lines, turn);
+        items = rows && budgetImportRows(rows);
+        return items && items.length;
+      });
+      return items;
+    });
+  }
   function budgetImportFile(file) {
+    if (/\.pdf$/i.test(file.name) || file.type === "application/pdf") return file.arrayBuffer().then(budgetPdfImport);
     var isXlsx = /\.xlsx$/i.test(file.name) || /spreadsheetml/.test(file.type);
     var rows = isXlsx
       ? file.arrayBuffer().then(budgetXlsxRows)

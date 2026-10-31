@@ -310,7 +310,7 @@
     budgetTabItems: { he: "סעיפי כתב הכמויות", en: "BOQ items", ar: "بنود جدول الكميات", ru: "Позиции сметы" },
     budgetTabExpenses: { he: "הוצאות", en: "Expenses", ar: "المصروفات", ru: "Расходы" },
     budgetAddItem: { he: "＋ סעיף", en: "＋ Item", ar: "＋ بند", ru: "＋ Позиция" },
-    budgetImportCsv: { he: "העלאת כתב כמויות (Excel)", en: "Upload a BOQ (Excel)", ar: "رفع جدول كميات (Excel)", ru: "Загрузить смету (Excel)" },
+    budgetImportCsv: { he: "העלאת כתב כמויות (Excel / PDF)", en: "Upload a BOQ (Excel / PDF)", ar: "رفع جدول كميات (Excel / PDF)", ru: "Загрузить смету (Excel / PDF)" },
     budgetExportCsv: { he: "ייצוא לאקסל", en: "Export to Excel", ar: "تصدير إلى Excel", ru: "Экспорт в Excel" },
     budgetNoItems: { he: "עדיין אין סעיפים. העלה כתב כמויות מאקסל או הוסף סעיף.", en: "No items yet. Upload a BOQ from Excel or add an item.", ar: "لا بنود بعد. ارفع جدول كميات من Excel أو أضف بنداً.", ru: "Позиций пока нет. Загрузите смету из Excel или добавьте позицию." },
     budgetNoChapter: { he: "ללא פרק", en: "No chapter", ar: "بدون فصل", ru: "Без раздела" },

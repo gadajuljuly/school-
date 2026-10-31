@@ -284,3 +284,19 @@ test("reports: expenses of the types picked, in a period, grouped by supplier; s
   expect(subs.text).toContain("\"עפר בע\"\"מ\",\"3,000 ₪\",\"1,500 ₪\",\"1,500 ₪\",\"1,425 ₪\",75 ₪");
   expect(subs.text).toContain("1,08/10/2026,\"1,500 ₪\",\"1,500 ₪\",75 ₪,0 ₪,\"1,425 ₪\"");
 });
+
+for (const [file, what] of [["boq.pdf", "a PDF"], ["boq-visual.pdf", "a PDF whose Hebrew is stored backwards (display order)"]]) {
+  test(`a BOQ uploaded from ${what}: its lines and columns rebuilt into chapters and items`, async ({ page }) => {
+    await openBudget(page);
+    await page.locator("#budgetCsvInput").setInputFiles(path.join(__dirname, "../fixtures/" + file));
+    await expect(page.locator("#confirmOverlay")).toContainText("נמצאו 3 סעיפים", { timeout: 15000 });
+    await page.locator("#confirmYesBtn").click();
+    await expect.poll(async () => (await finance(page))?.data.items.map((i) => [i.code, i.chapter, i.name, i.unit, i.qty, i.price]))
+      .toEqual([
+        ["01.010", "01 עבודות עפר", "חפירה כללית", "מ\"ק", 120, 45],
+        ["01.020", "01 עבודות עפר", "מילוי מהודק", "מ\"ק", 80, 60],
+        ["02.010", "02 עבודות בטון", "יסודות", "מ\"ק", 35, 1200],
+      ]);
+    await expect(page.locator(".budget-card").first()).toContainText("52,200 ₪");
+  });
+}
