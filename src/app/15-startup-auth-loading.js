@@ -206,7 +206,7 @@
     var d = row.data || {};
     var tasks = d.tasks || [];
     var reports = d.reports || [];
-    var siteLogs = (d.siteLogs || []).map(normalizeSiteLog);
+    var siteLogs = combineSameDaySiteLogs((d.siteLogs || []).map(normalizeSiteLog));
     var ended = d.ended || false;
     var endedDate = d.endedDate || null;
     var logoId = d.logoId || null;

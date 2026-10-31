@@ -484,6 +484,7 @@
       activeSiteLogDate = state.viewDate;
       updateSiteLogCloseShareButtons();
       updateBudgetTile();
+      refreshOpenSiteLogViews();
       return;
     }
     if (libraryMode) {

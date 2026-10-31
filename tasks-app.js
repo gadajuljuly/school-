@@ -1383,6 +1383,84 @@
     return JSON.stringify(localVal) !== JSON.stringify(syncedVal) ? localVal : freshVal;
   }
 
+  // The diary: several members write in the same day's log (works,
+  // attendance, contractors...), so a day both sides changed is merged
+  // entry by entry - each of its lists the way whole arrays are above -
+  // instead of one side's day replacing the other's. And two members who
+  // each started the same day's log at once (two logs, one date) end up
+  // with one, holding both their entries.
+  var SITE_LOG_LISTS = ["works", "contractors", "procurement", "photos", "planned"];
+  function siteLogListOf(log, path) {
+    var parts = path.split(".");
+    var v = log && log[parts[0]];
+    if (parts[1]) v = v && v[parts[1]];
+    return Array.isArray(v) ? v : [];
+  }
+  function siteLogListPaths() {
+    return SITE_LOG_LISTS.concat(SITE_LOG_ATTENDANCE_COLUMNS.map(function (c) { return "attendance." + c; }))
+      .concat(SITE_LOG_TOOLS_COLUMNS.map(function (c) { return "tools." + c; }));
+  }
+  // "planned" entries are one per activity (itemId), with no id of their own
+  function siteLogKeyed(list, path) {
+    return path === "planned" ? list.map(function (e) { return Object.assign({ id: "plan:" + e.itemId }, e); }) : list;
+  }
+  function siteLogUnkeyed(list, path) {
+    return path === "planned" ? list.map(function (e) { var c = Object.assign({}, e); delete c.id; return c; }) : list;
+  }
+  function setSiteLogList(log, path, list) {
+    var parts = path.split(".");
+    if (!parts[1]) { log[parts[0]] = list; return; }
+    if (!log[parts[0]] || typeof log[parts[0]] !== "object" || Array.isArray(log[parts[0]])) log[parts[0]] = {};
+    log[parts[0]][parts[1]] = list;
+  }
+  function mergeSiteLog(fresh, local, synced) {
+    var out = {};
+    Object.keys(Object.assign({}, fresh, local)).forEach(function (k) {
+      out[k] = mergeSharedScalarByLocalChange(fresh[k], local[k], synced ? synced[k] : undefined);
+    });
+    siteLogListPaths().forEach(function (path) {
+      var merged = mergeSharedArrayByLocalChanges(siteLogKeyed(siteLogListOf(fresh, path), path),
+        siteLogKeyed(siteLogListOf(local, path), path), siteLogKeyed(siteLogListOf(synced, path), path));
+      setSiteLogList(out, path, siteLogUnkeyed(merged, path));
+    });
+    return out;
+  }
+  function mergeSiteLogsByLocalChanges(freshLogs, localLogs, syncedLogs) {
+    var freshById = {}, syncedById = {};
+    (freshLogs || []).forEach(function (l) { freshById[l.id] = l; });
+    (syncedLogs || []).forEach(function (l) { syncedById[l.id] = l; });
+    var logs = mergeSharedArrayByLocalChanges(freshLogs, localLogs, syncedLogs).map(function (l) {
+      var fresh = freshById[l.id];
+      var local = (localLogs || []).find(function (x) { return x.id === l.id; });
+      // changed here and there since the last sync: entry by entry
+      if (fresh && local && JSON.stringify(fresh) !== JSON.stringify(local)) return mergeSiteLog(fresh, local, syncedById[l.id]);
+      return l;
+    });
+    return combineSameDaySiteLogs(logs);
+  }
+  // one log per date: a second one's entries go into the first (by id),
+  // the same way on every phone (the lower id stays)
+  function combineSameDaySiteLogs(logs) {
+    var byDate = {}, out = [];
+    (logs || []).slice().sort(function (a, b) { return String(a.id).localeCompare(String(b.id)); }).forEach(function (l) {
+      var keep = byDate[l.date];
+      if (!keep) { byDate[l.date] = l; out.push(l); return; }
+      siteLogListPaths().forEach(function (path) {
+        var have = siteLogKeyed(siteLogListOf(keep, path), path);
+        var ids = {};
+        have.forEach(function (e) { ids[e.id] = true; });
+        var add = siteLogKeyed(siteLogListOf(l, path), path).filter(function (e) { return !ids[e.id]; });
+        if (add.length) setSiteLogList(keep, path, siteLogUnkeyed(have.concat(add), path));
+      });
+      Object.keys(l).forEach(function (k) {
+        if (keep[k] == null || keep[k] === false) keep[k] = l[k];
+      });
+    });
+    var order = {};
+    (logs || []).forEach(function (l, i) { if (order[l.date] == null) order[l.date] = i; });
+    return out.sort(function (a, b) { return order[a.date] - order[b.date]; });
+  }
+
   // Only ever pushes a sheet whose tasks/reports/siteLogs/ended/logoId
   // actually differ from what we last confirmed the server holds - a save
   // triggered by editing sheet A no longer re-uploads every OTHER shared
@@ -1450,7 +1528,7 @@
           reports: mergeSharedArrayByLocalChanges(freshData.reports, local.reports, syncedComparable.reports),
           files: [],
           folders: freshData.folders || null,
-          siteLogs: mergeSharedArrayByLocalChanges(freshData.siteLogs, local.siteLogs, syncedComparable.siteLogs),
+          siteLogs: mergeSiteLogsByLocalChanges(freshData.siteLogs, local.siteLogs, syncedComparable.siteLogs),
           ended: mergeSharedScalarByLocalChange(freshData.ended || false, local.ended, syncedComparable.ended),
           endedDate: mergeSharedScalarByLocalChange(freshData.endedDate || null, local.endedDate, syncedComparable.endedDate),
           logoId: mergeSharedScalarByLocalChange(freshData.logoId || null, local.logoId, syncedComparable.logoId)
@@ -9553,6 +9631,25 @@
   siteLogContractorsBtn.addEventListener("click", openSiteLogContractorsView);
   siteLogContractorsBackBtn.addEventListener("click", closeSiteLogContractorsView);
 
+  // A diary list that's open, redrawn as other members' entries arrive
+  // (render() calls this) - unless something in it is being typed in.
+  function refreshOpenSiteLogViews() {
+    var views = [
+      ["siteLogWorksView", function () { renderSiteLogWorksList(); }],
+      ["siteLogAttendanceView", function () { renderSiteLogAttendanceColumns(); }],
+      ["siteLogToolsView", function () { renderSiteLogToolsColumns(); }],
+      ["siteLogContractorsView", function () { renderSiteLogContractorsList(); }],
+      ["siteLogProcurementView", function () { renderSiteLogProcurementRows(); }],
+      ["siteLogPlanView", function () { renderSiteLogPlanList(); }]
+    ];
+    var active = document.activeElement;
+    views.forEach(function (v) {
+      var el = document.getElementById(v[0]);
+      if (!el || el.hidden) return;
+      if (active && el.contains(active) && /^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName)) return;
+      v[1]();
+    });
+  }
   function renderSiteLogWorksList() {
     siteLogWorksList.innerHTML = "";
     var sheet = activeSheet();
@@ -16874,6 +16971,7 @@
       activeSiteLogDate = state.viewDate;
       updateSiteLogCloseShareButtons();
       updateBudgetTile();
+      refreshOpenSiteLogViews();
       return;
     }
     if (libraryMode) {
@@ -21099,7 +21197,7 @@
     var d = row.data || {};
     var tasks = d.tasks || [];
     var reports = d.reports || [];
-    var siteLogs = (d.siteLogs || []).map(normalizeSiteLog);
+    var siteLogs = combineSameDaySiteLogs((d.siteLogs || []).map(normalizeSiteLog));
     var ended = d.ended || false;
     var endedDate = d.endedDate || null;
     var logoId = d.logoId || null;

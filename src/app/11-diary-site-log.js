@@ -936,6 +936,25 @@
   siteLogContractorsBtn.addEventListener("click", openSiteLogContractorsView);
   siteLogContractorsBackBtn.addEventListener("click", closeSiteLogContractorsView);
 
+  // A diary list that's open, redrawn as other members' entries arrive
+  // (render() calls this) - unless something in it is being typed in.
+  function refreshOpenSiteLogViews() {
+    var views = [
+      ["siteLogWorksView", function () { renderSiteLogWorksList(); }],
+      ["siteLogAttendanceView", function () { renderSiteLogAttendanceColumns(); }],
+      ["siteLogToolsView", function () { renderSiteLogToolsColumns(); }],
+      ["siteLogContractorsView", function () { renderSiteLogContractorsList(); }],
+      ["siteLogProcurementView", function () { renderSiteLogProcurementRows(); }],
+      ["siteLogPlanView", function () { renderSiteLogPlanList(); }]
+    ];
+    var active = document.activeElement;
+    views.forEach(function (v) {
+      var el = document.getElementById(v[0]);
+      if (!el || el.hidden) return;
+      if (active && el.contains(active) && /^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName)) return;
+      v[1]();
+    });
+  }
   function renderSiteLogWorksList() {
     siteLogWorksList.innerHTML = "";
     var sheet = activeSheet();
