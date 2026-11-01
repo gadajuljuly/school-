@@ -407,3 +407,34 @@ test("P&L analysis: headline tiles, what the numbers say, and the charts", async
   await page.locator(".budget-actions button", { hasText: "PDF של הניתוח" }).click();
   await expect.poll(() => page.evaluate(() => (window.__native.files || []).map((f) => f.path)), { timeout: 20000 }).toEqual([expect.stringContaining("ניתוח רווח והפסד")]);
 });
+
+test("deleting a BOQ: one upload's items (uploaded twice by mistake), or all of them", async ({ page }) => {
+  await openBudget(page);
+  for (let i = 0; i < 2; i++) {
+    await page.locator("#budgetCsvInput").setInputFiles(path.join(__dirname, "../fixtures/boq.xlsx"));
+    await page.locator("#confirmYesBtn").click();
+    await expect(page.locator(".budget-item")).toHaveCount(3 * (i + 1));
+  }
+  await expect.poll(async () => (await finance(page))?.data.imports.length).toBe(2);
+  // the first upload only
+  await page.locator(".budget-actions button", { hasText: "מחיקת כתב כמויות" }).click();
+  const which = page.locator("#budgetFormFields select[name=which]");
+  await expect(which.locator("option")).toHaveCount(3); // two uploads + everything
+  await expect(which.locator("option").first()).toContainText("boq.xlsx");
+  await expect(which.locator("option").first()).toContainText("3 סעיפים");
+  await page.locator("#budgetForm button[type=submit]").click();
+  await expect(page.locator("#confirmOverlay")).toContainText("למחוק 3 סעיפים");
+  await page.locator("#confirmYesBtn").click();
+  await expect(page.locator(".budget-item")).toHaveCount(3);
+  await expect.poll(async () => { const d = (await finance(page)).data; return [d.items.length, d.imports.length, new Set(d.items.map((i) => i.importId)).size]; }).toEqual([3, 1, 1]);
+  // an item by hand, then everything
+  await page.locator(".budget-actions button", { hasText: "＋ סעיף" }).click();
+  await fill(page, { code: "09", name: "ידני", qty: 1, price: 10 });
+  await page.locator(".budget-actions button", { hasText: "מחיקת כתב כמויות" }).click();
+  await page.locator("#budgetFormFields select[name=which]").selectOption({ label: "כל הסעיפים (4)" });
+  await page.locator("#budgetForm button[type=submit]").click();
+  await page.locator("#confirmYesBtn").click();
+  await expect(page.locator(".budget-item")).toHaveCount(0);
+  await expect.poll(async () => { const d = (await finance(page)).data; return [d.items.length, d.imports.length]; }).toEqual([0, 0]);
+  await expect(page.locator(".budget-actions button", { hasText: "מחיקת כתב כמויות" })).toHaveCount(0);
+});

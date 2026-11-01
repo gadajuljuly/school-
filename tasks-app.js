@@ -515,6 +515,12 @@
     pnlRingLoss: { he: "אין פרוסת רווח: ההוצאות עברו את ערך מה שבוצע ב-{sum}", en: "No profit slice: spending is {sum} past the value of the work done", ar: "لا شريحة ربح: المصروفات تجاوزت قيمة المنجز بـ {sum}", ru: "Нет доли прибыли: расходы превысили стоимость работ на {sum}" },
     workPlanUndoTitle: { he: "ביטול הפעולה האחרונה", en: "Undo the last change", ar: "تراجع عن آخر تغيير", ru: "Отменить последнее действие" },
     workPlanUndone: { he: "בוטל", en: "Undone", ar: "تم التراجع", ru: "Отменено" },
+    budgetDeleteBoq: { he: "🗑 מחיקת כתב כמויות", en: "🗑 Delete a BOQ", ar: "🗑 حذف جدول كميات", ru: "🗑 Удалить смету" },
+    budgetDeleteWhich: { he: "מה למחוק", en: "What to delete", ar: "ماذا تحذف", ru: "Что удалить" },
+    budgetUploadOption: { he: "{name} (הועלה {date}, {n} סעיפים)", en: "{name} (uploaded {date}, {n} items)", ar: "{name} (رُفع {date}، {n} بنود)", ru: "{name} (загружен {date}, позиций: {n})" },
+    budgetDeleteAllItems: { he: "כל הסעיפים ({n})", en: "All the items ({n})", ar: "كل البنود ({n})", ru: "Все позиции ({n})" },
+    budgetDeleteBoqConfirm: { he: "למחוק {n} סעיפים מכתב הכמויות?", en: "Delete {n} BOQ items?", ar: "حذف {n} بنداً من جدول الكميات؟", ru: "Удалить позиций сметы: {n}?" },
+    budgetDeleteBoqLinked: { he: "{n} הוצאות / סעיפי חוזה של קבלנים מקושרים אליהם – הם יישארו, בלי סעיף.", en: "{n} expenses / contract lines point to them – they stay, with no item.", ar: "{n} مصروفات / بنود عقود مرتبطة بها – ستبقى بدون بند.", ru: "{n} расходов / строк договоров ссылаются на них – они останутся без позиции." },
     voiceBtnTitle: { he: "פקודה קולית", en: "Voice command", ar: "أمر صوتي", ru: "Голосовая команда" },
     voiceListening: { he: "מקשיב... דבר עכשיו", en: "Listening... speak now", ar: "أستمع... تكلّم الآن", ru: "Слушаю... говорите" },
     voiceThinking: { he: "מבין...", en: "Understanding...", ar: "أفهم...", ru: "Разбираю..." },
@@ -10598,6 +10604,8 @@
   //   expenses: [{ id, date, supplier, supplierCode, invoice, itemId, amount, note, by, at, billId }]
   //   generalBudget: { category: amount } - the project's own costs (overheads,
   //             insurance...) that sit on no BOQ item
+  //   imports:  [{ id, name, at, count }] - each BOQ file uploaded; its items
+  //             carry its importId, so the upload can be deleted as one
   //   client, receipts: the client's bill terms and the money that came in
   //             (11f-client-bills.js; the client's bills are among `bills`)
   //   subcontracts, bills: the subcontractors' contracts and partial bills
@@ -10692,13 +10700,13 @@
   }
 
   // ---- the server ------------------------------------------------------------
-  function budgetEmpty() { return { items: [], expenses: [], subcontracts: [], bills: [], generalBudget: {}, client: {}, receipts: [] }; }
+  function budgetEmpty() { return { items: [], expenses: [], subcontracts: [], bills: [], generalBudget: {}, client: {}, receipts: [], imports: [] }; }
   function budgetNormalize(d) {
     d = d || {};
     var list = function (k) { return Array.isArray(d[k]) ? d[k] : []; };
     return { items: list("items"), expenses: list("expenses"), subcontracts: list("subcontracts"), bills: list("bills"),
       generalBudget: d.generalBudget && typeof d.generalBudget === "object" ? d.generalBudget : {},
-      client: d.client && typeof d.client === "object" ? d.client : {}, receipts: list("receipts") };
+      client: d.client && typeof d.client === "object" ? d.client : {}, receipts: list("receipts"), imports: list("imports") };
   }
   function budgetRow() {
     return supabaseClient.from(FINANCE_TABLE).select("data, data_version")
@@ -10845,7 +10853,7 @@
   function renderBudgetItems() {
     budgetActions([["budgetAddItem", function () { budgetItemForm(null); }, "primary"],
       ["budgetImportCsv", function () { document.getElementById("budgetCsvInput").click(); }],
-      ["budgetExportCsv", budgetExport]]);
+      ["budgetExportCsv", budgetExport]].concat(budget.data.items.length ? [["budgetDeleteBoq", budgetDeleteBoqForm]] : []));
     var items = budget.data.items.slice().sort(function (a, b) {
       return String(a.code || "").localeCompare(String(b.code || ""), undefined, { numeric: true });
     });
@@ -11284,10 +11292,41 @@
     budgetImportFile(file).then(function (items) {
       if (!items || !items.length) { alert(tr("budgetImportNone")); return; }
       askConfirm(tr("budgetImportConfirm").replace("{n}", items.length), function () {
-        budgetChange(function (d) { d.items = d.items.concat(JSON.parse(JSON.stringify(items))); });
+        // each upload remembered, so it can be deleted as one
+        var upload = { id: uid(), name: file.name, at: Date.now(), count: items.length };
+        items.forEach(function (i) { i.importId = upload.id; });
+        budgetChange(function (d) {
+          d.items = d.items.concat(JSON.parse(JSON.stringify(items)));
+          d.imports.push(upload);
+        });
       });
     }, function () { alert(tr("budgetImportNone")); });
   });
+  // deleting a BOQ: one upload's items (the file it came from), or every item
+  function budgetDeleteBoqForm() {
+    var d = budget.data;
+    var options = d.imports.filter(function (u) {
+      return d.items.some(function (i) { return i.importId === u.id; });
+    }).map(function (u) {
+      return [u.id, tr("budgetUploadOption").replace("{name}", u.name).replace("{date}", isoToDisplay(new Date(u.at).toISOString().slice(0, 10)))
+        .replace("{n}", d.items.filter(function (i) { return i.importId === u.id; }).length)];
+    }).concat([["*", tr("budgetDeleteAllItems").replace("{n}", d.items.length)]]);
+    budgetForm(tr("budgetDeleteBoq"), [{ key: "which", label: tr("budgetDeleteWhich"), value: options[0][0], options: options }], function (v) {
+      var gone = d.items.filter(function (i) { return v.which === "*" || i.importId === v.which; }).map(function (i) { return i.id; });
+      if (!gone.length) return;
+      var linked = d.expenses.filter(function (e) { return gone.indexOf(e.itemId) !== -1; }).length +
+        d.subcontracts.reduce(function (n, sub) { return n + sub.lines.filter(function (l) { return gone.indexOf(l.itemId) !== -1; }).length; }, 0);
+      budgetFormOverlay.hidden = true;
+      askConfirm(tr("budgetDeleteBoqConfirm").replace("{n}", gone.length) + (linked ? "\n" + tr("budgetDeleteBoqLinked").replace("{n}", linked) : ""), function () {
+        var which = v.which;
+        budgetChange(function (dd) {
+          dd.items = dd.items.filter(function (i) { return gone.indexOf(i.id) === -1; });
+          dd.imports = dd.imports.filter(function (u) { return which !== "*" && u.id !== which; });
+        });
+      });
+      return false;
+    }, null);
+  }
   function budgetExport() {
     var rows = [[tr("budgetCode"), tr("budgetChapter"), tr("budgetName"), tr("budgetUnit"), tr("budgetQty"), tr("budgetPrice"),
       tr("budgetContract"), tr("budgetCostBudget"), tr("budgetActual"), tr("budgetDone") + " %", tr("budgetUsed") + " %", tr("budgetForecastCost")]];
