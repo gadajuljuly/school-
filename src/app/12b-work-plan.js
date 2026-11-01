@@ -227,6 +227,7 @@
 
   function renderWorkPlan() {
     if (workPlanView.hidden) return;
+    wpUpdateUndoBtn();
     var groups = wpGroups();
     var range = wpRange(groups);
     workPlanRangeLabel.textContent = wpRangeLabel(range);
@@ -372,6 +373,7 @@
   // no activity is in any more are dropped. item may be null (a hammock
   // renamed / recoloured).
   function saveWorkPlanItem(sheet, item, remove, hammock) {
+    wpRememberForUndo(sheet); // (↶ - 12g-work-plan-undo.js)
     var apply = function (list) {
       if (!item) return (list || []).slice();
       var out = (list || []).filter(function (x) { return x.id !== item.id; });

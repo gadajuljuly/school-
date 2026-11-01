@@ -512,6 +512,8 @@
     pnlRingCenter: { he: "ערך מה שבוצע", en: "Value of the work done", ar: "قيمة المنجز", ru: "Стоимость выполненного" },
     pnlRingCenterCosts: { he: "סך ההוצאות", en: "Total spent", ar: "إجمالي المصروف", ru: "Всего потрачено" },
     pnlRingLoss: { he: "אין פרוסת רווח: ההוצאות עברו את ערך מה שבוצע ב-{sum}", en: "No profit slice: spending is {sum} past the value of the work done", ar: "لا شريحة ربح: المصروفات تجاوزت قيمة المنجز بـ {sum}", ru: "Нет доли прибыли: расходы превысили стоимость работ на {sum}" },
+    workPlanUndoTitle: { he: "ביטול הפעולה האחרונה", en: "Undo the last change", ar: "تراجع عن آخر تغيير", ru: "Отменить последнее действие" },
+    workPlanUndone: { he: "בוטל", en: "Undone", ar: "تم التراجع", ru: "Отменено" },
     voiceBtnTitle: { he: "פקודה קולית", en: "Voice command", ar: "أمر صوتي", ru: "Голосовая команда" },
     voiceListening: { he: "מקשיב... דבר עכשיו", en: "Listening... speak now", ar: "أستمع... تكلّم الآن", ru: "Слушаю... говорите" },
     voiceThinking: { he: "מבין...", en: "Understanding...", ar: "أفهم...", ru: "Разбираю..." },

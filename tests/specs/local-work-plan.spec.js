@@ -608,3 +608,44 @@ test("forecast: an activity under way shows where its pace leads; tapping the ta
   await expect.poll(async () => (await serverPlan(page, "p1")).find((x) => x.id === "c2").start).toBe(iso(10));
   await expect(row.locator(".wp-forecast")).toHaveCount(0); // on plan now
 });
+
+test("↶ undo: a change, a deletion and an addition, each put back", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [], workPlan: [
+    { id: "a1", name: "שלד", start: iso(-2), end: iso(3), status: "prog", progress: 30, by: "" },
+    { id: "a2", name: "חשמל", start: iso(4), end: iso(8), status: "todo", progress: 0, by: "" },
+  ] }] });
+  await page.locator("#workPlanBtn").click();
+  const undo = page.locator("#workPlanUndoBtn");
+  const rows = page.locator("#workPlanChart .wp-row:not(.wp-head-row)");
+  await expect(rows).toHaveCount(2);
+  await expect(undo).toBeDisabled();
+
+  // a change: שלד done
+  await rows.filter({ hasText: "שלד" }).click();
+  await page.locator(".wp-status[data-status=done]").click();
+  await page.locator("#workPlanEditForm button[type=submit]").click();
+  await expect.poll(async () => (await serverPlan(page, "p1")).find((x) => x.id === "a1").status).toBe("done");
+  await expect(undo).toBeEnabled();
+  await undo.click();
+  await expect.poll(async () => (await serverPlan(page, "p1")).find((x) => x.id === "a1")).toMatchObject({ status: "prog", progress: 30 });
+
+  // a deletion: חשמל, back
+  await page.waitForTimeout(900);
+  await rows.filter({ hasText: "חשמל" }).click();
+  await page.locator("#wpDeleteBtn").click();
+  await page.locator("#confirmYesBtn").click();
+  await expect(rows).toHaveCount(1);
+  await expect.poll(async () => (await serverPlan(page, "p1")).length).toBe(1);
+  await undo.click();
+  await expect(rows).toHaveCount(2);
+  await expect.poll(async () => (await serverPlan(page, "p1")).map((x) => x.name).sort()).toEqual(["חשמל", "שלד"]);
+
+  // an addition: out again
+  await page.waitForTimeout(900);
+  await addActivity(page, { name: "טיח", start: iso(9), end: iso(12) });
+  await expect(rows).toHaveCount(3);
+  await undo.click();
+  await expect(rows).toHaveCount(2);
+  await expect.poll(async () => (await serverPlan(page, "p1")).map((x) => x.name).sort()).toEqual(["חשמל", "שלד"]);
+  await expect(undo).toBeDisabled();
+});
