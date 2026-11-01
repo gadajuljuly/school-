@@ -438,3 +438,18 @@ test("deleting a BOQ: one upload's items (uploaded twice by mistake), or all of 
   await expect.poll(async () => { const d = (await finance(page)).data; return [d.items.length, d.imports.length]; }).toEqual([0, 0]);
   await expect(page.locator(".budget-actions button", { hasText: "מחיקת כתב כמויות" })).toHaveCount(0);
 });
+
+test("a real-world BOQ PDF: wrapped descriptions, bold drawn twice, totals, page numbers, two pages", async ({ page }) => {
+  await openBudget(page);
+  await page.locator("#budgetCsvInput").setInputFiles(path.join(__dirname, "../fixtures/boq-real.pdf"));
+  await expect(page.locator("#confirmOverlay")).toContainText("נמצאו 4 סעיפים", { timeout: 15000 });
+  await page.locator("#confirmYesBtn").click();
+  await expect.poll(async () => (await finance(page))?.data.items.map((i) => [i.code, i.chapter, i.name, i.unit, i.qty, i.price])).toEqual([
+    ["01.51.01.0010", "1 עבודות ניקוז ומניעת סחף", "פירוק צינור ניקוז מבטון או אסבסט בקוטר 121 ס\"מ ועד 200 ס\"מ, כולל פינוי לאתר מורשה", "מ'", 150, 1150],
+    ["01.51.01.0020", "1 עבודות ניקוז ומניעת סחף", "תעלת ניקוז מבטון טרום", "מ\"א", 80.5, 420],
+    ["02.01.0010", "2 עבודות עפר", "חפירה כללית בשטח פתוח", "מ\"ק", 1200, 35],
+    ["02.01.0020", "2 עבודות עפר", "מילוי מובא מהודק בשכבות של 20 ס\"מ", "מ\"ק", 600, 0],
+  ]);
+  // the contract: 172,500 + 33,810 + 42,000
+  await expect(page.locator(".budget-card").first()).toContainText("248,310 ₪");
+});

@@ -515,6 +515,11 @@
     price: /מחיר|price|rate/i,
     cost: /תקציב|עלות|budget|cost/i
   };
+  // the number in an imported cell: its first one ("1,250.50"), never several run together
+  function budgetCellNum(v) {
+    var m = String(v == null ? "" : v).match(/-?\d{1,3}(?:,\d{3})+(?:\.\d+)?|-?\d+(?:\.\d+)?/);
+    return m ? parseFloat(m[0].replace(/,/g, "")) : 0;
+  }
   function budgetImportRows(rows) {
     var headAt = rows.findIndex(function (r) {
       return r.some(function (c) { return BUDGET_CSV_COLUMNS.qty.test(c); }) && r.some(function (c) { return BUDGET_CSV_COLUMNS.name.test(c); });
@@ -526,14 +531,27 @@
         if (col[key] == null && c && BUDGET_CSV_COLUMNS[key].test(c)) col[key] = k;
       });
     });
-    var get = function (r, key) { return col[key] == null ? "" : (r[col[key]] || ""); };
-    var chapter = "", out = [];
+    var get = function (r, key) { return col[key] == null ? "" : String(r[col[key]] || "").trim(); };
+    var chapter = "", out = [], last = null; // last: the item / chapter a wrapped line continues
     rows.slice(headAt + 1).forEach(function (r) {
-      var name = get(r, "name"), code = get(r, "code"), qty = get(r, "qty");
+      var name = get(r, "name"), code = get(r, "code"), qty = budgetCellNum(get(r, "qty")), price = budgetCellNum(get(r, "price"));
       if (!name && !code) return;
-      if (!budgetNum(qty) && !budgetNum(get(r, "price"))) { chapter = [code, name].filter(Boolean).join(" "); return; }
-      out.push({ id: uid(), code: code, chapter: chapter, name: name, unit: get(r, "unit"),
-        qty: budgetNum(qty), price: budgetNum(get(r, "price")), cost: budgetNum(get(r, "cost")), progress: 0 });
+      if (!qty && !price) {
+        // no number of its own: a description's next line - or, with an item number, a chapter
+        if (!code) {
+          // (a page number, a chapter's total line: not part of anything)
+          if (/^(עמוד|page)\s*\d|סה["״']?כ|סך הכל|total/i.test(name)) { last = null; return; }
+          if (last === "chapter") chapter += " " + name;
+          else if (last) last.name += " " + name;
+          return;
+        }
+        chapter = [code, name].filter(Boolean).join(" ");
+        last = "chapter";
+        return;
+      }
+      last = { id: uid(), code: code, chapter: chapter, name: name, unit: get(r, "unit"),
+        qty: qty, price: price, cost: budgetCellNum(get(r, "cost")), progress: 0 };
+      out.push(last);
     });
     return out;
   }
@@ -623,6 +641,10 @@
             var h = Math.abs(it.transform[3]) || 10;
             return { str: String(it.str).trim(), x: it.transform[4], w: it.width || 0, y: it.transform[5], h: h };
           }).sort(function (a, b) { return b.y - a.y || b.x - a.x; });
+          // a word drawn twice in the same place (some PDFs fake bold that way): once
+          words = words.filter(function (wd, k) {
+            return !words.slice(0, k).some(function (o) { return o.str === wd.str && Math.abs(o.x - wd.x) < 2 && Math.abs(o.y - wd.y) < 2; });
+          });
           var lines = [];
           words.forEach(function (wd) {
             var line = lines.find(function (l) { return Math.abs(l.y - wd.y) <= Math.max(2, wd.h * 0.45); });
@@ -635,10 +657,53 @@
     }).then(function (pages) { return [].concat.apply([], pages); });
   }
   var BUDGET_HEBREW = /[\u0590-\u05FF]/;
+  // Which column a word belongs to. The description column is wide and its
+  // header sits in its middle, so "the nearest header" misplaces its words;
+  // instead: an item number only at the line's start (the item-number
+  // column, a number-like word), numbers / units only in the narrow columns
+  // past the description (each to the nearest of those), and any other word
+  // - a number inside a description too - is description. A table with no
+  // description column found: the nearest header, as before.
+  var BUDGET_CODE_WORD = /^\d+([.\-\/]\d+)*\.?$/;
+  function pdfColumnKinds(columns) {
+    columns.forEach(function (c) {
+      var l = c.label;
+      c.kind = BUDGET_CSV_COLUMNS.name.test(l) ? "name" : BUDGET_CSV_COLUMNS.code.test(l) && !/כמות|מחיר|סה|qty|price/i.test(l) ? "code" : "num";
+    });
+    var name = columns.find(function (c) { return c.kind === "name"; });
+    var code = columns.find(function (c) { return c.kind === "code"; });
+    var nums = columns.filter(function (c) { return c.kind === "num"; });
+    var rtl = name && nums.length ? name.x > nums[0].x : true;
+    return {
+      name: name, code: code, rtl: rtl,
+      // where the narrow (number / unit) columns start, past the description
+      numEdge: nums.length ? (rtl ? Math.max.apply(null, nums.map(function (c) { return c.right; })) : Math.min.apply(null, nums.map(function (c) { return c.left; }))) : null,
+      // where the item-number column starts, before the description
+      codeEdge: code ? (rtl ? code.left - (code.right - code.left) * 0.6 : code.right + (code.right - code.left) * 0.6) : null
+    };
+  }
+  function pdfColumnOf(columns, wd, str) {
+    var k = columns.kinds || (columns.kinds = pdfColumnKinds(columns));
+    var mid = wd.x + wd.w / 2;
+    var nearest = function (list) {
+      var best = list[0];
+      list.forEach(function (c) { if (Math.abs(c.x - mid) < Math.abs(best.x - mid)) best = c; });
+      return columns.indexOf(best);
+    };
+    if (!k.name) return nearest(columns);
+    var past = function (edge, beyond) { return edge != null && (k.rtl ? (beyond ? mid > edge : mid < edge) : (beyond ? mid < edge : mid > edge)); };
+    if (k.code && past(k.codeEdge, true) && BUDGET_CODE_WORD.test(str)) return columns.indexOf(k.code);
+    if (past(k.numEdge + (k.rtl ? 8 : -8), false)) return nearest(columns.filter(function (c) { return c.kind === "num"; }));
+    return columns.indexOf(k.name);
+  }
   // headerText(all the line's text): whether it's the table's header line
   // (a BOQ's, by default: a quantity and a description)
   function budgetPdfRows(lines, turnHebrew, headerText) {
-    var text = function (wd) { return turnHebrew && BUDGET_HEBREW.test(wd.str) ? wd.str.split("").reverse().join("") : wd.str; };
+    // turned around: the letters, but a number inside keeps its own order (200, not 002)
+    var text = function (wd) {
+      if (!turnHebrew || !BUDGET_HEBREW.test(wd.str)) return wd.str;
+      return wd.str.split("").reverse().join("").replace(/\d[\d.,:\/-]*\d|\d/g, function (n) { return n.split("").reverse().join(""); });
+    };
     headerText = headerText || function (all) { return BUDGET_CSV_COLUMNS.qty.test(all) && BUDGET_CSV_COLUMNS.name.test(all); };
     var isHeader = function (line) { return headerText(line.words.map(text).join(" ")); };
     var columns = null, rows = [];
@@ -661,9 +726,7 @@
       if (!columns) return;
       var cells = columns.map(function () { return []; });
       line.words.forEach(function (wd) {
-        var mid = wd.x + wd.w / 2, best = 0;
-        columns.forEach(function (c, k) { if (Math.abs(c.x - mid) < Math.abs(columns[best].x - mid)) best = k; });
-        cells[best].push(wd);
+        cells[pdfColumnOf(columns, wd, text(wd))].push(wd);
       });
       rows.push(cells.map(function (ws) {
         return ws.sort(function (a, b) { return b.x - a.x; }).map(text).join(" ");
