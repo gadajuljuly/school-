@@ -6807,11 +6807,11 @@
     if (e.target === libraryFileActionOverlay) closeLibraryFileActionModal();
   });
 
-  function uploadLibraryFiles(fileList) {
+  function uploadLibraryFiles(fileList, intoFolderId) {
     var initialSheet = allSheets().find(function (s) { return s.id === activeLibrarySheetId; });
     if (!initialSheet) return;
     var sheetId = initialSheet.id;
-    var folderId = activeLibraryFolderId;
+    var folderId = intoFolderId || activeLibraryFolderId;
     var isShared = !!initialSheet.shared;
     if (!supabaseClient || !folderId) return;
     Array.prototype.slice.call(fileList).forEach(function (file) {
@@ -6880,6 +6880,57 @@
   libraryFileInput.addEventListener("change", function () {
     if (libraryFileInput.files && libraryFileInput.files.length) uploadLibraryFiles(libraryFileInput.files);
     libraryFileInput.value = "";
+  });
+
+  // On a computer: files dragged in from the desktop / file explorer. Over
+  // a folder's tile they go into that folder (it lights up); anywhere else
+  // inside an open folder they go into the open folder.
+  var libraryDropTile = null;
+  function libraryDraggingFiles(e) {
+    return !!e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], "Files") >= 0;
+  }
+  function libraryDropTarget(e) {
+    if (!libraryDraggingFiles(e)) return null;
+    var inFolder = !libraryView.hidden;
+    var onFolders = libraryFoldersView && !libraryFoldersView.hidden;
+    if (!inFolder && !onFolders) return null;
+    var tile = e.target && e.target.closest && e.target.closest(".library-folder-tile");
+    if (tile) return { tile: tile, folderId: tile.getAttribute("data-folder-id") };
+    if (inFolder && activeLibraryFolderId) return { tile: null, folderId: activeLibraryFolderId };
+    return null;
+  }
+  function setLibraryDropTile(tile) {
+    if (tile === libraryDropTile) return;
+    if (libraryDropTile) libraryDropTile.classList.remove("library-drop-over");
+    libraryDropTile = tile;
+    if (tile) tile.classList.add("library-drop-over");
+  }
+  function showLibraryDrop(target) {
+    setLibraryDropTile(target ? target.tile : null);
+    libraryView.classList.toggle("library-drop-here", !!(target && !target.tile));
+  }
+  document.addEventListener("dragover", function (e) {
+    var target = libraryDropTarget(e);
+    showLibraryDrop(target);
+    if (!target) {
+      // (a file dropped elsewhere must not make the browser open it in
+      // place of the app)
+      if (libraryDraggingFiles(e)) { e.preventDefault(); e.dataTransfer.dropEffect = "none"; }
+      return;
+    }
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+  });
+  document.addEventListener("dragleave", function (e) {
+    if (!e.relatedTarget) showLibraryDrop(null); // left the window
+  });
+  document.addEventListener("drop", function (e) {
+    var target = libraryDropTarget(e);
+    showLibraryDrop(null);
+    if (!target) { if (libraryDraggingFiles(e)) e.preventDefault(); return; }
+    e.preventDefault();
+    var files = e.dataTransfer.files;
+    if (files && files.length) uploadLibraryFiles(files, target.folderId);
   });
 
   var newLibraryFolderParentId = null;
