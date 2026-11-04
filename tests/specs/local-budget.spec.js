@@ -59,10 +59,12 @@ test("a BOQ uploaded from Excel: its chapters and items, saved for the project",
 test("an item added by hand; expenses against it; spending ahead of the work shows as an overrun", async ({ page }) => {
   await openBudget(page);
   await page.locator(".budget-actions button", { hasText: "＋ סעיף" }).click();
-  await fill(page, { code: "04.010", chapter: "חשמל", name: "תשתית חשמל", unit: "קומפ'", qty: 1, price: 60000, cost: 40000, progress: 20 });
+  // the work done is typed as a quantity: 40 of the 200 m = 20%
+  await fill(page, { code: "04.010", chapter: "חשמל", name: "תשתית חשמל", unit: "מ'", qty: 200, price: 300, cost: 40000, doneQty: 40 });
   const item = page.locator(".budget-item", { hasText: "תשתית חשמל" });
   await expect(item.locator("td.boq-strong")).toHaveText("60,000");
-  await expect(item.locator("td.boq-pct").first()).toContainText("20%");
+  await expect(item.locator("td.boq-pct").first()).toContainText("40 מ'");
+  await expect.poll(async () => (await finance(page))?.data.items[0]).toMatchObject({ doneQty: 40, progress: 20 });
 
   // an expense: 20,000 on it - half the budget used for 20% of the work
   await page.locator(".budget-tabs button", { hasText: "הוצאות" }).click();
@@ -80,8 +82,11 @@ test("an item added by hand; expenses against it; spending ahead of the work sho
 
   // the work catches up: 60% done -> no overrun
   await item.click();
-  await fill(page, { progress: 60 });
+  await expect(page.locator("#budgetFormFields label", { hasText: "כמות שבוצעה (מ')" })).toBeVisible();
+  await expect(page.locator("#budgetFormFields [name=doneQty]")).toHaveValue("40");
+  await fill(page, { doneQty: 120 });
   await expect(item).not.toHaveClass(/over/);
+  await expect(item.locator("td.boq-pct").first()).toContainText("120 מ'");
   await expect.poll(async () => (await finance(page)).data.items[0].progress).toBe(60);
 
   // removed

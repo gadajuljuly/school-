@@ -56,6 +56,11 @@
     return Math.round(n || 0).toLocaleString("he-IL") + " ₪";
   }
   function budgetItemContract(item) { return budgetNum(item.qty) * budgetNum(item.price); }
+  // the quantity done: typed in, or (an item from before that) its % of the quantity
+  function budgetItemDoneQty(item) {
+    if (item.doneQty != null && item.doneQty !== "") return budgetNum(item.doneQty);
+    return Math.round(budgetNum(item.qty) * budgetNum(item.progress) / 100 * 1000) / 1000;
+  }
   function budgetItemActual(item) {
     return budget.data.expenses.reduce(function (s, e) { return e.itemId === item.id ? s + budgetNum(e.amount) : s; }, 0);
   }
@@ -277,7 +282,7 @@
     var table = bEl("table", "boq-table");
     var head = bEl("tr");
     [["budgetCode", "boq-code"], ["budgetName", "boq-desc"], ["budgetUnit"], ["budgetQty"], ["boqUnitPrice"], ["boqContractTotal"],
-      ["budgetCostBudget"], ["budgetActual"], ["budgetDone"], ["budgetUsed"]].forEach(function (c) {
+      ["budgetCostBudget"], ["budgetActual"], ["boqDoneQty"], ["budgetUsed"]].forEach(function (c) {
       head.appendChild(bEl("th", c[1] || "", tr(c[0])));
     });
     var thead = bEl("thead");
@@ -342,7 +347,11 @@
         row.appendChild(bEl("td", "boq-strong", num(contract)));
         row.appendChild(bEl("td", "", num(cost)));
         row.appendChild(bEl("td", "", num(actual)));
-        row.appendChild(pctCell(budgetNum(item.progress), "done"));
+        // done: the quantity (in the item's unit), its bar showing how much of all of it
+        var doneCell = pctCell(budgetNum(item.progress), "done");
+        doneCell.firstChild.textContent = qtyText(budgetItemDoneQty(item)) + (item.unit ? " " + item.unit : "");
+        doneCell.title = Math.round(budgetNum(item.progress)) + "%";
+        row.appendChild(doneCell);
         row.appendChild(pctCell(cost ? actual * 100 / cost : 0, over ? "over" : "used"));
         row.addEventListener("click", function () { budgetItemForm(item); });
         body.appendChild(row);
@@ -495,13 +504,15 @@
       { key: "qty", label: tr("budgetQty"), value: it.qty, type: "number" },
       { key: "price", label: tr("budgetPrice"), value: it.price, type: "number" },
       { key: "cost", label: tr("budgetCostField"), value: it.cost, type: "number" },
-      { key: "progress", label: tr("budgetProgressField"), value: it.progress, type: "number" }
+      { key: "doneQty", label: tr("budgetDoneQtyField").replace("{unit}", it.unit || ""), value: item ? budgetItemDoneQty(it) : "", type: "number" }
     ], function (v) {
       if (!v.name && !v.code) { alert(tr("budgetNeedName")); return false; }
+      // the work done is typed as a quantity; its % (what the sums use) follows from it
+      var qty = budgetNum(v.qty), done = Math.max(0, budgetNum(v.doneQty));
       var rec = Object.assign({}, it, {
         id: it.id || uid(), code: v.code, chapter: v.chapter, name: v.name, unit: v.unit,
-        qty: budgetNum(v.qty), price: budgetNum(v.price), cost: budgetNum(v.cost),
-        progress: Math.max(0, Math.min(100, budgetNum(v.progress)))
+        qty: qty, price: budgetNum(v.price), cost: budgetNum(v.cost),
+        doneQty: done, progress: qty ? Math.min(100, done * 100 / qty) : 0
       });
       budgetChange(budgetUpsert("items", rec));
     }, item ? function () { budgetChange(budgetRemove("items", item.id)); } : null);
