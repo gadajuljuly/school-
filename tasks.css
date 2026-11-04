@@ -3585,6 +3585,11 @@
   .morning-task-text small { color: var(--ink-muted); font-size: 0.75rem; }
   .morning-task.done .morning-task-text span { text-decoration: line-through; color: var(--ink-muted); }
   .morning-plan-row { padding: 4px 0; }
+  /* the "+" under a project's last task, and the line it opens */
+  .morning-add { align-self: flex-start; width: 30px; height: 28px; margin: 0; padding: 0; border: none; background: transparent; color: var(--accent); font: inherit; font-size: 1.4rem; font-weight: 700; line-height: 1; cursor: pointer; }
+  .morning-add-form { display: flex; gap: 6px; align-items: center; padding: 3px 0; }
+  .morning-add-input { flex: 1; min-width: 0; padding: 6px 8px; border: 1px solid var(--rule); border-radius: 8px; font: inherit; font-size: 0.92rem; background: var(--paper, #fff); color: inherit; }
+  .morning-add-ok { width: 32px; height: 32px; border: none; border-radius: 8px; background: var(--accent); color: #fff; font-size: 1rem; cursor: pointer; }
   .morning-more { align-self: center; margin-top: 4px; border: none; background: transparent; color: var(--accent); font: inherit; font-size: 0.85rem; text-decoration: underline; cursor: pointer; }
   /* the 🎤 by the new-task field, while it listens */
   .add-row button.add-btn.voice-btn.listening { color: #d32f2f; animation: voice-listen 1s infinite; }

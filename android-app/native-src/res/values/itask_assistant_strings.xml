@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="itask_assistant_label">דוח בוקר ITASK</string>
-    <string name="itask_morning_title">דוח בוקר</string>
+    <string name="itask_assistant_label">דו\"ח כללי ITASK</string>
+    <string name="itask_morning_title">דו\"ח כללי</string>
     <string name="itask_assistant_hint">מה יש היום – לחצו לדוח</string>
     <string name="itask_assistant_description">מה יש היום: משימות, איחורים ותוכניות העבודה, בלחיצה אחת</string>
 </resources>

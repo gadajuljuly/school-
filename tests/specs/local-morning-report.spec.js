@@ -147,3 +147,23 @@ test("budget overruns in שים לב - for whoever may see the money", async ({ 
   await expect(att).not.toContainText("טיח"); // 40% spent, 50% done: fine
   await expect(att).not.toContainText("של אחר");
 });
+
+test("general report: named so, and the + under a project's last task adds a task for today", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, native: true, sheet: SHEET });
+  await openReport(page);
+  await expect(page.locator("#morningView")).toContainText('דו"ח כללי');
+  await expect(page.locator("#morningBody .morning-add")).toHaveCount(2); // one per project (+ the local one)
+  const add = page.locator('#morningBody .morning-add[data-sheet-id="p1"]');
+  await add.click();
+  const input = page.locator("#morningBody .morning-add-input");
+  await expect(input).toBeFocused();
+  await input.fill("להזמין מנוף");
+  await input.press("Enter");
+  await expect(page.locator("#morningBody .morning-task", { hasText: "להזמין מנוף" })).toBeVisible();
+  await expect.poll(async () => (await server(page)).tasks.find((t) => t.text === "להזמין מנוף"))
+    .toEqual(expect.objectContaining({ date: iso(0), status: 0, type: "task" }));
+  // the line stays open for the next one; Esc closes it
+  await expect(page.locator("#morningBody .morning-add-input")).toBeFocused();
+  await page.locator("#morningBody .morning-add-input").press("Escape");
+  await expect(add).toBeVisible();
+});

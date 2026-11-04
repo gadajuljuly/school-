@@ -254,7 +254,8 @@
     workPlanDiaryPctTitle: { he: "אחוז הביצוע: גרור או לחץ לאורך השדה", en: "% done: drag or tap along the bar", ar: "نسبة الإنجاز: اسحب أو انقر على الشريط", ru: "% выполнения: проведите или нажмите по полосе" },
     workPlanResultClear: { he: "ניקוי הסימון של היום", en: "Clear today's mark", ar: "مسح علامة اليوم", ru: "Сбросить отметку дня" },
     voiceMenuLabel: { he: "פקודה קולית", en: "Voice command", ar: "أمر صوتي", ru: "Голосовая команда" },
-    morningReportTitle: { he: "דוח בוקר", en: "Morning report", ar: "تقرير الصباح", ru: "Утренний отчёт" },
+    morningReportTitle: { he: "דו\"ח כללי", en: "General report", ar: "تقرير عام", ru: "Общий отчёт" },
+    morningAddTask: { he: "משימה חדשה", en: "New task", ar: "مهمة جديدة", ru: "Новая задача" },
     morningAttention: { he: "שים לב", en: "Heads up", ar: "انتبه", ru: "Обратите внимание" },
     morningLateActivity: { he: "{name} באיחור – הייתה צריכה להסתיים ב-{date}", en: "{name} is late - it was due {date}", ar: "{name} متأخر – كان يجب أن ينتهي في {date}", ru: "{name} опаздывает – срок был {date}" },
     morningSlipping: { he: "{name}: לפי הקצב תסתיים ב-{date}, {n} ימים אחרי התכנון", en: "{name}: at this pace it ends {date}, {n} days late", ar: "{name}: بهذه الوتيرة سينتهي في {date}، متأخراً {n} أيام", ru: "{name}: при таком темпе закончится {date}, на {n} дн. позже" },
@@ -21196,7 +21197,7 @@
   }
 
   // ---------------------------------------------------------------------
-  // דוח בוקר: the day's start, over all the projects - opened by the
+  // דו"ח כללי (was דוח בוקר): the day's start, over all the projects - opened by the
   // morning notification and the home-screen widget.
   //   1. שים לב: only what needs acting on - activities late, ones whose
   //      pace runs past their end (and what's linked after them), tasks
@@ -21255,6 +21256,7 @@
 
   function openMorningReport() {
     morningMore = { tasks: false, plan: false };
+    morningAddingSheet = null;
     morningTouched = {};
     morningMoney = [];
     loadMorningMoney();
@@ -21372,8 +21374,7 @@
         if (t.type === "note" || t.headOfficeVirtual || t.planItemId || !(t.text || "").trim() || t.date > until) return false;
         return t.status !== 2 || morningTouched["t:" + t.id];
       }).sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : (a.createdAt || 0) - (b.createdAt || 0); });
-      if (!tasks.length) return;
-      any = true;
+      if (tasks.length) any = true;
       sec.appendChild(morningEl("div", "morning-project", (sheet.shared ? "👥 " : "") + sheet.name));
       tasks.forEach(function (t) {
         var row = morningEl("div", "morning-task" + (t.status === 1 ? " partial" : t.status === 2 ? " done" : ""));
@@ -21398,9 +21399,52 @@
         row.appendChild(text);
         sec.appendChild(row);
       });
+      sec.appendChild(morningAddRow(sheet, today));
     });
-    if (!any) sec.appendChild(morningEl("p", "morning-ok", tr("morningNoTasks")));
+    if (!any) sec.insertBefore(morningEl("p", "morning-ok", tr("morningNoTasks")), sec.children[1] || null);
     morningMoreBtn(sec, "tasks", "morningMoreTasks", "morningLessTasks");
+  }
+
+  // the "+" under a project's last task: a line to type a new task (for
+  // today) into; it stays open for the next one until Esc / emptied away
+  var morningAddingSheet = null;
+  function morningAddRow(sheet, today) {
+    if (morningAddingSheet !== sheet.id) {
+      var plus = morningEl("button", "morning-add", "+");
+      plus.type = "button";
+      plus.setAttribute("data-sheet-id", sheet.id);
+      plus.title = tr("morningAddTask");
+      plus.setAttribute("aria-label", tr("morningAddTask"));
+      plus.addEventListener("click", function () {
+        morningAddingSheet = sheet.id;
+        renderMorningReport();
+      });
+      return plus;
+    }
+    var form = morningEl("form", "morning-add-form");
+    var input = morningEl("input", "morning-add-input");
+    input.type = "text";
+    input.placeholder = tr("morningAddTask");
+    var ok = morningEl("button", "morning-add-ok", "✓");
+    ok.type = "submit";
+    form.appendChild(input);
+    form.appendChild(ok);
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var text = input.value.trim();
+      if (!text) { morningAddingSheet = null; renderMorningReport(); return; }
+      var t = { id: uid(), text: text, status: 0, urgent: false, type: "task", date: today, createdAt: Date.now() };
+      sheet.tasks = sheet.tasks || [];
+      sheet.tasks.push(t);
+      saveData();
+      if (sheet.shared) sendChatSystemMessage(sheet.id, "added", text, myPhoneNumber);
+      renderMorningReport();
+    });
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") { morningAddingSheet = null; renderMorningReport(); }
+    });
+    setTimeout(function () { input.focus(); }, 0);
+    return form;
   }
 
   // ---- 3. the work plans ---------------------------------------------------

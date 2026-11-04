@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="itask_assistant_label">تقرير الصباح ITASK</string>
-    <string name="itask_morning_title">تقرير الصباح</string>
+    <string name="itask_assistant_label">تقرير عام ITASK</string>
+    <string name="itask_morning_title">تقرير عام</string>
     <string name="itask_assistant_hint">ماذا لديك اليوم – اضغط للتقرير</string>
     <string name="itask_assistant_description">اليوم بلمحة: المهام والتأخيرات وخطط العمل بضغطة واحدة</string>
 </resources>
