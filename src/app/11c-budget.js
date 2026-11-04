@@ -264,9 +264,9 @@
     budgetActions([["budgetAddItem", function () { budgetItemForm(null); }, "primary"],
       ["budgetImportCsv", function () { document.getElementById("budgetCsvInput").click(); }],
       ["budgetExportCsv", budgetExport]].concat(budget.data.items.length ? [["budgetDeleteBoq", budgetDeleteBoqForm]] : []));
-    var items = budget.data.items.slice().sort(function (a, b) {
-      return String(a.code || "").localeCompare(String(b.code || ""), undefined, { numeric: true });
-    });
+    // in the order of the BOQ itself (as uploaded), not re-sorted by number; the
+    // chapters in the order they come, and an item added by hand at its chapter's end
+    var items = budget.data.items.slice();
     if (!items.length) { budgetBody.appendChild(bEl("p", "team-empty", tr("budgetNoItems"))); return; }
     var chapters = [];
     items.forEach(function (item) {

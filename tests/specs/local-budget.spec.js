@@ -461,3 +461,18 @@ test("a real-world BOQ PDF: wrapped descriptions, bold drawn twice, totals, page
   // the contract: 172,500 + 33,810 + 42,000
   await expect(page.locator(".budget-card").first()).toContainText("248,310 ₪");
 });
+
+test("the BOQ shows in the file's own order, not re-sorted by item number", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, native: true, sheet: SHEET });
+  await page.evaluate(() => { window.__backend.tables.project_finance = [{ owner_phone: "+972500000001", project_id: "p1", data_version: 1, data: { items: [
+    { id: "a", code: "51.01", chapter: "51 ניקוז", name: "צינור", qty: 1, price: 1 },
+    { id: "b", code: "51.10", chapter: "51 ניקוז", name: "שוחה", qty: 1, price: 1 },
+    { id: "c", code: "51.02", chapter: "51 ניקוז", name: "מכסה", qty: 1, price: 1 },
+    { id: "d", code: "40.01", chapter: "40 גינון", name: "דשא", qty: 1, price: 1 },
+  ] } }]; });
+  await page.locator("#calendarFabBtn").click();
+  await page.locator("#siteLogBudgetBtn").click();
+  await expect(page.locator(".budget-item")).toHaveCount(4);
+  expect(await page.locator(".budget-item .boq-code").allInnerTexts()).toEqual(["51.01", "51.10", "51.02", "40.01"]);
+  expect(await page.locator("tr.boq-ch .boq-desc").allInnerTexts()).toEqual(["ניקוז", "גינון"]);
+});
