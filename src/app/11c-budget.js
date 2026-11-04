@@ -270,46 +270,95 @@
       if (!g) chapters.push(g = { name: ch, items: [] });
       g.items.push(item);
     });
+    // a table: the item number and description stay put at the right while
+    // the rest scrolls sideways; a section per chapter - its title row, its
+    // items, its subtotal - and the BOQ's total at the bottom
+    var wrap = bEl("div", "boq-wrap");
+    var table = bEl("table", "boq-table");
+    var head = bEl("tr");
+    [["budgetCode", "boq-code"], ["budgetName", "boq-desc"], ["budgetUnit"], ["budgetQty"], ["boqUnitPrice"], ["boqContractTotal"],
+      ["budgetCostBudget"], ["budgetActual"], ["budgetDone"], ["budgetUsed"]].forEach(function (c) {
+      head.appendChild(bEl("th", c[1] || "", tr(c[0])));
+    });
+    var thead = bEl("thead");
+    thead.appendChild(head);
+    table.appendChild(thead);
+    var num = function (n) { return Math.round(n || 0).toLocaleString("he-IL"); };
+    var qtyText = function (n) { return (Math.round(budgetNum(n) * 1000) / 1000).toLocaleString("he-IL"); };
+    var pctCell = function (pct, cls) {
+      var td = bEl("td", "boq-pct");
+      td.appendChild(bEl("span", "", Math.round(pct) + "%" + (cls === "over" ? " ⚠" : "")));
+      var bar = bEl("span", "boq-bar " + cls);
+      var fill = bEl("i");
+      fill.style.width = Math.max(0, Math.min(100, pct)) + "%";
+      bar.appendChild(fill);
+      td.appendChild(bar);
+      return td;
+    };
+    var sumRow = function (cls, label, contract, cost, actual) {
+      var tr_ = bEl("tr", cls);
+      tr_.appendChild(bEl("td", "boq-code"));
+      tr_.appendChild(bEl("td", "boq-desc", label));
+      [""].concat(["", ""]).forEach(function () { tr_.appendChild(bEl("td")); });
+      tr_.appendChild(bEl("td", "", num(contract)));
+      tr_.appendChild(bEl("td", "", num(cost)));
+      tr_.appendChild(bEl("td", "", num(actual)));
+      tr_.appendChild(bEl("td"));
+      tr_.appendChild(bEl("td", "", cost ? Math.round(actual * 100 / cost) + "%" : ""));
+      return tr_;
+    };
+    var all = { contract: 0, cost: 0, actual: 0 };
     chapters.forEach(function (g) {
-      var sec = bEl("section", "budget-chapter");
-      var head = bEl("div", "budget-chapter-head");
-      head.appendChild(bEl("b", "", g.name));
-      var gCost = 0, gActual = 0;
-      g.items.forEach(function (i) { gCost += budgetNum(i.cost); gActual += budgetItemActual(i); });
-      head.appendChild(bEl("small", gActual > gCost && gCost ? "over" : "", budgetMoney(gActual) + " / " + budgetMoney(gCost)));
-      sec.appendChild(head);
+      var body = bEl("tbody", "budget-chapter");
+      // the chapter's title row: its number (if it starts with one) and name
+      var m = /^(\d+(?:[.\-]\d+)*)\s+(.+)$/.exec(g.name);
+      var ch = bEl("tr", "boq-ch");
+      ch.appendChild(bEl("td", "boq-code", m ? m[1] : ""));
+      ch.appendChild(bEl("td", "boq-desc", m ? m[2] : g.name));
+      var rest = bEl("td");
+      rest.colSpan = 8;
+      ch.appendChild(rest);
+      body.appendChild(ch);
+      var sum = { contract: 0, cost: 0, actual: 0 };
       g.items.forEach(function (item) {
         var actual = budgetItemActual(item), cost = budgetNum(item.cost), over = budgetItemOver(item, actual);
-        var row = bEl("div", "budget-item" + (over ? " over" : ""));
-        var top = bEl("div", "budget-item-top");
-        top.appendChild(bEl("span", "budget-code", item.code || ""));
-        top.appendChild(bEl("span", "budget-name", item.name || ""));
-        row.appendChild(top);
-        row.appendChild(bEl("small", "budget-item-nums", [
-          tr("budgetContract") + " " + budgetMoney(budgetItemContract(item)),
-          tr("budgetCostBudget") + " " + budgetMoney(cost),
-          tr("budgetActual") + " " + budgetMoney(actual)].join(" · ")));
-        var bars = bEl("div", "budget-item-bars");
-        var done = bEl("div", "budget-bar-row");
-        done.appendChild(bEl("small", "", tr("budgetDone") + " " + Math.round(budgetNum(item.progress)) + "%"));
-        done.appendChild(budgetBar(budgetNum(item.progress), "done"));
-        bars.appendChild(done);
-        var used = bEl("div", "budget-bar-row");
-        var usedPct = cost ? actual * 100 / cost : 0;
-        used.appendChild(bEl("small", "", tr("budgetUsed") + " " + Math.round(usedPct) + "%"));
-        used.appendChild(budgetBar(usedPct, over ? "used over" : "used"));
-        bars.appendChild(used);
-        row.appendChild(bars);
+        var contract = budgetItemContract(item);
+        sum.contract += contract;
+        sum.cost += cost;
+        sum.actual += actual;
+        var row = bEl("tr", "budget-item" + (over ? " over" : ""));
+        row.appendChild(bEl("td", "boq-code", item.code || ""));
+        var desc = bEl("td", "boq-desc");
+        desc.appendChild(bEl("span", "", item.name || ""));
         if (over) {
-          row.appendChild(bEl("small", "budget-warn", tr("budgetOverWarn")
+          desc.appendChild(bEl("small", "budget-warn", tr("budgetOverWarn")
             .replace("{forecast}", budgetMoney(budgetItemForecast(item, actual)))
             .replace("{diff}", budgetMoney(budgetItemForecast(item, actual) - cost))));
         }
+        row.appendChild(desc);
+        row.appendChild(bEl("td", "", item.unit || ""));
+        row.appendChild(bEl("td", "", qtyText(item.qty)));
+        row.appendChild(bEl("td", "", num(budgetNum(item.price))));
+        row.appendChild(bEl("td", "boq-strong", num(contract)));
+        row.appendChild(bEl("td", "", num(cost)));
+        row.appendChild(bEl("td", "", num(actual)));
+        row.appendChild(pctCell(budgetNum(item.progress), "done"));
+        row.appendChild(pctCell(cost ? actual * 100 / cost : 0, over ? "over" : "used"));
         row.addEventListener("click", function () { budgetItemForm(item); });
-        sec.appendChild(row);
+        body.appendChild(row);
       });
-      budgetBody.appendChild(sec);
+      body.appendChild(sumRow("boq-sub", tr("boqChapterTotal").replace("{name}", m ? m[1] : g.name), sum.contract, sum.cost, sum.actual));
+      all.contract += sum.contract;
+      all.cost += sum.cost;
+      all.actual += sum.actual;
+      table.appendChild(body);
     });
+    var foot = bEl("tbody");
+    foot.appendChild(sumRow("boq-total", tr("boqTotal"), all.contract, all.cost, all.actual));
+    table.appendChild(foot);
+    wrap.appendChild(table);
+    budgetBody.appendChild(wrap);
+    budgetBody.appendChild(bEl("p", "budget-note", tr("boqNote")));
   }
   function budgetItemLabel(item) {
     return [item.code, item.name].filter(Boolean).join(" ");

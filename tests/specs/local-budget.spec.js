@@ -35,10 +35,13 @@ test("a BOQ uploaded from Excel: its chapters and items, saved for the project",
   await page.locator("#confirmYesBtn").click();
   const chapters = page.locator(".budget-chapter");
   await expect(chapters).toHaveCount(2);
-  await expect(chapters.first()).toContainText("01 עבודות עפר");
+  // the table: a section per chapter - its number and name in the title row
+  await expect(chapters.first().locator("tr.boq-ch .boq-code")).toHaveText("01");
+  await expect(chapters.first().locator("tr.boq-ch .boq-desc")).toHaveText("עבודות עפר");
   await expect(chapters.first().locator(".budget-item")).toHaveCount(2);
   await expect(chapters.first().locator(".budget-item").first()).toContainText("חפירה כללית");
-  await expect(chapters.first().locator(".budget-item").first()).toContainText("חוזה 5,400 ₪");
+  await expect(chapters.first().locator(".budget-item").first().locator("td.boq-strong")).toHaveText("5,400"); // the contract
+  await expect(chapters.first().locator("tr.boq-sub")).toContainText("10,200"); // the chapter's total
   // the contract: 5,400 + 4,800 + 42,000
   await expect(page.locator(".budget-card").first()).toContainText("52,200 ₪");
   await expect.poll(async () => (await finance(page))?.data.items.map((i) => [i.code, i.chapter, i.qty, i.price]))
@@ -49,7 +52,7 @@ test("a BOQ uploaded from Excel: its chapters and items, saved for the project",
   // ...and a CSV too, with its cost budget
   await page.locator("#budgetCsvInput").setInputFiles(path.join(__dirname, "../fixtures/boq.csv"));
   await page.locator("#confirmYesBtn").click();
-  await expect(page.locator(".budget-chapter", { hasText: "03 טיח" })).toContainText("טיח פנים");
+  await expect(page.locator(".budget-chapter").filter({ has: page.locator("tr.boq-ch .boq-code", { hasText: "03" }) })).toContainText("טיח פנים");
   await expect.poll(async () => (await finance(page)).data.items.find((i) => i.code === "03.010")).toMatchObject({ unit: 'מ"ר', qty: 500, price: 70, cost: 28000 });
 });
 
@@ -58,8 +61,8 @@ test("an item added by hand; expenses against it; spending ahead of the work sho
   await page.locator(".budget-actions button", { hasText: "＋ סעיף" }).click();
   await fill(page, { code: "04.010", chapter: "חשמל", name: "תשתית חשמל", unit: "קומפ'", qty: 1, price: 60000, cost: 40000, progress: 20 });
   const item = page.locator(".budget-item", { hasText: "תשתית חשמל" });
-  await expect(item).toContainText("חוזה 60,000 ₪");
-  await expect(item).toContainText("ביצוע 20%");
+  await expect(item.locator("td.boq-strong")).toHaveText("60,000");
+  await expect(item.locator("td.boq-pct").first()).toContainText("20%");
 
   // an expense: 20,000 on it - half the budget used for 20% of the work
   await page.locator(".budget-tabs button", { hasText: "הוצאות" }).click();
@@ -70,7 +73,7 @@ test("an item added by hand; expenses against it; spending ahead of the work sho
 
   await page.locator(".budget-tabs button", { hasText: "סעיפי כתב הכמויות" }).click();
   await expect(item).toHaveClass(/over/);
-  await expect(item).toContainText("ניצול תקציב 50%");
+  await expect(item.locator("td.boq-pct").nth(1)).toContainText("50% ⚠");
   // at this pace: 20,000 for 20% -> 100,000; 60,000 over
   await expect(item).toContainText("עלות צפויה 100,000 ₪, חריגה של 60,000 ₪");
   await expect(page.locator(".budget-card", { hasText: "רווח צפוי" })).toContainText("-40,000 ₪");
