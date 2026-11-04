@@ -22386,6 +22386,12 @@
         // pushed fix can silently activate in the background while the
         // visible page keeps showing the stale version indefinitely.
         var reloadedForUpdate = false;
+        // A first visit has no older version to replace: the worker taking
+        // over then isn't an update, and reloading there aborted whatever
+        // was under way - a phone sign-in's request to Firebase
+        // (auth/network-request-failed). Nor is the sign-in screen
+        // reloaded (a code being typed in): the update shows next time.
+        var hadController = !!navigator.serviceWorker.controller;
         // None of this app's inline-edit fields (task text, report cells,
         // chat input, site-log names...) autosave keystroke-by-keystroke -
         // they only commit on blur/Enter. Force-reloading out from under an
@@ -22394,6 +22400,8 @@
         // currently-focused field (if any) loses focus, which is exactly
         // when its edit, if any, has already committed.
         function reloadOnce() {
+          if (!hadController) { hadController = true; return; }
+          if (appRoot.hidden) return;
           if (reloadedForUpdate) return;
           reloadedForUpdate = true;
           var active = document.activeElement;
