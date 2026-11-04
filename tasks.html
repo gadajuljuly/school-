@@ -38,7 +38,7 @@
 <script src="vendor/supabase-js-2.118.0.js"></script>
 <script src="vendor/firebase-app-compat-10.7.1.js"></script>
 <script src="vendor/firebase-auth-compat-10.7.1.js"></script>
-<link rel="stylesheet" href="tasks.css?v=5f12340ee7">
+<link rel="stylesheet" href="tasks.css?v=49165c97f1">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -450,6 +450,12 @@
   <div class="splash-app-name">ITASK</div>
 </div>
 
+<div class="install-bar" id="installBar" hidden>
+  <img src="tasks-icon-192.png" alt="">
+  <span data-i18n="installBarText">התקנת ITASK במחשב – אייקון בשולחן העבודה, בחלון משלה</span>
+  <button type="button" id="installBtn" data-i18n="installBtn">התקנה</button>
+  <button type="button" id="installOffBtn" class="install-off" data-i18n-title="installOff" title="לא עכשיו">✕</button>
+</div>
 <div class="auth-gate" id="authGate">
   <div class="auth-box">
     <select id="authLangSelect" class="reminder-select" style="width:100%;margin-bottom:12px;">
@@ -1570,6 +1576,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=690e61ca82"></script>
+<script src="tasks-app.js?v=3d8870a203"></script>
 </body>
 </html>

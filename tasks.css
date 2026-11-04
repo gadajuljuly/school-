@@ -3669,3 +3669,16 @@
   .boq-bar.done i { background: var(--plan-green); }
   .boq-bar.used i { background: var(--accent); }
   .boq-bar.over i { background: var(--danger); }
+  /* installing on a computer (src/app/00c-desktop-install.js) */
+  .install-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 70; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 8px 14px; background: var(--accent); color: var(--accent-contrast); font-size: 0.9rem; box-shadow: 0 2px 10px var(--shadow); }
+  .install-bar[hidden] { display: none; }
+  .install-bar img { width: 28px; height: 28px; border-radius: 7px; }
+  .install-bar #installBtn { border: none; background: #fff; color: var(--accent); font: inherit; font-weight: 800; border-radius: 8px; padding: 6px 16px; cursor: pointer; }
+  .install-bar .install-off { border: none; background: transparent; color: var(--accent-contrast); font-size: 1rem; cursor: pointer; opacity: 0.8; }
+  /* a computer's screen: the same app, as wide as the screen allows; the
+     full screens (budget, plan, diary...) centred at the same width */
+  @media (min-width: 900px) {
+    .app { max-width: min(1280px, 100%); }
+    .report-view { max-width: 1280px; margin: 0 auto; box-shadow: 0 0 0 1px var(--rule), 0 0 30px var(--shadow); }
+    .boq-table { min-width: 0; }
+  }
