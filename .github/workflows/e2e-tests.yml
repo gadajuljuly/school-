@@ -27,7 +27,8 @@ jobs:
   # Fully offline: no backend, fake Android bridge (tests/specs/local-*),
   # plus the login-screen smoke test. These must always pass.
   offline:
-    runs-on: ubuntu-latest
+    # (pinned: Playwright has no Chromium for ubuntu-latest = 26.04 yet)
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -63,7 +64,7 @@ jobs:
   # Kept separate: it depends on Google accepting the CI runner (it has been
   # failing with auth/network-request-failed from GitHub's runners).
   live-login:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
