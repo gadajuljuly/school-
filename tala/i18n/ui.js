@@ -1,4 +1,4 @@
-/* Screen texts. Generated: [he, ar, en] per original text ('' = the original). */
+/* UI texts. Generated: [he, ar, en] per original text ('' = the original). */
 Object.assign(TR, {
   "טרם החל": ["", "لم يبدأ بعد", "Not started"],
   "בתהליך": ["", "قيد التنفيذ", "In progress"],
@@ -440,4 +440,22 @@ Object.assign(TR, {
   "أ": ["א'", "", "A"],
   "ب": ["ב'", "", "B"],
   "ج": ["ג'", "", "C"],
+  "תח\"י אינטגרטיבית – הזדמנויות למידה והערכה": ["", "خطة تربوية فردية تكاملية – فرص التعلّم والتقييم", "Integrative IEP – learning opportunities and evaluation"],
+  "מחנכת": ["", "مربية الصف", "Homeroom teacher"],
+  "קלינאית תקשורת": ["", "معالجة النطق واللغة", "Speech-language therapist"],
+  "מרפאה בעיסוק": ["", "معالجة وظيفية", "Occupational therapist"],
+  "דרכי הערכה": ["", "طرق التقييم", "Evaluation methods"],
+  "המלצות": ["", "توصيات", "Recommendations"],
+  "הערכה לכל יעד": ["", "تقييم كل هدف", "Evaluation of each objective"],
+  "תח\"י אינטגרטיבית 2026": ["", "خطة تكاملية 2026", "Integrative IEP 2026"],
+  "שותפים נוספים": ["", "شركاء آخرون", "Other partners"],
+  "מטרה ויעדים": ["", "الهدف العام والأهداف", "Goal and objectives"],
+  "הזדמנויות למידה": ["", "فرص التعلّم", "Learning opportunities"],
+  "(שותפים / אמצעים / דרכי הוראה וטיפול)": ["", "(الشركاء / الوسائل / طرق التدريس والعلاج)", "(partners / means / teaching and therapy methods)"],
+  "המטרה השנתית": ["", "الهدف السنوي", "Annual goal"],
+  "היעדים המשותפים": ["", "الأهداف المشتركة", "Shared objectives"],
+  "תכנית חינוכית יחידנית אינטגרטיבית – תח\"י": ["", "الخطة التربوية الفردية التكاملية", "Integrative Individual Education Plan (IEP)"],
+  "תכנית לימודים אישית אינטגרטיבית – תל\"א": ["", "الخطة التعليمية الشخصية التكاملية", "Integrative Individual Learning Plan (ILP)"],
+  "משתתפים בבניית התח\"י / תל\"א": ["", "المشاركون في بناء الخطة", "Participants in building the plan"],
+  "תח\"י אינטגרטיבית": ["", "خطة تكاملية", "Integrative IEP"],
 });

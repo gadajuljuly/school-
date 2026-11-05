@@ -209,3 +209,9 @@ select.cur-select { width: auto; padding: 3px 8px; font-size: .82rem; border-rad
 @keyframes aipulse { 50% { transform: scale(1.25); } }
 .lang-pick { background: rgba(255,255,255,.15); color: #fff; border: 0; border-radius: 8px; padding: 4px 6px; font-size: .85rem; width: auto; }
 .lang-pick option { color: #000; }
+.integ { margin-top: 12px; border: 1px dashed var(--line); border-radius: 10px; padding: 8px 12px; }
+.integ summary { cursor: pointer; color: var(--brand); font-weight: 600; }
+.doc .integ4 { margin-top: 16px; table-layout: fixed; }
+.doc .integ4 th { background: #eef4f2; font-size: .9em; }
+.doc .integ4 td { vertical-align: top; font-size: .9em; }
+.doc.integ-doc h3 { margin: 16px 0 6px; }

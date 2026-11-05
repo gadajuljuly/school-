@@ -667,6 +667,35 @@ METHODS['فهم المقروء والمسموع'].push('بطاقات "أنا ت�
 METHODS['الكتابة'].push('نموذج ر.س.م');
 METHODS['المعرفة اللغوية'].push('جدول ادوات الاستفهام', 'جدول اسماء الاشارة', 'بطاقة العوائد');
 
+// ---------- integrative IEP / ILP form 2026–2027 (תכנית חינוכית יחידנית אינטגרטיבית) ----------
+// Goals built jointly by the homeroom teacher, speech therapist and occupational therapist:
+// annual goal, shared objectives, learning opportunities per professional, formative and summative evaluation.
+DEVELOPMENTAL.push(
+  { id: 'task', label: 'משימות לימודיות בשיעור', domain: 'cognitive', items: [
+    ['tk1', 'התארגנות לקראת משימה בשיעור', 'התלמיד יתארגן לקראת משימה בשיעור עם תיווך מבוגר'],
+    ['tk2', 'ישיבה למשימה מוגדרת (10–15 דקות)', 'התלמיד יתיישב למשימה מוגדרת לפחות 10–15 דקות עם תיווך מבוגר'],
+    ['tk3', 'ביצוע הוראה חד-שלבית בחוברת', 'התלמיד יבצע הוראה חד-שלבית בחוברת עם תיווך הולך ופוחת'],
+    ['tk4', 'ביצוע משימות מהחוברת בשיעור', 'התלמיד יבצע שתי משימות מהחוברת בשיעור עם תיווך הולך ופוחת'],
+  ] },
+  { id: 'play', label: 'משחק משותף וויסות', domain: 'comm', items: [
+    ['pl1', 'משחק עם שני ילדים לפי כללי המשחק', 'התלמיד ישחק עם שני ילדים תוך שמירה על כללי המשחק למשך 15 דקות, עם תיווך הולך ופוחת'],
+    ['pl2', 'הבעה מילולית של רגשות בזמן תסכול', 'התלמיד יביע רגשות במילים בזמן תסכול'],
+    ['pl3', 'פתרון בעיות בצורה יעילה', 'התלמיד יפתור בעיות בצורה יעילה'],
+  ] },
+);
+for (const sec of DEVELOPMENTAL.slice(-2)) for (const [id, label, goal] of sec.items) DEV_ITEM[id] = { id, label, goal, sec };
+
+// Learning opportunities per professional (suggestions from the form).
+const OPPORTUNITIES = {
+  teacher: ['שימוש בטיימר חזותי', 'חלוקת המטלה לשלבים ברורים', 'לוח משימות חזותי', 'חיזוק חיובי על עמידה בזמן',
+    'תיווך התנהגותי בשלבים', 'שימוש בכללים חזותיים', 'חיזוק התנהגות חיובית', 'מתן תפקיד ברור', 'כרטיסיות "רגשות"', 'חיזוק על ביטוי רגשי'],
+  slp: ['ביצוע רצף הוראות באופן עצמאי', 'התארגנות לקראת משחק ובזמן משחק', 'ביצוע הוראות בזמנים מוקצבים',
+    'מיומנויות פרגמטיות: המתנה בתור', 'תיאוריית התודעה (TOM)', 'קבלת האחר', 'עידוד הבעה מילולית בזמן תסכול',
+    'פתרון בעיות בזוג או בקבוצה', 'שיפור משחק משותף'],
+  ot: ['علاج وظيفي', 'العاب حركية', 'تمارين حركة دقيقة', 'نشاطات حسية'],
+};
+const EVAL_METHODS = ['משימות מהחוברת בשיעור', 'תצפית בכיתה או בחצר', 'תצפית', 'תיעוד מעקב'];
+
 // ---------- localization ----------
 // Every text above is written once, in the language of its source material. Here the texts that are
 // shown are put into the chosen language (dictionaries in i18n/). Ids and stored keys never change.
@@ -690,6 +719,7 @@ for (const sec of ACADEMIC) sec.kind = sec.sec.includes('الحسابية') ? 'm
   for (const l of Object.values(READING_LEVELS)) { l.title = T(l.title); l.text = T(l.text); }
   for (const a of Object.values(ASSESSMENT)) tr(a.tasks);
   tr(CRITERIA); tr(PERIODS); tr(PARTNERS); tr(SUPPORT_KINDS); tr(GRADE_BANDS);
+  tr(OPPORTUNITIES.teacher); tr(OPPORTUNITIES.slp); tr(OPPORTUNITIES.ot); tr(EVAL_METHODS);
   GRADE_NAMES.splice(0, GRADE_NAMES.length, ...(LANG === 'en' ? GRADE_WORDS.en.map(g => g && `Grade ${g}`) : GRADE_WORDS[LANG]));
   for (const k of Object.keys(METHODS)) { const v = METHODS[k].map(T); delete METHODS[k]; METHODS[T(k)] = v; }
   for (const st of STRATEGIES) st.t = T(st.t);
