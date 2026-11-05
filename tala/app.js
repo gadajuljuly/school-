@@ -57,21 +57,37 @@ const ALL_ITEMS = MAP_GROUPS.flatMap(g => g.sections.flatMap(s => s.items.map(i 
 let students = [];
 let view = { name: 'list', id: null, tab: 'details', q: '' };
 
-function load() {
-  let list;
-  try { list = JSON.parse(localStorage.getItem(STORE_KEY)) || []; } catch { list = []; }
-  return list.map(normalize);
+// Each signed-in teacher has her own copy on the device; without a server there is one shared copy.
+const storeKey = () => Cloud.user ? `tala.students.u.${Cloud.user.id}` : STORE_KEY;
+function loadKey(key) {
+  try { return (JSON.parse(localStorage.getItem(key)) || []).map(normalize); } catch { return []; }
 }
+const load = () => loadKey(storeKey());
+
+// What was last written, per student, so only changed students are sent to the server.
+const snap = new Map();
+function snapshot() { snap.clear(); for (const s of students) snap.set(s.id, JSON.stringify(s)); }
+
 let saveTimer;
 function save() { clearTimeout(saveTimer); saveTimer = setTimeout(flush, 250); }
 function flush() {
   clearTimeout(saveTimer);
-  localStorage.setItem(STORE_KEY, JSON.stringify(students));
+  if (Cloud.enabled && !Cloud.user) return;
+  localStorage.setItem(storeKey(), JSON.stringify(students));
+  if (Cloud.user) {
+    const ids = new Set();
+    for (const s of students) {
+      ids.add(s.id);
+      const j = JSON.stringify(s);
+      if (snap.get(s.id) !== j) { snap.set(s.id, j); Cloud.changed(s.id); }
+    }
+    for (const id of [...snap.keys()]) if (!ids.has(id)) { snap.delete(id); Cloud.removed(id); }
+  }
   const el = document.getElementById('savedNote');
   if (el) el.textContent = 'נשמר ✓';
 }
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-const current = () => students.find(s => s.id === view.id);
+const current = () => view.name === 'adminStudent' ? view.adminData : students.find(s => s.id === view.id);
 
 function schoolYear() {
   const d = new Date();
@@ -303,11 +319,20 @@ function render() {
   const back = document.getElementById('backBtn');
   const actions = document.getElementById('topActions');
   const title = document.getElementById('title');
-  if (view.name === 'list') {
+  if (view.name === 'login') {
+    back.hidden = true; title.textContent = 'תל"א / תח"י'; actions.innerHTML = '';
+    renderLogin();
+  } else if (view.name === 'admin') {
+    back.hidden = false; title.textContent = 'ניהול – כל המורות'; actions.innerHTML = accountMenu();
+    renderAdmin();
+  } else if (view.name === 'adminStudent') {
+    back.hidden = false; title.textContent = `${fullName(view.adminData)} · צפייה בלבד`; actions.innerHTML = accountMenu();
+    app.innerHTML = `<div class="card muted">מורה: <b dir="ltr">${esc(view.adminOwner)}</b> · עודכן ${new Date(view.adminData.updatedAt || 0).toLocaleString('he-IL')}</div>` + tabDoc(view.adminData);
+  } else if (view.name === 'list') {
     back.hidden = true;
     title.textContent = 'תל"א / תח"י';
     actions.innerHTML = `<button class="btn small" data-act="export-all" title="גיבוי כל הנתונים לקובץ">ייצוא</button>
-      <button class="btn small" data-act="import" title="שחזור מקובץ גיבוי">ייבוא</button>`;
+      <button class="btn small" data-act="import" title="שחזור מקובץ גיבוי">ייבוא</button>${accountMenu()}`;
     renderList();
   } else {
     const s = current();
@@ -317,6 +342,71 @@ function render() {
     actions.innerHTML = `<span class="saved" id="savedNote"></span>`;
     renderStudent(s);
   }
+}
+
+const SYNC_TEXT = { syncing: 'מסנכרן…', saved: '☁️ שמור בשרת', pending: 'ממתין לשליחה…', offline: 'אין חיבור – יישלח אחר כך', error: '⚠️ שגיאת סנכרון', idle: '' };
+function accountMenu() {
+  if (!Cloud.user) return '';
+  return `<span class="sync" id="syncNote">${SYNC_TEXT[Cloud.status] || ''}</span>
+    ${Cloud.admin && view.name !== 'admin' ? '<button class="btn small" data-act="admin">ניהול</button>' : ''}
+    <button class="btn small" data-act="logout" title="${esc(Cloud.user.email)}">יציאה</button>`;
+}
+function showSync(st) {
+  const el = document.getElementById('syncNote');
+  if (el) el.textContent = SYNC_TEXT[st] || '';
+}
+
+function renderLogin() {
+  const sent = view.sentTo;
+  app.innerHTML = `<div class="card login">
+    <div class="big">📋</div>
+    <h2>כניסה ל-תל"א / תח"י</h2>
+    <p class="muted">כל מורה נכנסת עם המייל שלה. התלמידים שלך נשמרים בחשבון שלך ואפשר לעבוד מכל מכשיר.</p>
+    ${!sent ? `
+      <label class="field">כתובת מייל<input type="email" id="loginEmail" dir="ltr" autocomplete="email" placeholder="name@example.com"></label>
+      <button class="btn primary big" data-act="send-code">שליחת קוד כניסה למייל</button>` : `
+      <p>שלחנו מייל אל <b dir="ltr">${esc(sent)}</b>.<br>לחצי על הקישור שבמייל, או הקלידי כאן את הקוד שקיבלת:</p>
+      <label class="field">קוד מהמייל<input type="text" id="loginCode" dir="ltr" inputmode="numeric" autocomplete="one-time-code"></label>
+      <div class="row" style="justify-content:center"><button class="btn primary big" data-act="verify-code">כניסה</button>
+      <button class="btn" data-act="login-back">מייל אחר</button></div>`}
+  </div>`;
+  document.getElementById(sent ? 'loginCode' : 'loginEmail')?.focus();
+}
+
+function renderAdmin() {
+  const rows = view.adminRows;
+  if (!rows) { app.innerHTML = '<div class="card empty">טוען את נתוני כל המורות…</div>'; return; }
+  const q = (view.adminQ || '').trim();
+  const list = rows.filter(r => !q || [r.owner_email, fullName(r.data), r.data.className, r.data.school, r.data.homeroomTeacher].join(' ').includes(q));
+  const byTeacher = {};
+  for (const r of list) (byTeacher[r.owner_email || '—'] ??= []).push(r);
+  const teachers = Object.keys(byTeacher).sort();
+  app.innerHTML = `
+    <div class="card row">
+      <input type="search" id="adminQ" placeholder="חיפוש מורה, תלמיד/ה, כיתה…" value="${esc(q)}" style="flex:1">
+      <button class="btn" data-act="admin-refresh">רענון</button>
+      <button class="btn" data-act="admin-export">גיבוי הכל (JSON)</button>
+    </div>
+    <div class="card"><b>${new Set(rows.map(r => r.owner_email)).size}</b> מורות · <b>${rows.length}</b> תלמידים
+      · <b>${rows.reduce((t, r) => t + (r.data.goals || []).reduce((n, g) => n + (g.objectives || []).length, 0), 0)}</b> יעדים</div>
+    ${teachers.map(t => `<div class="card">
+      <h2 dir="ltr" style="text-align:right">${esc(t)} <span class="count">${byTeacher[t].length} תלמידים</span></h2>
+      <div class="scroll-x"><table class="table">
+        <tr><th>תלמיד/ה</th><th>כיתה</th><th>בית ספר</th><th>תחומים / יעדים</th><th>עודכן</th><th></th></tr>
+        ${byTeacher[t].map(r => {
+          const d = r.data, objs = (d.goals || []).reduce((n, g) => n + (g.objectives || []).length, 0);
+          return `<tr><td><b>${esc(fullName(d))}</b></td><td>${esc([GRADE_NAMES[+d.grade], d.className].filter(Boolean).join(' · '))}</td>
+            <td>${esc(d.school)}</td><td>${(d.goals || []).length} / ${objs}</td><td>${new Date(r.updated_at).toLocaleDateString('he-IL')}</td>
+            <td class="row" style="flex-wrap:nowrap"><button class="btn small" data-act="admin-open" data-id="${r.id}">צפייה</button>
+              <button class="btn small" data-act="admin-excel" data-id="${r.id}">Excel</button></td></tr>`;
+        }).join('')}
+      </table></div></div>`).join('') || '<div class="card empty muted">אין עדיין נתונים.</div>'}`;
+}
+async function openAdmin() {
+  view = { name: 'admin', adminRows: null, adminQ: '' }; render();
+  try { view.adminRows = await Cloud.allStudents(); }
+  catch (e) { view.adminRows = []; alert('לא ניתן לטעון את הנתונים: ' + (e.message || e)); }
+  if (view.name === 'admin') render();
 }
 
 function renderList() {
@@ -902,6 +992,12 @@ function touch(s) { s.updatedAt = Date.now(); save(); }
 
 function onEdit(e) {
   const t = e.target;
+  if (t.id === 'adminQ') {
+    if (e.type !== 'input') return;
+    view.adminQ = t.value; renderAdmin();
+    const q = document.getElementById('adminQ'); q.focus(); q.setSelectionRange(q.value.length, q.value.length);
+    return;
+  }
   if (t.id === 'q') {
     if (e.type !== 'input') return;
     view.q = t.value; renderList();
@@ -954,6 +1050,37 @@ document.addEventListener('click', e => {
   const s = current(); const d = t.dataset;
   const gi = +d.gi, oi = +d.oi;
   switch (d.act) {
+    case 'send-code': {
+      const email = document.getElementById('loginEmail').value.trim();
+      if (!/^\S+@\S+\.\S+$/.test(email)) { alert('נא להקליד כתובת מייל תקינה'); return; }
+      t.disabled = true;
+      Cloud.sendCode(email).then(() => { view.sentTo = email; render(); })
+        .catch(err => { t.disabled = false; alert('שליחת המייל נכשלה: ' + (err.message || err)); });
+      return;
+    }
+    case 'verify-code': {
+      const code = document.getElementById('loginCode').value.trim();
+      if (!code) return;
+      t.disabled = true;
+      Cloud.verifyCode(view.sentTo, code).then(boot).catch(err => { t.disabled = false; alert('הקוד לא התקבל: ' + (err.message || err)); });
+      return;
+    }
+    case 'login-back': view.sentTo = ''; render(); return;
+    case 'logout':
+      if (!confirm('לצאת מהחשבון? התלמידים נשמרים בשרת ויחכו לך בכניסה הבאה.')) return;
+      flush(); Cloud.signOut().then(() => { students = []; view = { name: 'login' }; render(); });
+      return;
+    case 'admin': openAdmin(); return;
+    case 'admin-refresh': openAdmin(); return;
+    case 'admin-open': case 'admin-excel': {
+      const r = view.adminRows.find(x => x.id === d.id);
+      if (!r) return;
+      if (d.act === 'admin-excel') { exportExcel(normalize(JSON.parse(JSON.stringify(r.data)))); return; }
+      view = { name: 'adminStudent', adminData: normalize(JSON.parse(JSON.stringify(r.data))), adminOwner: r.owner_email, adminRows: view.adminRows, adminQ: view.adminQ };
+      render(); scrollTo(0, 0); return;
+    }
+    case 'admin-export':
+      download(`tala-all-teachers-${new Date().toISOString().slice(0, 10)}.json`, { app: 'tala', version: 3, rows: view.adminRows }); return;
     case 'add-student': {
       const n = newStudent(); students.push(n); save();
       view = { name: 'student', id: n.id, tab: 'details', q: '' }; render();
@@ -1038,7 +1165,10 @@ function nextYear(y) {
   return m ? `${+m[1] + 1}–${+m[2] + 1}` : y;
 }
 
-document.getElementById('backBtn').addEventListener('click', () => { view = { name: 'list', q: view.q || '' }; render(); });
+document.getElementById('backBtn').addEventListener('click', () => {
+  if (view.name === 'adminStudent') { view = { name: 'admin', adminRows: view.adminRows, adminQ: view.adminQ }; render(); return; }
+  view = { name: 'list', q: view.q || '' }; render();
+});
 
 function download(name, data) {
   const a = document.createElement('a');
@@ -1072,5 +1202,34 @@ window.addEventListener('pagehide', flush);
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 
-students = load();
-render();
+// Start: sign in (when a server is set up), load this teacher's students, then sync with the server.
+async function boot() {
+  if (Cloud.enabled && !Cloud.user) { students = []; view = { name: 'login' }; render(); return; }
+  students = load();
+  if (Cloud.user) {
+    const anon = loadKey(STORE_KEY);
+    if (anon.length && confirm(`נמצאו במכשיר ${anon.length} תלמידים שנשמרו לפני הכניסה לחשבון. להוסיף אותם לחשבון שלך?`)) {
+      for (const a of anon) if (!students.some(x => x.id === a.id)) students.push(a);
+      localStorage.setItem(storeKey(), JSON.stringify(students));
+      localStorage.removeItem(STORE_KEY);
+    }
+    snapshot();
+  }
+  view = { name: 'list', q: '' }; render();
+  if (!Cloud.user) return;
+  Cloud.track(() => students);
+  try {
+    students = (await Cloud.sync(students)).map(normalize);
+    localStorage.setItem(storeKey(), JSON.stringify(students));
+    snapshot();
+    if (view.name === 'list') render();
+  } catch (e) {
+    console.warn(e);
+    toast('אין חיבור לשרת – עובדים מהמכשיר, והשינויים יישלחו כשהחיבור יחזור');
+  }
+}
+
+(async () => {
+  try { await Cloud.init({ onAuth: boot, onStatusChange: showSync }); } catch (e) { console.warn('cloud init failed', e); }
+  boot();
+})();
