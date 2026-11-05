@@ -6,10 +6,12 @@ create table if not exists public.tala_students (
   id          text primary key,
   owner       uuid not null default auth.uid() references auth.users (id) on delete cascade,
   owner_email text,
+  owner_name  text,
   data        jsonb not null default '{}'::jsonb,
   deleted     boolean not null default false,
   updated_at  timestamptz not null default now()
 );
+alter table public.tala_students add column if not exists owner_name text;
 create index if not exists tala_students_owner on public.tala_students (owner);
 
 create table if not exists public.tala_admins (
@@ -22,6 +24,7 @@ language plpgsql security definer set search_path = public as $$
 begin
   new.owner := auth.uid();
   new.owner_email := lower(auth.jwt() ->> 'email');
+  new.owner_name := auth.jwt() -> 'user_metadata' ->> 'name';
   return new;
 end $$;
 drop trigger if exists tala_stamp_owner on public.tala_students;
@@ -62,5 +65,8 @@ grant select, insert, update, delete on public.tala_students to authenticated;
 grant select on public.tala_admins to authenticated;
 grant execute on function public.tala_is_admin() to authenticated;
 
--- ↓↓↓ Replace with the administrator's e-mail ↓↓↓
-insert into public.tala_admins (email) values (lower('YOUR_EMAIL@example.com')) on conflict do nothing;
+-- Sign-in is by phone number + password; each phone is stored as <international number>@tala.app
+-- (050-1234567 → 972501234567@tala.app). In Supabase: Authentication → Sign In / Providers → Email →
+-- turn OFF "Confirm email", so teachers can register in the app without an e-mail.
+-- ↓↓↓ The administrator: replace with the administrator's phone in this form ↓↓↓
+insert into public.tala_admins (email) values ('972XXXXXXXXX@tala.app') on conflict do nothing;

@@ -39,6 +39,33 @@ const Cloud = (() => {
     admin = !!(data && data.length);
   }
 
+  // Phone + password: the phone number is turned into an internal address (no SMS, no e-mail sent).
+  function phoneId(phone) {
+    let d = String(phone || '').replace(/\D/g, '');
+    if (d.startsWith('00')) d = d.slice(2);
+    if (d.startsWith('0')) d = '972' + d.slice(1);
+    return d.length >= 11 && d.length <= 13 ? `${d}@tala.app` : null;
+  }
+  function phoneOf(id) {
+    const m = /^(\d+)@tala\.app$/.exec(id || '');
+    if (!m) return id || '';
+    return m[1].startsWith('972') ? '0' + m[1].slice(3) : '+' + m[1];
+  }
+  async function signInPhone(phone, password) {
+    const email = phoneId(phone);
+    if (!email) throw new Error('bad-phone');
+    return signInPassword(email, password);
+  }
+  async function signUpPhone(phone, password, name) {
+    const email = phoneId(phone);
+    if (!email) throw new Error('bad-phone');
+    const { data, error } = await sb.auth.signUp({ email, password, options: { data: { name, phone: phoneOf(email) } } });
+    if (error) throw error;
+    if (!data.session) throw new Error('confirm-required');
+    await setUser(data.user);
+  }
+  const displayName = () => user?.user_metadata?.name || phoneOf(user?.email);
+
   async function signInPassword(email, password) {
     const { data, error } = await sb.auth.signInWithPassword({ email, password });
     if (error) throw error;
@@ -126,13 +153,13 @@ const Cloud = (() => {
 
   // Administrator: every teacher's students (the server only allows this for administrators).
   async function allStudents() {
-    const { data, error } = await sb.from('tala_students').select('id,owner_email,data,updated_at').eq('deleted', false).order('owner_email');
+    const { data, error } = await sb.from('tala_students').select('id,owner_email,owner_name,data,updated_at').eq('deleted', false).order('owner_email');
     if (error) throw error;
     return data;
   }
 
   return {
-    enabled, init, signInPassword, changePassword, sendCode, verifyCode, signOut, sync, track, changed, removed, flushSoon, allStudents,
+    enabled, init, signInPhone, signUpPhone, phoneOf, displayName, signInPassword, changePassword, sendCode, verifyCode, signOut, sync, track, changed, removed, flushSoon, allStudents,
     get user() { return user; }, get admin() { return admin; }, get status() { return status; },
   };
 })();

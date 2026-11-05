@@ -328,7 +328,7 @@ function render() {
     renderAdmin();
   } else if (view.name === 'adminStudent') {
     back.hidden = false; title.textContent = `${fullName(view.adminData)} · צפייה בלבד`; actions.innerHTML = accountMenu();
-    app.innerHTML = `<div class="card muted">מורה: <b dir="ltr">${esc(view.adminOwner)}</b> · עודכן ${new Date(view.adminData.updatedAt || 0).toLocaleString('he-IL')}</div>` + tabDoc(view.adminData);
+    app.innerHTML = `<div class="card muted">מורה: <b>${esc(view.adminOwner)}</b> · עודכן ${new Date(view.adminData.updatedAt || 0).toLocaleString('he-IL')}</div>` + tabDoc(view.adminData);
   } else if (view.name === 'list') {
     back.hidden = true;
     title.textContent = 'תל"א / תח"י';
@@ -351,7 +351,7 @@ function accountMenu() {
   return `<span class="sync" id="syncNote">${SYNC_TEXT[Cloud.status] || ''}</span>
     ${Cloud.admin && view.name !== 'admin' ? '<button class="btn small" data-act="admin">ניהול</button>' : ''}
     <button class="btn small" data-act="change-password" title="שינוי סיסמה">🔑</button>
-    <button class="btn small" data-act="logout" title="${esc(Cloud.user.email)}">יציאה</button>`;
+    <button class="btn small" data-act="logout" title="${esc(Cloud.displayName())}">יציאה</button>`;
 }
 function showSync(st) {
   const el = document.getElementById('syncNote');
@@ -359,35 +359,29 @@ function showSync(st) {
 }
 
 function renderLogin() {
-  const sent = view.sentTo;
-  const mode = view.loginMode || 'password';
+  const reg = view.loginMode === 'register';
   app.innerHTML = `<div class="card login">
     <div class="big">📋</div>
-    <h2>כניסה ל-תל"א / תח"י</h2>
-    <p class="muted">כל מורה נכנסת עם המייל שלה. התלמידים שלך נשמרים בחשבון שלך ואפשר לעבוד מכל מכשיר.</p>
-    ${mode === 'password' ? `
-      <label class="field">כתובת מייל<input type="email" id="loginEmail" dir="ltr" autocomplete="username" placeholder="name@example.com"></label>
-      <label class="field">סיסמה<input type="password" id="loginPassword" dir="ltr" autocomplete="current-password"></label>
-      <button class="btn primary big" data-act="login-password">כניסה</button>
-      <button class="btn ghost small" data-act="login-mode" data-v="code">אין לי סיסמה – שליחת קוד למייל</button>` : !sent ? `
-      <label class="field">כתובת מייל<input type="email" id="loginEmail" dir="ltr" autocomplete="email" placeholder="name@example.com"></label>
-      <button class="btn primary big" data-act="send-code">שליחת קוד כניסה למייל</button>
-      <button class="btn ghost small" data-act="login-mode" data-v="password">כניסה עם סיסמה</button>` : `
-      <p>שלחנו מייל אל <b dir="ltr">${esc(sent)}</b>.<br>לחצי על הקישור שבמייל, או הקלידי כאן את הקוד שקיבלת:</p>
-      <label class="field">קוד מהמייל<input type="text" id="loginCode" dir="ltr" inputmode="numeric" autocomplete="one-time-code"></label>
-      <div class="row" style="justify-content:center"><button class="btn primary big" data-act="verify-code">כניסה</button>
-      <button class="btn" data-act="login-back">מייל אחר</button></div>`}
+    <h2>${reg ? 'הרשמה ל-תל"א / תח"י' : 'כניסה ל-תל"א / תח"י'}</h2>
+    <p class="muted">כל מורה נכנסת עם מספר הטלפון שלה וסיסמה. התלמידים שלך נשמרים בחשבון שלך ואפשר לעבוד מכל מכשיר.</p>
+    ${reg ? '<label class="field">שם מלא<input type="text" id="loginName" autocomplete="name"></label>' : ''}
+    <label class="field">מספר טלפון<input type="tel" id="loginPhone" dir="ltr" inputmode="tel" autocomplete="tel" placeholder="05X-XXXXXXX"></label>
+    <label class="field">סיסמה${reg ? ' (לפחות 6 תווים)' : ''}<input type="password" id="loginPassword" dir="ltr" autocomplete="${reg ? 'new-password' : 'current-password'}"></label>
+    ${reg ? '<label class="field">סיסמה שוב<input type="password" id="loginPassword2" dir="ltr" autocomplete="new-password"></label>' : ''}
+    <button class="btn primary big" data-act="${reg ? 'register' : 'login-phone'}">${reg ? 'הרשמה' : 'כניסה'}</button>
+    <button class="btn ghost small" data-act="login-mode" data-v="${reg ? 'login' : 'register'}">${reg ? 'כבר רשומה? כניסה' : 'פעם ראשונה? הרשמה'}</button>
   </div>`;
-  document.getElementById(sent ? 'loginCode' : 'loginEmail')?.focus();
+  document.getElementById(reg ? 'loginName' : 'loginPhone')?.focus();
 }
 
 function renderAdmin() {
   const rows = view.adminRows;
   if (!rows) { app.innerHTML = '<div class="card empty">טוען את נתוני כל המורות…</div>'; return; }
   const q = (view.adminQ || '').trim();
-  const list = rows.filter(r => !q || [r.owner_email, fullName(r.data), r.data.className, r.data.school, r.data.homeroomTeacher].join(' ').includes(q));
+  const teacherOf = r => [r.owner_name, Cloud.phoneOf(r.owner_email)].filter(Boolean).join(' · ') || '—';
+  const list = rows.filter(r => !q || [teacherOf(r), fullName(r.data), r.data.className, r.data.school, r.data.homeroomTeacher].join(' ').includes(q));
   const byTeacher = {};
-  for (const r of list) (byTeacher[r.owner_email || '—'] ??= []).push(r);
+  for (const r of list) (byTeacher[teacherOf(r)] ??= []).push(r);
   const teachers = Object.keys(byTeacher).sort();
   app.innerHTML = `
     <div class="card row">
@@ -398,7 +392,7 @@ function renderAdmin() {
     <div class="card"><b>${new Set(rows.map(r => r.owner_email)).size}</b> מורות · <b>${rows.length}</b> תלמידים
       · <b>${rows.reduce((t, r) => t + (r.data.goals || []).reduce((n, g) => n + (g.objectives || []).length, 0), 0)}</b> יעדים</div>
     ${teachers.map(t => `<div class="card">
-      <h2 dir="ltr" style="text-align:right">${esc(t)} <span class="count">${byTeacher[t].length} תלמידים</span></h2>
+      <h2>${esc(t)} <span class="count">${byTeacher[t].length} תלמידים</span></h2>
       <div class="scroll-x"><table class="table">
         <tr><th>תלמיד/ה</th><th>כיתה</th><th>בית ספר</th><th>תחומים / יעדים</th><th>עודכן</th><th></th></tr>
         ${byTeacher[t].map(r => {
@@ -1067,7 +1061,7 @@ function onEdit(e) {
 app.addEventListener('input', onEdit);
 app.addEventListener('keydown', e => {
   if (e.key !== 'Enter' || view.name !== 'login') return;
-  document.querySelector('[data-act="login-password"],[data-act="verify-code"],[data-act="send-code"]')?.click();
+  document.querySelector('[data-act="login-phone"],[data-act="register"]')?.click();
 });
 app.addEventListener('change', onEdit);
 // Remember which mapping sections are open across re-renders.
@@ -1099,6 +1093,27 @@ document.addEventListener('click', e => {
   const s = current(); const d = t.dataset;
   const gi = +d.gi, oi = +d.oi;
   switch (d.act) {
+    case 'login-phone': case 'register': {
+      const phone = document.getElementById('loginPhone').value;
+      const pw = document.getElementById('loginPassword').value;
+      const reg = d.act === 'register';
+      const name = reg ? document.getElementById('loginName').value.trim() : '';
+      if (reg && !name) { alert('נא להקליד שם מלא'); return; }
+      if (!phone.trim() || !pw) { alert('נא להקליד מספר טלפון וסיסמה'); return; }
+      if (reg && pw.length < 6) { alert('הסיסמה צריכה להיות לפחות 6 תווים'); return; }
+      if (reg && pw !== document.getElementById('loginPassword2').value) { alert('הסיסמאות אינן זהות'); return; }
+      t.disabled = true;
+      (reg ? Cloud.signUpPhone(phone, pw, name) : Cloud.signInPhone(phone, pw)).then(boot).catch(err => {
+        t.disabled = false;
+        const m = err.message || String(err);
+        alert(m === 'bad-phone' ? 'מספר הטלפון לא תקין'
+          : /already registered|already exists/i.test(m) ? 'המספר הזה כבר רשום. עברי ל"כניסה".'
+          : /invalid login/i.test(m) ? 'מספר הטלפון או הסיסמה שגויים'
+          : m === 'confirm-required' ? 'ההרשמה נקלטה, אבל השרת מחכה לאישור מייל. המנהלת צריכה לכבות את "Confirm email" ב-Supabase.'
+          : 'הפעולה נכשלה: ' + m);
+      });
+      return;
+    }
     case 'login-mode': view.loginMode = d.v; view.sentTo = ''; render(); return;
     case 'login-password': {
       const email = document.getElementById('loginEmail').value.trim();
@@ -1135,7 +1150,7 @@ document.addEventListener('click', e => {
     }
     case 'login-back': view.sentTo = ''; render(); return;
     case 'logout':
-      if (!confirm('לצאת מהחשבון? התלמידים נשמרים בשרת ויחכו לך בכניסה הבאה.')) return;
+      if (!confirm(`לצאת מהחשבון (${Cloud.displayName()})? התלמידים נשמרים בשרת ויחכו לך בכניסה הבאה.`)) return;
       flush(); Cloud.signOut().then(() => { students = []; view = { name: 'login' }; render(); });
       return;
     case 'admin': openAdmin(); return;
@@ -1144,7 +1159,7 @@ document.addEventListener('click', e => {
       const r = view.adminRows.find(x => x.id === d.id);
       if (!r) return;
       if (d.act === 'admin-excel') { exportExcel(normalize(JSON.parse(JSON.stringify(r.data)))); return; }
-      view = { name: 'adminStudent', adminData: normalize(JSON.parse(JSON.stringify(r.data))), adminOwner: r.owner_email, adminRows: view.adminRows, adminQ: view.adminQ };
+      view = { name: 'adminStudent', adminData: normalize(JSON.parse(JSON.stringify(r.data))), adminOwner: [r.owner_name, Cloud.phoneOf(r.owner_email)].filter(Boolean).join(' · '), adminRows: view.adminRows, adminQ: view.adminQ };
       render(); scrollTo(0, 0); return;
     }
     case 'admin-export':
