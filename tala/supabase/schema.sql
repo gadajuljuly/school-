@@ -55,5 +55,12 @@ drop policy if exists "tala admin self" on public.tala_admins;
 create policy "tala admin self" on public.tala_admins for select to authenticated
   using (lower(email) = lower(auth.jwt() ->> 'email'));
 
+-- Access for signed-in users only (needed when "Automatically expose new tables" is off).
+revoke all on public.tala_students, public.tala_admins from anon;
+grant usage on schema public to authenticated;
+grant select, insert, update, delete on public.tala_students to authenticated;
+grant select on public.tala_admins to authenticated;
+grant execute on function public.tala_is_admin() to authenticated;
+
 -- ↓↓↓ Replace with the administrator's e-mail ↓↓↓
 insert into public.tala_admins (email) values (lower('YOUR_EMAIL@example.com')) on conflict do nothing;
