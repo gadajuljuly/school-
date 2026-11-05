@@ -39,6 +39,15 @@ const Cloud = (() => {
     admin = !!(data && data.length);
   }
 
+  async function signInPassword(email, password) {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    await setUser(data.user);
+  }
+  async function changePassword(password) {
+    const { error } = await sb.auth.updateUser({ password });
+    if (error) throw error;
+  }
   async function sendCode(email) {
     const { error } = await sb.auth.signInWithOtp({
       email, options: { emailRedirectTo: location.origin + location.pathname, shouldCreateUser: true },
@@ -123,7 +132,7 @@ const Cloud = (() => {
   }
 
   return {
-    enabled, init, sendCode, verifyCode, signOut, sync, track, changed, removed, flushSoon, allStudents,
+    enabled, init, signInPassword, changePassword, sendCode, verifyCode, signOut, sync, track, changed, removed, flushSoon, allStudents,
     get user() { return user; }, get admin() { return admin; }, get status() { return status; },
   };
 })();

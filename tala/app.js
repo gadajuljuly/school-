@@ -350,6 +350,7 @@ function accountMenu() {
   if (!Cloud.user) return '';
   return `<span class="sync" id="syncNote">${SYNC_TEXT[Cloud.status] || ''}</span>
     ${Cloud.admin && view.name !== 'admin' ? '<button class="btn small" data-act="admin">ניהול</button>' : ''}
+    <button class="btn small" data-act="change-password" title="שינוי סיסמה">🔑</button>
     <button class="btn small" data-act="logout" title="${esc(Cloud.user.email)}">יציאה</button>`;
 }
 function showSync(st) {
@@ -359,13 +360,19 @@ function showSync(st) {
 
 function renderLogin() {
   const sent = view.sentTo;
+  const mode = view.loginMode || 'password';
   app.innerHTML = `<div class="card login">
     <div class="big">📋</div>
     <h2>כניסה ל-תל"א / תח"י</h2>
     <p class="muted">כל מורה נכנסת עם המייל שלה. התלמידים שלך נשמרים בחשבון שלך ואפשר לעבוד מכל מכשיר.</p>
-    ${!sent ? `
+    ${mode === 'password' ? `
+      <label class="field">כתובת מייל<input type="email" id="loginEmail" dir="ltr" autocomplete="username" placeholder="name@example.com"></label>
+      <label class="field">סיסמה<input type="password" id="loginPassword" dir="ltr" autocomplete="current-password"></label>
+      <button class="btn primary big" data-act="login-password">כניסה</button>
+      <button class="btn ghost small" data-act="login-mode" data-v="code">אין לי סיסמה – שליחת קוד למייל</button>` : !sent ? `
       <label class="field">כתובת מייל<input type="email" id="loginEmail" dir="ltr" autocomplete="email" placeholder="name@example.com"></label>
-      <button class="btn primary big" data-act="send-code">שליחת קוד כניסה למייל</button>` : `
+      <button class="btn primary big" data-act="send-code">שליחת קוד כניסה למייל</button>
+      <button class="btn ghost small" data-act="login-mode" data-v="password">כניסה עם סיסמה</button>` : `
       <p>שלחנו מייל אל <b dir="ltr">${esc(sent)}</b>.<br>לחצי על הקישור שבמייל, או הקלידי כאן את הקוד שקיבלת:</p>
       <label class="field">קוד מהמייל<input type="text" id="loginCode" dir="ltr" inputmode="numeric" autocomplete="one-time-code"></label>
       <div class="row" style="justify-content:center"><button class="btn primary big" data-act="verify-code">כניסה</button>
@@ -1058,6 +1065,10 @@ function onEdit(e) {
   if (t.hasAttribute('data-rerender') || (path === 'grade' && view.tab === 'mapping')) rerender();
 }
 app.addEventListener('input', onEdit);
+app.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || view.name !== 'login') return;
+  document.querySelector('[data-act="login-password"],[data-act="verify-code"],[data-act="send-code"]')?.click();
+});
 app.addEventListener('change', onEdit);
 // Remember which mapping sections are open across re-renders.
 app.addEventListener('toggle', e => {
@@ -1088,6 +1099,25 @@ document.addEventListener('click', e => {
   const s = current(); const d = t.dataset;
   const gi = +d.gi, oi = +d.oi;
   switch (d.act) {
+    case 'login-mode': view.loginMode = d.v; view.sentTo = ''; render(); return;
+    case 'login-password': {
+      const email = document.getElementById('loginEmail').value.trim();
+      const pw = document.getElementById('loginPassword').value;
+      if (!email || !pw) { alert('נא להקליד מייל וסיסמה'); return; }
+      t.disabled = true;
+      Cloud.signInPassword(email, pw).then(boot).catch(err => {
+        t.disabled = false;
+        alert(/invalid/i.test(err.message || '') ? 'המייל או הסיסמה שגויים' : 'הכניסה נכשלה: ' + (err.message || err));
+      });
+      return;
+    }
+    case 'change-password': {
+      const pw = prompt('סיסמה חדשה (לפחות 6 תווים):');
+      if (!pw) return;
+      if (pw.length < 6) { alert('הסיסמה קצרה מדי'); return; }
+      Cloud.changePassword(pw).then(() => toast('הסיסמה עודכנה')).catch(err => alert('לא ניתן לעדכן: ' + (err.message || err)));
+      return;
+    }
     case 'send-code': {
       const email = document.getElementById('loginEmail').value.trim();
       if (!/^\S+@\S+\.\S+$/.test(email)) { alert('נא להקליד כתובת מייל תקינה'); return; }
