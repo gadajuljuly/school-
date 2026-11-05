@@ -666,3 +666,38 @@ for (const st of STRATEGIES) for (const g of st.goals) (STRATEGY_FOR[g] ??= []).
 METHODS['فهم المقروء والمسموع'].push('بطاقات "أنا تلميذ نامي"', 'نموذج ر.س.م');
 METHODS['الكتابة'].push('نموذج ر.س.م');
 METHODS['المعرفة اللغوية'].push('جدول ادوات الاستفهام', 'جدول اسماء الاشارة', 'بطاقة العوائد');
+
+// ---------- localization ----------
+// Every text above is written once, in the language of its source material. Here the texts that are
+// shown are put into the chosen language (dictionaries in i18n/). Ids and stored keys never change.
+const GRADE_WORDS = {
+  he: ['', "א'", "ב'", "ג'", "ד'", "ה'", "ו'", "ז'", "ח'", "ט'", "י'", 'י"א', 'י"ב'],
+  ar: ['', 'الاول', 'الثاني', 'الثالث', 'الرابع', 'الخامس', 'السادس', 'السابع', 'الثامن', 'التاسع', 'العاشر', 'الحادي عشر', 'الثاني عشر'],
+  en: ['', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'],
+};
+const gradeWord = g => GRADE_WORDS[LANG][+g] || '';
+
+for (const sec of ACADEMIC) sec.kind = sec.sec.includes('الحسابية') ? 'math' : sec.sec.startsWith('ד') ? 'reading' : 'language';
+
+(function localize() {
+  const tr = a => a.splice(0, a.length, ...a.map(T));
+  for (const d of DOMAINS) { d.label = T(d.label); d.annual = T(d.annual); }
+  for (const g of GOALS) { g.t = T(g.t); g.area = T(g.area); if (g.cur) g.cur = T(g.cur); }
+  for (const sec of [...ACADEMIC, ...INTERIM]) { sec.sec = T(sec.sec); for (const it of sec.items) it[1] = T(it[1]); }
+  for (const sec of FUNCTIONAL) { sec.sec = T(sec.sec); for (const it of sec.items) { it[1] = T(it[1]); it[3] = T(it[3]); } }
+  for (const sec of DEVELOPMENTAL) { sec.label = T(sec.label); for (const it of sec.items) { it[1] = T(it[1]); it[2] = T(it[2]); } }
+  for (const k of Object.keys(INTERIM_SCALE)) INTERIM_SCALE[k] = T(INTERIM_SCALE[k]);
+  for (const l of Object.values(READING_LEVELS)) { l.title = T(l.title); l.text = T(l.text); }
+  for (const a of Object.values(ASSESSMENT)) tr(a.tasks);
+  tr(CRITERIA); tr(PERIODS); tr(PARTNERS); tr(SUPPORT_KINDS); tr(GRADE_BANDS);
+  GRADE_NAMES.splice(0, GRADE_NAMES.length, ...(LANG === 'en' ? GRADE_WORDS.en.map(g => g && `Grade ${g}`) : GRADE_WORDS[LANG]));
+  for (const k of Object.keys(METHODS)) { const v = METHODS[k].map(T); delete METHODS[k]; METHODS[T(k)] = v; }
+  for (const st of STRATEGIES) st.t = T(st.t);
+  for (const k of Object.keys(STRATEGY_FOR)) delete STRATEGY_FOR[k];
+  for (const st of STRATEGIES) for (const g of st.goals) (STRATEGY_FOR[g] ??= []).push(st.t);
+  for (const k of Object.keys(PARENT_RECS)) { const v = PARENT_RECS[k].map(T); delete PARENT_RECS[k]; PARENT_RECS[T(k)] = v; }
+  for (const st of PLAN_STEPS) st[1] = T(st[1]);
+  for (const r of PROFILE_ROWS) { r.title = T(r.title); r.desc = T(r.desc); }
+  CURRICULUM.title = T(CURRICULUM.title); tr(CURRICULUM.domains);
+})();
+const curriculumStageText = g => T(curriculumStage(g));

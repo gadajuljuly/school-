@@ -31,24 +31,34 @@ const cors = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
 
-const SYSTEM = `You are the writing assistant inside an app for building individual education plans (תל"א / תח"י) for special-education students at a school in Israel.
+const LANG_NAMES: Record<string, string> = { he: "Hebrew", ar: "Arabic (Modern Standard Arabic)", en: "English" };
+const OBJECTIVE_STYLE: Record<string, string> = {
+  he: '"התלמיד/ה + future-tense verb ..."',
+  ar: '"ان + present-tense verb + الطالب ..."',
+  en: '"The student will + verb ..."',
+};
+
+// The app sends the language the teacher chose; the whole result is in that language.
+const systemFor = (lang: string) => `You are the writing assistant inside an app for building individual education plans for special-education students at a school in Israel.
 
 Rules:
-- Write in Hebrew. Every result is in Hebrew, even when the given text or context is in Arabic - unless the task explicitly asks for a translation into Arabic.
+- Write in ${LANG_NAMES[lang] ?? LANG_NAMES.he}. Every result is entirely in that language, even when the given text or context is in another language - unless the task explicitly asks for a translation. Do not mix languages. Arabic letters or words that are themselves the subject being taught (for example letters a student learns to read) may stay as examples.
+- Use the professional terms of special education and of the Israeli Ministry of Education curricula in that language.
 - Return only the resulting text for the field - no preface, quotes, explanations or markdown.
-- Objectives are written in the usual Hebrew style of Israeli education plans: "התלמיד/ה + future-tense verb ...", short, observable and measurable, at the student's level.
+- Objectives follow the usual style: ${OBJECTIVE_STYLE[lang] ?? OBJECTIVE_STYLE.he}, short, observable and measurable, at the student's level.
 - Use only facts given in the text or the context. Never invent diagnoses, scores, names or events. Keep blanks written as ___ unless the context gives the value.
 - Professional, respectful, strengths-based wording suitable for parents to read.
 - Keep the length suitable for the field: a single objective, criterion or method is one line; descriptions may be a short paragraph.`;
 
 const TASKS: Record<string, string> = {
-  improve: "Improve the wording: clearer, more professional and grammatically correct Hebrew. Keep the meaning.",
-  expand: "Expand the text with a little more professional detail, based only on the given context. Write in Hebrew.",
-  shorten: "Shorten the text and keep its essential meaning. Write in Hebrew.",
-  measurable: "Rewrite as a measurable, observable objective (who, what, under which conditions, to what criterion). Write in Hebrew.",
-  to_ar: "Translate the text into Modern Standard Arabic suitable for a school document.",
-  to_he: "Translate the text into Hebrew suitable for a school document.",
-  draft: "The field is empty or almost empty. Draft suitable content for it in Hebrew from the context.",
+  improve: "Improve the wording: clearer, more professional and grammatically correct. Keep the meaning.",
+  expand: "Expand the text with a little more professional detail, based only on the given context.",
+  shorten: "Shorten the text and keep its essential meaning.",
+  measurable: "Rewrite as a measurable, observable objective (who, what, under which conditions, to what criterion).",
+  to_ar: "Translate the text accurately into Modern Standard Arabic suitable for a school document (this task overrides the writing language).",
+  to_he: "Translate the text accurately into Hebrew suitable for a school document (this task overrides the writing language).",
+  to_en: "Translate the text accurately into English suitable for a school document (this task overrides the writing language).",
+  draft: "The field is empty or almost empty. Draft suitable content for it from the context.",
 };
 
 class AiError extends Error {}
@@ -56,7 +66,7 @@ class AiError extends Error {}
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 // Google Gemini (REST generateContent): busy or missing models fall through to the next one.
-async function askGemini(prompt: string): Promise<string> {
+async function askGemini(system: string, prompt: string): Promise<string> {
   let last = "busy";
   for (const model of GEMINI_MODELS) {
     for (let attempt = 0; attempt < 2; attempt++) {
@@ -64,7 +74,7 @@ async function askGemini(prompt: string): Promise<string> {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_KEY! },
         body: JSON.stringify({
-          system_instruction: { parts: [{ text: SYSTEM }] },
+          system_instruction: { parts: [{ text: system }] },
           contents: [{ role: "user", parts: [{ text: prompt }] }],
           generationConfig: generationConfig(model),
         }),
@@ -93,7 +103,7 @@ async function askGemini(prompt: string): Promise<string> {
 }
 
 // Claude (Anthropic SDK), loaded only when used.
-async function askClaude(prompt: string): Promise<string> {
+async function askClaude(system: string, prompt: string): Promise<string> {
   const { default: Anthropic } = await import("npm:@anthropic-ai/sdk");
   const anthropic = new Anthropic(); // reads ANTHROPIC_API_KEY
   try {
@@ -103,7 +113,7 @@ async function askClaude(prompt: string): Promise<string> {
       output_config: { effort: "low" },
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
-      system: SYSTEM,
+      system,
       messages: [{ role: "user", content: prompt }],
     });
     if (response.stop_reason === "refusal") throw new AiError("refusal");
@@ -128,7 +138,7 @@ Deno.serve(async (req) => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return json({ error: "not-signed-in" }, 401);
 
-  let body: { action?: string; text?: string; field?: string; context?: string };
+  let body: { action?: string; text?: string; field?: string; context?: string; lang?: string };
   try { body = await req.json(); } catch { return json({ error: "bad-request" }, 400); }
   const task = TASKS[body.action ?? ""];
   const text = String(body.text ?? "").slice(0, 6000);
@@ -139,7 +149,8 @@ Deno.serve(async (req) => {
 
   const prompt = `Task: ${task}\n\nField: ${body.field ?? ""}\n\nContext:\n${context || "(none)"}\n\nText:\n${text || "(empty)"}`;
   try {
-    const result = GEMINI_KEY ? await askGemini(prompt) : await askClaude(prompt);
+    const system = systemFor(LANG_NAMES[body.lang ?? ""] ? body.lang! : "he");
+    const result = GEMINI_KEY ? await askGemini(system, prompt) : await askClaude(system, prompt);
     if (!result) return json({ error: "empty-result" }, 502);
     return json({ text: result });
   } catch (error) {

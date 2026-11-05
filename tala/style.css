@@ -207,3 +207,5 @@ select.cur-select { width: auto; padding: 3px 8px; font-size: .82rem; border-rad
 @media print { .ai-btn, .ai-pop { display: none !important; } }
 .ai-btn.busy { animation: aipulse 1s ease-in-out infinite; opacity: 1; }
 @keyframes aipulse { 50% { transform: scale(1.25); } }
+.lang-pick { background: rgba(255,255,255,.15); color: #fff; border: 0; border-radius: 8px; padding: 4px 6px; font-size: .85rem; width: auto; }
+.lang-pick option { color: #000; }

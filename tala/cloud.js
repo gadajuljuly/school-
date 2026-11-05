@@ -105,7 +105,7 @@ const Cloud = (() => {
 
   // ✨ writing helper (Edge Function "tala-ai").
   async function ai(payload) {
-    const { data, error } = await sb.functions.invoke(cfg.aiFunction || 'tala-ai', { body: payload });
+    const { data, error } = await sb.functions.invoke(cfg.aiFunction || 'tala-ai', { body: { lang: LANG, ...payload } });
     if (error) {
       let code = 'server';
       try {
