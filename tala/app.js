@@ -305,7 +305,7 @@ function render() {
   const title = document.getElementById('title');
   if (view.name === 'list') {
     back.hidden = true;
-    title.textContent = 'תל"א · תוכנית לימודים אישית';
+    title.textContent = 'תל"א / תח"י';
     actions.innerHTML = `<button class="btn small" data-act="export-all" title="גיבוי כל הנתונים לקובץ">ייצוא</button>
       <button class="btn small" data-act="import" title="שחזור מקובץ גיבוי">ייבוא</button>`;
     renderList();
@@ -333,7 +333,7 @@ function renderList() {
     ${students.length === 0 ? `
       <div class="card empty">
         <div class="big">📋</div>
-        <h2>ברוכים הבאים לבונה התל"א</h2>
+        <h2>ברוכים הבאים ל-תל"א / תח"י</h2>
         <ol class="howto">
           <li><b>פרטי התלמיד/ה</b> – פרטים אישיים, רקע, תמיכות והתאמות.</li>
           <li><b>מיפוי והערכה</b> – לכל מיומנות: הערכה 1–5 והערה, ונתונים כלליים לכל תחום.</li>

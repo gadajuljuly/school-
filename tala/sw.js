@@ -1,4 +1,4 @@
-const CACHE = 'tala-v3';
+const CACHE = 'tala-v4';
 const FILES = ['./', './index.html', './materials.js', './xlsx.js', './app.js', './style.css', './manifest.json', './icon.svg'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)));
