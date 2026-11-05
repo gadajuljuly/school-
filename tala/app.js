@@ -75,6 +75,7 @@ function normalize(raw) {
       if (!o.id) o.id = uid();
       if (o.partners == null) o.partners = o.responsible || '';
       if (o.period == null) o.period = o.due ? fmtDate(o.due) : '';
+      if (o.curriculum == null) o.curriculum = GOAL_BY_ID[o.ref]?.cur || '';
     });
   });
   return s;
@@ -164,7 +165,7 @@ function sectionFor(s, domain) {
 
 function newObjective(s, { text, domain, area, ref }) {
   return {
-    id: uid(), ref: ref || '', area: area || '', text: fillBlanks(text, s),
+    id: uid(), ref: ref || '', area: area || '', curriculum: (ref && GOAL_BY_ID[ref]?.d === domain && GOAL_BY_ID[ref].cur) || '', text: fillBlanks(text, s),
     period: 'حتى نهاية السنة', criterion: 'بنسبة نجاح 80%', methods: methodsFor(domain, area), partners: partnersFor(domain),
     status: 'todo', notes: '',
   };
@@ -243,7 +244,7 @@ function draftPlan(s) {
 // Bank of goals offered under a plan section.
 function bankFor(domain) {
   if (domain === 'arabic' || domain === 'math') {
-    return GOALS.filter(g => g.d === domain).map(g => ({ ref: g.id, text: g.t, area: g.area, level: g.level }));
+    return GOALS.filter(g => g.d === domain).map(g => ({ ref: g.id, text: g.t, area: domain === 'arabic' ? g.cur : g.area, level: g.level }));
   }
   return FUNCTIONAL.flatMap(sec => sec.items.filter(i => i[2] === domain).map(([id, , , t]) => ({ ref: id, text: t, area: domain })));
 }
@@ -478,7 +479,9 @@ function tabGoals(s) {
         <div class="objective">
           <div class="row" style="margin-bottom:8px">
             <span class="num">יעד ${gi + 1}.${oi + 1}</span>
-            ${o.area && o.area !== g.domain ? `<span class="area-pill">${esc(o.area)}</span>` : ''}
+            ${g.domain === 'arabic' ? `<select class="cur-select" data-path="goals.${gi}.objectives.${oi}.curriculum" title="مجال المنهاج 2009">
+              <option value="">مجال المنهاج 2009…</option>${CURRICULUM.domains.map(c => `<option ${c === o.curriculum ? 'selected' : ''}>${c}</option>`).join('')}
+            </select>` : o.area && o.area !== g.domain ? `<span class="area-pill">${esc(o.area)}</span>` : ''}
             <select class="status ${statusOf(o.status).cls}" data-path="goals.${gi}.objectives.${oi}.status" data-status>
               ${STATUSES.map(st => `<option value="${st.v}" ${st.v === (o.status || 'todo') ? 'selected' : ''}>${st.label}</option>`).join('')}
             </select>
@@ -504,7 +507,8 @@ function tabGoals(s) {
         <button class="btn ghost" data-act="add-obj" data-gi="${gi}">+ יעד ריק</button>
         ${bank.length ? `<details class="bank" ${g.objectives.length ? '' : 'open'}>
           <summary>מאגר המטרות לתחום (${bank.length}) – לחיצה מוסיפה יעד${s.readingLevel && g.domain === 'arabic' ? ` · מסומנות המתאימות לרמה (${s.readingLevel})` : ''}</summary>
-          ${areas.map(area => `<div class="bank-area"><div class="bank-title">${esc(area === g.domain ? domainLabel(area) : area)}</div>
+          ${g.domain === 'arabic' ? `<div class="cur-note" dir="rtl">مرتبة حسب مجالات ${esc(CURRICULUM.title)}${s.grade ? ' · ' + curriculumStage(s.grade) : ''}</div>` : ''}
+          ${areas.map(area => `<div class="bank-area"><div class="bank-title">${esc(area === g.domain ? domainLabel(area) : g.domain === 'arabic' ? 'مجال ' + area : area)}</div>
             <div class="suggest">${bank.filter(b => b.area === area).map(b => `<button type="button" dir="rtl"
               class="${used.has(b.ref) ? 'used' : ''} ${s.readingLevel && b.level?.includes(s.readingLevel) ? 'fit' : ''}"
               data-act="add-bank" data-gi="${gi}" data-ref="${b.ref}" ${used.has(b.ref) ? 'disabled' : ''}>${esc(fillBlanks(b.text, s))}</button>`).join('')}</div></div>`).join('')}
@@ -609,11 +613,12 @@ function tabDoc(s) {
       <h1>תוכנית עבודה שנתית לתלמיד תח"י – תל"א</h1>
       <div class="sub">תוכנית חינוכית יחידנית · תוכנית לימודים אישית</div>
       ${head(g)}
+      ${g.domain === 'arabic' ? `<table class="kv">${kv('תוכנית הלימודים', CURRICULUM.title + (s.grade ? '\n' + curriculumStage(s.grade) : ''))}</table>` : ''}
       <table class="kv">${kv('מטרה\\ות שנתית\\ות', g.annual)}${kv('יכולת התפקוד הנוכחית', g.current)}</table>
       <table>
         <tr><th>יעדים עפ"י יכולת התפקוד הנוכחית של התלמיד אקדמי – תפקודי</th><th style="width:14%">פרק זמן להשגה</th>
           <th style="width:28%">אמות מידה להצלחה, דרכי הוראה שיטות ואמצעים</th><th style="width:16%">גורמים מטפלים שותפים לתוכנית</th></tr>
-        ${g.objectives.map(o => `<tr><td class="pre" dir="auto">${esc(o.text)}${o.status && o.status !== 'todo' ? `<div class="eval">הערכה: ${statusOf(o.status).label}${o.notes ? ' – ' + esc(o.notes) : ''}</div>` : ''}</td>
+        ${g.objectives.map(o => `<tr><td class="pre" dir="auto">${esc(o.text)}${o.curriculum ? `<div class="eval">مجال المنهاج: ${esc(o.curriculum)}</div>` : ''}${o.status && o.status !== 'todo' ? `<div class="eval">הערכה: ${statusOf(o.status).label}${o.notes ? ' – ' + esc(o.notes) : ''}</div>` : ''}</td>
           <td dir="auto">${esc(o.period)}</td>
           <td dir="auto">${o.criterion ? `<b>${esc(o.criterion)}</b><br>` : ''}${esc(o.methods)}</td>
           <td dir="auto">${esc(o.partners)}</td></tr>`).join('')}

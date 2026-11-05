@@ -135,3 +135,5 @@ select.rate.ok { background: #dcefe3; border-color: #b4d8c1; }
 @media print {
   .page-break { break-before: page; border: 0; margin: 0; }
 }
+select.cur-select { width: auto; padding: 3px 8px; font-size: .82rem; border-radius: 999px; background: #f3ead5; color: #7b5a12; border-color: #e6d6ad; }
+.cur-note { font-size: .82rem; color: #7b5a12; background: #fbf5e6; border-radius: 8px; padding: 6px 10px; margin-top: 8px; }

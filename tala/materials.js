@@ -348,3 +348,34 @@ const SUPPORT_TYPES = ['לימודי', 'רגשי', 'התנהגותי', 'סייע
 const SUPPORT_WHEN = ['טרום בית הספר', 'בתוך בית הספר', 'מחוץ לבית הספר'];
 const DIAGNOSES = ['דידקטי', 'פסיכולוגי', 'פסיכודידקטי', 'ניאורולוגי', 'פסיכיאטרי', 'אחר'];
 const ACCOMMODATIONS = ['הארכת זמן', 'התעלמות משגיאות כתיב', 'שעתוק', 'הקראת שאלון', 'הקלטת התשובות', 'הגדלת כתב השאלון', 'שימוש במחשבון', 'שימוש במילונית', 'הכתבת התשובות לבוחן', 'בחינה מותאמת', 'מבחן בע"פ'];
+
+// ---------- Ministry of Education Arabic curriculum (2009) ----------
+// "التربية اللغوية العربية: لغة، أدب، ثقافة" – primary schools (grades 1–6), 2009.
+// Its attainments are organised in five domains and set by stage (end of grades 2, 4, 6).
+// Language knowledge covers sounds and their written form, morphology, syntax,
+// meaning, spelling, handwriting and punctuation.
+const CURRICULUM = {
+  title: 'التربية اللغوية العربية: لغة، أدب، ثقافة – منهاج للمدارس الابتدائية (2009)',
+  domains: ['الاستماع', 'التكلم', 'القراءة', 'الكتابة', 'المعرفة اللغوية'],
+};
+function curriculumStage(grade) {
+  const g = +grade;
+  if (!g) return '';
+  if (g <= 2) return 'التحصيلات المرحلية لنهاية الصف الثاني';
+  if (g <= 4) return 'التحصيلات المرحلية لنهاية الصف الرابع';
+  if (g <= 6) return 'التحصيلات المرحلية لنهاية الصف السادس';
+  return 'التحصيلات المرحلية لنهاية الصف السادس (الصف اعلى من المرحلة الابتدائية)';
+}
+// Curriculum domain of each Arabic goal in the bank.
+(function tagCurriculum() {
+  const byId = {
+    w1: 'المعرفة اللغوية', w2: 'المعرفة اللغوية', w3: 'المعرفة اللغوية', w4: 'المعرفة اللغوية',
+    w5: 'المعرفة اللغوية', w6: 'المعرفة اللغوية', w7: 'المعرفة اللغوية', w8: 'المعرفة اللغوية',
+    c15: 'الاستماع', c16: 'الاستماع', c18: 'الاستماع',
+  };
+  const byArea = {
+    'القراءة': 'القراءة', 'فهم المقروء والمسموع': 'القراءة', 'التعبير الشفهي': 'التكلم',
+    'الكتابة': 'الكتابة', 'الاملاء': 'المعرفة اللغوية', 'المعرفة اللغوية': 'المعرفة اللغوية',
+  };
+  for (const g of GOALS) if (g.d === 'arabic') g.cur = byId[g.id] || byArea[g.area];
+})();
