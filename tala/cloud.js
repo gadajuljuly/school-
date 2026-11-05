@@ -103,6 +103,17 @@ const Cloud = (() => {
     return maskEmail(email);
   }
 
+  // ✨ writing helper (Edge Function "tala-ai").
+  async function ai(payload) {
+    const { data, error } = await sb.functions.invoke('tala-ai', { body: payload });
+    if (error) {
+      let code = 'server';
+      try { code = (await error.context.json()).error || code; } catch { if (/Failed to send|fetch/i.test(error.message || '')) code = 'not-deployed'; }
+      throw new Error(code);
+    }
+    return data.text;
+  }
+
   async function adminUsers() {
     const { data, error } = await sb.rpc('tala_admin_users');
     if (error) throw error;
@@ -198,7 +209,7 @@ const Cloud = (() => {
   }
 
   return {
-    enabled, init, isRecovering, recoveryDone, signInPhone, signUpPhone, forgotPassword, showPhone, displayName, userPhone,
+    enabled, init, ai, isRecovering, recoveryDone, signInPhone, signUpPhone, forgotPassword, showPhone, displayName, userPhone,
     adminUsers, adminSetPassword, changePassword, signOut, sync, track, changed, removed, flushSoon, allStudents,
     get user() { return user; }, get admin() { return admin; }, get status() { return status; },
   };

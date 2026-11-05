@@ -190,3 +190,18 @@ select.cur-select { width: auto; padding: 3px 8px; font-size: .82rem; border-rad
 .doc .sign.four { grid-template-columns: repeat(4, 1fr); }
 .rcode { font-family: ui-monospace, Consolas, monospace; font-size: 2rem; font-weight: 700; letter-spacing: 4px; background: var(--brand-2); color: var(--brand); border-radius: 12px; padding: 14px; }
 .teachers summary { cursor: pointer; }
+
+/* ✨ AI writing helper */
+.ai-wrap { position: relative; display: block; }
+.ai-wrap > input, .ai-wrap > textarea { padding-inline-end: 34px; }
+.ai-btn { position: absolute; inset-inline-end: 4px; top: 4px; width: 28px; height: 28px; border-radius: 8px; border: 0; background: transparent; cursor: pointer; font-size: 15px; opacity: .55; }
+.ai-btn:hover, .ai-btn:focus-visible { opacity: 1; background: var(--brand-2); }
+.ai-pop { position: absolute; z-index: 30; inset-inline-end: 0; top: 34px; width: min(360px, 90vw); background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.15); padding: 8px; display: grid; gap: 4px; color: var(--ink); font-size: .92rem; }
+.ai-pop > button { text-align: start; border: 0; background: none; padding: 7px 10px; border-radius: 8px; cursor: pointer; }
+.ai-pop > button:hover { background: var(--brand-2); }
+.ai-head { font-weight: 700; color: var(--brand); padding: 4px 6px; }
+.ai-result { white-space: pre-wrap; background: #faf8f2; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; max-height: 240px; overflow: auto; line-height: 1.6; }
+.ai-err { margin: 4px 6px; color: var(--no); }
+.ai-wait { height: 6px; margin: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--brand-2), var(--brand), var(--brand-2)); background-size: 200% 100%; animation: aiwait 1.2s linear infinite; }
+@keyframes aiwait { to { background-position: -200% 0; } }
+@media print { .ai-btn, .ai-pop { display: none !important; } }

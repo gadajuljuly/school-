@@ -315,8 +315,11 @@ function devBank(domain) {
 
 // ---------- rendering ----------
 const app = document.getElementById('app');
+// Every render ends with the ✨ buttons.
+const renderScreen = () => { renderInner(); decorateAI(); };
 
-function render() {
+function render() { renderScreen(); }
+function renderInner() {
   const back = document.getElementById('backBtn');
   const actions = document.getElementById('topActions');
   const title = document.getElementById('title');
@@ -1072,6 +1075,105 @@ function docSchool(s) {
   </div>`;
 }
 
+// ---------- ✨ AI writing helper ----------
+const AI_ACTIONS = [
+  ['improve', 'שיפור ניסוח'], ['expand', 'הרחבה'], ['shorten', 'קיצור'],
+  ['measurable', 'ניסוח כיעד מדיד'], ['to_ar', 'תרגום לערבית'], ['to_he', 'תרגום לעברית'],
+];
+const AI_SKIP = /^(firstName|lastName|idNumber|birthDate|school|city|className|homeroomTeacher|inclusionTeacher|aide|parentsContact|familyPosition|year|fillDate|committeeDate|wpm|team\.|supports\.|meetings\.\d+\.(date|type|participants)|diagnoses\.|evalDates\.)/;
+
+// Adds a ✨ button to every writing field of the current screen.
+function decorateAI() {
+  if (!Cloud.user || !['student'].includes(view.name)) return;
+  app.querySelectorAll('textarea[data-path], input[type=text][data-path]').forEach(el => {
+    if (AI_SKIP.test(el.dataset.path) || el.parentElement.classList.contains('ai-wrap')) return;
+    const wrap = document.createElement('span');
+    wrap.className = 'ai-wrap' + (el.tagName === 'TEXTAREA' ? ' ta' : '');
+    el.replaceWith(wrap);
+    wrap.append(el);
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'ai-btn'; b.textContent = '✨'; b.title = 'עזרה בכתיבה';
+    b.dataset.act = 'ai-menu'; b.dataset.path = el.dataset.path;
+    wrap.append(b);
+  });
+}
+
+function aiContext(path) {
+  const s = current();
+  const lines = [];
+  if (s.grade) lines.push(`דרגת כיתה: ${gradeName(s)}`);
+  if (s.readingLevel) lines.push(READING_LEVELS[s.readingLevel].title);
+  const m = /^goals\.(\d+)(?:\.objectives\.(\d+))?/.exec(path);
+  if (m) {
+    const g = s.goals[+m[1]];
+    lines.push(`תחום: ${domainLabel(g.domain)}`);
+    if (g.annual) lines.push(`מטרה שנתית: ${g.annual}`);
+    if (g.current) lines.push(`יכולת תפקוד נוכחית: ${g.current}`);
+    if (g.difficulties) lines.push(`תחומי קושי: ${g.difficulties}`);
+    if (m[2] != null) {
+      const o = g.objectives[+m[2]];
+      if (o.text && !path.endsWith('.text')) lines.push(`היעד: ${o.text}`);
+      if (o.criterion && !path.endsWith('.criterion')) lines.push(`אמת מידה: ${o.criterion}`);
+    }
+  } else {
+    if (s.strengths) lines.push(`תחומי חוזק: ${s.strengths}`);
+    if (s.difficulties) lines.push(`תחומי קושי: ${s.difficulties}`);
+  }
+  return lines.join('\n');
+}
+
+function closeAI() { document.querySelector('.ai-pop')?.remove(); }
+
+function openAIMenu(btn) {
+  closeAI();
+  const el = btn.parentElement.querySelector('[data-path]');
+  const empty = !el.value.trim();
+  const pop = document.createElement('div');
+  pop.className = 'ai-pop';
+  pop.innerHTML = `<div class="ai-head">✨ עזרה בכתיבה</div>
+    ${empty ? '<button type="button" data-ai="draft">ניסוח טיוטה לשדה</button>'
+      : AI_ACTIONS.map(([k, l]) => `<button type="button" data-ai="${k}">${l}</button>`).join('') + '<button type="button" data-ai="draft">ניסוח חדש לשדה</button>'}`;
+  btn.parentElement.append(pop);
+  pop.addEventListener('click', e => {
+    const a = e.target.closest('[data-ai]');
+    if (a) runAI(el, a.dataset.ai, pop);
+  });
+}
+
+async function runAI(el, action, pop) {
+  const label = el.closest('label')?.firstChild?.textContent?.trim() || el.closest('tr')?.querySelector('td')?.textContent?.trim() || '';
+  pop.innerHTML = '<div class="ai-head">✨ כותב…</div><div class="ai-wait"></div>';
+  try {
+    const text = await Cloud.ai({ action, text: el.value, field: label, context: aiContext(el.dataset.path) });
+    pop.innerHTML = `<div class="ai-head">✨ הצעה</div><div class="ai-result" dir="auto"></div>
+      <div class="row"><button type="button" class="btn small primary" data-ai-do="replace">החלפה</button>
+      ${el.value.trim() ? '<button type="button" class="btn small" data-ai-do="append">הוספה בסוף</button>' : ''}
+      <button type="button" class="btn small" data-ai-do="cancel">ביטול</button></div>`;
+    pop.querySelector('.ai-result').textContent = text;
+    pop.onclick = e => {
+      const d = e.target.closest('[data-ai-do]')?.dataset.aiDo;
+      if (!d) return;
+      e.stopPropagation();
+      if (d !== 'cancel') {
+        el.value = d === 'append' ? `${el.value.replace(/\s+$/, '')}\n${text}` : text;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      closeAI();
+    };
+  } catch (err) {
+    const m = err.message;
+    pop.innerHTML = `<div class="ai-head">✨</div><p class="ai-err">${{
+      'not-deployed': 'עוזר הכתיבה עוד לא הופעל בשרת.', 'not-signed-in': 'צריך להיכנס מחדש לחשבון.',
+      'api-key': 'מפתח ה-AI בשרת חסר או שגוי.', busy: 'העוזר עמוס כרגע. נסי שוב בעוד דקה.',
+      refusal: 'העוזר לא יכול לעזור עם הטקסט הזה.', empty: 'אין טקסט לעבוד עליו.',
+    }[m] || 'משהו השתבש (' + esc(m) + ').'}</p><button type="button" class="btn small" data-ai-do="cancel">סגירה</button>`;
+    pop.onclick = e => { if (e.target.closest('[data-ai-do]')) closeAI(); };
+  }
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('.ai-pop, .ai-btn')) closeAI();
+}, true);
+
 // ---------- events ----------
 function touch(s) { s.updatedAt = Date.now(); save(); }
 
@@ -1195,6 +1297,7 @@ document.addEventListener('click', e => {
       });
       return;
     }
+    case 'ai-menu': openAIMenu(t); return;
     case 'login-mode': view.loginMode = d.v; view.sentTo = ''; render(); return;
     case 'login-password': {
       const email = document.getElementById('loginEmail').value.trim();
