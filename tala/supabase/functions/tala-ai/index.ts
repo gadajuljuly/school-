@@ -1,10 +1,14 @@
 // Supabase Edge Function "tala-ai": the ✨ writing helper of תל"א / תח"י.
-// Signed-in teachers send a field's text and context; Claude returns the rewritten text.
-// Secret needed in Supabase (Edge Functions → Secrets): ANTHROPIC_API_KEY.
+// Signed-in teachers send a field's text and context; the AI returns the rewritten text.
+// Secrets (Edge Functions → Secrets), one of:
+//   GEMINI_API_KEY    – Google Gemini, free tier (on the free tier Google may use the texts to improve its products)
+//   ANTHROPIC_API_KEY – Claude, paid
+// Optional: GEMINI_MODEL (default "gemini-flash-latest").
 import Anthropic from "npm:@anthropic-ai/sdk";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const anthropic = new Anthropic(); // reads ANTHROPIC_API_KEY
+const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY");
+const GEMINI_MODEL = Deno.env.get("GEMINI_MODEL") || "gemini-flash-latest";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -34,6 +38,58 @@ const TASKS: Record<string, string> = {
   draft: "The field is empty or almost empty. Draft suitable content for it from the context.",
 };
 
+class AiError extends Error {}
+
+// Google Gemini (REST generateContent).
+async function askGemini(prompt: string): Promise<string> {
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_KEY! },
+    body: JSON.stringify({
+      system_instruction: { parts: [{ text: SYSTEM }] },
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: { maxOutputTokens: 4000, temperature: 0.4 },
+    }),
+  });
+  if (res.status === 429) throw new AiError("busy");
+  if (res.status === 400 || res.status === 401 || res.status === 403) {
+    const body = await res.text();
+    throw new AiError(/API key|PERMISSION_DENIED|UNAUTHENTICATED/i.test(body) ? "api-key" : `api-${res.status}`);
+  }
+  if (!res.ok) throw new AiError(`api-${res.status}`);
+  const data = await res.json();
+  const cand = data.candidates?.[0];
+  if (!cand || cand.finishReason === "SAFETY" || data.promptFeedback?.blockReason) throw new AiError("refusal");
+  return (cand.content?.parts ?? [])
+    .map((p: { text?: string; thought?: boolean }) => (p.thought ? "" : p.text ?? ""))
+    .join("")
+    .trim();
+}
+
+// Claude (Anthropic SDK).
+async function askClaude(prompt: string): Promise<string> {
+  const anthropic = new Anthropic(); // reads ANTHROPIC_API_KEY
+  try {
+    const response = await anthropic.beta.messages.create({
+      model: "claude-opus-5-5",
+      max_tokens: 4000,
+      output_config: { effort: "low" },
+      betas: ["server-side-fallback-2026-07-01"],
+      fallbacks: "default",
+      system: SYSTEM,
+      messages: [{ role: "user", content: prompt }],
+    });
+    if (response.stop_reason === "refusal") throw new AiError("refusal");
+    return response.content.map((block) => (block.type === "text" ? block.text : "")).join("").trim();
+  } catch (error) {
+    if (error instanceof AiError) throw error;
+    if (error instanceof Anthropic.AuthenticationError) throw new AiError("api-key");
+    if (error instanceof Anthropic.RateLimitError) throw new AiError("busy");
+    if (error instanceof Anthropic.APIError) throw new AiError(`api-${error.status}`);
+    throw error;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "method" }, 405);
@@ -52,31 +108,18 @@ Deno.serve(async (req) => {
   const context = String(body.context ?? "").slice(0, 6000);
   if (!task) return json({ error: "bad-action" }, 400);
   if (!text.trim() && body.action !== "draft") return json({ error: "empty" }, 400);
+  if (!GEMINI_KEY && !Deno.env.get("ANTHROPIC_API_KEY")) return json({ error: "api-key" }, 500);
 
+  const prompt = `Task: ${task}\n\nField: ${body.field ?? ""}\n\nContext:\n${context || "(none)"}\n\nText:\n${text || "(empty)"}`;
   try {
-    const response = await anthropic.beta.messages.create({
-      model: "claude-opus-5-5",
-      max_tokens: 4000,
-      output_config: { effort: "low" },
-      betas: ["server-side-fallback-2026-07-01"],
-      fallbacks: "default",
-      system: SYSTEM,
-      messages: [{
-        role: "user",
-        content: `Task: ${task}\n\nField: ${body.field ?? ""}\n\nContext:\n${context || "(none)"}\n\nText:\n${text || "(empty)"}`,
-      }],
-    });
-    if (response.stop_reason === "refusal") return json({ error: "refusal" }, 422);
-    const result = response.content
-      .map((block) => (block.type === "text" ? block.text : ""))
-      .join("")
-      .trim();
+    const result = GEMINI_KEY ? await askGemini(prompt) : await askClaude(prompt);
     if (!result) return json({ error: "empty-result" }, 502);
     return json({ text: result });
   } catch (error) {
-    if (error instanceof Anthropic.AuthenticationError) return json({ error: "api-key" }, 500);
-    if (error instanceof Anthropic.RateLimitError) return json({ error: "busy" }, 429);
-    if (error instanceof Anthropic.APIError) return json({ error: `api-${error.status}` }, 502);
+    if (error instanceof AiError) {
+      const m = error.message;
+      return json({ error: m }, m === "busy" ? 429 : m === "refusal" ? 422 : m === "api-key" ? 500 : 502);
+    }
     return json({ error: "server" }, 500);
   }
 });
