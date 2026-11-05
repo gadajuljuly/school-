@@ -1,0 +1,16 @@
+{
+  "name": "תל\"א – תוכנית לימודים אישית",
+  "short_name": "תל\"א",
+  "description": "בניית תוכניות לימודים אישיות (תל\"א) לתלמידים בחינוך המיוחד",
+  "start_url": "./index.html",
+  "id": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "dir": "rtl",
+  "lang": "he",
+  "background_color": "#f4f1ea",
+  "theme_color": "#2f6b5e",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
