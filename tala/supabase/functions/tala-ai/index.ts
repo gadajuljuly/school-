@@ -4,18 +4,24 @@
 //   GEMINI_API_KEY    – Google Gemini, free tier (on the free tier Google may use the texts to improve its products)
 //   ANTHROPIC_API_KEY – Claude, paid
 // Optional: GEMINI_MODEL (tried first; then the other free Gemini models below).
-import Anthropic from "npm:@anthropic-ai/sdk";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY");
-// Free Gemini models, tried in order when one is busy (503/429) or not found.
+// Free Gemini models, fastest first; the next one is tried when one is busy (503/429) or not found.
 const GEMINI_MODELS = [
   Deno.env.get("GEMINI_MODEL"),
-  "gemini-flash-latest",
-  "gemini-2.5-flash",
   "gemini-flash-lite-latest",
   "gemini-2.5-flash-lite",
+  "gemini-flash-latest",
+  "gemini-2.5-flash",
 ].filter((m, i, a): m is string => !!m && a.indexOf(m) === i);
+
+// Short rewriting needs no "thinking" step: turn it off where the model takes that setting (2.5 models).
+const generationConfig = (model: string) => ({
+  maxOutputTokens: 2000,
+  temperature: 0.4,
+  ...(model.startsWith("gemini-2.5") ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
+});
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -60,12 +66,12 @@ async function askGemini(prompt: string): Promise<string> {
         body: JSON.stringify({
           system_instruction: { parts: [{ text: SYSTEM }] },
           contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 4000, temperature: 0.4 },
+          generationConfig: generationConfig(model),
         }),
       });
       if (res.status === 503 || res.status === 500 || res.status === 429) {
         last = "busy";
-        if (attempt === 0) { await sleep(800); continue; }
+        if (attempt === 0) { await sleep(400); continue; }
         break; // next model
       }
       if (res.status === 404) { last = "api-404"; break; } // model not available: next model
@@ -86,8 +92,9 @@ async function askGemini(prompt: string): Promise<string> {
   throw new AiError(last);
 }
 
-// Claude (Anthropic SDK).
+// Claude (Anthropic SDK), loaded only when used.
 async function askClaude(prompt: string): Promise<string> {
+  const { default: Anthropic } = await import("npm:@anthropic-ai/sdk");
   const anthropic = new Anthropic(); // reads ANTHROPIC_API_KEY
   try {
     const response = await anthropic.beta.messages.create({
