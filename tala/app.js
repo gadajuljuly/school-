@@ -45,7 +45,7 @@ const dev = (...ids) => DEVELOPMENTAL.filter(s => ids.includes(s.id)).map(fromDe
 const MAP_GROUPS = [
   { id: 'arabic', domain: 'arabic', title: T("ערבית – קריאה, הבנה, כתיבה ושפה"), reading: true, sections: [...INTERIM.map(fromInterim), ...acad(sec => sec.kind !== 'math')] },
   { id: 'math', domain: 'math', title: T("חשבון"), sections: [...acad(sec => sec.kind === 'math'), ...dev('quant')] },
-  { id: 'cognitive', domain: 'cognitive', title: T("תלמידאות, קשב, חשיבה והרגלי למידה"), sections: [...dev('student', 'indep'), ...func('t', 'p', 'g', 'h'), ...dev('att', 'vis', 'think', 'ready', 'task')] },
+  { id: 'cognitive', domain: 'cognitive', title: T("תלמידאות, קשב, חשיבה והרגלי למידה"), sections: [...dev('student', 'indep'), ...func('t', 'p', 'g', 'h'), ...dev('att', 'vis', 'think', 'ready', 'task', 'retr')] },
   { id: 'comm', domain: 'comm', title: T("שפה, דיבור ותקשורת"), sections: dev('lang', 'aud', 'play') },
   { id: 'emotional', domain: 'emotional', title: T("רגשי, חברתי והתנהגותי"), sections: [...func('s', 'l'), ...dev('emo', 'soc')] },
   { id: 'motor', domain: 'motor', title: T("תנועה, ניידות, הנגשה ותחושה"), sections: [...dev('access'), ...dev('sen', 'gm', 'fm')] },
@@ -102,7 +102,7 @@ function newStudent() {
     committee: '', committeeDate: '', parentsContact: '', familyStatus: '', familyPosition: '', health: '', previousSchools: '',
     year: schoolYear(), fillDate: new Date().toISOString().slice(0, 10),
     support: {}, diagnoses: {}, accommodations: {}, accommodationsOther: '',
-    background: '', strengths: '', difficulties: '', motivators: '', parentsView: '', studentView: '',
+    background: '', strengths: '', difficulties: '', motivators: '', parentsView: '', teachersView: '', studentView: '', assessments: {},
     readingLevel: '', readingBand: '', listeningBand: '', wpm: '', ratings: {}, mapNotes: {},
     parentRecs: '', steps: {}, profile: {}, evalDates: {}, summary: '', team: [], supports: [], goals: [], meetings: [], updatedAt: Date.now(),
   };
@@ -112,7 +112,7 @@ function newStudent() {
 function normalize(raw) {
   const s = Object.assign(newStudent(), raw);
   ['team', 'supports', 'goals', 'meetings'].forEach(k => { if (!Array.isArray(s[k])) s[k] = []; });
-  ['support', 'diagnoses', 'ratings', 'mapNotes', 'steps', 'profile', 'evalDates'].forEach(k => { if (!s[k] || typeof s[k] !== 'object') s[k] = {}; });
+  ['support', 'diagnoses', 'ratings', 'mapNotes', 'steps', 'profile', 'evalDates', 'assessments'].forEach(k => { if (!s[k] || typeof s[k] !== 'object') s[k] = {}; });
   if (typeof s.accommodations === 'string') {
     s.accommodationsOther = [s.accommodationsOther, s.accommodations].filter(Boolean).join('\n');
     s.accommodations = {};
@@ -234,6 +234,22 @@ function addObjective(s, sec, item) {
 const fitsLevel = (goal, level) => !level || !goal.level || goal.level.includes(level);
 
 // Builds (or rebuilds) the plan from the mapping. Returns null when nothing was entered.
+// The functional area (detailed form) a mapping item belongs to.
+function functionRow(item) {
+  const sid = item.section.id;
+  if (sid === 'soc' || sid === 'play') return 'f_soc';
+  switch (item.group.id) {
+    case 'cognitive': return 'f_cog';
+    case 'emotional': return 'f_emo';
+    case 'comm': return sid === 'lang' ? 'f_lang' : 'f_listen';
+    case 'arabic': {
+      const a = item.goals[0]?.area || '';
+      return a === T('الكتابة') || a === T('الاملاء') ? 'f_write' : a === T('المعرفة اللغوية') ? 'f_lang' : a === T('التعبير الشفهي') ? 'f_listen' : 'f_read';
+    }
+  }
+  return null;
+}
+
 function buildPlan(s, rebuild) {
   const rated = ALL_ITEMS.filter(i => rating(s, i.id)).sort((a, b) => rating(s, a.id) - rating(s, b.id));
   const hasNotes = Object.values(s.mapNotes).some(v => v && v.trim());
@@ -242,6 +258,7 @@ function buildPlan(s, rebuild) {
 
   const strengths = {}, difficulties = {};
   const push = (map, domain, line) => (map[domain] ??= []).push(line);
+  const fnStrengths = {}, fnFocus = {};
   let added = 0;
 
   for (const item of rated) {
@@ -249,8 +266,10 @@ function buildPlan(s, rebuild) {
     const note = s.ratings[item.id]?.note?.trim();
     const domain = item.goals[0]?.domain || item.group.domain;
     const line = `${item.label} (${r})${note ? ' – ' + note : ''}`;
-    if (r > (item.section.needs || NEEDS_GOAL)) { push(strengths, domain, line); continue; }
+    const fr = functionRow(item);
+    if (r > (item.section.needs || NEEDS_GOAL)) { push(strengths, domain, line); if (fr) push(fnStrengths, fr, line); continue; }
     push(difficulties, domain, line);
+    if (fr) push(fnFocus, fr, line);
     const fitting = item.goals.filter(g => fitsLevel(g, s.readingLevel));
     for (const g of (fitting.length ? fitting : item.goals)) {
       if (addObjective(s, sectionFor(s, g.domain), g)) added++;
@@ -302,6 +321,13 @@ function buildPlan(s, rebuild) {
     const cur = s.profile[row.id] ??= { strengths: '', focus: '' };
     if (st.length && (rebuild || !cur.strengths.trim())) cur.strengths = st.join('\n');
     if (df.length && (rebuild || !cur.focus.trim())) cur.focus = df.join('\n');
+  }
+
+  // Functional areas of the detailed form.
+  for (const row of FUNCTION_ROWS) {
+    const cur = s.profile[row.id] ??= { strengths: '', focus: '' };
+    if (fnStrengths[row.id] && (rebuild || !cur.strengths.trim())) cur.strengths = fnStrengths[row.id].join('\n');
+    if (fnFocus[row.id] && (rebuild || !cur.focus.trim())) cur.focus = fnFocus[row.id].join('\n');
   }
 
   // Overall strengths / difficulties on the details page, if still empty.
@@ -573,6 +599,7 @@ function tabDetails(s) {
       ${field('background', T("רקע כללי (התפתחותי, לימודי, טיפולים, ראיון הורים, דו\"חות קודמים)"), 'textarea', 'wide')}
       ${field('motivators', T("תחומי עניין ומחזקים"), 'textarea', 'wide')}
       ${field('parentsView', T("עמדת ההורים ומטרותיהם"), 'textarea', 'wide')}
+      ${field('teachersView', T("מפי המורות (שפות, מדעים וחשבון)"), 'textarea', 'wide')}
       ${field('studentView', T("ייצוג וסינגור עצמי – מטרות מפי התלמיד/ה"), 'textarea', 'wide')}
     </div>
   </div>
@@ -586,6 +613,19 @@ function tabDetails(s) {
     </table></div>
     <h3 style="margin-top:14px">${T("אבחונים – תאריך האבחון האחרון")}</h3>
     <div class="grid">${DIAGNOSES.map(d => field(`diagnoses.${d}`, T(d), 'date')).join('')}</div>
+  </div>
+  <div class="card"><h2>${T("אבחונים וטיפולים")}</h2>
+    <div class="scroll-x"><table class="table assess-table">
+      <tr><th>${T("פירוט")}</th><th>${T("אבחון")}</th><th>${T("טיפול")}</th><th>${T("תאריך או תקופה משוערת")}</th><th>${T("מסגרת האבחון / הטיפול")}</th><th>${T("שם המאבחן / המטפל")}</th><th>${T("ממצאים / המלצות")}</th></tr>
+      ${ASSESS_KINDS.map((k, i) => {
+        const a = s.assessments[i] || {};
+        const yn = f => `<select data-path="assessments.${i}.${f}" aria-label="${T(k)}"><option value=""></option>${[['yes', T("כן")], ['no', T("לא")]].map(([v, l]) => `<option value="${v}" ${a[f] === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+        const inp = f => `<input type="text" dir="auto" data-path="assessments.${i}.${f}" value="${esc(a[f])}">`;
+        return `<tr><th>${T(k)}</th><td>${yn('diag')}</td><td>${yn('treat')}</td><td>${inp('date')}</td><td>${inp('frame')}</td><td>${inp('by')}</td>
+          <td><textarea dir="auto" data-path="assessments.${i}.findings">${esc(a.findings)}</textarea></td></tr>`;
+      }).join('')}
+    </table></div>
+    <p class="muted" style="font-size:.85rem">${T("אם קיימים מסמכים וסיכומים – יש לצרף אותם.")}</p>
   </div>
   <div class="card"><h2>${T("תמיכות שהתלמיד/ה מקבל/ת")}</h2>
     <table class="table">
@@ -714,6 +754,14 @@ function tabGoals(s) {
         <td><textarea dir="auto" data-path="profile.${r.id}.focus">${esc(s.profile[r.id]?.focus)}</textarea></td></tr>`).join('')}
     </table></div>
     ${field('studentView', T("ייצוג וסינגור עצמי – מטרות מפי התלמיד/ה"), 'textarea', 'wide')}
+    <details class="integ"><summary>${T("תחומי תפקוד – לתח\"י המפורטת")}</summary>
+      <div class="scroll-x"><table class="table profile-table">
+        <tr><th></th><th>${T("מוקדי כוח")}</th><th>${T("מוקדים לחיזוק")}</th></tr>
+        ${FUNCTION_ROWS.map(r => `<tr><td><b>${r.title}</b><div class="muted" style="font-size:.8rem">${r.desc}</div></td>
+          <td><textarea dir="auto" data-path="profile.${r.id}.strengths">${esc(s.profile[r.id]?.strengths)}</textarea></td>
+          <td><textarea dir="auto" data-path="profile.${r.id}.focus">${esc(s.profile[r.id]?.focus)}</textarea></td></tr>`).join('')}
+      </table></div>
+    </details>
   </div>` : ''}
   ${s.goals.length === 0 ? `<div class="card empty"><div class="big">🎯</div>
     <p class="muted">${T("עדיין אין תוכנית. מלאו את")} <b>${T("המיפוי")}</b> ${T("ולחצו")} "${T("בנה את התוכנית")}", ${T("או הוסיפו תחום ידנית למטה.")}</p>
@@ -872,11 +920,12 @@ function tabDoc(s) {
     <button class="btn small ${fmt === 'matya' ? 'primary' : ''}" data-act="format" data-v="matya">${T("פורמט תל\"א (מת\"יא)")}</button>
     <button class="btn small ${fmt === 'school' ? 'primary' : ''}" data-act="format" data-v="school">${T("תבנית בית הספר (תח\"י)")}</button>
     <button class="btn small ${fmt === 'integrative' ? 'primary' : ''}" data-act="format" data-v="integrative">${T("תח\"י אינטגרטיבית 2026")}</button>
+    <button class="btn small ${fmt === 'detailed' ? 'primary' : ''}" data-act="format" data-v="detailed">${T("תח\"י מפורטת")}</button>
     <span class="spacer"></span>
     <button class="btn primary" data-act="excel">⬇️ ${T("הורדה כקובץ Excel")}</button>
     <button class="btn" data-act="print">🖨️ ${T("הדפסה / PDF")}</button>
   </div>
-  ${fmt === 'matya' ? docMatya(s) : fmt === 'integrative' ? docIntegrative(s) : docSchool(s)}`;
+  ${fmt === 'matya' ? docMatya(s) : fmt === 'integrative' ? docIntegrative(s) : fmt === 'detailed' ? docDetailed(s) : docSchool(s)}`;
 }
 
 // Rows of the plan in the Matya format, shared by the printed page and the Excel file.
@@ -1008,6 +1057,85 @@ function exportExcelIntegrative(s) {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = `${T("תח\"י אינטגרטיבית")} - ${fullName(s)}.xlsx`.replace(/[\\/:*?"<>|]/g, '_');
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  toast(T("קובץ ה-Excel ירד"));
+}
+
+// ---- Detailed IEP: assessments and treatments, functional areas, goals ----
+function detailedData(s) {
+  const yn = v => v === 'yes' ? T("כן") : v === 'no' ? T("לא") : '';
+  const assessHead = [T("פירוט"), T("אבחון"), T("טיפול"), T("תאריך או תקופה משוערת"), T("מסגרת האבחון / הטיפול"), T("שם המאבחן / המטפל"), T("ממצאים / המלצות")];
+  const assess = ASSESS_KINDS.map((k, i) => [k, s.assessments[i] || {}]).filter(([, a]) => Object.values(a).some(v => String(v || '').trim()))
+    .map(([k, a]) => [T(k), yn(a.diag), yn(a.treat), a.date, a.frame, a.by, a.findings]);
+  const funcs = FUNCTION_ROWS.map(r => [r.title, s.profile[r.id]?.strengths || '', s.profile[r.id]?.focus || '']);
+  const goalHead = [T("תפקוד נוכחי"), T("יעדים"), T("משך זמן"), T("אמצעים ומשאבים"), T("דרכי הערכה")];
+  const goalRows = g => g.objectives.map((o, i) => [i === 0 ? g.current : '', o.text, o.period, o.methods, o.criterion]);
+  return { assessHead, assess, funcs, goalHead, goalRows };
+}
+
+function docDetailed(s) {
+  const { assessHead, assess, funcs, goalHead, goalRows } = detailedData(s);
+  const td = v => `<td class="pre" dir="auto">${esc(v)}</td>`;
+  return `<div class="doc integ-doc">
+    <h1>${T("תכנית חינוכית יחידנית")} – ${T("לשנת הלימודים")} <bdi dir="ltr">${esc(s.year)}</bdi></h1>
+    <table class="kv">
+      <tr><td>${T("שם התלמיד")}</td><td>${esc(fullName(s))}</td><td>${T("ת.ז.")}</td><td>${esc(s.idNumber)}</td></tr>
+      <tr><td>${T("תאריך לידה")}</td><td>${esc(fmtDate(s.birthDate))}</td><td>${T("כיתה")}</td><td>${esc([gradeName(s), s.className].filter(Boolean).join(' · '))}</td></tr>
+      <tr><td>${T("מחנכת הכיתה")}</td><td>${esc(s.homeroomTeacher)}</td><td>${T("בית הספר")}</td><td>${esc(s.school)}</td></tr>
+      <tr><td>${T("מורת השילוב")}</td><td colspan="3">${esc(s.inclusionTeacher)}</td></tr>
+    </table>
+    ${assess.length ? `<h2>${T("אבחונים וטיפולים")}</h2>
+      <table class="integ4"><tr>${assessHead.map(h => `<th>${h}</th>`).join('')}</tr>
+      ${assess.map(r => `<tr>${r.map(td).join('')}</tr>`).join('')}</table>` : ''}
+    <h2>${T("תחומי תפקוד")}</h2>
+    <table class="integ4"><tr><th></th><th>${T("מוקדי כוח")}</th><th>${T("מוקדים לחיזוק")}</th></tr>
+      ${funcs.map(([t, a, b]) => `<tr><th>${esc(t)}</th>${td(a)}${td(b)}</tr>`).join('')}
+      ${s.parentsView ? `<tr><th>${T("מפי ההורים")}</th><td class="pre" dir="auto" colspan="2">${esc(s.parentsView)}</td></tr>` : ''}
+      ${s.teachersView ? `<tr><th>${T("מפי המורות")}</th><td class="pre" dir="auto" colspan="2">${esc(s.teachersView)}</td></tr>` : ''}
+    </table>
+    ${s.goals.map(g => `<h3>${T("מטרה כללית")}: ${esc(g.annual)} <span class="muted">(${esc(domainLabel(g.domain))})</span></h3>
+      <table class="integ4"><tr>${goalHead.map(h => `<th>${h}</th>`).join('')}</tr>
+      ${goalRows(g).map(r => `<tr>${r.map(td).join('')}</tr>`).join('')}</table>`).join('')}
+    ${tailPages(s)}
+  </div>`;
+}
+
+function exportExcelDetailed(s) {
+  const { assessHead, assess, funcs, goalHead, goalRows } = detailedData(s);
+  const C = (v, st = 'cell') => ({ v: v ?? '', s: st });
+  const rows = [[C(`${T("תכנית חינוכית יחידנית")} – ${T("לשנת הלימודים")} ${s.year}`, 'title')], [],
+    [C(T("שם התלמיד"), 'label'), C(fullName(s)), C(T("ת.ז."), 'label'), C(s.idNumber)],
+    [C(T("תאריך לידה"), 'label'), C(fmtDate(s.birthDate)), C(T("כיתה"), 'label'), C([gradeName(s), s.className].filter(Boolean).join(' · '))],
+    [C(T("מחנכת הכיתה"), 'label'), C(s.homeroomTeacher), C(T("בית הספר"), 'label'), C(s.school)],
+    [C(T("מורת השילוב"), 'label'), C(s.inclusionTeacher), C(''), C('')], []];
+  const merges = ['A1:G1', 'B6:D6'];
+  const banner = t => { rows.push([C(t, 'banner'), ...Array(6).fill(C('', 'banner'))]); merges.push(`A${rows.length}:G${rows.length}`); };
+  if (assess.length) {
+    banner(T("אבחונים וטיפולים"));
+    rows.push(assessHead.map(h => C(h, 'head')));
+    for (const r of assess) rows.push([C(r[0], 'label'), ...r.slice(1).map(v => C(v))]);
+    rows.push([]);
+  }
+  banner(T("תחומי תפקוד"));
+  rows.push([C('', 'head'), C(T("מוקדי כוח"), 'head'), C('', 'head'), C('', 'head'), C(T("מוקדים לחיזוק"), 'head'), C('', 'head'), C('', 'head')]);
+  const half = n => merges.push(`B${n}:D${n}`, `E${n}:G${n}`);
+  half(rows.length);
+  for (const [t, a, b] of funcs) { rows.push([C(t, 'label'), C(a), C(''), C(''), C(b), C(''), C('')]); half(rows.length); }
+  for (const [t, v] of [[T("מפי ההורים"), s.parentsView], [T("מפי המורות"), s.teachersView]]) if (v) {
+    rows.push([C(t, 'label'), C(v), ...Array(5).fill(C(''))]); merges.push(`B${rows.length}:G${rows.length}`);
+  }
+  rows.push([]);
+  for (const g of s.goals) {
+    banner(`${T("מטרה כללית")}: ${g.annual} (${domainLabel(g.domain)})`);
+    rows.push([...goalHead.map(h => C(h, 'head')), C('', 'head'), C('', 'head')]); merges.push(`E${rows.length}:G${rows.length}`);
+    for (const r of goalRows(g)) { rows.push([...r.map(v => C(v)), C(''), C('')]); merges.push(`E${rows.length}:G${rows.length}`); }
+    rows.push([]);
+  }
+  const blob = XLSX.build([{ name: T("תח\"י מפורטת"), landscape: true, cols: [24, 34, 14, 22, 22, 18, 34], rows, merges }]);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${T("תח\"י מפורטת")} - ${fullName(s)}.xlsx`.replace(/[\\/:*?"<>|]/g, '_');
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   toast(T("קובץ ה-Excel ירד"));
@@ -1559,7 +1687,7 @@ document.addEventListener('click', e => {
     case 'add-team': s.team.push({ name: '', role: '' }); break;
     case 'add-support': s.supports.push({ type: '', hours: '', teacher: '' }); break;
     case 'del-support': s.supports.splice(+d.i, 1); break;
-    case 'excel': (view.format === 'integrative' ? exportExcelIntegrative : exportExcel)(s); return;
+    case 'excel': ({ integrative: exportExcelIntegrative, detailed: exportExcelDetailed }[view.format] || exportExcel)(s); return;
     case 'format': view.format = d.v; break;
     case 'del-team': s.team.splice(+d.i, 1); break;
     case 'add-goal': {

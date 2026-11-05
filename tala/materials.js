@@ -696,6 +696,53 @@ const OPPORTUNITIES = {
 };
 const EVAL_METHODS = ['משימות מהחוברת בשיעור', 'תצפית בכיתה או בחצר', 'תצפית', 'תיעוד מעקב'];
 
+// ---------- detailed IEP form (תכנית חינוכית יחידנית: אבחונים וטיפולים, תחומי תפקוד, מטרות) ----------
+// Assessment / treatment kinds of the form's table (stored keys; shown translated).
+const ASSESS_KINDS = ['קלינאית תקשורת', 'ריפוי בעיסוק', 'פסיכולוגי', 'ראייה', 'שמיעה', 'ועדת השמה'];
+// Functional areas of the form, each with strengths and areas to strengthen (kept in s.profile by id).
+const FUNCTION_ROWS = [
+  { id: 'f_cog', title: 'תחום קוגניטיבי', desc: 'קשב, זיכרון, שליפה, קצב עבודה, הבנת הוראות' },
+  { id: 'f_read', title: 'קריאה', desc: 'זיהוי אותיות, צירופים, שטף, הבנה' },
+  { id: 'f_write', title: 'כתיבה', desc: 'איכות התוצר, קצב, אחיזה, העתקה, תכנון' },
+  { id: 'f_listen', title: 'האזנה ודיבור', desc: 'הבנת הנשמע, העברת מסר בעל פה, שיח' },
+  { id: 'f_lang', title: 'ידע שפתי ולשוני', desc: 'תחבירי, אורתוגרפי, לקסיקלי, מורפולוגי, סמנטי, פונולוגי' },
+  { id: 'f_emo', title: 'תחום התנהגותי – רגשי', desc: 'מוטיבציה, התמדה, תסכול, עצמאות, דימוי עצמי' },
+  { id: 'f_soc', title: 'תחום חברתי', desc: 'קשרים עם חברים, קשר עין, השתלבות' },
+];
+// Goals of the form that the goal bank didn't have yet.
+GOALS.push(...[
+  ['n_name', 'القراءة', 'ان يسمي الطالب اسماء الحروف خلال لعبة بطاقات', 'القراءة', ['أ']],
+  ['n_phon', 'القراءة', 'ان يميز الطالب الصوت الاول والصوت الاخير في الكلمة', 'القراءة', ['أ']],
+  ['n_syl', 'القراءة', 'ان يقسم الطالب كلمات بسيطة الى مقاطع (حتى 3 مقاطع)', 'القراءة', ['أ']],
+  ['n_del', 'القراءة', 'ان يحذف الطالب صوتا من بداية الكلمة او وسطها او نهايتها ويلفظ الكلمة الجديدة', 'القراءة', ['أ', 'ب']],
+  ['n_define', 'المعرفة اللغوية', 'ان يشرح الطالب معنى كلمة في سياقات مختلفة', 'المعرفة اللغوية'],
+].map(([id, area, t, cur, level]) => ({ id, d: 'arabic', area, t, cur, level })));
+for (const g of GOALS) GOAL_BY_ID[g.id] ??= g;
+DEVELOPMENTAL.push(
+  { id: 'retr', label: 'שליפה ועיבוד מידע', domain: 'cognitive', items: [
+    ['rt1', 'שליפה מהירה (שיום מהיר של עצמים, מספרים, אותיות)', 'התלמיד ישלוף מידע בצורה מהירה יותר'],
+    ['rt2', 'שטף סמנטי ופונולוגי (הפקת מילים לפי קטגוריה או צליל)', 'התלמיד יפיק מילים לפי קטגוריה ולפי צליל פותח בזמן קצוב'],
+    ['rt3', 'עיבוד מידע בצורה מאורגנת', 'התלמיד יעבד מידע בצורה מובנית וסכמתית'],
+    ['rt4', 'שימוש באסטרטגיות עבודה', 'התלמיד ישתמש באסטרטגיות עבודה יעילות במהלך ביצוע מטלות'],
+  ] },
+);
+// Means and resources of the form, used as teaching methods of the matching goals.
+STRATEGIES.push(
+  { id: 'letters', t: 'משחקי אותיות: לוטו אותיות, סרגל האותיות, קלפי אותיות, פאזל אותיות, משחק זיכרון, סרטון אותיות עם תומכי זיכרון', goals: ['r5', 'r6', 'r7', 'n_name'] },
+  { id: 'similar', t: 'מצגת אותיות דומות מבחינה אורתוגרפית', goals: ['r6', 'r7', 'r8'] },
+  { id: 'phon', t: 'משחקי מודעות פונולוגית: תמונות לצליל פותח וסוגר, מצא את הצליל הפותח, חרוזים, הבחנה שמיעתית', goals: ['n_phon', 'la9', 'r9', 'r12'] },
+  { id: 'syl', t: 'חלוקה להברות: המורה משמיעה מילה והתלמיד מחלק להברות, פאזל הברות', goals: ['n_syl', 'r14', 'r15', 'g10', 'g11'] },
+  { id: 'del', t: 'הפקת מילים בהשמטת פונמה בתחילת המילה, באמצעה ובסופה', goals: ['n_del'] },
+  { id: 'rapid', t: 'טבלאות שיום מהיר (עצמים, מספרים, אותיות) עם עקומת זמן', goals: ['rt1', 'rt2'] },
+  { id: 'memsup', t: 'תומכי זיכרון חזותיים ושמיעתיים', goals: ['rt3', 'rt4', 'c16', 'au6', 'vi6', 'g9'] },
+  { id: 'vocab', t: 'שיבוץ מילים במשפטים, משחק המסלול ומשחקי קלפים להעשרת אוצר המילים', goals: ['n_define', 'o2', 'la3'] },
+);
+for (const sec of ACADEMIC) for (const it of sec.items) {
+  if (it[0] === 'd1') it[2].push('n_name');
+  if (it[0] === 'd3') it[2].push('n_phon', 'n_syl', 'n_del');
+}
+for (const st of STRATEGIES.slice(-8)) for (const g of st.goals) (STRATEGY_FOR[g] ??= []).push(st.t);
+
 // ---------- localization ----------
 // Every text above is written once, in the language of its source material. Here the texts that are
 // shown are put into the chosen language (dictionaries in i18n/). Ids and stored keys never change.
@@ -727,7 +774,7 @@ for (const sec of ACADEMIC) sec.kind = sec.sec.includes('الحسابية') ? 'm
   for (const st of STRATEGIES) for (const g of st.goals) (STRATEGY_FOR[g] ??= []).push(st.t);
   for (const k of Object.keys(PARENT_RECS)) { const v = PARENT_RECS[k].map(T); delete PARENT_RECS[k]; PARENT_RECS[T(k)] = v; }
   for (const st of PLAN_STEPS) st[1] = T(st[1]);
-  for (const r of PROFILE_ROWS) { r.title = T(r.title); r.desc = T(r.desc); }
+  for (const r of [...PROFILE_ROWS, ...FUNCTION_ROWS]) { r.title = T(r.title); r.desc = T(r.desc); }
   CURRICULUM.title = T(CURRICULUM.title); tr(CURRICULUM.domains);
 })();
 const curriculumStageText = g => T(curriculumStage(g));
