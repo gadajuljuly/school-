@@ -1175,6 +1175,8 @@ function showAIError(pop, m) {
     'not-deployed': 'עוזר הכתיבה עוד לא הופעל בשרת.', 'not-signed-in': 'צריך להיכנס מחדש לחשבון.',
     'api-key': 'מפתח ה-AI בשרת חסר או שגוי.', busy: 'העוזר עמוס כרגע. נסי שוב בעוד דקה.',
     refusal: 'העוזר לא יכול לעזור עם הטקסט הזה.', empty: 'אין טקסט לעבוד עליו.',
+    'not-found': `השרת לא מצא את הפונקציה "${esc(window.TALA_CONFIG?.aiFunction || 'tala-ai')}".`,
+    'api-404': 'שם המודל של Gemini לא נמצא (api-404).', 'empty-result': 'העוזר החזיר תשובה ריקה. נסי שוב.',
   }[m] || 'משהו השתבש (' + esc(m) + ').'}</p><button type="button" class="btn small" data-ai-do="cancel">סגירה</button>`;
   pop.onclick = e => { if (e.target.closest('[data-ai-do]')) closeAI(); };
 }

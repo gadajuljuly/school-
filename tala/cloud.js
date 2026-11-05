@@ -108,7 +108,11 @@ const Cloud = (() => {
     const { data, error } = await sb.functions.invoke(cfg.aiFunction || 'tala-ai', { body: payload });
     if (error) {
       let code = 'server';
-      try { code = (await error.context.json()).error || code; } catch { if (/Failed to send|fetch/i.test(error.message || '')) code = 'not-deployed'; }
+      try {
+        const res = error.context;
+        const body = await res.json();
+        code = body.error || (res.status === 404 ? 'not-found' : `http-${res.status} ${body.message || body.msg || ''}`.trim());
+      } catch { if (/Failed to send|fetch/i.test(error.message || '')) code = 'not-deployed'; }
       throw new Error(code);
     }
     return data.text;

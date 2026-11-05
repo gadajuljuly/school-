@@ -1,4 +1,4 @@
-const CACHE = 'tala-v14';
+const CACHE = 'tala-v15';
 const FILES = ['./', './index.html', './config.js', './cloud.js', './vendor/supabase-js-2.118.0.js', './materials.js', './xlsx.js', './app.js', './style.css', './manifest.json', './icon.svg'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)));
@@ -14,7 +14,7 @@ self.addEventListener('fetch', e => {
   // Only this app's own files; server (Supabase) requests go straight to the network.
   if (new URL(e.request.url).origin !== self.location.origin) return;
   e.respondWith(
-    fetch(e.request).then(r => {
+    fetch(e.request, { cache: 'no-cache' }).then(r => {
       const copy = r.clone();
       caches.open(CACHE).then(c => c.put(e.request, copy));
       return r;
