@@ -185,3 +185,6 @@ select.cur-select { width: auto; padding: 3px 8px; font-size: .82rem; border-rad
 .login { max-width: 460px; margin: 30px auto; text-align: center; display: grid; gap: 12px; }
 .login .field { text-align: start; }
 .sync { font-size: .8rem; color: rgba(255,255,255,.85); white-space: nowrap; }
+.doc .interim td.c { width: 10%; font-size: 1.1em; }
+.doc .interim td.ptitle { background: #eef4f2; width: 12%; }
+.doc .sign.four { grid-template-columns: repeat(4, 1fr); }

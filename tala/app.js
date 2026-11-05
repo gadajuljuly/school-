@@ -29,6 +29,7 @@ const NEEDS_GOAL = 3;   // 1–3 → goals in the plan
 const scaleLabel = n => SCALE.find(x => x[0] === +n)?.[1] || '';
 
 // Every mapping item in one shape: {id, label, goals: [{domain, area, text, ref, level}]}.
+const fromInterim = sec => ({ ...fromAcademic(sec), needs: INTERIM_NEEDS_GOAL, interim: true });
 const fromAcademic = sec => ({ title: sec.sec, items: sec.items.map(([id, label, ids]) => ({
   id, label, goals: ids.map(g => GOAL_BY_ID[g]).filter(Boolean).map(g => ({ domain: g.d, area: g.area, text: g.t, ref: g.id, level: g.level })),
 })) });
@@ -43,7 +44,7 @@ const func = (...ids) => FUNCTIONAL.filter(s => s.items.some(i => ids.includes(i
 const dev = (...ids) => DEVELOPMENTAL.filter(s => ids.includes(s.id)).map(fromDev);
 
 const MAP_GROUPS = [
-  { id: 'arabic', domain: 'arabic', title: 'ערבית – קריאה, הבנה, כתיבה ושפה', reading: true, sections: acad(t => !t.includes('الحسابية')) },
+  { id: 'arabic', domain: 'arabic', title: 'ערבית – קריאה, הבנה, כתיבה ושפה', reading: true, sections: [...INTERIM.map(fromInterim), ...acad(t => !t.includes('الحسابية'))] },
   { id: 'math', domain: 'math', title: 'חשבון', sections: [...acad(t => t.includes('الحسابية')), ...dev('quant')] },
   { id: 'cognitive', domain: 'cognitive', title: 'תלמידאות, קשב, חשיבה והרגלי למידה', sections: [...dev('student', 'indep'), ...func('t', 'p', 'g', 'h'), ...dev('att', 'vis', 'think', 'ready')] },
   { id: 'comm', domain: 'comm', title: 'שפה, דיבור ותקשורת', sections: dev('lang', 'aud') },
@@ -217,7 +218,7 @@ function newObjective(s, { text, domain, area, ref }) {
     id: uid(), ref: ref || '', area: area || '',
     curriculum: (ref && GOAL_BY_ID[ref]?.d === domain && GOAL_BY_ID[ref].cur) || '',
     text: fillBlanks(text, s), period: 'حتى نهاية السنة', criterion: 'بنسبة نجاح 80%',
-    methods: methodsFor(domain, area), partners: partnersFor(domain), status: 'todo', notes: '', midEval: '', finalEval: '',
+    methods: [...(STRATEGY_FOR[ref] || []).slice(0, 1), methodsFor(domain, area)].join('، '), partners: partnersFor(domain), status: 'todo', notes: '', midEval: '', finalEval: '',
   };
 }
 function addObjective(s, sec, item) {
@@ -244,7 +245,7 @@ function buildPlan(s, rebuild) {
     const note = s.ratings[item.id]?.note?.trim();
     const domain = item.goals[0]?.domain || item.group.domain;
     const line = `${item.label} (${r})${note ? ' – ' + note : ''}`;
-    if (r > NEEDS_GOAL) { push(strengths, domain, line); continue; }
+    if (r > (item.section.needs || NEEDS_GOAL)) { push(strengths, domain, line); continue; }
     push(difficulties, domain, line);
     const fitting = item.goals.filter(g => fitsLevel(g, s.readingLevel));
     for (const g of (fitting.length ? fitting : item.goals)) {
@@ -551,12 +552,13 @@ function tabDetails(s) {
   </div>`;
 }
 
-function rateRow(s, item) {
+function rateRow(s, item, sec) {
   const v = s.ratings[item.id]?.b || '';
+  const tip = n => sec?.interim ? `${INTERIM_SCALE[n]}` : scaleLabel(n);
   return `<tr>
     <td dir="auto">${esc(item.label)}</td>
     <td><div class="rate5" role="radiogroup" aria-label="${esc(item.label)}">
-      ${SCALE.map(([n, l]) => `<label class="r${n}" title="${l}"><input type="radio" name="rate-${item.id}" value="${n}" data-path="ratings.${item.id}.b" ${String(n) === String(v) ? 'checked' : ''}><span>${n}</span></label>`).join('')}
+      ${SCALE.map(([n]) => `<label class="r${n}" title="${tip(n)}"><input type="radio" name="rate-${item.id}" value="${n}" data-path="ratings.${item.id}.b" ${String(n) === String(v) ? 'checked' : ''}><span>${n}</span></label>`).join('')}
       <button type="button" class="clear" data-act="clear-rate" data-id="${item.id}" title="ניקוי" ${v ? '' : 'hidden'}>✕</button>
     </div></td>
     <td><input type="text" data-path="ratings.${item.id}.note" value="${esc(s.ratings[item.id]?.note)}" dir="auto" placeholder="הערה"></td>
@@ -608,7 +610,8 @@ function tabMapping(s) {
         const n = sec.items.filter(i => rating(s, i.id)).length;
         return `<details class="map-sec" data-key="${key}" ${open[key] ? 'open' : ''}>
           <summary dir="auto">${esc(sec.title)} <span class="count">${n}/${sec.items.length}</span>${sec.source ? '<span class="src" title="' + esc(DEV_SOURCE) + '">ⓘ</span>' : ''}</summary>
-          <div class="scroll-x"><table class="table rate-table">${sec.items.map(i => rateRow(s, i)).join('')}</table></div>
+          ${sec.interim ? `<div class="cur-note" dir="rtl">${[5, 4, 3, 2, 1].map(n => `<b>${n}</b> ${INTERIM_SCALE[n]}`).join(' · ')} — 1–${INTERIM_NEEDS_GOAL} تدخل الخطة كأهداف</div>` : ''}
+          <div class="scroll-x"><table class="table rate-table">${sec.items.map(i => rateRow(s, i, sec)).join('')}</table></div>
         </details>`;
       }).join('')}
     </div>`;
@@ -827,9 +830,26 @@ function docMatya(s) {
   </div>`;
 }
 
+function interimPage(s) {
+  const secs = INTERIM.map(sec => [sec, sec.items.filter(([id]) => rating(s, id))]).filter(([, items]) => items.length);
+  if (!secs.length) return '';
+  const levels = [5, 4, 3, 2, 1];
+  return `<div class="page-break"></div><div dir="rtl">
+    <h1>تقييم مرحلي – اللغة العربية</h1><div class="sub">مجموعة الدعم</div>
+    <table class="kv"><tr><td>اسم التلميذ\\ة</td><td>${esc(fullName(s))}</td><td>رقم الهوية</td><td>${esc(s.idNumber)}</td></tr>
+      <tr><td>الصّف</td><td>${esc([ARABIC_GRADES[+s.grade], s.className].filter(Boolean).join(' '))}</td><td>التّاريخ</td><td></td></tr></table>
+    <table class="interim"><tr><th></th><th>المهارة</th>${levels.map(n => `<th class="c">${INTERIM_SCALE[n]}</th>`).join('')}</tr>
+      ${secs.map(([sec, items]) => items.map(([id, label], k) => `<tr>${k ? '' : `<td rowspan="${items.length}" class="ptitle"><b>${esc(sec.sec.replace('التقييم المرحلي – ', ''))}</b></td>`}
+        <td>${esc(label)}</td>${levels.map(n => `<td class="c">${rating(s, id) === n ? '✓' : ''}</td>`).join('')}</tr>`).join('')).join('')}
+    </table>
+    ${s.mapNotes.arabic ? `<table class="kv"><tr><td>ملاحظات</td><td class="pre">${esc(s.mapNotes.arabic)}</td></tr></table>` : ''}
+    <div class="sign four"><div>مديرة المدرسة</div><div>مربية الصف</div><div>معلمة الدعم</div><div>توقيع ولي امر التلميذ/ة</div></div>
+  </div>`;
+}
+
 function tailPages(s) {
   const services = s.team.filter(m => m.name && m.role && !/הורה|מחנך|מנהל/.test(m.role));
-  return `${s.parentRecs.trim() ? `<div class="page-break"></div><h1>המלצות להורים</h1><div class="sub">${esc(fullName(s))}</div>
+  return `${interimPage(s)}${s.parentRecs.trim() ? `<div class="page-break"></div><h1>המלצות להורים</h1><div class="sub">${esc(fullName(s))}</div>
       <ul class="recs" dir="auto">${s.parentRecs.split('\n').filter(x => x.trim()).map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
     ${s.goals.length ? `<div class="page-break"></div><h1>אישור הורים</h1>
       <p class="consent">אנו, ההורים של <b>${esc(fullName(s))}</b>, מאשרים בזאת שקיבלנו מידע על תפקודו/ה בבית הספר והסבר על תכנית הלימודים האישית (תל"א) המתוכננת לשנת הלימודים <bdi dir="ltr">${esc(s.year)}</bdi>.</p>
@@ -881,7 +901,25 @@ function exportExcel(s) {
     sheets.push({ name: `מטרה ${gi + 1} - ${domainLabel(g.domain)}`, landscape: true, cols: [38, 16, 34, 22, 24, 24], rows: r, merges: ['A1:F1', 'A3:F3'] });
   });
 
-  // 4. Mapping (the data the plan was built from)
+  // 4. Interim assessment form (תקييم مرحلي), filled from the ratings
+  const interimRows = INTERIM.map(sec => [sec, sec.items.filter(([id]) => rating(s, id))]).filter(([, items]) => items.length);
+  if (interimRows.length) {
+    const levels = [5, 4, 3, 2, 1];
+    const ir = [[C('تقييم مرحلي – اللغة العربية', 'title')], [C('مجموعة الدعم', 'center')], [],
+      [C('اسم التلميذ\\ة:', 'label'), C(fullName(s)), C('رقم الهوية:', 'label'), C(s.idNumber), C('الصّف:', 'label'), C([ARABIC_GRADES[+s.grade], s.className].filter(Boolean).join(' ')), C('التّاريخ:', 'label')],
+      [], [C('', 'head'), C('المهارة', 'head'), ...levels.map(n => C(INTERIM_SCALE[n], 'head'))]];
+    const im = ['A1:G1', 'A2:G2'];
+    for (const [sec, items] of interimRows) {
+      const start = ir.length + 1;
+      items.forEach(([id, label], k) => ir.push([C(k ? '' : sec.sec.replace('التقييم المرحلي – ', ''), 'label'), C(label), ...levels.map(n => C(rating(s, id) === n ? '✓' : '', 'center'))]));
+      if (items.length > 1) im.push(`A${start}:A${ir.length}`);
+    }
+    ir.push([], [C('ملاحظات:', 'label'), C(s.mapNotes.arabic || ''), C(''), C(''), C(''), C(''), C('')]); im.push(`B${ir.length}:G${ir.length}`);
+    ir.push([], [C('مديرة المدرسة', 'center'), C(''), C('مربية الصف', 'center'), C(''), C('معلمة الدعم', 'center'), C(''), C('توقيع ولي امر التلميذ/ة', 'center')]);
+    sheets.push({ name: 'تقييم مرحلي', cols: [16, 46, 11, 11, 11, 11, 13], rows: ir, merges: im });
+  }
+
+  // 5. Mapping (the data the plan was built from)
   const map = [[C('מיפוי והערכה', 'title')], [C(`סולם: ${SCALE.map(([n, l]) => `${n} – ${l}`).join(' · ')}`, 'wrap')], []];
   const mm = ['A1:D1', 'A2:D2'];
   for (const grp of MAP_GROUPS) {
