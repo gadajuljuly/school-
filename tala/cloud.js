@@ -64,6 +64,38 @@ const Cloud = (() => {
     if (!data.session) throw new Error('confirm-required');
     await setUser(data.user);
   }
+  // Recovery code: 8 characters without look-alikes, shown once as XXXX-XXXX.
+  function newRecoveryCode() {
+    const abc = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+    const v = crypto.getRandomValues(new Uint32Array(8));
+    const c = [...v].map(n => abc[n % abc.length]).join('');
+    return c.slice(0, 4) + '-' + c.slice(4);
+  }
+  const cleanCode = c => String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  async function setRecoveryCode() {
+    const code = newRecoveryCode();
+    const { error } = await sb.rpc('tala_set_recovery', { p_code: cleanCode(code) });
+    if (error) throw error;
+    return code;
+  }
+  async function resetWithCode(phone, code, password) {
+    const email = phoneId(phone);
+    if (!email) throw new Error('bad-phone');
+    const { data, error } = await sb.rpc('tala_reset_with_code', { p_email: email, p_code: cleanCode(code), p_password: password });
+    if (error) throw error;
+    if (data !== 'ok') throw new Error(data);
+    await signInPassword(email, password);
+  }
+  async function adminUsers() {
+    const { data, error } = await sb.rpc('tala_admin_users');
+    if (error) throw error;
+    return data;
+  }
+  async function adminSetPassword(email, password) {
+    const { data, error } = await sb.rpc('tala_admin_set_password', { p_email: email, p_password: password });
+    if (error) throw error;
+    return data;
+  }
   const displayName = () => user?.user_metadata?.name || phoneOf(user?.email);
 
   async function signInPassword(email, password) {
@@ -159,7 +191,7 @@ const Cloud = (() => {
   }
 
   return {
-    enabled, init, signInPhone, signUpPhone, phoneOf, displayName, signInPassword, changePassword, sendCode, verifyCode, signOut, sync, track, changed, removed, flushSoon, allStudents,
+    enabled, init, setRecoveryCode, resetWithCode, adminUsers, adminSetPassword, signInPhone, signUpPhone, phoneOf, displayName, signInPassword, changePassword, sendCode, verifyCode, signOut, sync, track, changed, removed, flushSoon, allStudents,
     get user() { return user; }, get admin() { return admin; }, get status() { return status; },
   };
 })();

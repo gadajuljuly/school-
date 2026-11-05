@@ -188,3 +188,5 @@ select.cur-select { width: auto; padding: 3px 8px; font-size: .82rem; border-rad
 .doc .interim td.c { width: 10%; font-size: 1.1em; }
 .doc .interim td.ptitle { background: #eef4f2; width: 12%; }
 .doc .sign.four { grid-template-columns: repeat(4, 1fr); }
+.rcode { font-family: ui-monospace, Consolas, monospace; font-size: 2rem; font-weight: 700; letter-spacing: 4px; background: var(--brand-2); color: var(--brand); border-radius: 12px; padding: 14px; }
+.teachers summary { cursor: pointer; }
