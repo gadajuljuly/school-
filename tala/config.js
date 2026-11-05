@@ -2,6 +2,6 @@
  * Both values are in Supabase: Project Settings → API ("Project URL" and the "anon public" key).
  * The anon key is meant to be public; access to the data is enforced by the rules in supabase/schema.sql. */
 window.TALA_CONFIG = {
-  supabaseUrl: '',
-  supabaseAnonKey: '',
+  supabaseUrl: 'https://tecmncvrojzhuxmzsfrv.supabase.co',
+  supabaseAnonKey: 'sb_publishable_U3BiJ4BxccEfDD2hcr9lOQ_wcxq9rDs',
 };
