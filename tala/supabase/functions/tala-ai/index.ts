@@ -3,12 +3,19 @@
 // Secrets (Edge Functions → Secrets), one of:
 //   GEMINI_API_KEY    – Google Gemini, free tier (on the free tier Google may use the texts to improve its products)
 //   ANTHROPIC_API_KEY – Claude, paid
-// Optional: GEMINI_MODEL (default "gemini-flash-latest").
+// Optional: GEMINI_MODEL (tried first; then the other free Gemini models below).
 import Anthropic from "npm:@anthropic-ai/sdk";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY");
-const GEMINI_MODEL = Deno.env.get("GEMINI_MODEL") || "gemini-flash-latest";
+// Free Gemini models, tried in order when one is busy (503/429) or not found.
+const GEMINI_MODELS = [
+  Deno.env.get("GEMINI_MODEL"),
+  "gemini-flash-latest",
+  "gemini-2.5-flash",
+  "gemini-flash-lite-latest",
+  "gemini-2.5-flash-lite",
+].filter((m, i, a): m is string => !!m && a.indexOf(m) === i);
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -40,30 +47,43 @@ const TASKS: Record<string, string> = {
 
 class AiError extends Error {}
 
-// Google Gemini (REST generateContent).
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// Google Gemini (REST generateContent): busy or missing models fall through to the next one.
 async function askGemini(prompt: string): Promise<string> {
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_KEY! },
-    body: JSON.stringify({
-      system_instruction: { parts: [{ text: SYSTEM }] },
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: { maxOutputTokens: 4000, temperature: 0.4 },
-    }),
-  });
-  if (res.status === 429) throw new AiError("busy");
-  if (res.status === 400 || res.status === 401 || res.status === 403) {
-    const body = await res.text();
-    throw new AiError(/API key|PERMISSION_DENIED|UNAUTHENTICATED/i.test(body) ? "api-key" : `api-${res.status}`);
+  let last = "busy";
+  for (const model of GEMINI_MODELS) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_KEY! },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: SYSTEM }] },
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          generationConfig: { maxOutputTokens: 4000, temperature: 0.4 },
+        }),
+      });
+      if (res.status === 503 || res.status === 500 || res.status === 429) {
+        last = "busy";
+        if (attempt === 0) { await sleep(800); continue; }
+        break; // next model
+      }
+      if (res.status === 404) { last = "api-404"; break; } // model not available: next model
+      if (res.status === 400 || res.status === 401 || res.status === 403) {
+        const body = await res.text();
+        throw new AiError(/API key|PERMISSION_DENIED|UNAUTHENTICATED/i.test(body) ? "api-key" : `api-${res.status}`);
+      }
+      if (!res.ok) throw new AiError(`api-${res.status}`);
+      const data = await res.json();
+      const cand = data.candidates?.[0];
+      if (!cand || cand.finishReason === "SAFETY" || data.promptFeedback?.blockReason) throw new AiError("refusal");
+      return (cand.content?.parts ?? [])
+        .map((p: { text?: string; thought?: boolean }) => (p.thought ? "" : p.text ?? ""))
+        .join("")
+        .trim();
+    }
   }
-  if (!res.ok) throw new AiError(`api-${res.status}`);
-  const data = await res.json();
-  const cand = data.candidates?.[0];
-  if (!cand || cand.finishReason === "SAFETY" || data.promptFeedback?.blockReason) throw new AiError("refusal");
-  return (cand.content?.parts ?? [])
-    .map((p: { text?: string; thought?: boolean }) => (p.thought ? "" : p.text ?? ""))
-    .join("")
-    .trim();
+  throw new AiError(last);
 }
 
 // Claude (Anthropic SDK).
