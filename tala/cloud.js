@@ -1,4 +1,4 @@
-/* Server sync (Supabase): e-mail sign-in, each teacher's students saved to the server,
+/* Server sync (Supabase): sign-in with phone + password (reset by e-mail), each teacher's students saved to the server,
  * and an administrator view of all teachers. Off when config.js is empty.
  * The data stays usable offline: changes wait in a queue and are sent when back online. */
 'use strict';
@@ -14,15 +14,21 @@ const Cloud = (() => {
   const writeQueue = q => localStorage.setItem(qKey(), JSON.stringify(q));
   const setStatus = s => { status = s; onStatus(s); };
 
-  async function init({ onAuth, onStatusChange }) {
+  // A password-reset link from the e-mail lands here with "type=recovery" in the address.
+  let recovering = /type=recovery/.test(location.hash);
+  let onRecovery = () => {};
+
+  async function init({ onAuth, onStatusChange, onPasswordRecovery }) {
     if (!enabled) return;
     onStatus = onStatusChange || onStatus;
+    onRecovery = onPasswordRecovery || onRecovery;
     sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, {
       auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
     });
     const { data } = await sb.auth.getSession();
     await setUser(data.session?.user || null);
-    sb.auth.onAuthStateChange(async (_ev, session) => {
+    sb.auth.onAuthStateChange(async (ev, session) => {
+      if (ev === 'PASSWORD_RECOVERY') { recovering = true; await setUser(session?.user || null); onRecovery(); return; }
       const next = session?.user || null;
       if ((next?.id || null) === (user?.id || null)) return;
       await setUser(next);
@@ -30,6 +36,11 @@ const Cloud = (() => {
     });
     window.addEventListener('online', () => flushSoon(0));
     setInterval(() => flushSoon(0), 60000);
+  }
+  const isRecovering = () => recovering && !!user;
+  function recoveryDone() {
+    recovering = false;
+    if (location.hash) history.replaceState(null, '', location.pathname + location.search);
   }
 
   async function setUser(u) {
@@ -39,84 +50,80 @@ const Cloud = (() => {
     admin = !!(data && data.length);
   }
 
-  // Phone + password: the phone number is turned into an internal address (no SMS, no e-mail sent).
-  function phoneId(phone) {
+  // Any password is allowed (the teacher's choice). The server needs at least 6 characters,
+  // so the app always adds the same ending before sending it.
+  const pw = p => String(p ?? '') + '~tala';
+
+  // Phone numbers are kept as international digits: 050-1234567 → 972501234567.
+  function normPhone(phone) {
     let d = String(phone || '').replace(/\D/g, '');
     if (d.startsWith('00')) d = d.slice(2);
     if (d.startsWith('0')) d = '972' + d.slice(1);
-    return d.length >= 11 && d.length <= 13 ? `${d}@tala.app` : null;
+    return d.length >= 11 && d.length <= 13 ? d : null;
   }
-  function phoneOf(id) {
-    const m = /^(\d+)@tala\.app$/.exec(id || '');
-    if (!m) return id || '';
-    return m[1].startsWith('972') ? '0' + m[1].slice(3) : '+' + m[1];
+  function showPhone(d) {
+    if (!d) return '';
+    return d.startsWith('972') ? '0' + d.slice(3) : '+' + d;
   }
+  const maskEmail = e => e.replace(/^(.)(.*)(@.*)$/, (_, a, b, c) => a + '*'.repeat(Math.min(b.length, 6)) + c);
+  async function emailForPhone(phone) {
+    const p = normPhone(phone);
+    if (!p) throw new Error('bad-phone');
+    const { data, error } = await sb.rpc('tala_email_for_phone', { p_phone: p });
+    if (error) throw error;
+    return data;
+  }
+
+  // Sign in: phone + password (the account behind the phone is the teacher's e-mail).
   async function signInPhone(phone, password) {
-    const email = phoneId(phone);
-    if (!email) throw new Error('bad-phone');
+    const email = await emailForPhone(phone);
+    if (!email) throw new Error('no-user');
     return signInPassword(email, password);
   }
-  async function signUpPhone(phone, password, name) {
-    const email = phoneId(phone);
-    if (!email) throw new Error('bad-phone');
-    const { data, error } = await sb.auth.signUp({ email, password, options: { data: { name, phone: phoneOf(email) } } });
+  // Register: name, phone, e-mail, password.
+  async function signUpPhone(phone, email, password, name) {
+    const p = normPhone(phone);
+    if (!p) throw new Error('bad-phone');
+    if (await emailForPhone(phone)) throw new Error('phone-taken');
+    const { data, error } = await sb.auth.signUp({ email, password: pw(password), options: { data: { name, phone: showPhone(p) } } });
     if (error) throw error;
     if (!data.session) throw new Error('confirm-required');
     await setUser(data.user);
+    const r = await sb.rpc('tala_register_phone', { p_phone: p });
+    if (r.error) throw r.error;
+    if (r.data !== 'ok') throw new Error(r.data === 'taken' ? 'phone-taken' : r.data);
   }
-  // Recovery code: 8 characters without look-alikes, shown once as XXXX-XXXX.
-  function newRecoveryCode() {
-    const abc = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-    const v = crypto.getRandomValues(new Uint32Array(8));
-    const c = [...v].map(n => abc[n % abc.length]).join('');
-    return c.slice(0, 4) + '-' + c.slice(4);
-  }
-  const cleanCode = c => String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-  async function setRecoveryCode() {
-    const code = newRecoveryCode();
-    const { error } = await sb.rpc('tala_set_recovery', { p_code: cleanCode(code) });
+  // Forgotten password: an e-mail with a link to choose a new password. Returns the (masked) address.
+  async function forgotPassword(phoneOrEmail) {
+    const v = String(phoneOrEmail || '').trim();
+    const email = v.includes('@') ? v : await emailForPhone(v);
+    if (!email) throw new Error('no-user');
+    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
     if (error) throw error;
-    return code;
+    return maskEmail(email);
   }
-  async function resetWithCode(phone, code, password) {
-    const email = phoneId(phone);
-    if (!email) throw new Error('bad-phone');
-    const { data, error } = await sb.rpc('tala_reset_with_code', { p_email: email, p_code: cleanCode(code), p_password: password });
-    if (error) throw error;
-    if (data !== 'ok') throw new Error(data);
-    await signInPassword(email, password);
-  }
+
   async function adminUsers() {
     const { data, error } = await sb.rpc('tala_admin_users');
     if (error) throw error;
     return data;
   }
   async function adminSetPassword(email, password) {
-    const { data, error } = await sb.rpc('tala_admin_set_password', { p_email: email, p_password: password });
+    const { data, error } = await sb.rpc('tala_admin_set_password', { p_email: email, p_password: pw(password) });
     if (error) throw error;
     return data;
   }
-  const displayName = () => user?.user_metadata?.name || phoneOf(user?.email);
+  const displayName = () => user?.user_metadata?.name || user?.email || '';
+  const userPhone = () => user?.user_metadata?.phone || '';
 
   async function signInPassword(email, password) {
-    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: pw(password) });
     if (error) throw error;
     await setUser(data.user);
   }
   async function changePassword(password) {
-    const { error } = await sb.auth.updateUser({ password });
+    const { error } = await sb.auth.updateUser({ password: pw(password) });
     if (error) throw error;
-  }
-  async function sendCode(email) {
-    const { error } = await sb.auth.signInWithOtp({
-      email, options: { emailRedirectTo: location.origin + location.pathname, shouldCreateUser: true },
-    });
-    if (error) throw error;
-  }
-  async function verifyCode(email, token) {
-    const { data, error } = await sb.auth.verifyOtp({ email, token, type: 'email' });
-    if (error) throw error;
-    await setUser(data.user);
   }
   async function signOut() { await sb.auth.signOut(); user = null; admin = false; }
 
@@ -191,7 +198,8 @@ const Cloud = (() => {
   }
 
   return {
-    enabled, init, setRecoveryCode, resetWithCode, adminUsers, adminSetPassword, signInPhone, signUpPhone, phoneOf, displayName, signInPassword, changePassword, sendCode, verifyCode, signOut, sync, track, changed, removed, flushSoon, allStudents,
+    enabled, init, isRecovering, recoveryDone, signInPhone, signUpPhone, forgotPassword, showPhone, displayName, userPhone,
+    adminUsers, adminSetPassword, changePassword, signOut, sync, track, changed, removed, flushSoon, allStudents,
     get user() { return user; }, get admin() { return admin; }, get status() { return status; },
   };
 })();

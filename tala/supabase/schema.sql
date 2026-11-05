@@ -65,8 +65,6 @@ grant select, insert, update, delete on public.tala_students to authenticated;
 grant select on public.tala_admins to authenticated;
 grant execute on function public.tala_is_admin() to authenticated;
 
--- Sign-in is by phone number + password; each phone is stored as <international number>@tala.app
--- (050-1234567 → 972501234567@tala.app). In Supabase: Authentication → Sign In / Providers → Email →
--- turn OFF "Confirm email", so teachers can register in the app without an e-mail.
--- ↓↓↓ The administrator: replace with the administrator's phone in this form ↓↓↓
-insert into public.tala_admins (email) values ('972XXXXXXXXX@tala.app') on conflict do nothing;
+-- The administrator (sees every teacher's students): her e-mail.
+-- ↓↓↓ Replace with the administrator's e-mail ↓↓↓
+insert into public.tala_admins (email) values (lower('YOUR_EMAIL@example.com')) on conflict do nothing;

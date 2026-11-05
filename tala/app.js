@@ -320,9 +320,9 @@ function render() {
   const back = document.getElementById('backBtn');
   const actions = document.getElementById('topActions');
   const title = document.getElementById('title');
-  if (view.name === 'recovery') {
+  if (view.name === 'newpw') {
     back.hidden = true; title.textContent = 'תל"א / תח"י'; actions.innerHTML = '';
-    renderRecovery();
+    renderNewPassword();
   } else if (view.name === 'account') {
     back.hidden = false; title.textContent = 'החשבון שלי'; actions.innerHTML = '';
     renderAccount();
@@ -367,59 +367,55 @@ function showSync(st) {
 function renderLogin() {
   const mode = view.loginMode || 'login';
   const reg = mode === 'register', forgot = mode === 'forgot';
-  const title = reg ? 'הרשמה ל-תל"א / תח"י' : forgot ? 'שחזור סיסמה' : 'כניסה ל-תל"א / תח"י';
+  if (forgot && view.sentTo) {
+    app.innerHTML = `<div class="card login"><div class="big">📧</div><h2>שלחנו לך מייל</h2>
+      <p>שלחנו קישור לבחירת סיסמה חדשה אל <b dir="ltr">${esc(view.sentTo)}</b>.</p>
+      <p class="muted">פתחי את המייל (בדקי גם בספאם) ולחצי על הכפתור שבו. הקישור יחזיר אותך לכאן לבחירת סיסמה חדשה.</p>
+      <button class="btn" data-act="login-mode" data-v="login">חזרה לכניסה</button></div>`;
+    return;
+  }
+  const title = reg ? 'הרשמה ל-תל"א / תח"י' : forgot ? 'שכחתי סיסמה' : 'כניסה ל-תל"א / תח"י';
   app.innerHTML = `<div class="card login">
     <div class="big">${forgot ? '🔑' : '📋'}</div>
     <h2>${title}</h2>
-    <p class="muted">${forgot ? 'הקלידי את מספר הטלפון, את קוד השחזור שקיבלת בהרשמה, ובחרי סיסמה חדשה.' : 'כל מורה נכנסת עם מספר הטלפון שלה וסיסמה. התלמידים שלך נשמרים בחשבון שלך ואפשר לעבוד מכל מכשיר.'}</p>
+    <p class="muted">${forgot ? 'הקלידי את מספר הטלפון שלך (או את המייל), ונשלח לך מייל עם קישור לבחירת סיסמה חדשה.'
+      : 'כל מורה נכנסת עם מספר הטלפון שלה וסיסמה. התלמידים שלך נשמרים בחשבון שלך ואפשר לעבוד מכל מכשיר.'}</p>
     ${reg ? '<label class="field">שם מלא<input type="text" id="loginName" autocomplete="name"></label>' : ''}
-    <label class="field">מספר טלפון<input type="tel" id="loginPhone" dir="ltr" inputmode="tel" autocomplete="tel" placeholder="05X-XXXXXXX"></label>
-    ${forgot ? '<label class="field">קוד שחזור<input type="text" id="loginCode" dir="ltr" autocomplete="off" placeholder="XXXX-XXXX" style="text-transform:uppercase"></label>' : ''}
-    <label class="field">${forgot ? 'סיסמה חדשה' : 'סיסמה'}${reg || forgot ? ' (לפחות 6 תווים)' : ''}<input type="password" id="loginPassword" dir="ltr" autocomplete="${reg || forgot ? 'new-password' : 'current-password'}"></label>
-    ${reg || forgot ? '<label class="field">סיסמה שוב<input type="password" id="loginPassword2" dir="ltr" autocomplete="new-password"></label>' : ''}
-    <button class="btn primary big" data-act="${reg ? 'register' : forgot ? 'reset-code' : 'login-phone'}">${reg ? 'הרשמה' : forgot ? 'שמירת סיסמה חדשה וכניסה' : 'כניסה'}</button>
+    <label class="field">${forgot ? 'מספר טלפון או מייל' : 'מספר טלפון'}<input type="${forgot ? 'text' : 'tel'}" id="loginPhone" dir="ltr" inputmode="${forgot ? 'email' : 'tel'}" autocomplete="tel" placeholder="05X-XXXXXXX"></label>
+    ${reg ? '<label class="field">מייל (לשחזור סיסמה אם תישכח)<input type="email" id="loginEmail" dir="ltr" autocomplete="email" placeholder="name@example.com"></label>' : ''}
+    ${!forgot ? `<label class="field">סיסמה<input type="password" id="loginPassword" dir="ltr" autocomplete="${reg ? 'new-password' : 'current-password'}"></label>` : ''}
+    <button class="btn primary big" data-act="${reg ? 'register' : forgot ? 'forgot' : 'login-phone'}">${reg ? 'הרשמה' : forgot ? 'שליחת מייל' : 'כניסה'}</button>
     ${mode === 'login' ? `<button class="btn ghost small" data-act="login-mode" data-v="register">פעם ראשונה? הרשמה</button>
       <button class="btn ghost small" data-act="login-mode" data-v="forgot">שכחתי סיסמה</button>` :
       `<button class="btn ghost small" data-act="login-mode" data-v="login">חזרה לכניסה</button>`}
-    ${forgot ? '<p class="muted" style="font-size:.85rem">אין לך קוד שחזור? פני למנהלת – היא יכולה לתת לך סיסמה זמנית.</p>' : ''}
   </div>`;
   document.getElementById(reg ? 'loginName' : 'loginPhone')?.focus();
 }
 
-// Shown once after registration (or when a new code is made): the personal recovery code.
-function renderRecovery() {
-  app.innerHTML = `<div class="card login">
-    <div class="big">🔐</div>
-    <h2>קוד השחזור שלך</h2>
-    <p>אם תשכחי את הסיסמה, בעזרת הקוד הזה תוכלי לבחור סיסמה חדשה בעצמך.</p>
-    <div class="rcode" dir="ltr">${esc(view.recoveryCode)}</div>
-    <p class="muted"><b>רשמי אותו או צלמי את המסך</b> ושמרי במקום בטוח. הוא לא יוצג שוב.</p>
-    <div class="row" style="justify-content:center">
-      <button class="btn" data-act="copy-code">העתקה</button>
-      <button class="btn primary big" data-act="recovery-done">שמרתי את הקוד</button>
-    </div>
-  </div>`;
+// After the link in the reset e-mail: choose a new password.
+function renderNewPassword() {
+  app.innerHTML = `<div class="card login"><div class="big">🔑</div><h2>בחירת סיסמה חדשה</h2>
+    <p class="muted">${esc(Cloud.displayName())}</p>
+    <label class="field">סיסמה חדשה<input type="password" id="newPw" dir="ltr" autocomplete="new-password"></label>
+    <button class="btn primary big" data-act="save-password">שמירה וכניסה</button></div>`;
+  document.getElementById('newPw')?.focus();
 }
 
 function renderAccount() {
+  const phone = Cloud.userPhone();
   app.innerHTML = `<div class="card"><h2>החשבון שלי</h2>
-      <p>${esc(Cloud.displayName())} · <bdi dir="ltr">${esc(Cloud.phoneOf(Cloud.user.email))}</bdi></p></div>
+      <p>${esc(Cloud.displayName())}${phone ? ` · <bdi dir="ltr">${esc(phone)}</bdi>` : ''} · <bdi dir="ltr">${esc(Cloud.user.email)}</bdi></p></div>
     <div class="card"><h2>שינוי סיסמה</h2>
-      <div class="grid">
-        <label class="field">סיסמה חדשה (לפחות 6 תווים)<input type="password" id="newPw" dir="ltr" autocomplete="new-password"></label>
-        <label class="field">סיסמה שוב<input type="password" id="newPw2" dir="ltr" autocomplete="new-password"></label>
-      </div>
-      <button class="btn primary" data-act="save-password" style="margin-top:10px">שמירת סיסמה</button></div>
-    <div class="card"><h2>קוד שחזור</h2>
-      <p class="muted">איבדת את קוד השחזור? אפשר ליצור קוד חדש. הקוד הקודם יפסיק לעבוד.</p>
-      <button class="btn" data-act="new-recovery">יצירת קוד שחזור חדש</button></div>`;
+      <label class="field">סיסמה חדשה<input type="password" id="newPw" dir="ltr" autocomplete="new-password"></label>
+      <button class="btn primary" data-act="save-password" style="margin-top:10px">שמירת סיסמה</button></div>`;
 }
 
 function renderAdmin() {
   const rows = view.adminRows;
   if (!rows) { app.innerHTML = '<div class="card empty">טוען את נתוני כל המורות…</div>'; return; }
   const q = (view.adminQ || '').trim();
-  const teacherOf = r => [r.owner_name, Cloud.phoneOf(r.owner_email)].filter(Boolean).join(' · ') || '—';
+  const phoneBy = Object.fromEntries((view.adminUsers || []).map(u => [String(u.email).toLowerCase(), u.phone]));
+  const teacherOf = r => [r.owner_name, Cloud.showPhone(phoneBy[r.owner_email]) || r.owner_email].filter(Boolean).join(' · ') || '—';
   const list = rows.filter(r => !q || [teacherOf(r), fullName(r.data), r.data.className, r.data.school, r.data.homeroomTeacher].join(' ').includes(q));
   const byTeacher = {};
   for (const r of list) (byTeacher[teacherOf(r)] ??= []).push(r);
@@ -434,8 +430,8 @@ function renderAdmin() {
       · <b>${rows.reduce((t, r) => t + (r.data.goals || []).reduce((n, g) => n + (g.objectives || []).length, 0), 0)}</b> יעדים</div>
     ${view.adminUsers ? `<details class="card teachers"><summary><b>מורות רשומות (${view.adminUsers.length})</b> – איפוס סיסמה</summary>
       <div class="scroll-x"><table class="table">
-        <tr><th>שם</th><th>טלפון</th><th>נרשמה</th><th>כניסה אחרונה</th><th></th></tr>
-        ${view.adminUsers.map(u => `<tr><td>${esc(u.name || '—')}</td><td dir="ltr" style="text-align:right">${esc(Cloud.phoneOf(u.email))}</td>
+        <tr><th>שם</th><th>טלפון</th><th>מייל</th><th>נרשמה</th><th>כניסה אחרונה</th><th></th></tr>
+        ${view.adminUsers.map(u => `<tr><td>${esc(u.name || '—')}</td><td dir="ltr" style="text-align:right">${esc(Cloud.showPhone(u.phone))}</td><td dir="ltr" style="text-align:right">${esc(u.email)}</td>
           <td>${u.created_at ? new Date(u.created_at).toLocaleDateString('he-IL') : ''}</td>
           <td>${u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleDateString('he-IL') : '—'}</td>
           <td><button class="btn small" data-act="admin-reset" data-email="${esc(u.email)}">איפוס סיסמה</button></td></tr>`).join('')}
@@ -1110,8 +1106,8 @@ function onEdit(e) {
 }
 app.addEventListener('input', onEdit);
 app.addEventListener('keydown', e => {
-  if (e.key !== 'Enter' || view.name !== 'login') return;
-  document.querySelector('[data-act="login-phone"],[data-act="register"],[data-act="reset-code"]')?.click();
+  if (e.key !== 'Enter' || !['login', 'newpw'].includes(view.name)) return;
+  document.querySelector('[data-act="login-phone"],[data-act="register"],[data-act="forgot"],[data-act="save-password"]')?.click();
 });
 app.addEventListener('change', onEdit);
 // Remember which mapping sections are open across re-renders.
@@ -1145,68 +1141,55 @@ document.addEventListener('click', e => {
   switch (d.act) {
     case 'account': view = { name: 'account' }; render(); return;
     case 'save-password': {
-      const pw = document.getElementById('newPw').value;
-      if (pw.length < 6) { alert('הסיסמה צריכה להיות לפחות 6 תווים'); return; }
-      if (pw !== document.getElementById('newPw2').value) { alert('הסיסמאות אינן זהות'); return; }
-      Cloud.changePassword(pw).then(() => { toast('הסיסמה עודכנה'); view = { name: 'list', q: '' }; render(); })
-        .catch(err => alert('לא ניתן לעדכן: ' + (err.message || err)));
+      const v = document.getElementById('newPw').value;
+      if (!v) { alert('נא להקליד סיסמה חדשה'); return; }
+      t.disabled = true;
+      Cloud.changePassword(v).then(() => { toast('הסיסמה עודכנה'); Cloud.recoveryDone(); boot(); })
+        .catch(err => { t.disabled = false; alert('לא ניתן לעדכן: ' + (err.message || err)); });
       return;
     }
-    case 'new-recovery':
-      if (!confirm('ליצור קוד שחזור חדש? הקוד הקודם יפסיק לעבוד.')) return;
-      Cloud.setRecoveryCode().then(code => { view = { name: 'recovery', recoveryCode: code }; render(); })
-        .catch(err => alert('לא ניתן ליצור קוד: ' + (err.message || err)));
-      return;
-    case 'copy-code':
-      navigator.clipboard?.writeText(view.recoveryCode).then(() => toast('הקוד הועתק'), () => {});
-      return;
-    case 'recovery-done': boot(); return;
-    case 'reset-code': {
-      const phone = document.getElementById('loginPhone').value;
-      const code = document.getElementById('loginCode').value;
-      const pw = document.getElementById('loginPassword').value;
-      if (!phone.trim() || !code.trim()) { alert('נא להקליד מספר טלפון וקוד שחזור'); return; }
-      if (pw.length < 6) { alert('הסיסמה צריכה להיות לפחות 6 תווים'); return; }
-      if (pw !== document.getElementById('loginPassword2').value) { alert('הסיסמאות אינן זהות'); return; }
+    case 'forgot': {
+      const v = document.getElementById('loginPhone').value.trim();
+      if (!v) { alert('נא להקליד מספר טלפון או מייל'); return; }
       t.disabled = true;
-      Cloud.resetWithCode(phone, code, pw).then(() => { toast('הסיסמה עודכנה'); boot(); }).catch(err => {
+      Cloud.forgotPassword(v).then(masked => { view.sentTo = masked; render(); }).catch(err => {
         t.disabled = false;
         const m = err.message || String(err);
-        alert({ 'bad-phone': 'מספר הטלפון לא תקין', wrong: 'קוד השחזור שגוי', 'no-code': 'למספר הזה אין קוד שחזור. פני למנהלת לקבלת סיסמה זמנית.',
-          locked: 'היו יותר מדי ניסיונות שגויים. פני למנהלת לקבלת סיסמה זמנית.', weak: 'הסיסמה צריכה להיות לפחות 6 תווים' }[m] || 'השחזור נכשל: ' + m);
+        alert(m === 'bad-phone' ? 'מספר הטלפון לא תקין' : m === 'no-user' ? 'לא מצאנו מורה רשומה עם הפרטים האלה'
+          : /rate limit/i.test(m) ? 'נשלחו יותר מדי מיילים. נסי שוב בעוד כמה דקות.' : 'שליחת המייל נכשלה: ' + m);
       });
       return;
     }
     case 'admin-reset': {
       const u = view.adminUsers.find(x => x.email === d.email);
-      const name = u?.name || Cloud.phoneOf(d.email);
-      const temp = String(100000 + crypto.getRandomValues(new Uint32Array(1))[0] % 900000);
+      const name = u?.name || d.email;
+      const temp = String(1000 + crypto.getRandomValues(new Uint32Array(1))[0] % 9000);
       if (!confirm(`לתת ל${name} סיסמה זמנית חדשה? הסיסמה הקודמת שלה תפסיק לעבוד.`)) return;
       Cloud.adminSetPassword(d.email, temp).then(ok => {
         if (!ok) { alert('המורה לא נמצאה'); return; }
-        alert(`הסיסמה הזמנית של ${name} (${Cloud.phoneOf(d.email)}):\n\n${temp}\n\nמסרי לה אותה. אחרי הכניסה היא יכולה להחליף סיסמה בכפתור 🔑.`);
+        alert(`הסיסמה הזמנית של ${name} (${Cloud.showPhone(u?.phone) || d.email}):\n\n${temp}\n\nמסרי לה אותה. אחרי הכניסה היא יכולה להחליף סיסמה בכפתור 🔑.`);
       }).catch(err => alert('האיפוס נכשל: ' + (err.message || err)));
       return;
     }
     case 'login-phone': case 'register': {
+      const reg = d.act === 'register';
       const phone = document.getElementById('loginPhone').value;
       const pw = document.getElementById('loginPassword').value;
-      const reg = d.act === 'register';
       const name = reg ? document.getElementById('loginName').value.trim() : '';
+      const email = reg ? document.getElementById('loginEmail').value.trim() : '';
       if (reg && !name) { alert('נא להקליד שם מלא'); return; }
-      if (!phone.trim() || !pw) { alert('נא להקליד מספר טלפון וסיסמה'); return; }
-      if (reg && pw.length < 6) { alert('הסיסמה צריכה להיות לפחות 6 תווים'); return; }
-      if (reg && pw !== document.getElementById('loginPassword2').value) { alert('הסיסמאות אינן זהות'); return; }
+      if (!phone.trim()) { alert('נא להקליד מספר טלפון'); return; }
+      if (reg && !/^\S+@\S+\.\S+$/.test(email)) { alert('נא להקליד כתובת מייל תקינה (לשחזור סיסמה)'); return; }
+      if (!pw) { alert('נא להקליד סיסמה'); return; }
       t.disabled = true;
-      const afterReg = () => Cloud.setRecoveryCode()
-        .then(code => { view = { name: 'recovery', recoveryCode: code }; render(); })
-        .catch(() => boot());
-      (reg ? Cloud.signUpPhone(phone, pw, name).then(afterReg) : Cloud.signInPhone(phone, pw).then(boot)).catch(err => {
+      (reg ? Cloud.signUpPhone(phone, email, pw, name) : Cloud.signInPhone(phone, pw)).then(boot).catch(err => {
         t.disabled = false;
         const m = err.message || String(err);
         alert(m === 'bad-phone' ? 'מספר הטלפון לא תקין'
-          : /already registered|already exists/i.test(m) ? 'המספר הזה כבר רשום. עברי ל"כניסה".'
-          : /invalid login/i.test(m) ? 'מספר הטלפון או הסיסמה שגויים'
+          : m === 'phone-taken' ? 'מספר הטלפון הזה כבר רשום. עברי ל"כניסה".'
+          : m === 'no-user' ? 'מספר הטלפון לא רשום. בפעם הראשונה לחצי "הרשמה".'
+          : /already registered|already exists/i.test(m) ? 'המייל הזה כבר רשום. עברי ל"כניסה".'
+          : /invalid login/i.test(m) ? 'הסיסמה שגויה. אפשר ללחוץ "שכחתי סיסמה".'
           : m === 'confirm-required' ? 'ההרשמה נקלטה, אבל השרת מחכה לאישור מייל. המנהלת צריכה לכבות את "Confirm email" ב-Supabase.'
           : 'הפעולה נכשלה: ' + m);
       });
@@ -1257,7 +1240,7 @@ document.addEventListener('click', e => {
       const r = view.adminRows.find(x => x.id === d.id);
       if (!r) return;
       if (d.act === 'admin-excel') { exportExcel(normalize(JSON.parse(JSON.stringify(r.data)))); return; }
-      view = { name: 'adminStudent', adminUsers: view.adminUsers, adminData: normalize(JSON.parse(JSON.stringify(r.data))), adminOwner: [r.owner_name, Cloud.phoneOf(r.owner_email)].filter(Boolean).join(' · '), adminRows: view.adminRows, adminQ: view.adminQ };
+      view = { name: 'adminStudent', adminUsers: view.adminUsers, adminData: normalize(JSON.parse(JSON.stringify(r.data))), adminOwner: [r.owner_name, r.owner_email].filter(Boolean).join(' · '), adminRows: view.adminRows, adminQ: view.adminQ };
       render(); scrollTo(0, 0); return;
     }
     case 'admin-export':
@@ -1387,6 +1370,7 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catc
 // Start: sign in (when a server is set up), load this teacher's students, then sync with the server.
 async function boot() {
   if (Cloud.enabled && !Cloud.user) { students = []; view = { name: 'login' }; render(); return; }
+  if (Cloud.isRecovering()) { view = { name: 'newpw' }; render(); return; }
   students = load();
   if (Cloud.user) {
     const anon = loadKey(STORE_KEY);
@@ -1412,6 +1396,6 @@ async function boot() {
 }
 
 (async () => {
-  try { await Cloud.init({ onAuth: boot, onStatusChange: showSync }); } catch (e) { console.warn('cloud init failed', e); }
+  try { await Cloud.init({ onAuth: boot, onStatusChange: showSync, onPasswordRecovery: () => { view = { name: 'newpw' }; render(); } }); } catch (e) { console.warn('cloud init failed', e); }
   boot();
 })();

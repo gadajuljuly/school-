@@ -30,7 +30,7 @@ main { max-width: 980px; margin: 0 auto; padding: 16px; padding-bottom: 80px; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
 label.field { display: flex; flex-direction: column; gap: 4px; font-size: .9rem; color: var(--muted); }
 label.field.wide { grid-column: 1 / -1; }
-input[type=text], input[type=date], input[type=search], select, textarea { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; background: #fffdf8; color: var(--ink); width: 100%; }
+input[type=text], input[type=date], input[type=search], input[type=tel], input[type=email], input[type=password], select, textarea { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; background: #fffdf8; color: var(--ink); width: 100%; }
 textarea { min-height: 70px; resize: vertical; line-height: 1.5; }
 input:focus, select:focus, textarea:focus { outline: 2px solid var(--brand); outline-offset: -1px; }
 
