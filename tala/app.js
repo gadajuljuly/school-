@@ -1104,8 +1104,8 @@ function updateAIIcon(el) {
   if (!b) return;
   const has = !!el.value.trim();
   b.textContent = has ? '💎' : '✨';
-  b.title = has ? 'שיפור הטקסט (לחיצה)' : 'עזרה בכתיבה';
-  b.dataset.act = has ? 'ai-improve' : 'ai-menu';
+  b.title = has ? 'שיפור הטקסט' : 'כתיבת טיוטה';
+  b.dataset.act = 'ai-run';
 }
 
 function aiContext(path) {
@@ -1134,21 +1134,23 @@ function aiContext(path) {
 
 function closeAI() { document.querySelector('.ai-pop')?.remove(); }
 
-async function quickImprove(btn) {
+// One click: an empty field gets a draft, a field with text gets an improved version. Undo stays available.
+async function quickAI(btn) {
   closeAI();
   const el = btn.parentElement.querySelector('[data-path]');
   const before = el.value;
+  const action = before.trim() ? 'improve' : 'draft';
   const pop = document.createElement('div');
   pop.className = 'ai-pop';
-  pop.innerHTML = '<div class="ai-head">💎 משפר…</div><div class="ai-wait"></div>';
+  pop.innerHTML = `<div class="ai-head">${action === 'draft' ? '✨ כותב…' : '💎 משפר…'}</div><div class="ai-wait"></div>`;
   btn.parentElement.append(pop);
   btn.classList.add('busy');
   try {
-    const text = await Cloud.ai({ action: 'improve', text: before, field: aiLabel(el), context: aiContext(el.dataset.path) });
+    const text = await Cloud.ai({ action, text: before, field: aiLabel(el), context: aiContext(el.dataset.path) });
     if (el.value !== before) { closeAI(); return; } // the teacher kept typing meanwhile
     el.value = text;
     el.dispatchEvent(new Event('input', { bubbles: true }));
-    pop.innerHTML = `<div class="ai-head">💎 הטקסט שופר</div>
+    pop.innerHTML = `<div class="ai-head">${action === 'draft' ? '✨ נכתבה טיוטה' : '💎 הטקסט שופר'}</div>
       <div class="row"><button type="button" class="btn small" data-ai-do="undo">ביטול השינוי</button>
       <button type="button" class="btn small" data-ai-do="more">אפשרויות נוספות</button>
       <button type="button" class="btn small primary" data-ai-do="ok">אישור</button></div>`;
@@ -1349,8 +1351,7 @@ document.addEventListener('click', e => {
       });
       return;
     }
-    case 'ai-menu': openAIMenu(t); return;
-    case 'ai-improve': if (!t.classList.contains('busy')) quickImprove(t); return;
+    case 'ai-run': if (!t.classList.contains('busy')) quickAI(t); return;
     case 'login-mode': view.loginMode = d.v; view.sentTo = ''; render(); return;
     case 'login-password': {
       const email = document.getElementById('loginEmail').value.trim();
