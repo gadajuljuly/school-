@@ -205,3 +205,5 @@ select.cur-select { width: auto; padding: 3px 8px; font-size: .82rem; border-rad
 .ai-wait { height: 6px; margin: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--brand-2), var(--brand), var(--brand-2)); background-size: 200% 100%; animation: aiwait 1.2s linear infinite; }
 @keyframes aiwait { to { background-position: -200% 0; } }
 @media print { .ai-btn, .ai-pop { display: none !important; } }
+.ai-btn.busy { animation: aipulse 1s ease-in-out infinite; opacity: 1; }
+@keyframes aipulse { 50% { transform: scale(1.25); } }

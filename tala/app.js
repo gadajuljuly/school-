@@ -1092,10 +1092,20 @@ function decorateAI() {
     el.replaceWith(wrap);
     wrap.append(el);
     const b = document.createElement('button');
-    b.type = 'button'; b.className = 'ai-btn'; b.textContent = '✨'; b.title = 'עזרה בכתיבה';
-    b.dataset.act = 'ai-menu'; b.dataset.path = el.dataset.path;
+    b.type = 'button'; b.className = 'ai-btn'; b.dataset.path = el.dataset.path;
     wrap.append(b);
+    updateAIIcon(el);
   });
+}
+
+// Empty field: ✨ opens the menu (draft). Field with text: 💎 improves the text in one click.
+function updateAIIcon(el) {
+  const b = el.parentElement?.classList.contains('ai-wrap') && el.parentElement.querySelector('.ai-btn');
+  if (!b) return;
+  const has = !!el.value.trim();
+  b.textContent = has ? '💎' : '✨';
+  b.title = has ? 'שיפור הטקסט (לחיצה)' : 'עזרה בכתיבה';
+  b.dataset.act = has ? 'ai-improve' : 'ai-menu';
 }
 
 function aiContext(path) {
@@ -1124,6 +1134,51 @@ function aiContext(path) {
 
 function closeAI() { document.querySelector('.ai-pop')?.remove(); }
 
+async function quickImprove(btn) {
+  closeAI();
+  const el = btn.parentElement.querySelector('[data-path]');
+  const before = el.value;
+  const pop = document.createElement('div');
+  pop.className = 'ai-pop';
+  pop.innerHTML = '<div class="ai-head">💎 משפר…</div><div class="ai-wait"></div>';
+  btn.parentElement.append(pop);
+  btn.classList.add('busy');
+  try {
+    const text = await Cloud.ai({ action: 'improve', text: before, field: aiLabel(el), context: aiContext(el.dataset.path) });
+    if (el.value !== before) { closeAI(); return; } // the teacher kept typing meanwhile
+    el.value = text;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    pop.innerHTML = `<div class="ai-head">💎 הטקסט שופר</div>
+      <div class="row"><button type="button" class="btn small" data-ai-do="undo">ביטול השינוי</button>
+      <button type="button" class="btn small" data-ai-do="more">אפשרויות נוספות</button>
+      <button type="button" class="btn small primary" data-ai-do="ok">אישור</button></div>`;
+    pop.onclick = e => {
+      const d = e.target.closest('[data-ai-do]')?.dataset.aiDo;
+      if (!d) return;
+      e.stopPropagation();
+      if (d === 'undo') { el.value = before; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (d === 'more') { openAIMenu(btn); return; }
+      closeAI();
+    };
+    clearTimeout(pop.timer);
+    pop.timer = setTimeout(() => { if (pop.isConnected && !pop.matches(':hover')) pop.remove(); }, 8000);
+  } catch (err) {
+    showAIError(pop, err.message);
+  } finally { btn.classList.remove('busy'); }
+}
+
+function aiLabel(el) {
+  return el.closest('label')?.firstChild?.textContent?.trim() || el.closest('tr')?.querySelector('td')?.textContent?.trim() || '';
+}
+function showAIError(pop, m) {
+  pop.innerHTML = `<div class="ai-head">✨</div><p class="ai-err">${{
+    'not-deployed': 'עוזר הכתיבה עוד לא הופעל בשרת.', 'not-signed-in': 'צריך להיכנס מחדש לחשבון.',
+    'api-key': 'מפתח ה-AI בשרת חסר או שגוי.', busy: 'העוזר עמוס כרגע. נסי שוב בעוד דקה.',
+    refusal: 'העוזר לא יכול לעזור עם הטקסט הזה.', empty: 'אין טקסט לעבוד עליו.',
+  }[m] || 'משהו השתבש (' + esc(m) + ').'}</p><button type="button" class="btn small" data-ai-do="cancel">סגירה</button>`;
+  pop.onclick = e => { if (e.target.closest('[data-ai-do]')) closeAI(); };
+}
+
 function openAIMenu(btn) {
   closeAI();
   const el = btn.parentElement.querySelector('[data-path]');
@@ -1141,7 +1196,7 @@ function openAIMenu(btn) {
 }
 
 async function runAI(el, action, pop) {
-  const label = el.closest('label')?.firstChild?.textContent?.trim() || el.closest('tr')?.querySelector('td')?.textContent?.trim() || '';
+  const label = aiLabel(el);
   pop.innerHTML = '<div class="ai-head">✨ כותב…</div><div class="ai-wait"></div>';
   try {
     const text = await Cloud.ai({ action, text: el.value, field: label, context: aiContext(el.dataset.path) });
@@ -1161,13 +1216,7 @@ async function runAI(el, action, pop) {
       closeAI();
     };
   } catch (err) {
-    const m = err.message;
-    pop.innerHTML = `<div class="ai-head">✨</div><p class="ai-err">${{
-      'not-deployed': 'עוזר הכתיבה עוד לא הופעל בשרת.', 'not-signed-in': 'צריך להיכנס מחדש לחשבון.',
-      'api-key': 'מפתח ה-AI בשרת חסר או שגוי.', busy: 'העוזר עמוס כרגע. נסי שוב בעוד דקה.',
-      refusal: 'העוזר לא יכול לעזור עם הטקסט הזה.', empty: 'אין טקסט לעבוד עליו.',
-    }[m] || 'משהו השתבש (' + esc(m) + ').'}</p><button type="button" class="btn small" data-ai-do="cancel">סגירה</button>`;
-    pop.onclick = e => { if (e.target.closest('[data-ai-do]')) closeAI(); };
+    showAIError(pop, err.message);
   }
 }
 document.addEventListener('click', e => {
@@ -1193,6 +1242,7 @@ function onEdit(e) {
   }
   const path = t.dataset.path; const s = current();
   if (!path || !s) return;
+  updateAIIcon(t);
   // Selects/checkboxes/radios commit on change; text fields on input.
   const isChoice = t.tagName === 'SELECT' || t.type === 'checkbox' || t.type === 'radio';
   if (isChoice !== (e.type === 'change')) return;
@@ -1298,6 +1348,7 @@ document.addEventListener('click', e => {
       return;
     }
     case 'ai-menu': openAIMenu(t); return;
+    case 'ai-improve': if (!t.classList.contains('busy')) quickImprove(t); return;
     case 'login-mode': view.loginMode = d.v; view.sentTo = ''; render(); return;
     case 'login-password': {
       const email = document.getElementById('loginEmail').value.trim();
