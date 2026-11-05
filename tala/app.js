@@ -1,6 +1,7 @@
 /* תל"א – תוכנית לימודים אישית לתלמידים בחינוך המיוחד.
  * Standalone app. All data lives in this device's localStorage; back it up with "ייצוא".
- * The goal bank, mapping sheets and assessment tools come from materials.js. */
+ * Flow: student details → mapping (data, notes and a 1–5 rating per skill) → "build the plan".
+ * The goal bank, mapping items and assessment tools come from materials.js. */
 'use strict';
 
 const STORE_KEY = 'tala.students.v1';
@@ -13,9 +14,44 @@ const STATUSES = [
   { v: 'not', label: 'לא הושג', cls: 'not', color: '#c75a46' },
 ];
 const statusOf = v => STATUSES.find(s => s.v === v) || STATUSES[0];
-const TEAM_ROLES = ['מחנך/ת', 'מורה שילוב', 'מורה אחראית תחום', 'סייע/ת', 'קלינאי/ת תקשורת', 'מרפא/ה בעיסוק', 'פסיכולוג/ית', 'יועץ/ת', 'הורה', 'מנהל/ת'];
+const TEAM_ROLES = ['מחנך/ת', 'מורה שילוב', 'מורה אחראית תחום', 'סייע/ת', 'קלינאי/ת תקשורת', 'מרפא/ה בעיסוק', 'מטפל/ת באומנות', 'פסיכולוג/ית', 'יועץ/ת', 'הורה', 'מנהל/ת'];
 const ARABIC_GRADES = ['', 'الاول', 'الثاني', 'الثالث', 'الرابع', 'الخامس', 'السادس', 'السابع', 'الثامن', 'التاسع', 'العاشر', 'الحادي عشر', 'الثاني عشر'];
-const RATE_COLS = [['b', 'תחילה'], ['m', 'אמצע'], ['e', 'סוף']];
+
+// ---------- the 1–5 mapping scale ----------
+const SCALE = [
+  [1, 'לא מבצע / קושי רב'],
+  [2, 'מבצע לעיתים רחוקות, בעזרה רבה'],
+  [3, 'מבצע חלקית, בעזרה ובתיווך'],
+  [4, 'מבצע לרוב, בעזרה מועטה'],
+  [5, 'מבצע באופן עצמאי, תואם גיל'],
+];
+const NEEDS_GOAL = 3;   // 1–3 → goals in the plan
+const scaleLabel = n => SCALE.find(x => x[0] === +n)?.[1] || '';
+
+// Every mapping item in one shape: {id, label, goals: [{domain, area, text, ref, level}]}.
+const fromAcademic = sec => ({ title: sec.sec, items: sec.items.map(([id, label, ids]) => ({
+  id, label, goals: ids.map(g => GOAL_BY_ID[g]).filter(Boolean).map(g => ({ domain: g.d, area: g.area, text: g.t, ref: g.id, level: g.level })),
+})) });
+const fromFunctional = sec => ({ title: sec.sec, items: sec.items.map(([id, label, domain, goal]) => ({
+  id, label, goals: [{ domain, area: domain, text: goal, ref: id }],
+})) });
+const fromDev = sec => ({ title: sec.label, source: true, items: sec.items.map(([id, label, goal]) => ({
+  id, label, goals: [{ domain: sec.domain, area: sec.domain, text: goal, ref: id }],
+})) });
+const acad = p => ACADEMIC.filter(s => p(s.sec)).map(fromAcademic);
+const func = (...ids) => FUNCTIONAL.filter(s => s.items.some(i => ids.includes(i[0][0]))).map(fromFunctional);
+const dev = (...ids) => DEVELOPMENTAL.filter(s => ids.includes(s.id)).map(fromDev);
+
+const MAP_GROUPS = [
+  { id: 'arabic', domain: 'arabic', title: 'ערבית – קריאה, הבנה, כתיבה ושפה', reading: true, sections: acad(t => !t.includes('الحسابية')) },
+  { id: 'math', domain: 'math', title: 'חשבון', sections: [...acad(t => t.includes('الحسابية')), ...dev('quant')] },
+  { id: 'cognitive', domain: 'cognitive', title: 'תלמידאות, קשב, חשיבה והרגלי למידה', sections: [...dev('student', 'indep'), ...func('t', 'p', 'g', 'h'), ...dev('att', 'vis', 'think', 'ready')] },
+  { id: 'comm', domain: 'comm', title: 'שפה, דיבור ותקשורת', sections: dev('lang', 'aud') },
+  { id: 'emotional', domain: 'emotional', title: 'רגשי, חברתי והתנהגותי', sections: [...func('s', 'l'), ...dev('emo', 'soc')] },
+  { id: 'motor', domain: 'motor', title: 'תנועה, ניידות, הנגשה ותחושה', sections: [...dev('access'), ...dev('sen', 'gm', 'fm')] },
+  { id: 'daily', domain: 'daily', title: 'פעילויות יום-יום ועצמאות', sections: dev('daily') },
+];
+const ALL_ITEMS = MAP_GROUPS.flatMap(g => g.sections.flatMap(s => s.items.map(i => ({ ...i, group: g, section: s }))));
 
 // ---------- data ----------
 let students = [];
@@ -27,10 +63,7 @@ function load() {
   return list.map(normalize);
 }
 let saveTimer;
-function save() {
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(flush, 250);
-}
+function save() { clearTimeout(saveTimer); saveTimer = setTimeout(flush, 250); }
 function flush() {
   clearTimeout(saveTimer);
   localStorage.setItem(STORE_KEY, JSON.stringify(students));
@@ -49,33 +82,36 @@ function schoolYear() {
 function newStudent() {
   return {
     id: uid(), firstName: '', lastName: '', gender: '', idNumber: '', birthDate: '',
-    school: '', className: '', grade: '', city: '', homeroomTeacher: '', inclusionTeacher: '',
+    school: '', className: '', grade: '', city: '', homeroomTeacher: '', inclusionTeacher: '', aide: '',
     committee: '', committeeDate: '', parentsContact: '', familyStatus: '', familyPosition: '', health: '', previousSchools: '',
-    year: schoolYear(), fillDate: new Date().toISOString().slice(0, 10), reviewDate: '',
+    year: schoolYear(), fillDate: new Date().toISOString().slice(0, 10),
     support: {}, diagnoses: {}, accommodations: {}, accommodationsOther: '',
     background: '', strengths: '', difficulties: '', motivators: '', parentsView: '', studentView: '',
-    readingLevel: '', readingBand: '', listeningBand: '', wpm: '', ratings: {},
-    summary: '', team: [], goals: [], meetings: [], updatedAt: Date.now(),
+    readingLevel: '', readingBand: '', listeningBand: '', wpm: '', ratings: {}, mapNotes: {},
+    parentRecs: '', steps: {}, profile: {}, evalDates: {}, summary: '', team: [], supports: [], goals: [], meetings: [], updatedAt: Date.now(),
   };
 }
 
-// Fill in fields added after a record was created, and map the first version's fields.
+// Fill in fields added after a record was created.
 function normalize(raw) {
   const s = Object.assign(newStudent(), raw);
-  ['team', 'goals', 'meetings'].forEach(k => { if (!Array.isArray(s[k])) s[k] = []; });
-  ['support', 'diagnoses', 'ratings'].forEach(k => { if (!s[k] || typeof s[k] !== 'object') s[k] = {}; });
+  ['team', 'supports', 'goals', 'meetings'].forEach(k => { if (!Array.isArray(s[k])) s[k] = []; });
+  ['support', 'diagnoses', 'ratings', 'mapNotes', 'steps', 'profile', 'evalDates'].forEach(k => { if (!s[k] || typeof s[k] !== 'object') s[k] = {}; });
   if (typeof s.accommodations === 'string') {
     s.accommodationsOther = [s.accommodationsOther, s.accommodations].filter(Boolean).join('\n');
     s.accommodations = {};
   } else if (!s.accommodations || typeof s.accommodations !== 'object') s.accommodations = {};
+  for (const r of Object.values(s.ratings)) if (r && +r.b > 5) r.b = '5';
   s.goals.forEach(g => {
     if (!g.id) g.id = uid();
+    ['teacher', 'annual', 'current', 'strengths', 'difficulties', 'accommodations'].forEach(k => { g[k] ??= ''; });
     if (!Array.isArray(g.objectives)) g.objectives = [];
     g.objectives.forEach(o => {
       if (!o.id) o.id = uid();
       if (o.partners == null) o.partners = o.responsible || '';
       if (o.period == null) o.period = o.due ? fmtDate(o.due) : '';
       if (o.curriculum == null) o.curriculum = GOAL_BY_ID[o.ref]?.cur || '';
+      o.midEval ??= ''; o.finalEval ??= '';
     });
   });
   return s;
@@ -89,12 +125,13 @@ const fmtDate = d => d ? new Date(d).toLocaleDateString('he-IL') : '';
 const domainOf = id => DOMAINS.find(d => d.id === id);
 const domainLabel = id => domainOf(id)?.label || id || '';
 const gradeName = s => GRADE_NAMES[+s.grade] || '';
+const rating = (s, id) => +(s.ratings[id]?.b || 0);
 
 function toast(msg) {
   const t = document.createElement('div');
   t.className = 'toast'; t.textContent = msg;
   document.body.appendChild(t);
-  setTimeout(() => t.remove(), 2600);
+  setTimeout(() => t.remove(), 2800);
 }
 
 function getPath(obj, path) { return path.split('.').reduce((o, k) => o?.[k], obj); }
@@ -127,14 +164,13 @@ function progressBar(s) {
   }).join('') + '</div>';
 }
 
-// Latest rating given (end, else middle, else beginning).
-function latestRating(s, id) {
-  const r = s.ratings[id];
-  if (!r) return 0;
-  return +(r.e || r.m || r.b || 0);
+// 15 November of the student's school year: the plan must be presented to the parents by then.
+function parentsDeadline(s) {
+  const y = /^(\d{4})/.exec(s.year || '')?.[1];
+  return y ? new Date(+y, 10, 15) : null;
 }
 
-// ---------- drafting the plan from the materials ----------
+// ---------- building the plan ----------
 function fillBlanks(text, s) {
   const g = +s.grade;
   let t = text;
@@ -142,111 +178,122 @@ function fillBlanks(text, s) {
   if (g && /كلمة في الدقيقة/.test(t)) t = t.replace('___', fluencyNorm(g));
   return t;
 }
-
 function methodsFor(domain, area) {
-  const list = METHODS[area] || METHODS[domain] || METHODS.other;
-  return list.slice(0, 2).join('، ');
+  return (METHODS[area] || METHODS[domain] || METHODS.other).slice(0, 2).join('، ');
 }
 function partnersFor(domain) {
   return {
     arabic: 'المربية، معلمة التربية الخاصة', math: 'المربية، معلمة التربية الخاصة',
-    emotional: 'المربية، المستشارة، الاهل', comm: 'المربية، معالجة النطق، الاهل', cognitive: 'المربية، المعالجة الوظيفية',
+    emotional: 'المربية، المستشارة، الاهل', comm: 'المربية، معالجة النطق، الاهل',
+    cognitive: 'المربية، المعالجة الوظيفية', motor: 'المعالجة الوظيفية، المربية',
   }[domain] || 'المربية';
 }
-
+function newSection(s, domain) {
+  return { id: uid(), domain, teacher: '', annual: fillBlanks(domainOf(domain)?.annual || '', s), current: '', strengths: '', difficulties: '', accommodations: '', objectives: [] };
+}
 function sectionFor(s, domain) {
   let sec = s.goals.find(g => g.domain === domain);
-  if (!sec) {
-    sec = { id: uid(), domain, teacher: '', annual: fillBlanks(domainOf(domain)?.annual || '', s), current: '', accommodations: '', objectives: [] };
-    s.goals.push(sec);
-  }
+  if (!sec) { sec = newSection(s, domain); s.goals.push(sec); }
   return sec;
 }
-
 function newObjective(s, { text, domain, area, ref }) {
   return {
-    id: uid(), ref: ref || '', area: area || '', curriculum: (ref && GOAL_BY_ID[ref]?.d === domain && GOAL_BY_ID[ref].cur) || '', text: fillBlanks(text, s),
-    period: 'حتى نهاية السنة', criterion: 'بنسبة نجاح 80%', methods: methodsFor(domain, area), partners: partnersFor(domain),
-    status: 'todo', notes: '',
+    id: uid(), ref: ref || '', area: area || '',
+    curriculum: (ref && GOAL_BY_ID[ref]?.d === domain && GOAL_BY_ID[ref].cur) || '',
+    text: fillBlanks(text, s), period: 'حتى نهاية السنة', criterion: 'بنسبة نجاح 80%',
+    methods: methodsFor(domain, area), partners: partnersFor(domain), status: 'todo', notes: '', midEval: '', finalEval: '',
   };
 }
-
 function addObjective(s, sec, item) {
   const text = fillBlanks(item.text, s);
   if (sec.objectives.some(o => (item.ref && o.ref === item.ref) || o.text === text)) return false;
   sec.objectives.push(newObjective(s, { ...item, domain: sec.domain }));
   return true;
 }
+const fitsLevel = (goal, level) => !level || !goal.level || goal.level.includes(level);
 
-function fitsLevel(goal, level) {
-  return !level || !goal.level || goal.level.includes(level);
-}
+// Builds (or rebuilds) the plan from the mapping. Returns null when nothing was entered.
+function buildPlan(s, rebuild) {
+  const rated = ALL_ITEMS.filter(i => rating(s, i.id)).sort((a, b) => rating(s, a.id) - rating(s, b.id));
+  const hasNotes = Object.values(s.mapNotes).some(v => v && v.trim());
+  if (!rated.length && !s.readingLevel && !hasNotes) return null;
+  if (rebuild) s.goals = [];
 
-function draftPlan(s) {
-  const found = []; // {domain, area, text, ref, why}
-  const currentLines = {}; // domain -> lines describing the current state
-  const note = (domain, line) => (currentLines[domain] ??= []).push(line);
-
-  // Academic profile: items at or below "يستصعب" get their goals.
-  for (const sec of ACADEMIC) {
-    for (const [id, label, goalIds] of sec.items) {
-      const r = latestRating(s, id);
-      if (!r || r > ACADEMIC_NEEDS_GOAL) continue;
-      const domain = sec.sec.includes('الحسابية') ? 'math' : 'arabic';
-      note(domain, `${label}: ${ACADEMIC_SCALE.find(x => x[0] === r)[1]}`);
-      const goals = goalIds.map(g => GOAL_BY_ID[g]).filter(Boolean);
-      const fitting = goals.filter(g => fitsLevel(g, s.readingLevel));
-      for (const g of (fitting.length ? fitting : goals)) found.push({ domain: g.d, area: g.area, text: g.t, ref: g.id });
-    }
-  }
-
-  // Reading level (PDF): if the reading sections weren't rated, start from the level's core goals.
-  const readingRated = ACADEMIC.filter(x => x.sec.startsWith('ד')).some(x => x.items.some(([id]) => latestRating(s, id)));
-  if (s.readingLevel && !readingRated) {
-    const core = {
-      'أ': ['r1', 'r3', 'r4', 'r5', 'r12', 'r13', 'c18', 'o5'],
-      'ب': ['r18', 'r20', 'r22', 'r28', 'f1', 'f2', 'c1', 'c3'],
-      'ج': ['r30', 'f2', 'c3', 'c6', 'c9', 'c12', 'k10', 'k20'],
-    }[s.readingLevel];
-    for (const id of core) { const g = GOAL_BY_ID[id]; found.push({ domain: g.d, area: g.area, text: g.t, ref: g.id }); }
-  }
-  if (s.readingLevel) note('arabic', READING_LEVELS[s.readingLevel].title);
-  if (s.readingBand) note('arabic', `רמת קריאות: ${s.readingBand}`);
-  if (s.listeningBand) note('arabic', `הבנת הנשמע: ${s.listeningBand}`);
-  if (s.wpm) note('arabic', `سرعة القراءة: ${s.wpm} كلمة في الدقيقة${s.grade ? ` (المعيار لصفه: ${fluencyNorm(s.grade)})` : ''}`);
-
-  // Functional profile: items at 1–2 get a goal in their domain.
-  for (const sec of FUNCTIONAL) {
-    for (const [id, label, domain, goal] of sec.items) {
-      const r = latestRating(s, id);
-      if (!r || r > FUNCTIONAL_NEEDS_GOAL) continue;
-      note(domain, `${label}: ${FUNCTIONAL_SCALE.find(x => x[0] === r)[1]}`);
-      found.push({ domain, area: domain, text: goal, ref: id });
-    }
-  }
-
-  if (!found.length) return null;
+  const strengths = {}, difficulties = {};
+  const push = (map, domain, line) => (map[domain] ??= []).push(line);
   let added = 0;
-  const order = DOMAINS.map(d => d.id);
-  found.sort((a, b) => order.indexOf(a.domain) - order.indexOf(b.domain));
-  for (const item of found) {
-    const sec = sectionFor(s, item.domain);
-    if (addObjective(s, sec, item)) added++;
+
+  for (const item of rated) {
+    const r = rating(s, item.id);
+    const note = s.ratings[item.id]?.note?.trim();
+    const domain = item.goals[0]?.domain || item.group.domain;
+    const line = `${item.label} (${r})${note ? ' – ' + note : ''}`;
+    if (r > NEEDS_GOAL) { push(strengths, domain, line); continue; }
+    push(difficulties, domain, line);
+    const fitting = item.goals.filter(g => fitsLevel(g, s.readingLevel));
+    for (const g of (fitting.length ? fitting : item.goals)) {
+      if (addObjective(s, sectionFor(s, g.domain), g)) added++;
+    }
   }
-  for (const [domain, lines] of Object.entries(currentLines)) {
-    const sec = s.goals.find(g => g.domain === domain);
-    if (sec && !sec.current.trim()) sec.current = lines.join('\n');
+
+  // Reading level (assessment tools PDF): if the reading skills weren't rated, start from the level's core goals.
+  const readingIds = ACADEMIC.filter(x => x.sec.startsWith('ד')).flatMap(x => x.items.map(i => i[0]));
+  if (s.readingLevel && !readingIds.some(id => rating(s, id))) {
+    const core = { 'أ': ['r1', 'r3', 'r4', 'r5', 'r12', 'r13', 'c18', 'o5'], 'ب': ['r18', 'r20', 'r22', 'r28', 'f1', 'f2', 'c1', 'c3'], 'ج': ['r30', 'f2', 'c3', 'c6', 'c9', 'c12', 'k10', 'k20'] }[s.readingLevel];
+    for (const id of core) {
+      const g = GOAL_BY_ID[id];
+      if (addObjective(s, sectionFor(s, 'arabic'), { domain: 'arabic', area: g.area, text: g.t, ref: g.id })) added++;
+    }
+  }
+
+  // Current functioning: the teacher's notes per mapping area + reading data.
+  const currentText = {};
+  for (const grp of MAP_GROUPS) {
+    const lines = [];
+    if (grp.reading) {
+      if (s.readingLevel) lines.push(READING_LEVELS[s.readingLevel].title);
+      if (s.readingBand) lines.push(`רמת קריאות: ${s.readingBand}`);
+      if (s.listeningBand) lines.push(`הבנת הנשמע: ${s.listeningBand}`);
+      if (s.wpm) lines.push(`سرعة القراءة: ${s.wpm} كلمة في الدقيقة${s.grade ? ` (المعيار لصفه: ${fluencyNorm(s.grade)})` : ''}`);
+    }
+    if (s.mapNotes[grp.id]?.trim()) lines.push(s.mapNotes[grp.id].trim());
+    if (lines.length) currentText[grp.domain] = lines.join('\n');
+  }
+
+  const order = DOMAINS.map(d => d.id);
+  for (const sec of s.goals) {
+    if (currentText[sec.domain] && (rebuild || !sec.current.trim())) sec.current = currentText[sec.domain];
+    if (strengths[sec.domain] && (rebuild || !sec.strengths.trim())) sec.strengths = strengths[sec.domain].join('\n');
+    if (difficulties[sec.domain] && (rebuild || !sec.difficulties.trim())) sec.difficulties = difficulties[sec.domain].join('\n');
   }
   s.goals.sort((a, b) => order.indexOf(a.domain) - order.indexOf(b.domain));
+
+  // Profile table of the Matya format: strengths and areas to strengthen per area.
+  for (const row of PROFILE_ROWS) {
+    const st = row.domains.flatMap(d => strengths[d] || []), df = row.domains.flatMap(d => difficulties[d] || []);
+    const cur = s.profile[row.id] ??= { strengths: '', focus: '' };
+    if (st.length && (rebuild || !cur.strengths.trim())) cur.strengths = st.join('\n');
+    if (df.length && (rebuild || !cur.focus.trim())) cur.focus = df.join('\n');
+  }
+
+  // Overall strengths / difficulties on the details page, if still empty.
+  const all = map => Object.values(map).flat();
+  if (!s.strengths.trim() && all(strengths).length) s.strengths = all(strengths).join('\n');
+  if (!s.difficulties.trim() && all(difficulties).length) s.difficulties = all(difficulties).join('\n');
   return added;
 }
 
-// Bank of goals offered under a plan section.
+// Goals offered under a plan section.
 function bankFor(domain) {
   if (domain === 'arabic' || domain === 'math') {
-    return GOALS.filter(g => g.d === domain).map(g => ({ ref: g.id, text: g.t, area: domain === 'arabic' ? g.cur : g.area, level: g.level }));
+    const bank = GOALS.filter(g => g.d === domain).map(g => ({ ref: g.id, text: g.t, area: domain === 'arabic' ? g.cur : g.area, level: g.level }));
+    return domain === 'math' ? bank.concat(devBank('math')) : bank;
   }
-  return FUNCTIONAL.flatMap(sec => sec.items.filter(i => i[2] === domain).map(([id, , , t]) => ({ ref: id, text: t, area: domain })));
+  return FUNCTIONAL.flatMap(sec => sec.items.filter(i => i[2] === domain).map(([id, , , t]) => ({ ref: id, text: t, area: 'מיפוי בית הספר' })))
+    .concat(devBank(domain));
+}
+function devBank(domain) {
+  return DEVELOPMENTAL.filter(sec => sec.domain === domain).flatMap(sec => sec.items.map(([id, , t]) => ({ ref: id, text: t, area: sec.label })));
 }
 
 // ---------- rendering ----------
@@ -277,6 +324,7 @@ function renderList() {
   const list = students
     .filter(s => !q || [fullName(s), s.className, s.school].join(' ').includes(q))
     .sort((a, b) => b.updatedAt - a.updatedAt);
+  const today = new Date();
   app.innerHTML = `
     <div class="row search">
       <input type="search" id="q" placeholder="חיפוש תלמיד/ה, כיתה או בית ספר…" value="${esc(view.q)}" style="flex:1">
@@ -286,8 +334,11 @@ function renderList() {
       <div class="card empty">
         <div class="big">📋</div>
         <h2>ברוכים הבאים לבונה התל"א</h2>
-        <p class="muted">ממלאים את דף הפתיחה ואת גיליונות המיפוי (אקדמי ותפקודי) ובוחרים רמת קריאה לפי כלי ההערכה –<br>
-        והאפליקציה מנסחת טיוטת תל"א לכל תחום (عربي, حساب, תקשורתי, רגשי, קוגניטיבי…) ממאגר המטרות.</p>
+        <ol class="howto">
+          <li><b>פרטי התלמיד/ה</b> – פרטים אישיים, רקע, תמיכות והתאמות.</li>
+          <li><b>מיפוי והערכה</b> – לכל מיומנות: הערכה 1–5 והערה, ונתונים כלליים לכל תחום.</li>
+          <li><b>בניית התוכנית</b> – לחיצה אחת, והאפליקציה בונה את התל"א מכל מה שהוכנס.</li>
+        </ol>
         <button class="btn primary" data-act="add-student">התחילו בתלמיד/ה הראשון/ה</button>
         <p class="muted" style="font-size:.85rem;margin-top:18px">הנתונים נשמרים במכשיר זה בלבד. מומלץ לגבות מדי פעם בכפתור "ייצוא".</p>
       </div>` : ''}
@@ -295,10 +346,15 @@ function renderList() {
       ${list.map(s => {
         const objs = allObjectives(s);
         const done = objs.filter(o => o.status === 'done').length;
+        const rated = ALL_ITEMS.filter(i => rating(s, i.id)).length;
+        const dl = parentsDeadline(s);
+        const late = dl && !s.steps.parents && today > dl;
+        const soon = dl && !s.steps.parents && !late && dl - today < 30 * 864e5;
         return `<div class="card student-card" data-open="${s.id}">
           <div class="name">${esc(fullName(s))}</div>
           <div class="muted">${esc([s.className && 'כיתה ' + s.className, s.school].filter(Boolean).join(' · '))} ${s.year ? `<bdi dir="ltr">${esc(s.year)}</bdi>` : ''}</div>
-          <div class="muted" style="margin-top:6px">${s.goals.length} תחומים · ${objs.length} יעדים · ${done} הושגו</div>
+          <div class="muted" style="margin-top:6px">${rated} מיומנויות מופו · ${objs.length} יעדים · ${done} הושגו</div>
+          ${late ? '<div class="badge late">לא סומן שהתוכנית הוצגה להורים (מועד: 15.11)</div>' : soon ? '<div class="badge soon">להציג להורים עד 15.11</div>' : ''}
           ${progressBar(s)}
         </div>`;
       }).join('')}
@@ -307,11 +363,11 @@ function renderList() {
 }
 
 const TABS = [
-  ['details', '1. פרטים ורקע'],
+  ['details', '1. פרטי התלמיד/ה'],
   ['mapping', '2. מיפוי והערכה'],
-  ['goals', '3. תוכנית תל"א'],
-  ['tracking', '4. מעקב ופגישות'],
-  ['doc', 'מסמך להדפסה'],
+  ['goals', '3. התוכנית'],
+  ['tracking', '4. מעקב'],
+  ['doc', 'הדפסה'],
 ];
 
 function renderStudent(s) {
@@ -321,9 +377,13 @@ function renderStudent(s) {
     ${body}`;
 }
 
+function nextButton(tab, label) {
+  return `<div class="card row next"><span class="spacer"></span><button class="btn primary" data-tab="${tab}">${label} ←</button></div>`;
+}
+
 function tabDetails(s) {
   return `
-  <div class="card"><h2>פרופיל תלמיד – פרטים</h2>
+  <div class="card"><h2>פרטים אישיים</h2>
     <div class="grid">
       ${field('firstName', 'שם פרטי')}${field('lastName', 'שם משפחה')}
       ${selectField('gender', 'ז/נ', [['ז', 'ז'], ['נ', 'נ']])}
@@ -331,12 +391,24 @@ function tabDetails(s) {
       ${field('school', 'בית הספר')}${field('city', 'ישוב')}
       ${field('className', 'כיתה')}
       ${selectField('grade', 'דרגת כיתה', GRADE_NAMES.slice(1).map((n, i) => [i + 1, n]))}
-      ${field('homeroomTeacher', 'שם המחנכ/ת')}${field('inclusionTeacher', 'שם מורת השילוב')}
+      ${field('homeroomTeacher', 'שם המחנכ/ת')}${field('inclusionTeacher', 'שם מורת השילוב')}${field('aide', 'סייעת')}
       ${selectField('committee', 'ועדה', [['שילוב', 'שילוב'], ['השמה', 'השמה']])}
       ${field('committeeDate', 'מועד ועדה', 'date')}
       ${field('parentsContact', 'קשר עם הורים')}
       ${field('year', 'שנת לימודים').replace('<input', '<input dir="ltr" style="text-align:right"')}
       ${field('fillDate', 'תאריך מילוי התוכנית', 'date')}
+    </div>
+  </div>
+  <div class="card"><h2>רקע</h2>
+    <div class="grid">
+      ${selectField('familyStatus', 'מצב משפחתי', ['נשואים', 'גרושים', 'פרודים', 'אחר'].map(x => [x, x]))}
+      ${field('familyPosition', 'מיקום במשפחה')}
+      ${field('health', 'מצב בריאותי / תרופות קבועות', 'text', 'wide')}
+      ${field('previousSchools', 'מוסדות חינוכיים קודמים – מגיל הגן', 'textarea', 'wide')}
+      ${field('background', 'רקע כללי (התפתחותי, לימודי, טיפולים, ראיון הורים, דו"חות קודמים)', 'textarea', 'wide')}
+      ${field('motivators', 'תחומי עניין ומחזקים', 'textarea', 'wide')}
+      ${field('parentsView', 'עמדת ההורים ומטרותיהם', 'textarea', 'wide')}
+      ${field('studentView', 'ייצוג וסינגור עצמי – מטרות מפי התלמיד/ה', 'textarea', 'wide')}
     </div>
   </div>
   <div class="card"><h2>סוגי תמיכה וטיפול שקיבל</h2>
@@ -347,22 +419,21 @@ function tabDetails(s) {
         return `<td><input type="checkbox" data-path="support.${key}" ${s.support[key] ? 'checked' : ''} aria-label="${w} – ${t}"></td>`;
       }).join('')}</tr>`).join('')}
     </table></div>
-    <h3 style="margin-top:14px">סוגי אבחונים – תאריך האבחון האחרון</h3>
+    <h3 style="margin-top:14px">אבחונים – תאריך האבחון האחרון</h3>
     <div class="grid">${DIAGNOSES.map(d => field(`diagnoses.${d}`, d, 'date')).join('')}</div>
   </div>
-  <div class="card"><h2>רקע כללי</h2>
-    <div class="grid">
-      ${selectField('familyStatus', 'מצב משפחתי', ['נשואים', 'גרושים', 'פרודים', 'אחר'].map(x => [x, x]))}
-      ${field('familyPosition', 'מיקום במשפחה')}
-      ${field('health', 'מצב בריאותי / תרופות קבועות', 'text', 'wide')}
-      ${field('previousSchools', 'מוסדות חינוכיים קודמים – מגיל הגן', 'textarea', 'wide')}
-      ${field('background', 'רקע נוסף (התפתחותי, לימודי, טיפולים)', 'textarea', 'wide')}
-      ${field('strengths', 'נקודות חוזק', 'textarea', 'wide')}
-      ${field('difficulties', 'קשיים וצרכים', 'textarea', 'wide')}
-      ${field('motivators', 'תחומי עניין ומחזקים', 'textarea', 'wide')}
-      ${field('parentsView', 'עמדת ההורים', 'textarea', 'wide')}
-      ${field('studentView', 'עמדת התלמיד/ה', 'textarea', 'wide')}
-    </div>
+  <div class="card"><h2>תמיכות שהתלמיד/ה מקבל/ת</h2>
+    <table class="table">
+      <tr><th>סוג התמיכה</th><th style="width:110px">מספר השעות</th><th>שם המורה / המטפל</th><th></th></tr>
+      ${s.supports.map((m, i) => `<tr>
+        <td><input type="text" data-path="supports.${i}.type" value="${esc(m.type)}" list="supportKinds"></td>
+        <td><input type="text" data-path="supports.${i}.hours" value="${esc(m.hours)}" inputmode="decimal"></td>
+        <td><input type="text" data-path="supports.${i}.teacher" value="${esc(m.teacher)}"></td>
+        <td style="width:40px"><button class="btn small danger" data-act="del-support" data-i="${i}" aria-label="מחיקה">✕</button></td>
+      </tr>`).join('')}
+    </table>
+    <datalist id="supportKinds">${SUPPORT_KINDS.map(r => `<option value="${r}">`).join('')}</datalist>
+    <button class="btn ghost" data-act="add-support" style="margin-top:8px">+ הוספת תמיכה</button>
   </div>
   <div class="card"><h2>התאמות בהמלצת בית הספר</h2>
     <div class="checks">${ACCOMMODATIONS.map(a => `<label class="check"><input type="checkbox" data-path="accommodations.${a}" ${s.accommodations[a] ? 'checked' : ''}> ${a}</label>`).join('')}</div>
@@ -379,6 +450,7 @@ function tabDetails(s) {
     <datalist id="roles">${TEAM_ROLES.map(r => `<option value="${r}">`).join('')}</datalist>
     <button class="btn ghost" data-act="add-team" style="margin-top:8px">+ הוספת איש/אשת צוות</button>
   </div>
+  ${nextButton('mapping', 'המשך למיפוי')}
   <div class="card no-print"><h2>פעולות</h2>
     <div class="row">
       <button class="btn" data-act="export-one">ייצוא תלמיד/ה לקובץ</button>
@@ -389,28 +461,22 @@ function tabDetails(s) {
   </div>`;
 }
 
-function ratingTable(s, sections, scale, threshold) {
-  return sections.map(sec => `
-    <h3 class="sec-title" dir="auto">${esc(sec.sec)}</h3>
-    <div class="scroll-x"><table class="table rate-table">
-      <tr><th>המיומנות</th>${RATE_COLS.map(([, l]) => `<th class="rate-col">${l}</th>`).join('')}<th>התייחסות נוספת</th></tr>
-      ${sec.items.map(([id, label]) => `<tr>
-        <td dir="auto">${esc(label)}</td>
-        ${RATE_COLS.map(([k]) => {
-          const v = s.ratings[id]?.[k] || '';
-          return `<td><select class="rate ${v && +v <= threshold ? 'low' : v ? 'ok' : ''}" data-path="ratings.${id}.${k}" data-threshold="${threshold}">
-            <option value=""></option>${scale.map(([n]) => `<option ${String(n) === String(v) ? 'selected' : ''}>${n}</option>`).join('')}
-          </select></td>`;
-        }).join('')}
-        <td><input type="text" data-path="ratings.${id}.note" value="${esc(s.ratings[id]?.note)}" dir="auto"></td>
-      </tr>`).join('')}
-    </table></div>`).join('');
+function rateRow(s, item) {
+  const v = s.ratings[item.id]?.b || '';
+  return `<tr>
+    <td dir="auto">${esc(item.label)}</td>
+    <td><div class="rate5" role="radiogroup" aria-label="${esc(item.label)}">
+      ${SCALE.map(([n, l]) => `<label class="r${n}" title="${l}"><input type="radio" name="rate-${item.id}" value="${n}" data-path="ratings.${item.id}.b" ${String(n) === String(v) ? 'checked' : ''}><span>${n}</span></label>`).join('')}
+      <button type="button" class="clear" data-act="clear-rate" data-id="${item.id}" title="ניקוי" ${v ? '' : 'hidden'}>✕</button>
+    </div></td>
+    <td><input type="text" data-path="ratings.${item.id}.note" value="${esc(s.ratings[item.id]?.note)}" dir="auto" placeholder="הערה"></td>
+  </tr>`;
 }
 
-function tabMapping(s) {
+function readingBlock(s) {
   const a = ASSESSMENT[Math.min(+s.grade || 0, 7)];
-  return `
-  <div class="card"><h2>רמת קריאה – أدوات لتقييم البروفيل اللغوي</h2>
+  return `<div class="reading">
+    <h3>רמת קריאה – أدوات لتقييم البروفيل اللغوي</h3>
     <div class="grid">
       ${selectField('grade', 'דרגת כיתה', GRADE_NAMES.slice(1).map((n, i) => [i + 1, n]))}
       ${selectField('readingBand', 'רמת קריאות (הקיפי)', GRADE_BANDS.map(b => [b, b]))}
@@ -426,33 +492,65 @@ function tabMapping(s) {
     ${a ? `<div class="tools" dir="rtl">
       <b>مهام التقييم للصف ${ARABIC_GRADES[Math.min(+s.grade, 7)]}${+s.grade > 7 ? ' (اعلى صف في الملف)' : ''}:</b>
       <ul>${a.tasks.map(t => `<li>${esc(t)}</li>`).join('')}</ul>
-      <a class="btn small" href="${TOOLS_PDF}#page=${a.page}" target="_blank" rel="noopener">פתיחת כלי ההערכה (نسخة الطالب / المعلم) ↗</a>
+      <a class="btn small" href="${TOOLS_PDF}#page=${a.page}" target="_blank" rel="noopener">פתיחת כלי ההערכה ↗</a>
     </div>` : '<p class="muted">בחרו דרגת כיתה כדי לראות את משימות ההערכה המתאימות.</p>'}
+  </div>`;
+}
+
+function tabMapping(s) {
+  const open = view.openSec || {};
+  return `
+  <div class="card scale-card">
+    <b>סולם ההערכה</b>
+    <div class="scale5">${SCALE.map(([n, l]) => `<span class="r${n}"><b>${n}</b> ${l}</span>`).join('')}</div>
+    <div class="muted" style="font-size:.85rem">מיומנות שהוערכה 1–${NEEDS_GOAL} תיכנס לתוכנית כיעד; ${NEEDS_GOAL + 1}–5 תירשם כתחום חוזק. אין חובה להעריך הכל – רק את מה שנבדק.</div>
   </div>
-  <div class="card"><h2>מיפוי אישי – פרופיל אקדמי</h2>
-    <p class="muted scale" dir="auto">${ACADEMIC_SCALE.map(([n, l]) => `<b>${n}</b> ${l}`).join(' · ')}<br>
-    פריט שדורג ${ACADEMIC_NEEDS_GOAL} ומטה ייכנס לטיוטת התוכנית.</p>
-    ${ratingTable(s, ACADEMIC, ACADEMIC_SCALE, ACADEMIC_NEEDS_GOAL)}
-  </div>
-  <div class="card"><h2>מיפוי אישי – פרופיל תפקודי</h2>
-    <p class="muted scale" dir="auto">${FUNCTIONAL_SCALE.map(([n, l]) => `<b>${n}</b> ${l}`).join(' · ')}<br>
-    פריט שדורג ${FUNCTIONAL_NEEDS_GOAL} ומטה ייכנס לטיוטת התוכנית.</p>
-    ${ratingTable(s, FUNCTIONAL, FUNCTIONAL_SCALE, FUNCTIONAL_NEEDS_GOAL)}
-  </div>
-  <div class="card row"><span class="muted">סיימתם למפות?</span><span class="spacer"></span>
-    <button class="btn primary" data-act="draft">✨ ניסוח טיוטת תל"א מהמיפוי</button></div>`;
+  ${MAP_GROUPS.map(grp => {
+    const items = grp.sections.flatMap(x => x.items);
+    const rated = items.filter(i => rating(s, i.id)).length;
+    return `<div class="card map-group">
+      <h2>${grp.title} <span class="count">${rated}/${items.length}</span></h2>
+      <label class="field wide">נתונים והערות כלליות לתחום (תצפיות, מבחנים, אבחונים, דברי הצוות)
+        <textarea dir="auto" data-path="mapNotes.${grp.id}">${esc(s.mapNotes[grp.id])}</textarea></label>
+      ${grp.reading ? readingBlock(s) : ''}
+      ${grp.sections.map((sec, si) => {
+        const key = `${grp.id}-${si}`;
+        const n = sec.items.filter(i => rating(s, i.id)).length;
+        return `<details class="map-sec" data-key="${key}" ${open[key] ? 'open' : ''}>
+          <summary dir="auto">${esc(sec.title)} <span class="count">${n}/${sec.items.length}</span>${sec.source ? '<span class="src" title="' + esc(DEV_SOURCE) + '">ⓘ</span>' : ''}</summary>
+          <div class="scroll-x"><table class="table rate-table">${sec.items.map(i => rateRow(s, i)).join('')}</table></div>
+        </details>`;
+      }).join('')}
+    </div>`;
+  }).join('')}
+  <div class="card build">
+    <div><b>סיימת להכניס נתונים?</b><div class="muted">האפליקציה תבנה תוכנית לכל תחום: יכולת התפקוד הנוכחית, תחומי חוזק וקושי, ויעדים ממאגר המטרות לפי ההערכות.</div></div>
+    <button class="btn primary big" data-act="build">✨ בנה את התוכנית</button>
+  </div>`;
 }
 
 function tabGoals(s) {
   const partnerChips = [...new Set([...s.team.filter(m => m.name).map(m => m.name), ...PARTNERS])];
   return `
   <div class="card row">
-    <div><b>ניסוח אוטומטי</b><div class="muted" style="font-size:.9rem">לפי המיפוי ורמת הקריאה, ממאגר המטרות. יעדים קיימים לא יוכפלו.</div></div>
+    <div><b>בנייה מהמיפוי</b><div class="muted" style="font-size:.9rem">שיניתם את המיפוי? אפשר להוסיף רק יעדים חדשים, או לבנות את כל התוכנית מחדש.</div></div>
     <span class="spacer"></span>
-    <button class="btn primary" data-act="draft">✨ ניסוח טיוטה מהמיפוי</button>
+    <button class="btn" data-act="build-add">הוספת יעדים חדשים</button>
+    <button class="btn primary" data-act="build">✨ בנייה מחדש</button>
+    <button class="btn" data-act="excel">⬇️ Excel</button>
   </div>
+  ${s.goals.length || Object.keys(s.profile).length ? `<div class="card"><h2>פרופיל תלמיד – תיאור רמת התפקוד</h2>
+    <div class="scroll-x"><table class="table profile-table">
+      <tr><th></th><th>מוקדי כוח – תחומים בהם התלמיד מגלה יכולת וכישורים</th><th>מוקדים לחיזוק</th></tr>
+      ${PROFILE_ROWS.map(r => `<tr><td><b>${r.title}</b><div class="muted" style="font-size:.8rem">${r.desc}</div></td>
+        <td><textarea dir="auto" data-path="profile.${r.id}.strengths">${esc(s.profile[r.id]?.strengths)}</textarea></td>
+        <td><textarea dir="auto" data-path="profile.${r.id}.focus">${esc(s.profile[r.id]?.focus)}</textarea></td></tr>`).join('')}
+    </table></div>
+    ${field('studentView', 'ייצוג וסינגור עצמי – מטרות מפי התלמיד/ה', 'textarea', 'wide')}
+  </div>` : ''}
   ${s.goals.length === 0 ? `<div class="card empty"><div class="big">🎯</div>
-    <p class="muted">עדיין אין תחומים בתוכנית. מלאו את <b>המיפוי</b> ולחצו "ניסוח טיוטה", או הוסיפו תחום ידנית למטה.</p></div>` : ''}
+    <p class="muted">עדיין אין תוכנית. מלאו את <b>המיפוי</b> ולחצו "בנה את התוכנית", או הוסיפו תחום ידנית למטה.</p>
+    <button class="btn primary" data-tab="mapping">למיפוי</button></div>` : ''}
   ${s.goals.map((g, gi) => {
     const bank = bankFor(g.domain);
     const areas = [...new Set(bank.map(b => b.area))];
@@ -473,7 +571,9 @@ function tabGoals(s) {
       <div class="grid">
         <label class="field">שם מורה אחראית תחום<input type="text" data-path="goals.${gi}.teacher" value="${esc(g.teacher)}" list="teamNames"></label>
         <label class="field wide">מטרה\\ות שנתית\\ות<textarea dir="auto" data-path="goals.${gi}.annual">${esc(g.annual)}</textarea></label>
-        <label class="field wide">יכולת התפקוד הנוכחית (מהמיפוי)<textarea dir="auto" data-path="goals.${gi}.current">${esc(g.current)}</textarea></label>
+        <label class="field wide">יכולת התפקוד הנוכחית<textarea dir="auto" data-path="goals.${gi}.current">${esc(g.current)}</textarea></label>
+        <label class="field">תחומי חוזק<textarea dir="auto" data-path="goals.${gi}.strengths">${esc(g.strengths)}</textarea></label>
+        <label class="field">תחומי קושי<textarea dir="auto" data-path="goals.${gi}.difficulties">${esc(g.difficulties)}</textarea></label>
       </div>
       ${g.objectives.map((o, oi) => `
         <div class="objective">
@@ -481,7 +581,7 @@ function tabGoals(s) {
             <span class="num">יעד ${gi + 1}.${oi + 1}</span>
             ${g.domain === 'arabic' ? `<select class="cur-select" data-path="goals.${gi}.objectives.${oi}.curriculum" title="مجال المنهاج 2009">
               <option value="">مجال المنهاج 2009…</option>${CURRICULUM.domains.map(c => `<option ${c === o.curriculum ? 'selected' : ''}>${c}</option>`).join('')}
-            </select>` : o.area && o.area !== g.domain ? `<span class="area-pill">${esc(o.area)}</span>` : ''}
+            </select>` : ''}
             <select class="status ${statusOf(o.status).cls}" data-path="goals.${gi}.objectives.${oi}.status" data-status>
               ${STATUSES.map(st => `<option value="${st.v}" ${st.v === (o.status || 'todo') ? 'selected' : ''}>${st.label}</option>`).join('')}
             </select>
@@ -505,10 +605,10 @@ function tabGoals(s) {
         </div>`).join('')}
       <div style="margin-top:10px">
         <button class="btn ghost" data-act="add-obj" data-gi="${gi}">+ יעד ריק</button>
-        ${bank.length ? `<details class="bank" ${g.objectives.length ? '' : 'open'}>
+        ${bank.length ? `<details class="bank">
           <summary>מאגר המטרות לתחום (${bank.length}) – לחיצה מוסיפה יעד${s.readingLevel && g.domain === 'arabic' ? ` · מסומנות המתאימות לרמה (${s.readingLevel})` : ''}</summary>
           ${g.domain === 'arabic' ? `<div class="cur-note" dir="rtl">مرتبة حسب مجالات ${esc(CURRICULUM.title)}${s.grade ? ' · ' + curriculumStage(s.grade) : ''}</div>` : ''}
-          ${areas.map(area => `<div class="bank-area"><div class="bank-title">${esc(area === g.domain ? domainLabel(area) : g.domain === 'arabic' ? 'مجال ' + area : area)}</div>
+          ${areas.map(area => `<div class="bank-area"><div class="bank-title">${esc(g.domain === 'arabic' ? 'مجال ' + area : area)}</div>
             <div class="suggest">${bank.filter(b => b.area === area).map(b => `<button type="button" dir="rtl"
               class="${used.has(b.ref) ? 'used' : ''} ${s.readingLevel && b.level?.includes(s.readingLevel) ? 'fit' : ''}"
               data-act="add-bank" data-gi="${gi}" data-ref="${b.ref}" ${used.has(b.ref) ? 'disabled' : ''}>${esc(fillBlanks(b.text, s))}</button>`).join('')}</div></div>`).join('')}
@@ -524,12 +624,32 @@ function tabGoals(s) {
       <select id="newDomain" style="width:auto;flex:1">${DOMAINS.map(d => `<option value="${d.id}">${d.label}</option>`).join('')}</select>
       <button class="btn primary" data-act="add-goal">+ הוספת תחום לתוכנית</button>
     </div>
+  </div>
+  <div class="card"><h2>המלצות להורים</h2>
+    ${field('parentRecs', 'ההמלצות (אחת בכל שורה)', 'textarea', 'wide')}
+    ${Object.entries(PARENT_RECS).map(([area, recs]) => `<div class="bank-title" style="margin-top:8px">${area}</div>
+      ${chips('append', 'data-path="parentRecs" data-sep="nl"', recs)}`).join('')}
   </div>`;
 }
 
 function tabTracking(s) {
   const objs = allObjectives(s);
+  const dl = parentsDeadline(s);
   return `
+  <div class="card"><h2>שלבי בניית התל"א</h2>
+    ${PLAN_STEPS.map(([k, l]) => `<label class="check step"><input type="checkbox" data-path="steps.${k}" ${s.steps[k] ? 'checked' : ''}> ${l}</label>`).join('')}
+    ${dl ? `<p class="muted" style="font-size:.9rem">לפי חוק החינוך המיוחד יש להציג את התל"א להורים עד ${dl.toLocaleDateString('he-IL')}.</p>` : ''}
+  </div>
+  <div class="card"><h2>הערכה מעצבת ומסכמת</h2>
+    <div class="grid">${field('evalDates.mid', 'תאריך הערכה מעצבת', 'date')}${field('evalDates.final', 'תאריך הערכה מסכמת', 'date')}</div>
+    ${s.goals.map((g, gi) => g.objectives.length ? `<h3 style="margin-top:14px">מטרה ${gi + 1} – ${esc(domainLabel(g.domain))}</h3>
+      ${g.objectives.map((o, oi) => `<div class="objective">
+        <div dir="auto"><b>${gi + 1}.${oi + 1}</b> ${esc(o.text)}</div>
+        <div class="grid" style="margin-top:6px">
+          <label class="field">הערכה מעצבת<textarea dir="auto" data-path="goals.${gi}.objectives.${oi}.midEval">${esc(o.midEval)}</textarea></label>
+          <label class="field">הערכה מסכמת<textarea dir="auto" data-path="goals.${gi}.objectives.${oi}.finalEval">${esc(o.finalEval)}</textarea></label>
+        </div></div>`).join('')}` : '').join('') || '<p class="muted">אין עדיין יעדים.</p>'}
+  </div>
   <div class="card"><h2>תמונת התקדמות</h2>
     ${objs.length ? `${progressBar(s)}
       <div class="row" style="margin-top:10px">${STATUSES.map(st => `<span class="status ${st.cls}">${st.label}: ${objs.filter(o => (o.status || 'todo') === st.v).length}</span>`).join('')}</div>
@@ -540,7 +660,6 @@ function tabTracking(s) {
             ${STATUSES.map(st => `<option value="${st.v}" ${st.v === (o.status || 'todo') ? 'selected' : ''}>${st.label}</option>`).join('')}
           </select></td></tr>`).join('')).join('')}
       </table>` : '<p class="muted">אין עדיין יעדים למעקב.</p>'}
-    <p class="muted" style="font-size:.9rem">לעדכון ההערכה המעצבת והמסכמת – דרגו שוב את המיפוי בעמודות "אמצע" ו"סוף".</p>
   </div>
   <div class="card"><h2>פגישות צוות והורים</h2>
     ${s.meetings.map((m, i) => `<div class="objective">
@@ -552,25 +671,172 @@ function tabTracking(s) {
       </div>
       <div class="row" style="margin-top:6px"><span class="spacer"></span><button class="btn small danger" data-act="del-meeting" data-i="${i}">מחיקת פגישה</button></div>
     </div>`).join('')}
-    <datalist id="meetingTypes"><option value="בניית תל&quot;א"><option value="הערכה מעצבת"><option value="הערכה מסכמת"><option value="פגישת הורים"><option value="ישיבת צוות"></datalist>
+    <datalist id="meetingTypes"><option value="ישיבת צוות רב-מקצועי"><option value="הצגת התל&quot;א להורים"><option value="הערכה מעצבת"><option value="הערכה מסכמת"><option value="פגישת משוב סוף שנה"></datalist>
     <button class="btn ghost" data-act="add-meeting" style="margin-top:8px">+ תיעוד פגישה</button>
   </div>
-  <div class="card"><h2>סיכום והמלצות להמשך</h2>
-    ${field('summary', 'סיכום שנתי, הישגים והמלצות לשנה הבאה', 'textarea', 'wide')}
+  <div class="card"><h2>דו"ח סיכום והמלצות להמשך</h2>
+    ${field('summary', 'תיאור התהליך שעבר התלמיד/ה, הישגים והמלצות להמשך טיפול', 'textarea', 'wide')}
   </div>`;
 }
 
 function tabDoc(s) {
+  const fmt = view.format || 'matya';
+  return `
+  <div class="card row no-print">
+    <b>פורמט:</b>
+    <button class="btn small ${fmt === 'matya' ? 'primary' : ''}" data-act="format" data-v="matya">פורמט תל"א (מת"יא)</button>
+    <button class="btn small ${fmt === 'school' ? 'primary' : ''}" data-act="format" data-v="school">תבנית בית הספר (תח"י)</button>
+    <span class="spacer"></span>
+    <button class="btn primary" data-act="excel">⬇️ הורדה כקובץ Excel</button>
+    <button class="btn" data-act="print">🖨️ הדפסה / PDF</button>
+  </div>
+  ${fmt === 'matya' ? docMatya(s) : docSchool(s)}`;
+}
+
+// Rows of the plan in the Matya format, shared by the printed page and the Excel file.
+function matyaData(s) {
+  const info = [
+    ['שם התלמיד/ה', fullName(s), 'תעודת זהות', s.idNumber],
+    ['תאריך לידה', fmtDate(s.birthDate), 'כיתה', [gradeName(s), s.className].filter(Boolean).join(' · ')],
+    ['בית ספר', s.school, 'שנת הלימודים', s.year],
+    ['מחנכת הכיתה', s.homeroomTeacher, 'סייעת', s.aide],
+  ];
+  const goalTitle = (g, gi) => `מטרה ${gi + 1} – ${domainLabel(g.domain)}: ${g.annual}`;
+  const evalHead = (label, date) => `${label} (תאריך: ${date ? fmtDate(date) : '      '})`;
+  const goalHead = ['יעד', 'פרק זמן להשגת היעד', 'דרכים ואמצעים (יפורט עם צוות ההוראה והטיפול)', 'אמות מידה להערכה',
+    evalHead('הערכה מעצבת', s.evalDates.mid), evalHead('הערכה מסכמת', s.evalDates.final)];
+  const goalRow = o => [o.text, o.period, [o.methods, o.partners && `(${o.partners})`].filter(Boolean).join('\n'), o.criterion, o.midEval, o.finalEval];
+  return { info, goalTitle, goalHead, goalRow };
+}
+
+function docMatya(s) {
+  const { info, goalTitle, goalHead, goalRow } = matyaData(s);
+  return `<div class="doc matya">
+    <h1 class="u">תל"א – תוכנית לימודים אישית</h1>
+    <table class="kv">${info.map(r => `<tr><td>${r[0]}</td><td>${esc(r[1])}</td><td>${r[2]}</td><td>${esc(r[3])}</td></tr>`).join('')}</table>
+    <h3 class="u">הצוות הרב-מקצועי המשתתף בהכנת התוכנית ובביצועה:</h3>
+    <table><tr><th>שם</th><th>תפקיד</th></tr>${(s.team.length ? s.team : [{}, {}, {}]).map(m => `<tr><td>${esc(m.name)}</td><td>${esc(m.role)}</td></tr>`).join('')}</table>
+    <h3 class="u">תמיכות שהתלמיד/ה מקבל/ת:</h3>
+    <table><tr><th>סוג התמיכה</th><th>מספר השעות</th><th>שם המורה/מטפל</th></tr>${(s.supports.length ? s.supports : [{}, {}, {}]).map(m => `<tr><td>${esc(m.type)}</td><td>${esc(m.hours)}</td><td>${esc(m.teacher)}</td></tr>`).join('')}</table>
+
+    <div class="page-break"></div>
+    <h1 class="u">פרופיל תלמיד – תיאור רמת התפקוד</h1>
+    <table class="profile"><tr><th style="width:30%"></th><th>מוקדי כוח – תחומים בהם התלמיד מגלה יכולת וכישורים</th><th>מוקדים לחיזוק</th></tr>
+      ${PROFILE_ROWS.map(r => `<tr><td class="ptitle"><b>${r.title}</b><div>${r.desc}</div></td><td class="pre" dir="auto">${esc(s.profile[r.id]?.strengths)}</td><td class="pre" dir="auto">${esc(s.profile[r.id]?.focus)}</td></tr>`).join('')}
+    </table>
+    <h3 class="u">ייצוג וסינגור עצמי – מטרות מפי התלמיד:</h3>
+    <div class="pre line" dir="auto">${esc(s.studentView) || '&nbsp;'}</div>
+
+    ${s.goals.map((g, gi) => `<div class="page-break"></div>
+      <h2 class="center u plain">תכנית לימודים אישית (תל"א)</h2>
+      <div class="banner" dir="auto">${esc(goalTitle(g, gi))}</div>
+      <table class="goals6"><tr>${goalHead.map(h => `<th>${esc(h)}</th>`).join('')}</tr>
+        ${g.objectives.map(o => `<tr>${goalRow(o).map(v => `<td class="pre" dir="auto">${esc(v)}</td>`).join('')}</tr>`).join('')}
+      </table>`).join('')}
+    ${tailPages(s)}
+  </div>`;
+}
+
+function tailPages(s) {
+  const services = s.team.filter(m => m.name && m.role && !/הורה|מחנך|מנהל/.test(m.role));
+  return `${s.parentRecs.trim() ? `<div class="page-break"></div><h1>המלצות להורים</h1><div class="sub">${esc(fullName(s))}</div>
+      <ul class="recs" dir="auto">${s.parentRecs.split('\n').filter(x => x.trim()).map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
+    ${s.goals.length ? `<div class="page-break"></div><h1>אישור הורים</h1>
+      <p class="consent">אנו, ההורים של <b>${esc(fullName(s))}</b>, מאשרים בזאת שקיבלנו מידע על תפקודו/ה בבית הספר והסבר על תכנית הלימודים האישית (תל"א) המתוכננת לשנת הלימודים <bdi dir="ltr">${esc(s.year)}</bdi>.</p>
+      ${services.length ? `<p class="consent">ידוע לנו ש${esc(s.firstName || 'בננו/בתנו')} יקבל/תקבל עזרה מקצועית בתחומים הבאים:</p>
+        <ul class="recs">${services.map(m => `<li>${esc(m.role)} – ${esc(m.name)}</li>`).join('')}</ul>` : ''}
+      <table class="kv consent-table"><tr><td>שמות ההורים</td><td></td></tr><tr><td>תאריך</td><td></td></tr><tr><td>חתימת ההורים</td><td></td></tr></table>` : ''}`;
+}
+
+function exportExcel(s) {
+  const { info, goalTitle, goalHead, goalRow } = matyaData(s);
+  const C = (v, st = 'cell') => ({ v: v ?? '', s: st });
+  const sheets = [];
+
+  // 1. Details, team, supports
+  const rows = [[C('תל"א – תוכנית לימודים אישית', 'title')], []];
+  const merges = ['A1:D1'];
+  for (const r of info) rows.push([C(r[0], 'label'), C(r[1]), C(r[2], 'label'), C(r[3])]);
+  rows.push([], [C('הצוות הרב-מקצועי המשתתף בהכנת התוכנית ובביצועה:', 'sub')]);
+  merges.push(`A${rows.length}:D${rows.length}`);
+  rows.push([C('שם', 'head'), C('', 'head'), C('תפקיד', 'head'), C('', 'head')]);
+  merges.push(`A${rows.length}:B${rows.length}`, `C${rows.length}:D${rows.length}`);
+  for (const m of (s.team.length ? s.team : [{}, {}, {}])) {
+    rows.push([C(m.name), C(''), C(m.role), C('')]);
+    merges.push(`A${rows.length}:B${rows.length}`, `C${rows.length}:D${rows.length}`);
+  }
+  rows.push([], [C('תמיכות שהתלמיד/ה מקבל/ת:', 'sub')]);
+  merges.push(`A${rows.length}:D${rows.length}`);
+  rows.push([C('סוג התמיכה', 'head'), C('מספר השעות', 'head'), C('שם המורה/מטפל', 'head'), C('', 'head')]);
+  merges.push(`C${rows.length}:D${rows.length}`);
+  for (const m of (s.supports.length ? s.supports : [{}, {}, {}])) {
+    rows.push([C(m.type), C(m.hours), C(m.teacher), C('')]);
+    merges.push(`C${rows.length}:D${rows.length}`);
+  }
+  sheets.push({ name: 'פרטים', cols: [22, 28, 22, 28], rows, merges });
+
+  // 2. Profile
+  const prof = [[C('פרופיל תלמיד – תיאור רמת התפקוד', 'title')], [],
+    [C('', 'head'), C('מוקדי כוח – תחומים בהם התלמיד מגלה יכולת וכישורים', 'head'), C('מוקדים לחיזוק', 'head')]];
+  for (const r of PROFILE_ROWS) prof.push([C(`${r.title}\n${r.desc}`, 'label'), C(s.profile[r.id]?.strengths), C(s.profile[r.id]?.focus)]);
+  prof.push([], [C('ייצוג וסינגור עצמי – מטרות מפי התלמיד:', 'sub')], [C(s.studentView, 'wrap')]);
+  sheets.push({ name: 'פרופיל', cols: [30, 50, 50], rows: prof, merges: ['A1:C1', `A${prof.length - 1}:C${prof.length - 1}`, `A${prof.length}:C${prof.length}`] });
+
+  // 3. One sheet per goal, as in the format
+  s.goals.forEach((g, gi) => {
+    const r = [[C('תכנית לימודים אישית (תל"א)', 'title')], [], [C(goalTitle(g, gi), 'banner'), C('', 'banner'), C('', 'banner'), C('', 'banner'), C('', 'banner'), C('', 'banner')], [],
+      goalHead.map(h => C(h, 'head'))];
+    for (const o of g.objectives) r.push(goalRow(o).map(v => C(v)));
+    if (!g.objectives.length) r.push(goalHead.map(() => C('')));
+    sheets.push({ name: `מטרה ${gi + 1} - ${domainLabel(g.domain)}`, landscape: true, cols: [38, 16, 34, 22, 24, 24], rows: r, merges: ['A1:F1', 'A3:F3'] });
+  });
+
+  // 4. Mapping (the data the plan was built from)
+  const map = [[C('מיפוי והערכה', 'title')], [C(`סולם: ${SCALE.map(([n, l]) => `${n} – ${l}`).join(' · ')}`, 'wrap')], []];
+  const mm = ['A1:D1', 'A2:D2'];
+  for (const grp of MAP_GROUPS) {
+    const items = grp.sections.flatMap(x => x.items).filter(i => rating(s, i.id));
+    if (!items.length && !s.mapNotes[grp.id]) continue;
+    map.push([C(grp.title, 'banner'), C('', 'banner'), C('', 'banner'), C('', 'banner')]); mm.push(`A${map.length}:D${map.length}`);
+    if (s.mapNotes[grp.id]) { map.push([C('נתונים והערות', 'label'), C(s.mapNotes[grp.id]), C(''), C('')]); mm.push(`B${map.length}:D${map.length}`); }
+    if (items.length) {
+      map.push([C('המיומנות', 'head'), C('הערכה (1–5)', 'head'), C('הערה', 'head'), C('', 'head')]); mm.push(`C${map.length}:D${map.length}`);
+      for (const i of items) { map.push([C(i.label), C(rating(s, i.id), 'center'), C(s.ratings[i.id]?.note), C('')]); mm.push(`C${map.length}:D${map.length}`); }
+    }
+    map.push([]);
+  }
+  if (map.length > 3) sheets.push({ name: 'מיפוי', cols: [50, 12, 30, 20], rows: map, merges: mm });
+
+  // 5. Recommendations to parents
+  if (s.parentRecs.trim()) {
+    const rec = [[C('המלצות להורים', 'title')], [], ...s.parentRecs.split('\n').filter(x => x.trim()).map(x => [C('• ' + x.trim(), 'wrap')])];
+    sheets.push({ name: 'המלצות להורים', cols: [100], rows: rec });
+  }
+
+  const blob = XLSX.build(sheets);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `תלא - ${fullName(s)}.xlsx`.replace(/[\\/:*?"<>|]/g, '_');
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  toast('קובץ ה-Excel ירד');
+}
+
+function docSchool(s) {
   const kv = (k, v) => v ? `<tr><td>${k}</td><td class="pre" dir="auto">${esc(v)}</td></tr>` : '';
   const support = SUPPORT_WHEN.map(w => [w, SUPPORT_TYPES.filter(t => s.support[`${w}|${t}`])]).filter(([, l]) => l.length);
   const diag = DIAGNOSES.filter(d => s.diagnoses[d]);
   const acc = ACCOMMODATIONS.filter(a => s.accommodations[a]);
-  const ratedRows = (sections, scale) => sections.map(sec => {
-    const rows = sec.items.filter(([id]) => RATE_COLS.some(([k]) => s.ratings[id]?.[k]) || s.ratings[id]?.note);
-    if (!rows.length) return '';
-    return `<tr><th colspan="5" dir="auto">${esc(sec.sec)}</th></tr>` + rows.map(([id, label]) => `<tr><td dir="auto">${esc(label)}</td>${RATE_COLS.map(([k]) => `<td class="c">${s.ratings[id]?.[k] || ''}</td>`).join('')}<td dir="auto">${esc(s.ratings[id]?.note)}</td></tr>`).join('');
+  const mapping = MAP_GROUPS.map(grp => {
+    const rows = grp.sections.flatMap(x => x.items).filter(i => rating(s, i.id));
+    const notes = s.mapNotes[grp.id];
+    if (!rows.length && !notes) return '';
+    return `<h2>${grp.title}</h2>
+      ${notes ? `<table class="kv">${kv('נתונים והערות', notes)}</table>` : ''}
+      ${rows.length ? `<table><tr><th>המיומנות</th><th class="c">הערכה</th><th>הערה</th></tr>
+        ${rows.map(i => `<tr><td dir="auto">${esc(i.label)}</td><td class="c r${rating(s, i.id)}">${rating(s, i.id)}</td><td dir="auto">${esc(s.ratings[i.id]?.note)}</td></tr>`).join('')}</table>` : ''}`;
   }).join('');
-  const academic = ratedRows(ACADEMIC), functional = ratedRows(FUNCTIONAL);
+  const reading = s.readingLevel || s.readingBand || s.listeningBand || s.wpm;
   const head = g => `<table class="kv">
       <tr><td>שם התלמיד</td><td>${esc(fullName(s))}</td><td>שם מחנך\\ת כיתה</td><td>${esc(s.homeroomTeacher)}</td></tr>
       <tr><td>דרגת כיתה</td><td>${esc(gradeName(s) || s.className)}</td><td>שם מורה אחראית תחום</td><td>${esc(g.teacher)}</td></tr>
@@ -579,10 +845,6 @@ function tabDoc(s) {
     </table>`;
 
   return `
-  <div class="row no-print" style="margin-bottom:12px">
-    <button class="btn primary" data-act="print">🖨️ הדפסה / שמירה כ-PDF</button>
-    <span class="muted">בחלון ההדפסה אפשר לבחור "שמירה כ-PDF". כל תחום מודפס בעמוד נפרד, כמו בגיליונות התבנית.</span>
-  </div>
   <div class="doc">
     <h1>פרופיל תלמיד – פרטים ורקע</h1>
     <div class="sub">שנת הלימודים <bdi dir="ltr">${esc(s.year)}</bdi></div>
@@ -596,17 +858,17 @@ function tabDoc(s) {
     </table>
     ${support.length ? `<h2>סוגי תמיכה וטיפול שקיבל</h2><table class="kv">${support.map(([w, l]) => kv(w, l.join(', '))).join('')}</table>` : ''}
     ${diag.length ? `<h2>אבחונים</h2><table class="kv">${diag.map(d => kv(d, fmtDate(s.diagnoses[d]))).join('')}</table>` : ''}
-    ${[s.background, s.strengths, s.difficulties, s.motivators, s.parentsView, s.studentView].some(Boolean) ? `<h2>רקע כללי ותמונת מצב</h2><table class="kv">
-      ${kv('רקע', s.background)}${kv('נקודות חוזק', s.strengths)}${kv('קשיים וצרכים', s.difficulties)}${kv('תחומי עניין ומחזקים', s.motivators)}
+    ${[s.background, s.strengths, s.difficulties, s.motivators, s.parentsView, s.studentView].some(Boolean) ? `<h2>רקע ותיאור כללי</h2><table class="kv">
+      ${kv('רקע', s.background)}${kv('תחומי חוזק', s.strengths)}${kv('תחומי קושי', s.difficulties)}${kv('תחומי עניין ומחזקים', s.motivators)}
       ${kv('עמדת ההורים', s.parentsView)}${kv('עמדת התלמיד/ה', s.studentView)}</table>` : ''}
     ${acc.length || s.accommodationsOther ? `<h2>התאמות בהמלצת בית הספר</h2><table class="kv">${kv('התאמות', acc.join(' · '))}${kv('אחר', s.accommodationsOther)}</table>` : ''}
 
-    ${academic || functional || s.readingLevel ? `<div class="page-break"></div><h1>מיפוי אישי – פרופיל</h1><div class="sub">${esc(fullName(s))}</div>
-      ${s.readingLevel || s.readingBand || s.listeningBand || s.wpm ? `<table class="kv">
+    ${mapping || reading ? `<div class="page-break"></div><h1>מיפוי והערכה</h1>
+      <div class="sub">${esc(fullName(s))} · סולם: ${SCALE.map(([n, l]) => `${n} – ${l}`).join(' · ')}</div>
+      ${reading ? `<table class="kv">
         ${kv('רמת קריאה (أدوات التقييم)', s.readingLevel ? READING_LEVELS[s.readingLevel].title : '')}
         ${kv('רמת קריאות', s.readingBand)}${kv('הבנת הנשמע', s.listeningBand)}${kv('سرعة القراءة', s.wpm ? `${s.wpm} كلمة في الدقيقة` : '')}</table>` : ''}
-      ${academic ? `<h2>פרופיל אקדמי (1–6)</h2><table><tr><th>המיומנות</th><th class="c">תחילה</th><th class="c">אמצע</th><th class="c">סוף</th><th>התייחסות נוספת</th></tr>${academic}</table>` : ''}
-      ${functional ? `<h2>פרופיל תפקודי (1–4)</h2><table><tr><th>המיומנות</th><th class="c">תחילה</th><th class="c">אמצע</th><th class="c">סוף</th><th>התייחסות נוספת</th></tr>${functional}</table>` : ''}` : ''}
+      ${mapping}` : ''}
 
     ${s.goals.map(g => `
       <div class="page-break"></div>
@@ -614,7 +876,7 @@ function tabDoc(s) {
       <div class="sub">תוכנית חינוכית יחידנית · תוכנית לימודים אישית</div>
       ${head(g)}
       ${g.domain === 'arabic' ? `<table class="kv">${kv('תוכנית הלימודים', CURRICULUM.title + (s.grade ? '\n' + curriculumStage(s.grade) : ''))}</table>` : ''}
-      <table class="kv">${kv('מטרה\\ות שנתית\\ות', g.annual)}${kv('יכולת התפקוד הנוכחית', g.current)}</table>
+      <table class="kv">${kv('מטרה\\ות שנתית\\ות', g.annual)}${kv('יכולת התפקוד הנוכחית', g.current)}${kv('תחומי חוזק', g.strengths)}${kv('תחומי קושי', g.difficulties)}</table>
       <table>
         <tr><th>יעדים עפ"י יכולת התפקוד הנוכחית של התלמיד אקדמי – תפקודי</th><th style="width:14%">פרק זמן להשגה</th>
           <th style="width:28%">אמות מידה להצלחה, דרכי הוראה שיטות ואמצעים</th><th style="width:16%">גורמים מטפלים שותפים לתוכנית</th></tr>
@@ -629,7 +891,9 @@ function tabDoc(s) {
     ${s.meetings.length || s.summary ? `<div class="page-break"></div>` : ''}
     ${s.meetings.length ? `<h2>פגישות</h2><table><tr><th style="width:14%">תאריך</th><th style="width:18%">סוג</th><th>משתתפים</th><th>סיכום</th></tr>
       ${s.meetings.map(m => `<tr><td>${fmtDate(m.date)}</td><td>${esc(m.type)}</td><td>${esc(m.participants)}</td><td class="pre" dir="auto">${esc(m.summary)}</td></tr>`).join('')}</table>` : ''}
-    ${s.summary ? `<h2>סיכום והמלצות</h2><table class="kv">${kv('סיכום', s.summary)}</table>` : ''}
+    ${s.summary ? `<h2>דו"ח סיכום והמלצות</h2><table class="kv">${kv('סיכום', s.summary)}</table>` : ''}
+
+    ${tailPages(s)}
   </div>`;
 }
 
@@ -651,13 +915,35 @@ function onEdit(e) {
   if (isChoice !== (e.type === 'change')) return;
   setPath(s, path, t.type === 'checkbox' ? t.checked : t.value);
   if (t.hasAttribute('data-status')) t.className = 'status ' + statusOf(t.value).cls;
-  if (t.classList.contains('rate')) t.className = 'rate ' + (t.value ? (+t.value <= +t.dataset.threshold ? 'low' : 'ok') : '');
+  if (t.type === 'radio' && path.startsWith('ratings.')) {
+    const box = t.closest('.rate5'); box.querySelector('.clear').hidden = false;
+    updateCounts(s);
+  }
   if (path === 'firstName' || path === 'lastName') document.getElementById('title').textContent = fullName(s);
   touch(s);
-  if (t.hasAttribute('data-rerender') || (path === 'grade' && view.tab === 'mapping')) { const y = scrollY; render(); scrollTo(0, y); }
+  if (t.hasAttribute('data-rerender') || (path === 'grade' && view.tab === 'mapping')) rerender();
 }
 app.addEventListener('input', onEdit);
 app.addEventListener('change', onEdit);
+// Remember which mapping sections are open across re-renders.
+app.addEventListener('toggle', e => {
+  const key = e.target.dataset?.key;
+  if (key) (view.openSec ??= {})[key] = e.target.open;
+}, true);
+
+function updateCounts(s) {
+  document.querySelectorAll('.map-group').forEach((card, gi) => {
+    const grp = MAP_GROUPS[gi];
+    const items = grp.sections.flatMap(x => x.items);
+    card.querySelector('h2 .count').textContent = `${items.filter(i => rating(s, i.id)).length}/${items.length}`;
+    card.querySelectorAll('.map-sec').forEach((d, si) => {
+      const sec = grp.sections[si];
+      d.querySelector('summary .count').textContent = `${sec.items.filter(i => rating(s, i.id)).length}/${sec.items.length}`;
+    });
+  });
+}
+
+function rerender() { const y = scrollY; render(); scrollTo(0, y); }
 
 document.addEventListener('click', e => {
   const t = e.target.closest('[data-act],[data-open],[data-tab]');
@@ -680,26 +966,40 @@ document.addEventListener('click', e => {
     case 'clone-year': {
       const c = normalize(JSON.parse(JSON.stringify(s)));
       c.id = uid(); c.year = nextYear(s.year);
-      c.meetings = []; c.summary = ''; c.fillDate = new Date().toISOString().slice(0, 10);
-      // The end-of-year rating becomes the new starting point.
-      for (const r of Object.values(c.ratings)) { r.b = r.e || r.m || r.b || ''; r.m = ''; r.e = ''; }
+      c.meetings = []; c.summary = ''; c.steps = {}; c.fillDate = new Date().toISOString().slice(0, 10);
+      if (+c.grade && +c.grade < 12) c.grade = String(+c.grade + 1);
       c.goals.forEach(g => { g.id = uid(); g.objectives = g.objectives.filter(o => o.status !== 'done').map(o => ({ ...o, id: uid(), status: 'todo', notes: '' })); });
       c.updatedAt = Date.now(); students.push(c); save();
-      view.id = c.id; toast('נוצרה תוכנית לשנה הבאה (ללא היעדים שהושגו)'); break;
+      view.id = c.id; toast('נוצרה תוכנית לשנה הבאה (ללא היעדים שהושגו). עדכנו את המיפוי.'); break;
     }
-    case 'draft': {
-      const n = draftPlan(s);
-      if (n === null) { alert('אין עדיין נתונים לניסוח: דרגו פריטים במיפוי האקדמי או התפקודי, או בחרו רמת קריאה (أ / ب / ج).'); return; }
+    case 'clear-rate': {
+      if (s.ratings[d.id]) s.ratings[d.id].b = '';
+      t.closest('.rate5').querySelectorAll('input').forEach(i => { i.checked = false; });
+      t.hidden = true; updateCounts(s); touch(s); return;
+    }
+    case 'build':
+    case 'build-add': {
+      let rebuild = false;
+      if (d.act === 'build' && allObjectives(s).length) {
+        if (!confirm('לבנות את התוכנית מחדש מהמיפוי? יעדים ושינויים שעשית בתוכנית יוחלפו.\n(כדי לשמור אותם ולהוסיף רק יעדים חדשים – בטלו ובחרו "הוספת יעדים חדשים")')) return;
+        rebuild = true;
+      }
+      const n = buildPlan(s, rebuild);
+      if (n === null) { alert('אין עדיין נתונים: הכניסו הערכות 1–5 במיפוי (או רמת קריאה / הערות לתחום), ואז בנו את התוכנית.'); return; }
       view.tab = 'goals';
-      toast(n ? `נוספו ${n} יעדים לטיוטה – עברו עליהם והתאימו` : 'כל היעדים מהמיפוי כבר נמצאים בתוכנית');
+      toast(n ? `נבנתה תוכנית עם ${n} יעדים חדשים – עברו עליה והתאימו` : 'לא נמצאו יעדים חדשים להוספה');
       touch(s); render(); scrollTo(0, 0); return;
     }
     case 'add-team': s.team.push({ name: '', role: '' }); break;
+    case 'add-support': s.supports.push({ type: '', hours: '', teacher: '' }); break;
+    case 'del-support': s.supports.splice(+d.i, 1); break;
+    case 'excel': exportExcel(s); return;
+    case 'format': view.format = d.v; break;
     case 'del-team': s.team.splice(+d.i, 1); break;
     case 'add-goal': {
       const domain = document.getElementById('newDomain').value;
       if (s.goals.some(g => g.domain === domain) && !confirm('התחום כבר קיים בתוכנית. להוסיף אותו שוב?')) return;
-      s.goals.push({ id: uid(), domain, teacher: '', annual: fillBlanks(domainOf(domain)?.annual || '', s), current: '', accommodations: '', objectives: [] });
+      s.goals.push(newSection(s, domain));
       break;
     }
     case 'del-goal':
@@ -710,26 +1010,27 @@ document.addEventListener('click', e => {
     case 'add-obj': s.goals[gi].objectives.push(newObjective(s, { text: '', domain: s.goals[gi].domain })); break;
     case 'add-bank': {
       const g = s.goals[gi]; const b = bankFor(g.domain).find(x => x.ref === d.ref);
-      if (b) addObjective(s, g, { text: b.text, area: b.area, ref: b.ref });
+      if (b) addObjective(s, g, { text: b.text, area: g.domain === 'arabic' ? GOAL_BY_ID[b.ref]?.area : b.area, ref: b.ref });
       break;
     }
     case 'del-obj': s.goals[gi].objectives.splice(oi, 1); break;
     case 'set': setPath(s, d.path, d.v); break;
     case 'append': {
+      const sep = d.sep === 'nl' ? '\n' : '، ';
       const cur = getPath(s, d.path) || '';
-      if (cur.split('، ').includes(d.v)) return;
-      setPath(s, d.path, cur ? `${cur}، ${d.v}` : d.v); break;
+      if (cur.split(sep).map(x => x.trim()).includes(d.v)) return;
+      setPath(s, d.path, cur.trim() ? `${cur.replace(/\s+$/, '')}${sep}${d.v}` : d.v); break;
     }
     case 'add-meeting': s.meetings.push({ date: new Date().toISOString().slice(0, 10), type: '', participants: '', summary: '' }); break;
     case 'del-meeting': s.meetings.splice(+d.i, 1); break;
     case 'print': window.print(); return;
-    case 'export-all': download(`tala-backup-${new Date().toISOString().slice(0, 10)}.json`, { app: 'tala', version: 2, students }); return;
-    case 'export-one': download(`tala-${fullName(s)}.json`, { app: 'tala', version: 2, students: [s] }); return;
+    case 'export-all': download(`tala-backup-${new Date().toISOString().slice(0, 10)}.json`, { app: 'tala', version: 3, students }); return;
+    case 'export-one': download(`tala-${fullName(s)}.json`, { app: 'tala', version: 3, students: [s] }); return;
     case 'import': document.getElementById('importFile').click(); return;
     default: return;
   }
   if (s && students.includes(s)) touch(s); else save();
-  const y = scrollY; render(); scrollTo(0, y);
+  rerender();
 });
 
 function nextYear(y) {
