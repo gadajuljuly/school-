@@ -31,24 +31,24 @@ const cors = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
 
-const SYSTEM = `You are the writing assistant inside an app for building individual education plans (תל"א / תח"י) for special-education students at an Arab-sector school in Israel. Teachers write plan content mostly in Arabic and sometimes in Hebrew.
+const SYSTEM = `You are the writing assistant inside an app for building individual education plans (תל"א / תח"י) for special-education students at a school in Israel.
 
 Rules:
+- Write in Hebrew. Every result is in Hebrew, even when the given text or context is in Arabic - unless the task explicitly asks for a translation into Arabic.
 - Return only the resulting text for the field - no preface, quotes, explanations or markdown.
-- Keep the language of the input text unless the task is a translation. When drafting an empty field, write in the language the field normally uses: Arabic for goals, objectives, methods and evaluations; Hebrew if the context or the existing text is Hebrew.
-- Arabic objectives follow the school's style: "ان + present-tense verb + الطالب ...", short and measurable, at the student's level.
+- Objectives are written in the usual Hebrew style of Israeli education plans: "התלמיד/ה + future-tense verb ...", short, observable and measurable, at the student's level.
 - Use only facts given in the text or the context. Never invent diagnoses, scores, names or events. Keep blanks written as ___ unless the context gives the value.
 - Professional, respectful, strengths-based wording suitable for parents to read.
 - Keep the length suitable for the field: a single objective, criterion or method is one line; descriptions may be a short paragraph.`;
 
 const TASKS: Record<string, string> = {
-  improve: "Improve the wording: clearer, more professional and grammatically correct. Keep the meaning and the language.",
-  expand: "Expand the text with a little more professional detail, based only on the given context. Keep the language.",
-  shorten: "Shorten the text and keep its essential meaning. Keep the language.",
-  measurable: "Rewrite as a measurable, observable objective (who, what, under which conditions, to what criterion). Keep the language.",
+  improve: "Improve the wording: clearer, more professional and grammatically correct Hebrew. Keep the meaning.",
+  expand: "Expand the text with a little more professional detail, based only on the given context. Write in Hebrew.",
+  shorten: "Shorten the text and keep its essential meaning. Write in Hebrew.",
+  measurable: "Rewrite as a measurable, observable objective (who, what, under which conditions, to what criterion). Write in Hebrew.",
   to_ar: "Translate the text into Modern Standard Arabic suitable for a school document.",
   to_he: "Translate the text into Hebrew suitable for a school document.",
-  draft: "The field is empty or almost empty. Draft suitable content for it from the context.",
+  draft: "The field is empty or almost empty. Draft suitable content for it in Hebrew from the context.",
 };
 
 class AiError extends Error {}
