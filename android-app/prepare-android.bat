@@ -26,6 +26,10 @@ echo === floating task in AndroidManifest.xml (added once) ===
 rem the floating task (version 25): its receiver, and the display-over-other-apps permission
 powershell -NoProfile -ExecutionPolicy Bypass -Command "$f='android\app\src\main\AndroidManifest.xml'; $x=[IO.File]::ReadAllText($f); if ($x -notmatch 'ItaskFloatReceiver') { $r=[IO.File]::ReadAllText('native-src\manifest-float.xml'); $i=$x.LastIndexOf('</application>'); $x=$x.Substring(0,$i)+$r+$x.Substring($i); Write-Host 'receiver added' } if ($x -notmatch 'SYSTEM_ALERT_WINDOW') { $i=$x.IndexOf('<application'); $p=[IO.File]::ReadAllText('native-src\manifest-float-permission.xml'); $x=$x.Substring(0,$i)+$p+$x.Substring($i); Write-Host 'permission added' } [IO.File]::WriteAllText($f,$x)" || goto :error
 
+echo === assistant bubble in AndroidManifest.xml (added once) ===
+rem the assistant's floating bubble (version 29): its foreground service, and the special-use foreground permission
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$f='android\app\src\main\AndroidManifest.xml'; $x=[IO.File]::ReadAllText($f); if ($x -notmatch 'ItaskBubbleService') { $r=[IO.File]::ReadAllText('native-src\manifest-bubble.xml'); $i=$x.LastIndexOf('</application>'); $x=$x.Substring(0,$i)+$r+$x.Substring($i); Write-Host 'service added' } if ($x -notmatch 'FOREGROUND_SERVICE_SPECIAL_USE') { $i=$x.IndexOf('<application'); $p=[IO.File]::ReadAllText('native-src\manifest-bubble-permission.xml'); $x=$x.Substring(0,$i)+$p+$x.Substring($i); Write-Host 'permission added' } [IO.File]::WriteAllText($f,$x)" || goto :error
+
 echo.
 echo Done. Now in Android Studio: raise versionCode/versionName in build.gradle (:app), Sync, then Build ^> Generate Signed App Bundle.
 pause

@@ -237,6 +237,7 @@
     // "workplan|sheetId|itemId": that project's plan, the activity picked out
     if (view === "workplan" || (view && view.indexOf("workplan|") === 0)) { openWorkPlanLink(view.split("|")[1], view.split("|")[2]); return; }
     // ("assistant..." - the widget and notifications of app versions 23-24)
+    if (view === "chat") { openAssistant(); return; } // the assistant's floating bubble
     if (view === "morning" || (view && view.indexOf("assistant") === 0)) { openMorningReport(); return; }
     if (!view || view.indexOf("task|") !== 0) return;
     var parts = view.split("|");

@@ -255,6 +255,9 @@
     workPlanResultClear: { he: "ניקוי הסימון של היום", en: "Clear today's mark", ar: "مسح علامة اليوم", ru: "Сбросить отметку дня" },
     voiceMenuLabel: { he: "פקודה קולית", en: "Voice command", ar: "أمر صوتي", ru: "Голосовая команда" },
     morningReportTitle: { he: "דו\"ח כללי", en: "General report", ar: "تقرير عام", ru: "Общий отчёт" },
+    bubbleLabel: { he: "עוזר צף", en: "Floating assistant", ar: "المساعد العائم", ru: "Плавающий помощник" },
+    bubbleOn: { he: "בועה עם הלוגו מעל כל האפליקציות – לחיצה פותחת את העוזר", en: "A bubble with the logo over every app - a tap opens the assistant", ar: "فقاعة بالشعار فوق كل التطبيقات - النقر يفتح المساعد", ru: "Пузырь с логотипом поверх всех приложений - нажатие открывает помощника" },
+    bubbleAsk: { he: "להציג את עוזר ITASK כבועה צפה מעל כל האפליקציות? לחיצה עליה פותחת את העוזר, וגרירה ל-✕ מסתירה אותה.", en: "Show the ITASK assistant as a floating bubble over every app? A tap opens the assistant; dragging it onto ✕ hides it.", ar: "هل تريد عرض مساعد ITASK كفقاعة عائمة فوق كل التطبيقات؟ النقر يفتح المساعد، والسحب إلى ✕ يخفيها.", ru: "Показывать помощника ITASK пузырём поверх всех приложений? Нажатие открывает помощника, перетаскивание на ✕ скрывает." },
     assistantMenuLabel: { he: "עוזר", en: "Assistant", ar: "مساعد", ru: "Помощник" },
     assistantMenuBtn: { he: "💬 עוזר ITASK (ניסיון)", en: "💬 ITASK assistant (beta)", ar: "💬 مساعد ITASK (تجريبي)", ru: "💬 Помощник ITASK (бета)" },
     assistantTitle: { he: "עוזר ITASK", en: "ITASK assistant", ar: "مساعد ITASK", ru: "Помощник ITASK" },
@@ -2291,6 +2294,7 @@
     // "workplan|sheetId|itemId": that project's plan, the activity picked out
     if (view === "workplan" || (view && view.indexOf("workplan|") === 0)) { openWorkPlanLink(view.split("|")[1], view.split("|")[2]); return; }
     // ("assistant..." - the widget and notifications of app versions 23-24)
+    if (view === "chat") { openAssistant(); return; } // the assistant's floating bubble
     if (view === "morning" || (view && view.indexOf("assistant") === 0)) { openMorningReport(); return; }
     if (!view || view.indexOf("task|") !== 0) return;
     var parts = view.split("|");
@@ -2381,6 +2385,7 @@
     nativeTaskAlarmPlugin.features().then(function (f) {
       floatSupported = !!(f && f.floatingTask);
       refreshFloatStatus(true);
+      startAssistantBubble(f);
     }).catch(function () {});
   }
   floatToggle.addEventListener("change", function () {
@@ -2392,7 +2397,49 @@
   floatAllowBtn.addEventListener("click", openFloatSettings);
   // back from the phone's settings
   document.addEventListener("visibilitychange", function () {
-    if (!document.hidden) refreshFloatStatus(false);
+    if (!document.hidden) { refreshFloatStatus(false); refreshBubbleStatus(); }
+  });
+
+  // ---- the assistant's floating bubble (app version 29+, ItaskBubbleService):
+  // the ITASK mark over every app; a tap opens the assistant chat (launch
+  // view "chat"). Off until switched on - offered once, here or in the menu;
+  // it needs the same "display over other apps" permission.
+  var BUBBLE_ASKED_KEY = "itask-bubble-asked";
+  var bubbleSupported = false;
+  var bubbleMenuSection = document.getElementById("bubbleMenuSection");
+  var bubbleToggle = document.getElementById("bubbleToggle");
+  function refreshBubbleStatus() {
+    if (!bubbleSupported) return;
+    nativeTaskAlarmPlugin.bubbleStatus().then(function (st) {
+      bubbleMenuSection.hidden = false;
+      bubbleToggle.checked = !!st.on;
+    }).catch(function () {});
+  }
+  function setBubbleOn(on) {
+    return nativeTaskAlarmPlugin.setBubbleOn({ on: on }).then(function () {
+      if (!on) return refreshBubbleStatus();
+      return nativeTaskAlarmPlugin.bubbleStatus().then(function (st) {
+        if (!st.canDraw) openFloatSettings(); // it shows once that's allowed
+        refreshBubbleStatus();
+      });
+    }).catch(function () {});
+  }
+  function startAssistantBubble(features) {
+    bubbleSupported = !!(features && features.assistantBubble);
+    if (!bubbleSupported) return;
+    refreshBubbleStatus();
+    nativeTaskAlarmPlugin.bubbleStatus().then(function (st) {
+      var asked = false;
+      try { asked = !!localStorage.getItem(BUBBLE_ASKED_KEY); } catch (e) {}
+      // (another question already on screen - e.g. the floating task's
+      // first-time one: this one waits for the next time the app opens)
+      if (asked || st.on || !document.getElementById("confirmOverlay").hidden) return;
+      try { localStorage.setItem(BUBBLE_ASKED_KEY, "1"); } catch (e) {}
+      askConfirm(tr("bubbleAsk"), function () { setBubbleOn(true); });
+    }).catch(function () {});
+  }
+  bubbleToggle.addEventListener("change", function () {
+    if (bubbleSupported) setBubbleOn(bubbleToggle.checked);
   });
   // ---------------------------------------------------------------------
   // לוח שנה: month / week / day / list views over the phone's own

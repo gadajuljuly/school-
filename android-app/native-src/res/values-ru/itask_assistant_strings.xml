@@ -4,4 +4,8 @@
     <string name="itask_morning_title">Общий отчёт</string>
     <string name="itask_assistant_hint">Что сегодня – нажмите для отчёта</string>
     <string name="itask_assistant_description">Сегодня одним взглядом: задачи, задержки и планы работ</string>
+    <string name="itask_bubble_channel">Плавающий помощник ITASK</string>
+    <string name="itask_bubble_title">Помощник ITASK включён</string>
+    <string name="itask_bubble_text">Нажмите на пузырь, чтобы открыть помощника</string>
+    <string name="itask_bubble_hide">Скрыть</string>
 </resources>

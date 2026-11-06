@@ -30,7 +30,10 @@ const NATIVE_FAKE = () => {
         canScheduleExact: () => ok({ value: true }),
         openExactAlarmSettings: () => ok(),
         openFile: (o) => { (native.opened = native.opened || []).push(o); return ok(); },
-        features: () => ok({ quietAlarms: true, floatingTask: true }),
+        // the assistant bubble (version 29) only when a test sets window.__bubble
+        features: () => ok(Object.assign({ quietAlarms: true, floatingTask: true }, window.__bubble ? { assistantBubble: true } : {})),
+        bubbleStatus: () => ok({ on: !!native.bubbleOn, canDraw: !window.__floatNoPermission }),
+        setBubbleOn: ({ on }) => { native.bubbleOn = on; return ok(); },
         // the floating task: on, and allowed over other apps unless a test says otherwise
         floatStatus: () => ok({ on: native.floatOn !== false, canDraw: !window.__floatNoPermission }),
         setFloatOn: ({ on }) => { native.floatOn = on; return ok(); },

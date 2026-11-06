@@ -51,6 +51,20 @@ public class ItaskAlarmPlugin extends Plugin {
         if (getActivity() != null) takeViewFromIntent(getActivity().getIntent());
         ShortcutManagerCompat.removeDynamicShortcuts(getContext(), Collections.singletonList(OLD_SHORTCUT_ID));
         ItaskFloatReceiver.schedule(getContext());
+        ItaskBubbleService.sync(getContext());
+    }
+
+    // the assistant bubble hides while ITASK itself is on screen
+    @Override
+    protected void handleOnResume() {
+        super.handleOnResume();
+        ItaskBubbleService.appVisible(getContext(), true);
+    }
+
+    @Override
+    protected void handleOnPause() {
+        super.handleOnPause();
+        ItaskBubbleService.appVisible(getContext(), false);
     }
 
     @Override
@@ -100,6 +114,7 @@ public class ItaskAlarmPlugin extends Plugin {
         result.put("quietAlarms", true);
         result.put("assistantWidget", true);
         result.put("floatingTask", true);
+        result.put("assistantBubble", true);
         call.resolve(result);
     }
 
@@ -116,6 +131,22 @@ public class ItaskAlarmPlugin extends Plugin {
     @PluginMethod
     public void setFloatOn(PluginCall call) {
         ItaskFloatReceiver.setOn(getContext(), Boolean.TRUE.equals(call.getBoolean("on", true)));
+        call.resolve();
+    }
+
+    // The assistant bubble (ItaskBubbleService): on / off; the same
+    // "display over other apps" permission as the floating task.
+    @PluginMethod
+    public void bubbleStatus(PluginCall call) {
+        JSObject result = new JSObject();
+        result.put("on", ItaskBubbleService.isOn(getContext()));
+        result.put("canDraw", ItaskFloatReceiver.canDraw(getContext()));
+        call.resolve(result);
+    }
+
+    @PluginMethod
+    public void setBubbleOn(PluginCall call) {
+        ItaskBubbleService.setOn(getContext(), Boolean.TRUE.equals(call.getBoolean("on", false)));
         call.resolve();
     }
 

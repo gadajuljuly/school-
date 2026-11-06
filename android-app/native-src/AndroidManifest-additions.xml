@@ -43,6 +43,10 @@
 <!-- the floating task (version 25) - prepare-android.bat adds this one by itself
      (native-src/manifest-float.xml): -->
 <receiver android:name=".ItaskFloatReceiver" android:exported="false" />
+<!-- the assistant's floating bubble (version 29) - prepare-android.bat adds it by itself
+     (native-src/manifest-bubble.xml + manifest-bubble-permission.xml):
+     a foreground service of type specialUse, and
+     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" /> -->
 <service
     android:name=".ItaskWidgetService"
     android:exported="false"

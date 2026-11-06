@@ -47,3 +47,30 @@ test("in a browser (no phone app) there's no such switch", async ({ page }) => {
   await page.locator("#menuBtn").click();
   await expect(page.locator("#floatMenuSection")).toBeHidden();
 });
+
+test("the assistant bubble: offered once, switched from the menu; its tap opens the assistant chat", async ({ page }) => {
+  await page.addInitScript(() => { window.__bubble = true; });
+  await openLocalApp(page, { native: true });
+  await expect(page.locator("#confirmOverlay")).toBeVisible();
+  await expect(page.locator("#confirmOverlay")).toContainText("בועה צפה");
+  await page.locator("#confirmYesBtn").click();
+  expect((await native(page)).bubbleOn).toBe(true);
+
+  // not asked again; the menu shows it on, and switches it off
+  await page.reload();
+  await page.locator("#appRoot").waitFor({ state: "visible" });
+  await page.waitForTimeout(500);
+  await expect(page.locator("#confirmOverlay")).toBeHidden();
+  // (the fake phone starts afresh on reload: on, as left - then back to the app)
+  await page.evaluate(() => { window.__native.bubbleOn = true; document.dispatchEvent(new Event("visibilitychange")); });
+  await page.locator("#menuBtn").click();
+  await expect(page.locator("#bubbleMenuSection")).toBeVisible();
+  await expect(page.locator("#bubbleToggle")).toBeChecked();
+  await page.locator("#bubbleToggle").uncheck();
+  await expect.poll(async () => (await native(page)).bubbleOn).toBe(false);
+  await page.locator("#menuBtn").click();
+
+  // the bubble's tap: launch view "chat"
+  await page.evaluate(() => window.__native.listeners.launchView({ view: "chat" }));
+  await expect(page.locator("#assistantView")).toBeVisible();
+});

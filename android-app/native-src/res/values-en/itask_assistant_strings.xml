@@ -4,4 +4,8 @@
     <string name="itask_morning_title">General report</string>
     <string name="itask_assistant_hint">What\'s on today – tap for the report</string>
     <string name="itask_assistant_description">Today at a glance: tasks, delays and work plans, one tap away</string>
+    <string name="itask_bubble_channel">ITASK floating assistant</string>
+    <string name="itask_bubble_title">ITASK assistant is on</string>
+    <string name="itask_bubble_text">Tap the bubble to open the assistant</string>
+    <string name="itask_bubble_hide">Hide</string>
 </resources>

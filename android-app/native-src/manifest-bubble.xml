@@ -1,0 +1,8 @@
+<service
+    android:name=".ItaskBubbleService"
+    android:exported="false"
+    android:foregroundServiceType="specialUse">
+    <property
+        android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+        android:value="A floating shortcut bubble over other apps that opens the ITASK assistant chat; shown only while the user keeps it switched on." />
+</service>
