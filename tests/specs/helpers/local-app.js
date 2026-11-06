@@ -223,7 +223,12 @@ const FAKE_BACKEND = () => {
         getPublicUrl: (path) => ({ data: { publicUrl: "about:blank#" + path } }),
       }),
     },
-    functions: { invoke: (name, o) => { backend.log.push({ fn: name, body: o && o.body }); return Promise.resolve({ data: null, error: null }); } },
+    // a test sets window.__fnReplies[name] = (body) => data to answer a function
+    functions: { invoke: (name, o) => {
+      backend.log.push({ fn: name, body: o && o.body });
+      const reply = window.__fnReplies && window.__fnReplies[name];
+      return Promise.resolve({ data: reply ? reply(o && o.body) : null, error: null });
+    } },
     channel: () => { const c = { on: () => c, subscribe: () => c }; return c; },
     removeChannel: () => {},
   };

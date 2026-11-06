@@ -38,7 +38,7 @@
 <script src="vendor/supabase-js-2.118.0.js"></script>
 <script src="vendor/firebase-app-compat-10.7.1.js"></script>
 <script src="vendor/firebase-auth-compat-10.7.1.js"></script>
-<link rel="stylesheet" href="tasks.css?v=ac2ff8764d">
+<link rel="stylesheet" href="tasks.css?v=8e7c8d5cfc">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -555,6 +555,10 @@
               <option value="on" data-i18n="chatNotifOn">פעיל</option>
             </select>
             <p class="reminder-status" id="chatNotifStatus" hidden></p>
+          </div>
+          <div class="menu-section">
+            <div class="menu-label" data-i18n="assistantMenuLabel">עוזר</div>
+            <button type="button" id="assistantMenuBtn" data-i18n="assistantMenuBtn">💬 עוזר ITASK (ניסיון)</button>
           </div>
           <div class="menu-section" id="teamMenuSection">
             <div class="menu-label" data-i18n="teamMenuLabel">צוות</div>
@@ -1330,6 +1334,22 @@
     <div class="morning-body" id="morningBody"></div>
   </div>
 
+  <div class="report-view assistant-view" id="assistantView" hidden>
+    <div class="report-head">
+      <button type="button" class="report-back-btn" id="assistantBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
+      <div class="report-head-title">
+        <div data-i18n="assistantTitle">עוזר ITASK</div>
+        <div class="site-log-header-project" data-i18n="assistantSubtitle">ניסיון · כתבו או הקליטו מה קרה באתר</div>
+      </div>
+    </div>
+    <div class="assistant-body" id="assistantBody"></div>
+    <form class="assistant-form" id="assistantForm" autocomplete="off">
+      <button type="button" class="assistant-mic" id="assistantMicBtn" data-i18n-title="voiceBtnTitle" title="פקודה קולית">🎤</button>
+      <input type="text" id="assistantInput" data-i18n-ph="assistantPlaceholder" placeholder="מה קרה היום באתר?">
+      <button type="submit" class="assistant-send" data-i18n-title="chatSendBtnTitle" title="שליחה">&#10148;</button>
+    </form>
+  </div>
+
   <div class="report-view budget-view" id="budgetView" hidden>
     <div class="report-head">
       <button type="button" class="report-back-btn" id="budgetBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
@@ -1576,6 +1596,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=75a276b7b4"></script>
+<script src="tasks-app.js?v=4657876cfe"></script>
 </body>
 </html>

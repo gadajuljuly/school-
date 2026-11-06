@@ -433,6 +433,22 @@
       });
     });
   }
+  // An event added by the ITASK assistant (14h-site-assistant.js): into the
+  // calendar last used, else the primary one. Resolves its eventId, or null
+  // when there's no calendar (no permission, not the phone app).
+  function calQuickAddEvent(title, start, end, allDay, description) {
+    if (!calPlugin) return Promise.resolve(null);
+    return calInviteCalendarId().then(function (calendarId) {
+      if (calendarId == null) return null;
+      return calPlugin.saveEvent({
+        calendarId: Number(calendarId), title: title, allDay: !!allDay, start: start, end: end,
+        rrule: "", reminderMinutes: allDay ? -1 : 15, location: "", description: description || ""
+      }).then(function (res) { return res && res.eventId != null ? res.eventId : null; });
+    });
+  }
+  function calQuickDeleteEvent(eventId) {
+    return calPlugin && eventId != null ? calPlugin.deleteEvent({ eventId: eventId }).catch(function () {}) : Promise.resolve();
+  }
   function processCalendarInvites() {
     if (!calPlugin || !myPhoneNumber || dataLoadBlocked) return;
     sharedSheets.forEach(function (sheet) {
