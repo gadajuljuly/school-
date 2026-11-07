@@ -58,7 +58,8 @@
 
 <!-- 3) Inside the existing <activity android:name=".MainActivity" ...> element,
      next to its other <intent-filter>, so ITASK shows up in Android's share
-     sheet for text (a WhatsApp message -> a new task): -->
+     sheet for text (a WhatsApp message -> a new task). Since version 30
+     prepare-android.bat adds it by itself (native-src/manifest-share.xml): -->
 <intent-filter>
     <action android:name="android.intent.action.SEND" />
     <category android:name="android.intent.category.DEFAULT" />

@@ -27,6 +27,16 @@
   document.getElementById("shareTaskCancelBtn").addEventListener("click", function () {
     shareTaskOverlay.hidden = true;
   });
+  // or: the ITASK assistant reads it (14h-site-assistant.js) and decides -
+  // a diary line, attendance, a task, a meeting... in the project chosen here
+  document.getElementById("shareTaskAssistantBtn").addEventListener("click", function () {
+    var text = shareTaskText.value.trim();
+    if (!text) return;
+    var sheet = allSheets().find(function (s) { return s.id === shareTaskProject.value; });
+    shareTaskOverlay.hidden = true;
+    openAssistant();
+    assistantSend(sheet ? tr("shareAssistantFor").replace("{project}", sheet.name) + "\n" + text : text);
+  });
   document.getElementById("shareTaskForm").addEventListener("submit", function (e) {
     e.preventDefault();
     var text = shareTaskText.value.replace(/\s*\n\s*/g, " ").trim();

@@ -258,6 +258,8 @@
     bubbleLabel: { he: "עוזר צף", en: "Floating assistant", ar: "المساعد العائم", ru: "Плавающий помощник" },
     bubbleOn: { he: "בועה עם הלוגו מעל כל האפליקציות – לחיצה פותחת את העוזר", en: "A bubble with the logo over every app - a tap opens the assistant", ar: "فقاعة بالشعار فوق كل التطبيقات - النقر يفتح المساعد", ru: "Пузырь с логотипом поверх всех приложений - нажатие открывает помощника" },
     bubbleAsk: { he: "להציג את עוזר ITASK כבועה צפה מעל כל האפליקציות? לחיצה עליה פותחת את העוזר, וגרירה ל-✕ מסתירה אותה.", en: "Show the ITASK assistant as a floating bubble over every app? A tap opens the assistant; dragging it onto ✕ hides it.", ar: "هل تريد عرض مساعد ITASK كفقاعة عائمة فوق كل التطبيقات؟ النقر يفتح المساعد، والسحب إلى ✕ يخفيها.", ru: "Показывать помощника ITASK пузырём поверх всех приложений? Нажатие открывает помощника, перетаскивание на ✕ скрывает." },
+    shareAssistantFor: { he: "(פרויקט: {project})", en: "(project: {project})", ar: "(المشروع: {project})", ru: "(проект: {project})" },
+    shareTaskAssistant: { he: "🤖 לעוזר", en: "🤖 To the assistant", ar: "🤖 للمساعد", ru: "🤖 Помощнику" },
     assistantMenuLabel: { he: "עוזר", en: "Assistant", ar: "مساعد", ru: "Помощник" },
     assistantMenuBtn: { he: "💬 עוזר ITASK (ניסיון)", en: "💬 ITASK assistant (beta)", ar: "💬 مساعد ITASK (تجريبي)", ru: "💬 Помощник ITASK (бета)" },
     assistantTitle: { he: "עוזר ITASK", en: "ITASK assistant", ar: "مساعد ITASK", ru: "Помощник ITASK" },
@@ -3747,6 +3749,16 @@
   }
   document.getElementById("shareTaskCancelBtn").addEventListener("click", function () {
     shareTaskOverlay.hidden = true;
+  });
+  // or: the ITASK assistant reads it (14h-site-assistant.js) and decides -
+  // a diary line, attendance, a task, a meeting... in the project chosen here
+  document.getElementById("shareTaskAssistantBtn").addEventListener("click", function () {
+    var text = shareTaskText.value.trim();
+    if (!text) return;
+    var sheet = allSheets().find(function (s) { return s.id === shareTaskProject.value; });
+    shareTaskOverlay.hidden = true;
+    openAssistant();
+    assistantSend(sheet ? tr("shareAssistantFor").replace("{project}", sheet.name) + "\n" + text : text);
   });
   document.getElementById("shareTaskForm").addEventListener("submit", function (e) {
     e.preventDefault();

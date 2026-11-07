@@ -113,3 +113,24 @@ test("on a computer (no phone calendar) an event becomes a task on its day", asy
   await expect.poll(async () => (await server(page)).tasks.filter((t) => t.text.includes("פגישה עם המפקח")).map((t) => t.date))
     .toEqual([iso(1)]);
 });
+
+test("a message shared from WhatsApp goes to the assistant, with the chosen project", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, native: true, sheet: SHEET });
+  await page.evaluate((a) => { window.__fnReplies = { "itask-assistant": () => ({ reply: "רשמתי ביומן.", actions: [a] }) }; },
+    A({ type: "diary_work", text: "הגיעו 3 משאיות מצע" }));
+  await expect.poll(() => page.evaluate(() => !!(window.__native.listeners && window.__native.listeners.launchView))).toBe(true);
+  await page.evaluate(() => window.__native.listeners.launchView({ view: "share", text: "דני: הגיעו 3 משאיות מצע לק\"מ 0.4" }));
+  await expect(page.locator("#shareTaskOverlay")).toBeVisible();
+  await page.locator("#shareTaskProject").selectOption("p1");
+  await page.locator("#shareTaskAssistantBtn").click();
+  await expect(page.locator("#assistantView")).toBeVisible();
+  await expect(page.locator(".assistant-msg.theirs").last()).toContainText("רשמתי ביומן");
+  const sent = await page.evaluate(() => window.__backend.log.filter((l) => l.fn === "itask-assistant").map((l) => l.body.text));
+  expect(sent).toEqual([expect.stringContaining("כביש הדקלים")]);
+  expect(sent[0]).toContain("3 משאיות מצע");
+  await expect.poll(async () => {
+    const d = await server(page);
+    const log = (d.siteLogs || []).find((l) => l.date === iso(0)) || {};
+    return (log.works || []).map((w) => w.text);
+  }).toEqual(["הגיעו 3 משאיות מצע"]);
+});

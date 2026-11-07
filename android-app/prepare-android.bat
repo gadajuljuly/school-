@@ -30,6 +30,10 @@ echo === assistant bubble in AndroidManifest.xml (added once) ===
 rem the assistant's floating bubble (version 29): its foreground service, and the special-use foreground permission
 powershell -NoProfile -ExecutionPolicy Bypass -Command "$f='android\app\src\main\AndroidManifest.xml'; $x=[IO.File]::ReadAllText($f); if ($x -notmatch 'ItaskBubbleService') { $r=[IO.File]::ReadAllText('native-src\manifest-bubble.xml'); $i=$x.LastIndexOf('</application>'); $x=$x.Substring(0,$i)+$r+$x.Substring($i); Write-Host 'service added' } if ($x -notmatch 'FOREGROUND_SERVICE_SPECIAL_USE') { $i=$x.IndexOf('<application'); $p=[IO.File]::ReadAllText('native-src\manifest-bubble-permission.xml'); $x=$x.Substring(0,$i)+$p+$x.Substring($i); Write-Host 'permission added' } [IO.File]::WriteAllText($f,$x)" || goto :error
 
+echo === share to ITASK in AndroidManifest.xml (added once) ===
+rem ITASK in Android's share sheet for text (a WhatsApp message): an intent-filter inside MainActivity
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$f='android\app\src\main\AndroidManifest.xml'; $x=[IO.File]::ReadAllText($f); if ($x -notmatch 'android.intent.action.SEND') { $a=$x.IndexOf('.MainActivity'); $e=$x.IndexOf('</activity>', $a); $r=[IO.File]::ReadAllText('native-src\manifest-share.xml'); $x=$x.Substring(0,$e)+$r+$x.Substring($e); [IO.File]::WriteAllText($f,$x); Write-Host 'share added' } else { Write-Host 'already there' }" || goto :error
+
 echo.
 echo Done. Now in Android Studio: raise versionCode/versionName in build.gradle (:app), Sync, then Build ^> Generate Signed App Bundle.
 pause
