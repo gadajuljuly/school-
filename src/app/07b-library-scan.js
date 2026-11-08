@@ -482,7 +482,7 @@
     if (!supabaseClient) { alert(tr("scanSaveError")); return; }
     ensureLibraryFolders(sheet, function (folders) {
       chatSaveFolderList.innerHTML = "";
-      folders.forEach(function (folder) {
+      libraryLive(folders).forEach(function (folder) {
         var btn = document.createElement("button");
         btn.type = "button";
         btn.textContent = "📁 " + folderDisplayName(folder);

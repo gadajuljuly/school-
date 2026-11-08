@@ -1225,7 +1225,7 @@
       var parent = folder.parentId && folders.find(function (f) { return f.id === folder.parentId; });
       button(tr("sketchLibBack"), "sk-lib-back", function () { skLibShow(folders, parent || null); });
     }
-    folders.filter(function (f) { return folder ? f.parentId === folder.id : !f.parentId; }).forEach(function (f) {
+    libraryLive(folders).filter(function (f) { return folder ? f.parentId === folder.id : !f.parentId; }).forEach(function (f) {
       button("📁 " + folderDisplayName(f), "sk-lib-dir", function () { skLibShow(folders, f); });
     });
     (folder ? (folder.files || []).filter(skIsBgFile) : []).forEach(function (entry) {
@@ -1405,7 +1405,7 @@
     if (!sheet || !supabaseClient) { alert(tr("scanSaveError")); return; }
     ensureLibraryFolders(sheet, function (folders) {
       chatSaveFolderList.innerHTML = "";
-      folders.forEach(function (folder) {
+      libraryLive(folders).forEach(function (folder) {
         var btn = document.createElement("button");
         btn.type = "button";
         btn.textContent = "📁 " + folderDisplayName(folder);

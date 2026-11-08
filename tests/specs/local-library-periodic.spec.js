@@ -47,7 +47,47 @@ test("library: new folder, upload a file into it, delete the file and the folder
   await folder.locator("button", { hasText: "✕" }).first().click();
   if (await page.locator("#confirmOverlay").isVisible()) await page.locator("#confirmYesBtn").click();
   await expect(folder).toHaveCount(0);
-  await expect.poll(async () => (await folders(page)).map((f) => f.name)).not.toContain("חוזים");
+  // ...into the bin for 30 days (kept on the server, marked deleted)
+  await expect.poll(async () => (await folders(page)).filter((f) => !f.deletedAt).map((f) => f.name)).not.toContain("חוזים");
+  expect((await folders(page)).find((f) => f.name === "חוזים").deletedAt).toBeGreaterThan(0);
+
+  // 🗑 נמחקו לאחרונה: restored as it was
+  await grid.locator(".library-bin-tile").click();
+  await expect(page.locator("#libraryBinOverlay")).toContainText("חוזים");
+  await page.locator("#libraryBinList button", { hasText: "שחזור" }).click();
+  await expect(folder).toHaveCount(1);
+  await expect.poll(async () => (await folders(page)).find((f) => f.name === "חוזים").deletedAt).toBeUndefined();
+  await expect(grid.locator(".library-bin-tile")).toHaveCount(0);
+});
+
+test("library: built-in folders can't be deleted; a deleted folder's files leave the server only after 30 days", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheet: { id: "p1", name: "בניין A", members: [ME], tasks: [] } });
+  // a folder deleted 31 days ago, with a file
+  await page.evaluate(() => {
+    window.__backend.tables.shared_projects[0].data.folders = null;
+  });
+  await page.locator("#libraryBtn").click();
+  const grid = page.locator("#libraryFoldersGrid");
+  await expect(grid).toContainText("תוכניות");
+  // the built-in ones have no ✕
+  await expect(grid.locator(".library-item", { hasText: "תוכניות" }).locator(".library-item-delete")).toHaveCount(0);
+
+  await page.evaluate(() => {
+    const d = window.__backend.tables.shared_projects[0].data;
+    d.folders.push({ id: "old", name: "ישן", files: [{ id: "x", name: "a.pdf", path: "p1/old/a.pdf" }], deletedAt: Date.now() - 31 * 86400000, deletedBy: "", deletedRoot: "old" });
+    d.folders.push({ id: "recent", name: "חדש", files: [], deletedAt: Date.now() - 2 * 86400000, deletedBy: "", deletedRoot: "recent" });
+    window.__backend.tables.shared_projects[0].data_version++;
+  });
+  await page.evaluate(() => window.__hooks.loadSharedSheets());
+  await page.locator("#tasksFabBtn").click();
+  await page.waitForTimeout(300);
+  await page.locator("#libraryBtn").click();
+  // the old one is gone for good (its file removed); the recent one waits in the bin
+  await expect.poll(async () => (await folders(page)).map((f) => f.id)).not.toContain("old");
+  await expect(grid.locator(".library-bin-tile")).toContainText("(1)");
+  await grid.locator(".library-bin-tile").click();
+  await expect(page.locator("#libraryBinOverlay")).toContainText("חדש");
+  await expect(page.locator("#libraryBinOverlay")).toContainText("נשארו 28 ימים");
 });
 
 test("closing the day's log files it in the library; the periodic report covers closed logs only", async ({ page }) => {
@@ -156,5 +196,5 @@ test("library: folders inside folders, files dragged into them or moved from the
   await sub.locator(".library-item-delete").click();
   if (await page.locator("#confirmOverlay").isVisible()) await page.locator("#confirmYesBtn").click();
   await expect(sub).toHaveCount(0);
-  await expect.poll(async () => (await folders(page)).some((f) => f.name === "חשמל")).toBe(false);
+  await expect.poll(async () => (await folders(page)).some((f) => f.name === "חשמל" && !f.deletedAt)).toBe(false);
 });

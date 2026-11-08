@@ -433,6 +433,7 @@
     if (!sheet || !supabaseClient) return;
     ensureLibraryFolders(sheet, function (folders) {
       chatSaveFolderList.innerHTML = "";
+      folders = libraryLive(folders);
       var ordered = folders.filter(function (f) { return f.key === "downloads"; })
         .concat(folders.filter(function (f) { return f.key !== "downloads"; }));
       ordered.forEach(function (folder) {

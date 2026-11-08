@@ -38,7 +38,7 @@
 <script src="vendor/supabase-js-2.118.0.js"></script>
 <script src="vendor/firebase-app-compat-10.7.1.js"></script>
 <script src="vendor/firebase-auth-compat-10.7.1.js"></script>
-<link rel="stylesheet" href="tasks.css?v=8e7c8d5cfc">
+<link rel="stylesheet" href="tasks.css?v=8d2a6a5442">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -805,6 +805,17 @@
       </div>
       <div class="modal-actions">
         <button type="button" class="modal-btn modal-btn-no" id="reportRowActionCancelBtn" data-i18n="cancelBtn">ביטול</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="libraryBinOverlay" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true">
+      <p class="modal-message" data-i18n="libraryBinTitle">נמחקו לאחרונה</p>
+      <p class="library-bin-note" data-i18n="libraryBinNote">תיקייה שנמחקה נשמרת כאן 30 יום עם כל הקבצים שבה, ואפשר לשחזר אותה.</p>
+      <div class="library-bin-list" id="libraryBinList"></div>
+      <div class="modal-actions">
+        <button type="button" class="modal-btn modal-btn-no" id="libraryBinCloseBtn" data-i18n="closeBtn">סגירה</button>
       </div>
     </div>
   </div>
@@ -1601,6 +1612,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=224d915367"></script>
+<script src="tasks-app.js?v=3c1e458fe2"></script>
 </body>
 </html>

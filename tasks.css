@@ -3707,3 +3707,10 @@
 .assistant-send { background: #3d5a3e; color: #fff; }
 .assistant-mic { background: #fff; }
 .assistant-mic.listening { background: #d32f2f; color: #fff; animation: voice-listen 1s infinite; }
+/* the library's bin (07-library-files.js) */
+.library-bin-tile .library-item-thumb { filter: grayscale(0.3); }
+.library-bin-note { margin: 0 0 8px; font-size: 0.85rem; color: var(--ink-muted); }
+.library-bin-list { display: flex; flex-direction: column; gap: 8px; max-height: 55vh; overflow-y: auto; }
+.library-bin-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--rule); border-radius: 10px; }
+.library-bin-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.library-bin-info small { color: var(--ink-muted); font-size: 0.78rem; }

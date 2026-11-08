@@ -326,10 +326,27 @@
     ensureLibraryFolders(sheet, function (folders) {
       if (activeLibrarySheetId !== sheet.id || !libraryFoldersView || libraryFoldersView.hidden) return;
       libraryFoldersGrid.innerHTML = "";
-      folders.forEach(function (folder) {
+      libraryLive(folders).forEach(function (folder) {
         if (folder.parentId) return; // a folder inside a folder shows in its parent
         libraryFoldersGrid.appendChild(buildLibraryFolderTile(sheet, folder));
       });
+      // 🗑 נמחקו לאחרונה - while anything's in it
+      var binCount = folders.filter(function (f) { return f.deletedAt && f.deletedRoot === f.id; }).length;
+      if (binCount) {
+        var bin = document.createElement("div");
+        bin.className = "library-item library-bin-tile";
+        var binThumb = document.createElement("div");
+        binThumb.className = "library-item-thumb";
+        binThumb.textContent = "🗑";
+        bin.appendChild(binThumb);
+        var binName = document.createElement("div");
+        binName.className = "library-item-name";
+        binName.textContent = tr("libraryBinTile").replace("{n}", binCount);
+        bin.appendChild(binName);
+        bin.addEventListener("click", function () { openLibraryBin(sheet); });
+        libraryFoldersGrid.appendChild(bin);
+      }
+      libraryPurgeOld(sheet);
     });
   }
 
@@ -418,34 +435,129 @@
     return ids;
   }
 
+  // ---- deleting a folder: into "נמחקו לאחרונה" for 30 days --------------
+  // A deleted folder (with what's inside it) is only marked deletedAt /
+  // deletedBy / deletedRoot and hidden everywhere; from the bin it comes
+  // back as it was. Its files leave the server only after 30 days
+  // (libraryPurgeOld, when the library opens).
+  var LIBRARY_BIN_DAYS = 30;
+  function libraryLive(folders) {
+    return (folders || []).filter(function (f) { return !f.deletedAt; });
+  }
+  function libraryMarkFolders(sheet, mark) {
+    if (sheet.shared) {
+      return applySharedLibraryFolders(sheet.id, function (folders) { return folders.map(mark); });
+    }
+    var liveSheet = data.sheets.find(function (s) { return s.id === sheet.id; });
+    if (liveSheet && liveSheet.folders) {
+      liveSheet.folders = liveSheet.folders.map(mark);
+      saveData();
+    }
+    return Promise.resolve();
+  }
   function deleteLibraryFolder(sheet, folder) {
-    var sheetId = sheet.id;
-    var isShared = !!sheet.shared;
     var all = sheet.folders || [folder];
-    var gone = libraryFolderAndInside(all, folder.id);
-    var paths = [];
-    all.forEach(function (f) { if (gone.indexOf(f.id) >= 0) (f.files || []).forEach(function (x) { paths.push(x.path); }); });
-    var removePromise = paths.length ? supabaseClient.storage.from(LIBRARY_BUCKET).remove(paths) : Promise.resolve();
-    removePromise.then(function () {
-      if (isShared) {
-        return applySharedLibraryFolders(sheetId, function (folders) {
-          var drop = libraryFolderAndInside(folders, folder.id);
-          return folders.filter(function (f) { return drop.indexOf(f.id) < 0; });
-        });
-      }
-      var liveSheet = data.sheets.find(function (s) { return s.id === sheetId; });
-      if (liveSheet && liveSheet.folders) {
-        var drop = libraryFolderAndInside(liveSheet.folders, folder.id);
-        liveSheet.folders = liveSheet.folders.filter(function (f) { return drop.indexOf(f.id) < 0; });
-        saveData();
-      }
+    var gone = libraryFolderAndInside(libraryLive(all), folder.id);
+    var at = Date.now();
+    libraryMarkFolders(sheet, function (f) {
+      if (gone.indexOf(f.id) < 0 || f.deletedAt) return f;
+      return Object.assign({}, f, { deletedAt: at, deletedBy: myPhoneNumber || "", deletedRoot: folder.id });
     }).then(function () {
       renderLibraryFolders();
       if (!libraryView.hidden) renderLibraryGrid();
+      showToast(tr("libraryFolderToBin"));
     }, function () {
       alert(tr("libraryUploadError"));
     });
   }
+  function restoreLibraryFolder(sheet, rootId) {
+    return libraryMarkFolders(sheet, function (f) {
+      if (f.deletedRoot !== rootId) return f;
+      var back = Object.assign({}, f);
+      delete back.deletedAt; delete back.deletedBy; delete back.deletedRoot;
+      return back;
+    }).then(function () {
+      renderLibraryFolders();
+      showToast(tr("libraryFolderRestored"));
+    }, function () { alert(tr("libraryUploadError")); });
+  }
+  // after 30 days: the files leave the server, the folders the list
+  var libraryPurged = {};
+  function libraryPurgeOld(sheet) {
+    if (libraryPurged[sheet.id] || !supabaseClient) return;
+    var cutoff = Date.now() - LIBRARY_BIN_DAYS * 86400000;
+    var old = (sheet.folders || []).filter(function (f) { return f.deletedAt && f.deletedAt < cutoff; });
+    if (!old.length) return;
+    libraryPurged[sheet.id] = true;
+    var ids = old.map(function (f) { return f.id; });
+    var paths = [];
+    old.forEach(function (f) { (f.files || []).forEach(function (x) { if (x.path) paths.push(x.path); }); });
+    var removing = paths.length ? supabaseClient.storage.from(LIBRARY_BUCKET).remove(paths) : Promise.resolve();
+    removing.then(function () {
+      if (sheet.shared) {
+        return applySharedLibraryFolders(sheet.id, function (folders) {
+          return folders.filter(function (f) { return ids.indexOf(f.id) < 0; });
+        });
+      }
+      var liveSheet = data.sheets.find(function (s) { return s.id === sheet.id; });
+      if (liveSheet && liveSheet.folders) {
+        liveSheet.folders = liveSheet.folders.filter(function (f) { return ids.indexOf(f.id) < 0; });
+        saveData();
+      }
+    }).then(null, function () { libraryPurged[sheet.id] = false; });
+  }
+
+  // the bin: one row per deleted folder (its subfolders went with it)
+  var libraryBinOverlay = document.getElementById("libraryBinOverlay");
+  var libraryBinList = document.getElementById("libraryBinList");
+  function libraryFileCount(folders, rootId) {
+    return folders.filter(function (f) { return f.deletedRoot === rootId; })
+      .reduce(function (n, f) { return n + (f.files || []).length; }, 0);
+  }
+  function openLibraryBin(sheet) {
+    var live = allSheets().find(function (s) { return s.id === sheet.id; }) || sheet;
+    var folders = live.folders || [];
+    var roots = folders.filter(function (f) { return f.deletedAt && f.deletedRoot === f.id; })
+      .sort(function (a, b) { return b.deletedAt - a.deletedAt; });
+    libraryBinList.innerHTML = "";
+    if (!roots.length) {
+      var empty = document.createElement("p");
+      empty.className = "library-empty";
+      empty.textContent = tr("libraryBinEmpty");
+      libraryBinList.appendChild(empty);
+    }
+    roots.forEach(function (f) {
+      var row = document.createElement("div");
+      row.className = "library-bin-row";
+      var info = document.createElement("div");
+      info.className = "library-bin-info";
+      var name = document.createElement("b");
+      name.textContent = "📁 " + folderDisplayName(f);
+      info.appendChild(name);
+      var daysLeft = Math.max(0, Math.ceil((f.deletedAt + LIBRARY_BIN_DAYS * 86400000 - Date.now()) / 86400000));
+      var who = f.deletedBy && f.deletedBy !== myPhoneNumber && typeof teamPersonName === "function" ? teamPersonName(f.deletedBy) : "";
+      var meta = document.createElement("small");
+      meta.textContent = tr("libraryBinMeta")
+        .replace("{date}", isoToDisplay(new Date(f.deletedAt).toISOString().slice(0, 10)))
+        .replace("{files}", libraryFileCount(folders, f.id))
+        .replace("{days}", daysLeft) + (who ? " · " + who : "");
+      info.appendChild(meta);
+      row.appendChild(info);
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "modal-btn modal-btn-primary";
+      btn.textContent = tr("libraryBinRestore");
+      btn.addEventListener("click", function () {
+        libraryBinOverlay.hidden = true;
+        restoreLibraryFolder(live, f.id);
+      });
+      row.appendChild(btn);
+      libraryBinList.appendChild(row);
+    });
+    libraryBinOverlay.hidden = false;
+  }
+  document.getElementById("libraryBinCloseBtn").addEventListener("click", function () { libraryBinOverlay.hidden = true; });
+  libraryBinOverlay.addEventListener("click", function (e) { if (e.target === libraryBinOverlay) libraryBinOverlay.hidden = true; });
 
   var libraryFolderActionOverlay = document.getElementById("libraryFolderActionOverlay");
   var libraryFolderActionDeleteBtn = document.getElementById("libraryFolderActionDeleteBtn");
@@ -477,7 +589,7 @@
     var sheet = allSheets().find(function (s) { return s.id === activeLibrarySheetId; });
     var folder = sheet && sheet.folders && sheet.folders.find(function (f) { return f.id === activeLibraryFolderId; });
     var files = (folder && folder.files) || [];
-    var subfolders = folder ? sheet.folders.filter(function (f) { return f.parentId === folder.id; }) : [];
+    var subfolders = folder ? libraryLive(sheet.folders).filter(function (f) { return f.parentId === folder.id; }) : [];
     libraryGrid.classList.toggle("library-grid-rows", !!folder && (isProcurementOrdersFolder(folder) || isAttendanceReportsFolder(folder) || isToolsReportsFolder(folder)));
     libraryGrid.innerHTML = "";
     subfolders.forEach(function (sub) { libraryGrid.appendChild(buildLibraryFolderTile(sheet, sub)); });
@@ -657,7 +769,7 @@
   var libraryMoveOverlay = document.getElementById("libraryMoveOverlay");
   var libraryMoveList = document.getElementById("libraryMoveList");
   function openLibraryMoveModal(sheet, folder, entry) {
-    var folders = (allSheets().find(function (s) { return s.id === sheet.id; }) || sheet).folders || [];
+    var folders = libraryLive((allSheets().find(function (s) { return s.id === sheet.id; }) || sheet).folders || []);
     libraryMoveList.innerHTML = "";
     folders.map(function (f) { return { f: f, path: libraryFolderPath(folders, f) }; })
       .sort(function (x, y) { return x.path.localeCompare(y.path); })
