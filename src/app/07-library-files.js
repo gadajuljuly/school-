@@ -862,16 +862,20 @@
     if (e.target === libraryFileActionOverlay) closeLibraryFileActionModal();
   });
 
-  function uploadLibraryFiles(fileList, intoFolderId) {
-    var initialSheet = allSheets().find(function (s) { return s.id === activeLibrarySheetId; });
-    if (!initialSheet) return;
+  // intoSheetId: files shared in from another app (14j-share-files.js) -
+  // a project other than the open library's; then it returns a promise
+  // and leaves the error to the caller
+  function uploadLibraryFiles(fileList, intoFolderId, intoSheetId) {
+    var initialSheet = allSheets().find(function (s) { return s.id === (intoSheetId || activeLibrarySheetId); });
+    if (!initialSheet) return intoSheetId ? Promise.reject(new Error("no project")) : undefined;
     var sheetId = initialSheet.id;
     var folderId = intoFolderId || activeLibraryFolderId;
     var isShared = !!initialSheet.shared;
-    if (!supabaseClient || !folderId) return;
+    if (!supabaseClient || !folderId) return intoSheetId ? Promise.reject(new Error("no folder")) : undefined;
+    var uploads = [];
     Array.prototype.slice.call(fileList).forEach(function (file) {
       var path = sheetId + "/" + folderId + "/" + uid() + "-" + safeStorageFileName(file.name);
-      supabaseClient.storage.from(LIBRARY_BUCKET).upload(path, file).then(function (result) {
+      var one = supabaseClient.storage.from(LIBRARY_BUCKET).upload(path, file).then(function (result) {
         if (result.error) throw result.error;
         var newEntry = {
           id: uid(),
@@ -897,11 +901,16 @@
         }
       }).then(function () {
         renderLibraryGrid();
-      }).catch(function (err) {
-        console.error("library upload failed:", err);
-        alert(tr("libraryUploadError") + "\n" + ((err && (err.message || err.error || err.statusCode)) || JSON.stringify(err) || ""));
       });
+      if (!intoSheetId) {
+        one = one.catch(function (err) {
+          console.error("library upload failed:", err);
+          alert(tr("libraryUploadError") + "\n" + ((err && (err.message || err.error || err.statusCode)) || JSON.stringify(err) || ""));
+        });
+      }
+      uploads.push(one);
     });
+    return Promise.all(uploads);
   }
 
   function openLibraryFoldersView() {

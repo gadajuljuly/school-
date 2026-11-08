@@ -33,6 +33,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command "$f='android\app\src\main
 echo === share to ITASK in AndroidManifest.xml (added once) ===
 rem ITASK in Android's share sheet for text (a WhatsApp message): an intent-filter inside MainActivity
 powershell -NoProfile -ExecutionPolicy Bypass -Command "$f='android\app\src\main\AndroidManifest.xml'; $x=[IO.File]::ReadAllText($f); if ($x -notmatch 'android.intent.action.SEND') { $a=$x.IndexOf('.MainActivity'); $e=$x.IndexOf('</activity>', $a); $r=[IO.File]::ReadAllText('native-src\manifest-share.xml'); $x=$x.Substring(0,$e)+$r+$x.Substring($e); [IO.File]::WriteAllText($f,$x); Write-Host 'share added' } else { Write-Host 'already there' }" || goto :error
+rem ...and files: photos, PDFs, documents (version 31+)
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$f='android\app\src\main\AndroidManifest.xml'; $x=[IO.File]::ReadAllText($f); if ($x -notmatch 'android.intent.action.SEND_MULTIPLE') { $a=$x.IndexOf('.MainActivity'); $e=$x.IndexOf('</activity>', $a); $r=[IO.File]::ReadAllText('native-src\manifest-share-files.xml'); $x=$x.Substring(0,$e)+$r+$x.Substring($e); [IO.File]::WriteAllText($f,$x); Write-Host 'share files added' } else { Write-Host 'already there' }" || goto :error
 
 echo.
 echo Done. Now in Android Studio: raise versionCode/versionName in build.gradle (:app), Sync, then Build ^> Generate Signed App Bundle.

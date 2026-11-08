@@ -2,7 +2,10 @@ package com.gadajuljuly.itask;
 
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.database.Cursor;
 import android.net.Uri;
+import android.provider.OpenableColumns;
+import android.util.Base64;
 import android.os.Build;
 import android.provider.Settings;
 import com.getcapacitor.JSArray;
@@ -13,7 +16,13 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import androidx.core.content.FileProvider;
 import androidx.core.content.pm.ShortcutManagerCompat;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.Collections;
 import org.json.JSONArray;
 
@@ -35,6 +44,9 @@ public class ItaskAlarmPlugin extends Plugin {
 
     private String pendingLaunchView = null;
     private String pendingSharedText = null;
+    // files shared in (photos, PDFs... from WhatsApp, the gallery): copied
+    // into the app's cache, handed to the page as {name, type, size, path}
+    private JSArray pendingSharedFiles = null;
 
     // Opens the app on a project ("task|sheetId||") or a task
     // ("task|sheetId|date|taskId"); null just opens the app.
@@ -74,22 +86,30 @@ public class ItaskAlarmPlugin extends Plugin {
             JSObject event = new JSObject();
             event.put("view", pendingLaunchView);
             if (pendingSharedText != null) event.put("text", pendingSharedText);
+            if (pendingSharedFiles != null) event.put("files", pendingSharedFiles);
             notifyListeners("launchView", event);
         }
     }
 
     private boolean takeViewFromIntent(Intent intent) {
-        if (intent != null && Intent.ACTION_SEND.equals(intent.getAction())
-                && intent.getStringExtra(Intent.EXTRA_TEXT) != null) {
-            pendingLaunchView = "share";
-            pendingSharedText = intent.getStringExtra(Intent.EXTRA_TEXT);
-            // so a later reload doesn't offer the same text again
-            intent.setAction(Intent.ACTION_MAIN);
-            intent.removeExtra(Intent.EXTRA_TEXT);
-            return true;
+        String action = intent == null ? null : intent.getAction();
+        if (Intent.ACTION_SEND.equals(action) || Intent.ACTION_SEND_MULTIPLE.equals(action)) {
+            JSArray files = copySharedFiles(intent);
+            String text = intent.getStringExtra(Intent.EXTRA_TEXT);
+            if (files.length() > 0 || text != null) {
+                pendingLaunchView = "share";
+                pendingSharedText = text;
+                pendingSharedFiles = files.length() > 0 ? files : null;
+                // so a later reload doesn't offer the same again
+                intent.setAction(Intent.ACTION_MAIN);
+                intent.removeExtra(Intent.EXTRA_TEXT);
+                intent.removeExtra(Intent.EXTRA_STREAM);
+                return true;
+            }
         }
         if (intent == null || intent.getStringExtra(EXTRA_VIEW) == null) return false;
         pendingSharedText = null;
+        pendingSharedFiles = null;
         pendingLaunchView = intent.getStringExtra(EXTRA_VIEW);
         intent.removeExtra(EXTRA_VIEW); // so a later reload doesn't reopen it
         return true;
@@ -100,9 +120,102 @@ public class ItaskAlarmPlugin extends Plugin {
         JSObject result = new JSObject();
         result.put("view", pendingLaunchView);
         if (pendingSharedText != null) result.put("text", pendingSharedText);
+        if (pendingSharedFiles != null) result.put("files", pendingSharedFiles);
         pendingLaunchView = null;
         pendingSharedText = null;
+        pendingSharedFiles = null;
         call.resolve(result);
+    }
+
+    private File sharedInDir() {
+        return new File(getContext().getCacheDir(), "shared-in");
+    }
+
+    @SuppressWarnings("deprecation")
+    private JSArray copySharedFiles(Intent intent) {
+        JSArray out = new JSArray();
+        ArrayList<Uri> uris = new ArrayList<>();
+        try {
+            if (Intent.ACTION_SEND_MULTIPLE.equals(intent.getAction())) {
+                ArrayList<Uri> list = intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM);
+                if (list != null) uris.addAll(list);
+            } else {
+                Uri one = intent.getParcelableExtra(Intent.EXTRA_STREAM);
+                if (one != null) uris.add(one);
+            }
+        } catch (Exception e) {
+            return out;
+        }
+        if (uris.isEmpty()) return out;
+        File dir = sharedInDir();
+        // the last share's copies are no longer needed
+        File[] old = dir.listFiles();
+        if (old != null) for (File f : old) f.delete();
+        dir.mkdirs();
+        int n = 0;
+        for (Uri uri : uris) {
+            if (uri == null) continue;
+            String name = null;
+            long size = -1;
+            try (Cursor c = getContext().getContentResolver().query(uri, null, null, null, null)) {
+                if (c != null && c.moveToFirst()) {
+                    int ni = c.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                    int si = c.getColumnIndex(OpenableColumns.SIZE);
+                    if (ni >= 0) name = c.getString(ni);
+                    if (si >= 0 && !c.isNull(si)) size = c.getLong(si);
+                }
+            } catch (Exception ignored) {
+            }
+            String type = getContext().getContentResolver().getType(uri);
+            if (type == null) type = intent.getType();
+            if (name == null || name.trim().isEmpty()) name = uri.getLastPathSegment();
+            if (name == null || name.trim().isEmpty()) name = "file";
+            name = name.replaceAll("[\\\\/:*?\"<>|]", "_");
+            File target = new File(dir, (n++) + "-" + name);
+            try (InputStream in = getContext().getContentResolver().openInputStream(uri);
+                 OutputStream os = new FileOutputStream(target)) {
+                if (in == null) continue;
+                byte[] buf = new byte[65536];
+                int r;
+                long total = 0;
+                while ((r = in.read(buf)) > 0) { os.write(buf, 0, r); total += r; }
+                size = total;
+            } catch (Exception e) {
+                target.delete();
+                continue;
+            }
+            JSObject f = new JSObject();
+            f.put("name", name);
+            f.put("type", type == null || type.contains("*") ? "" : type);
+            f.put("size", size);
+            f.put("path", target.getAbsolutePath());
+            out.put(f);
+        }
+        return out;
+    }
+
+    // a shared file's bytes, for the page (base64) - only the copies above
+    @PluginMethod
+    public void readSharedFile(PluginCall call) {
+        String path = call.getString("path");
+        try {
+            File f = new File(path == null ? "" : path).getCanonicalFile();
+            if (!f.getPath().startsWith(sharedInDir().getCanonicalPath() + File.separator) || !f.isFile()) {
+                call.reject("not a shared file");
+                return;
+            }
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            try (InputStream in = new FileInputStream(f)) {
+                byte[] buf = new byte[65536];
+                int r;
+                while ((r = in.read(buf)) > 0) bos.write(buf, 0, r);
+            }
+            JSObject result = new JSObject();
+            result.put("data", Base64.encodeToString(bos.toByteArray(), Base64.NO_WRAP));
+            call.resolve(result);
+        } catch (Exception e) {
+            call.reject("read failed");
+        }
     }
 
     // What this build of the app can do, for the page to check before
@@ -115,6 +228,7 @@ public class ItaskAlarmPlugin extends Plugin {
         result.put("assistantWidget", true);
         result.put("floatingTask", true);
         result.put("assistantBubble", true);
+        result.put("shareFiles", true);
         call.resolve(result);
     }
 

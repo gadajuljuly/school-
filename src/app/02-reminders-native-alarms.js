@@ -232,7 +232,9 @@
   // picked up at startup (takeLaunchView) or, when the app was already
   // running, through the "launchView" event, and opened like a tapped
   // notification. ("focus", from app versions before 15, just opens the app.)
-  function openLaunchView(view, text) {
+  function openLaunchView(view, text, files) {
+    // photos / PDFs / documents (app version 31+): into a library folder
+    if (view === "share" && files && files.length) { openShareFilesModal(files); return; }
     if (view === "share") { openShareTaskModal(text); return; }
     // "workplan|sheetId|itemId": that project's plan, the activity picked out
     if (view === "workplan" || (view && view.indexOf("workplan|") === 0)) { openWorkPlanLink(view.split("|")[1], view.split("|")[2]); return; }
@@ -252,10 +254,10 @@
     if (launchViewChecked || !nativeTaskAlarmPlugin) return;
     launchViewChecked = true;
     nativeTaskAlarmPlugin.takeLaunchView().then(function (res) {
-      if (res) openLaunchView(res.view, res.text);
+      if (res) openLaunchView(res.view, res.text, res.files);
     }).catch(function () {});
     nativeTaskAlarmPlugin.addListener("launchView", function (e) {
-      if (e) openLaunchView(e.view, e.text);
+      if (e) openLaunchView(e.view, e.text, e.files);
       nativeTaskAlarmPlugin.takeLaunchView().catch(function () {});
     });
   }

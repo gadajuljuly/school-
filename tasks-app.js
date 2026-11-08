@@ -796,6 +796,12 @@
     sketchDimHint: { he: "גרור מקצה לקצה של המידה. לחיצה וגרירה על מידה מזיזה אותה", en: "Drag from one end of the dimension to the other. Press and drag a dimension to move it", ar: "اسحب من طرف القياس إلى طرفه الآخر. اضغط واسحب القياس لتحريكه", ru: "Тяните от одного конца размера к другому. Нажмите и тяните размер, чтобы сдвинуть его" },
     sketchDoorHint: { he: "גרור מהציר של הדלת לכיוון הכנף", en: "Drag from the door's hinge along its leaf", ar: "اسحب من مفصل الباب باتجاه الدرفة", ru: "Тяните от петли вдоль полотна" },
     sketchEmptyMsg: { he: "הסקיצה ריקה", en: "The sketch is empty", ar: "الرسم فارغ", ru: "Эскиз пуст" },
+    shareFilesTitle: { he: "שמירה בספריית הפרויקט", en: "Save to the project library", ar: "حفظ في مكتبة المشروع", ru: "Сохранить в библиотеку проекта" },
+    shareFilesFolder: { he: "תיקייה", en: "Folder", ar: "مجلد", ru: "Папка" },
+    shareFilesSave: { he: "שמירה", en: "Save", ar: "حفظ", ru: "Сохранить" },
+    shareFilesSaving: { he: "שומר...", en: "Saving...", ar: "جارٍ الحفظ...", ru: "Сохранение..." },
+    shareFilesSaved: { he: "נשמר בספרייה: {folder}", en: "Saved to the library: {folder}", ar: "تم الحفظ في المكتبة: {folder}", ru: "Сохранено в библиотеке: {folder}" },
+    shareFilesFailed: { he: "השמירה נכשלה. בדקו את החיבור לאינטרנט ונסו שוב.", en: "Saving failed. Check the internet connection and try again.", ar: "فشل الحفظ. تحقق من الاتصال بالإنترنت وحاول مرة أخرى.", ru: "Не удалось сохранить. Проверьте интернет и попробуйте снова." },
     shareTaskTitle: { he: "הוספת משימה", en: "Add a task", ar: "إضافة مهمة", ru: "Добавить задачу" },
     shareTaskProject: { he: "פרויקט", en: "Project", ar: "المشروع", ru: "Проект" },
     shareTaskDate: { he: "תאריך", en: "Date", ar: "التاريخ", ru: "Дата" },
@@ -2485,7 +2491,9 @@
   // picked up at startup (takeLaunchView) or, when the app was already
   // running, through the "launchView" event, and opened like a tapped
   // notification. ("focus", from app versions before 15, just opens the app.)
-  function openLaunchView(view, text) {
+  function openLaunchView(view, text, files) {
+    // photos / PDFs / documents (app version 31+): into a library folder
+    if (view === "share" && files && files.length) { openShareFilesModal(files); return; }
     if (view === "share") { openShareTaskModal(text); return; }
     // "workplan|sheetId|itemId": that project's plan, the activity picked out
     if (view === "workplan" || (view && view.indexOf("workplan|") === 0)) { openWorkPlanLink(view.split("|")[1], view.split("|")[2]); return; }
@@ -2505,10 +2513,10 @@
     if (launchViewChecked || !nativeTaskAlarmPlugin) return;
     launchViewChecked = true;
     nativeTaskAlarmPlugin.takeLaunchView().then(function (res) {
-      if (res) openLaunchView(res.view, res.text);
+      if (res) openLaunchView(res.view, res.text, res.files);
     }).catch(function () {});
     nativeTaskAlarmPlugin.addListener("launchView", function (e) {
-      if (e) openLaunchView(e.view, e.text);
+      if (e) openLaunchView(e.view, e.text, e.files);
       nativeTaskAlarmPlugin.takeLaunchView().catch(function () {});
     });
   }
@@ -7201,16 +7209,20 @@
     if (e.target === libraryFileActionOverlay) closeLibraryFileActionModal();
   });
 
-  function uploadLibraryFiles(fileList, intoFolderId) {
-    var initialSheet = allSheets().find(function (s) { return s.id === activeLibrarySheetId; });
-    if (!initialSheet) return;
+  // intoSheetId: files shared in from another app (14j-share-files.js) -
+  // a project other than the open library's; then it returns a promise
+  // and leaves the error to the caller
+  function uploadLibraryFiles(fileList, intoFolderId, intoSheetId) {
+    var initialSheet = allSheets().find(function (s) { return s.id === (intoSheetId || activeLibrarySheetId); });
+    if (!initialSheet) return intoSheetId ? Promise.reject(new Error("no project")) : undefined;
     var sheetId = initialSheet.id;
     var folderId = intoFolderId || activeLibraryFolderId;
     var isShared = !!initialSheet.shared;
-    if (!supabaseClient || !folderId) return;
+    if (!supabaseClient || !folderId) return intoSheetId ? Promise.reject(new Error("no folder")) : undefined;
+    var uploads = [];
     Array.prototype.slice.call(fileList).forEach(function (file) {
       var path = sheetId + "/" + folderId + "/" + uid() + "-" + safeStorageFileName(file.name);
-      supabaseClient.storage.from(LIBRARY_BUCKET).upload(path, file).then(function (result) {
+      var one = supabaseClient.storage.from(LIBRARY_BUCKET).upload(path, file).then(function (result) {
         if (result.error) throw result.error;
         var newEntry = {
           id: uid(),
@@ -7236,11 +7248,16 @@
         }
       }).then(function () {
         renderLibraryGrid();
-      }).catch(function (err) {
-        console.error("library upload failed:", err);
-        alert(tr("libraryUploadError") + "\n" + ((err && (err.message || err.error || err.statusCode)) || JSON.stringify(err) || ""));
       });
+      if (!intoSheetId) {
+        one = one.catch(function (err) {
+          console.error("library upload failed:", err);
+          alert(tr("libraryUploadError") + "\n" + ((err && (err.message || err.error || err.statusCode)) || JSON.stringify(err) || ""));
+        });
+      }
+      uploads.push(one);
     });
+    return Promise.all(uploads);
   }
 
   function openLibraryFoldersView() {
@@ -22637,6 +22654,143 @@
       urgentBody.appendChild(none);
     }
   }
+  // ---------------------------------------------------------------------
+  // Files shared into ITASK from another app (photos from WhatsApp or the
+  // gallery, a PDF, a document - app version 31+): ItaskAlarmPlugin copies
+  // them into the app's cache and hands them over with launch view
+  // "share"; here they're saved into a folder of a project's library.
+  // Photos go to "תמונות" by default, other files to the folder last
+  // chosen for that project.
+  // ---------------------------------------------------------------------
+  var shareFilesOverlay = document.getElementById("shareFilesOverlay");
+  var shareFilesList = document.getElementById("shareFilesList");
+  var shareFilesProject = document.getElementById("shareFilesProject");
+  var shareFilesFolder = document.getElementById("shareFilesFolder");
+  var shareFilesSaveBtn = document.getElementById("shareFilesSaveBtn");
+  var shareFilesPending = [];
+  var SHARE_FILES_LAST_KEY = "itask-share-files-folder";
+
+  function shareFilesAllMedia() {
+    return shareFilesPending.length > 0 && shareFilesPending.every(function (f) {
+      return /^(image|video)\//.test(f.type || "");
+    });
+  }
+  function shareFilesLastFolders() {
+    try { return JSON.parse(localStorage.getItem(SHARE_FILES_LAST_KEY) || "{}") || {}; } catch (e) { return {}; }
+  }
+
+  function fillShareFilesFolders() {
+    var sheet = allSheets().find(function (s) { return s.id === shareFilesProject.value; });
+    shareFilesFolder.innerHTML = "";
+    shareFilesSaveBtn.disabled = true;
+    if (!sheet) return;
+    var forSheet = sheet.id;
+    ensureLibraryFolders(sheet, function (folders) {
+      if (shareFilesProject.value !== forSheet) return;
+      var live = libraryLive(folders);
+      live.slice().sort(function (a, b) {
+        return libraryFolderPath(live, a).localeCompare(libraryFolderPath(live, b));
+      }).forEach(function (f) {
+        var o = document.createElement("option");
+        o.value = f.id;
+        o.textContent = libraryFolderPath(live, f);
+        shareFilesFolder.appendChild(o);
+      });
+      var last = shareFilesLastFolders()[forSheet];
+      var photos = live.find(function (f) { return f.key === "photos" && !f.parentId; });
+      var downloads = live.find(function (f) { return f.key === "downloads" && !f.parentId; });
+      var pick = shareFilesAllMedia() && photos ? photos.id
+        : (last && live.some(function (f) { return f.id === last; })) ? last
+        : downloads ? downloads.id : (live[0] && live[0].id);
+      if (pick) shareFilesFolder.value = pick;
+      shareFilesSaveBtn.disabled = !shareFilesFolder.value;
+    });
+  }
+
+  function openShareFilesModal(files) {
+    closeMoveTask();
+    shareFilesPending = (files || []).filter(function (f) { return f && f.path; });
+    if (!shareFilesPending.length) return;
+    shareFilesList.innerHTML = "";
+    shareFilesPending.forEach(function (f) {
+      var li = document.createElement("li");
+      li.textContent = (/^image\//.test(f.type || "") ? "🖼 " : /^video\//.test(f.type || "") ? "🎬 " : "📄 ") + (f.name || "");
+      shareFilesList.appendChild(li);
+    });
+    shareFilesProject.innerHTML = "";
+    allSheets().filter(function (s) {
+      return !s.ended && s.id !== HEAD_OFFICE_SHEET_ID;
+    }).forEach(function (s) {
+      var o = document.createElement("option");
+      o.value = s.id;
+      o.textContent = (s.shared ? "👥 " : "") + s.name;
+      shareFilesProject.appendChild(o);
+    });
+    if (allSheets().some(function (s) { return s.id === data.activeSheetId && !s.ended; })) {
+      shareFilesProject.value = data.activeSheetId;
+    }
+    shareFilesSaveBtn.textContent = tr("shareFilesSave");
+    shareFilesOverlay.hidden = false;
+    fillShareFilesFolders();
+  }
+  shareFilesProject.addEventListener("change", fillShareFilesFolders);
+  shareFilesFolder.addEventListener("change", function () { shareFilesSaveBtn.disabled = !shareFilesFolder.value; });
+  document.getElementById("shareFilesCancelBtn").addEventListener("click", function () {
+    shareFilesOverlay.hidden = true;
+    shareFilesPending = [];
+  });
+
+  // a shared file's bytes: straight from the app's cache through the web
+  // view, or (if that's not served) through the plugin as base64
+  function readSharedFile(f) {
+    var asFile = function (blob) {
+      return new File([blob], f.name, { type: f.type || blob.type || "" });
+    };
+    var viaPlugin = function () {
+      return nativeTaskAlarmPlugin.readSharedFile({ path: f.path }).then(function (res) {
+        var bin = atob((res && res.data) || "");
+        var bytes = new Uint8Array(bin.length);
+        for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        return asFile(new Blob([bytes], { type: f.type || "" }));
+      });
+    };
+    var cap = window.Capacitor;
+    if (!cap || typeof cap.convertFileSrc !== "function") return viaPlugin();
+    return fetch(cap.convertFileSrc("file://" + f.path)).then(function (r) {
+      if (!r.ok) throw new Error("not served");
+      return r.blob();
+    }).then(function (blob) {
+      if (f.size > 0 && blob.size !== f.size) throw new Error("partial");
+      return asFile(blob);
+    }).catch(viaPlugin);
+  }
+
+  document.getElementById("shareFilesForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var sheetId = shareFilesProject.value;
+    var folderId = shareFilesFolder.value;
+    if (!sheetId || !folderId || !shareFilesPending.length) return;
+    var folderName = shareFilesFolder.options[shareFilesFolder.selectedIndex].textContent;
+    var files = shareFilesPending;
+    try {
+      var last = shareFilesLastFolders();
+      if (!shareFilesAllMedia()) { last[sheetId] = folderId; localStorage.setItem(SHARE_FILES_LAST_KEY, JSON.stringify(last)); }
+    } catch (err) {}
+    shareFilesSaveBtn.disabled = true;
+    shareFilesSaveBtn.textContent = tr("shareFilesSaving");
+    Promise.all(files.map(readSharedFile)).then(function (list) {
+      return uploadLibraryFiles(list, folderId, sheetId);
+    }).then(function () {
+      shareFilesOverlay.hidden = true;
+      shareFilesPending = [];
+      showToast(tr("shareFilesSaved").replace("{folder}", folderName));
+    }, function (err) {
+      console.error("shared files upload failed:", err);
+      shareFilesSaveBtn.disabled = false;
+      shareFilesSaveBtn.textContent = tr("shareFilesSave");
+      alert(tr("shareFilesFailed"));
+    });
+  });
   function loadFromLocalOrDefault() {
     return loadLocalData() || defaultData();
   }

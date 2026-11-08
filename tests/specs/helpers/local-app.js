@@ -24,6 +24,8 @@ const NATIVE_FAKE = () => {
         setAlarms: ({ alarms }) => { native.alarms = alarms; native.alarmCalls++; return ok(); },
         takeTurnedOffAlarms: () => ok({ ids: native.turnedOff ? native.turnedOff.splice(0) : [] }),
         takeLaunchView: () => ok(null),
+        // files shared in from another app (copied to the cache natively)
+        readSharedFile: ({ path }) => ok({ data: btoa("bytes of " + path) }),
         // tests send a launch view (the widget's taps) through native.listeners.launchView
         addListener: (name, fn) => { (native.listeners = native.listeners || {})[name] = fn; return ok({ remove() {} }); },
         setWidgetData: (d) => { native.widget = d; return ok(); },
