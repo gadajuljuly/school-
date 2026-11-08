@@ -290,12 +290,7 @@
     saveLocalData();
     if (supabaseClient) {
       markPendingSyncDirty();
-      supabaseClient.from("app_state")
-        .upsert({ id: SUPABASE_ROW_ID, data: data, updated_at: new Date().toISOString() })
-        .then(function (result) {
-          if (result && result.error) { scheduleSyncRetry(); return; }
-          clearPendingSyncDirty();
-        }, function () { scheduleSyncRetry(); });
+      pushPrivateData(); // (01b-private-sync.js: never over another device's newer save)
     }
     saveSharedSheets();
   }
@@ -598,12 +593,7 @@
   }
   function flushPendingSync() {
     if (!pendingSyncDirty || !supabaseClient || dataLoadBlocked || !privateDataSettled) return;
-    supabaseClient.from("app_state")
-      .upsert({ id: SUPABASE_ROW_ID, data: data, updated_at: new Date().toISOString() })
-      .then(function (result) {
-        if (result && result.error) { scheduleSyncRetry(); return; }
-        clearPendingSyncDirty();
-      }, function () { scheduleSyncRetry(); });
+    pushPrivateData();
     saveSharedSheets();
   }
   var offlineSyncBadge = document.getElementById("offlineSyncBadge");

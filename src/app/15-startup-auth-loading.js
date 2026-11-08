@@ -54,6 +54,9 @@
     // startup-race bug (rendering before we know anything real).
     var usedInstantLocal = false;
     var instantLocal = loadLocalData() || findLegacyLocalData();
+    // (what the instant view started from - to merge edits made on it
+    // with the server's row once that arrives: 01b-private-sync.js)
+    var instantBase = instantLocal ? privateClone(instantLocal) : null;
     if (instantLocal) {
       data = instantLocal;
       privateDataSettled = true;
@@ -80,7 +83,7 @@
     // a visible blocked/retry state - never a silent empty default).
     try {
       withTimeout(
-        supabaseClient.from("app_state").select("data").eq("id", SUPABASE_ROW_ID).maybeSingle(),
+        supabaseClient.from("app_state").select("data, updated_at").eq("id", SUPABASE_ROW_ID).maybeSingle(),
         15000,
         "app_state load"
       ).then(function (result) {
@@ -100,12 +103,19 @@
           return;
         }
         hideDataLoadError();
+        // this device now knows the server's row (its saves only go over it)
+        if (row && remote) privateNoteServer(remote, row.updated_at);
         if (usedInstantLocal && editedSinceLastLoad) {
           // The user already made a real edit against the instantly
-          // rendered local snapshot before this fetch resolved - their own
-          // saveData() calls already own persisting from here on, so don't
-          // overwrite with what may now be a stale-relative-to-that-edit
-          // server snapshot.
+          // rendered local snapshot before this fetch resolved: those edits
+          // are merged with the server's row (which another device may have
+          // changed meanwhile), and saved.
+          if (remote) {
+            privateAdopt(privateMergeData(remote, data, instantBase || remote));
+            render();
+            markPendingSyncDirty();
+            pushPrivateData();
+          }
           return;
         }
         if (usedInstantLocal && hasPendingSyncFromPreviousSession()) {
@@ -423,7 +433,12 @@
     firebaseAuth.signOut().then(function () { location.reload(); }, function () { location.reload(); });
   }
 
+  // (no longer signs this device out when another one signs in: the phone
+  // and the computer work side by side, their saves merged -
+  // 01b-private-sync.js. Kept for an explicit "sign out everywhere".)
+  var SIGN_OUT_OTHER_DEVICES = false;
   function checkSessionStillActive() {
+    if (!SIGN_OUT_OTHER_DEVICES) return;
     if (!supabaseClient || !mySessionToken) return;
     supabaseClient.from("app_state").select("session_token").eq("id", SUPABASE_ROW_ID).maybeSingle()
       .then(function (result) {
@@ -764,6 +779,7 @@
       setBackendForTest: function (client, phone) {
         supabaseClient = client;
         myPhoneNumber = phone;
+        SUPABASE_ROW_ID = SUPABASE_ROW_ID || "test-row";
       },
       updateSharedSheetDataSafely: updateSharedSheetDataSafely,
       loadMyOfficeGroups: loadMyOfficeGroups,
