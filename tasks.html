@@ -38,7 +38,7 @@
 <script src="vendor/supabase-js-2.118.0.js"></script>
 <script src="vendor/firebase-app-compat-10.7.1.js"></script>
 <script src="vendor/firebase-auth-compat-10.7.1.js"></script>
-<link rel="stylesheet" href="tasks.css?v=8d2a6a5442">
+<link rel="stylesheet" href="tasks.css?v=7ba6671ca0">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -509,7 +509,7 @@
         </span>
         <button type="button" class="today-btn" id="todayBtn" data-i18n="todayBtn" hidden>היום</button>
       </span>
-      <div class="notebook-app-name"><span class="app-name-i">I</span><span class="app-name-rest">TASK</span></div>
+      <div class="notebook-app-name"><span class="app-name-i">I</span><span class="app-name-rest">TASK</span><button type="button" class="urgent-dot-btn" id="urgentDotBtn" data-i18n-title="urgentViewTitle" title="משימות דחופות"><span class="urgent-count" id="urgentCount"></span></button></div>
       <div class="head-right">
         <button class="menu-btn" id="menuBtn" data-i18n-title="menuBtnTitle" title="תפריט" aria-haspopup="true" aria-expanded="false"><img src="tasks-menu-icon.webp" alt=""></button>
         <div class="menu-panel" id="menuPanel" hidden>
@@ -1350,6 +1350,17 @@
     <div class="morning-body" id="morningBody"></div>
   </div>
 
+  <div class="report-view morning-view" id="urgentView" hidden>
+    <div class="report-head">
+      <button type="button" class="report-back-btn" id="urgentBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
+      <div class="report-head-title">
+        <div data-i18n="urgentViewTitle">משימות דחופות</div>
+        <div class="site-log-header-project" data-i18n="urgentViewSub">מכל הפרויקטים</div>
+      </div>
+    </div>
+    <div class="morning-body" id="urgentBody"></div>
+  </div>
+
   <div class="report-view assistant-view" id="assistantView" hidden>
     <div class="report-head">
       <button type="button" class="report-back-btn" id="assistantBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
@@ -1612,6 +1623,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=3c1e458fe2"></script>
+<script src="tasks-app.js?v=5e796d274a"></script>
 </body>
 </html>

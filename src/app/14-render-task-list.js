@@ -390,6 +390,7 @@
 
   var chatWasActiveLastRender = false;
   function render() {
+    try { updateUrgentDot(); } catch (e) {}
     appLoadingOverlay.hidden = true;
     syncWorkPlanTasks();
     clearTimeout(longPressTimer);
