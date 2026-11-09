@@ -3733,3 +3733,4 @@
 .boq-search input { flex: 1; min-width: 0; padding: 8px 12px; border: 1px solid var(--rule); border-radius: 10px; font: inherit; font-size: 0.9rem; background: #fff; }
 .boq-search-count { font-size: 0.8rem; color: var(--ink-muted); white-space: nowrap; }
 .boq-table tr[hidden], .boq-table tbody[hidden] { display: none; }
+.boq-table tr.boq-discount td { background: #fff7e6; color: #9a5b00; font-weight: 700; cursor: pointer; }

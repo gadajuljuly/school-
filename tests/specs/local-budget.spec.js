@@ -517,3 +517,39 @@ test("finding an item in the BOQ: by number, by words of its description, by cha
   await expect(rows).toHaveCount(3);
   await expect(page.locator(".boq-total")).toBeVisible();
 });
+
+test("discounts on the BOQ: several, each with its description - a % or an amount, one after the other", async ({ page }) => {
+  await openBudget(page);
+  await page.locator(".budget-actions button", { hasText: "＋ סעיף" }).click();
+  await fill(page, { code: "01.010", chapter: "01 עבודות עפר", name: "חפירה", unit: "מ\"ק", qty: 1000, price: 100, doneQty: 500 });
+  await expect(page.locator(".budget-item", { hasText: "חפירה" })).toBeVisible();
+
+  // 10% off the 100,000, then 5,000 more
+  await page.locator(".budget-actions button", { hasText: "＋ הנחה" }).click();
+  await fill(page, { description: "הנחת מכרז", value: 10 });
+  await page.locator(".budget-actions button", { hasText: "＋ הנחה" }).click();
+  await fill(page, { description: "הנחה מסחרית", kind: "סכום (₪)", value: 5000 });
+
+  const rows = page.locator("tr.boq-discount");
+  await expect(rows).toHaveCount(2);
+  await expect(rows.nth(0)).toContainText("הנחה: הנחת מכרז (10%)");
+  await expect(rows.nth(0)).toContainText("-10,000");
+  await expect(rows.nth(0)).toContainText("-5,000"); // half the work is done: half of it off that
+  await expect(rows.nth(1)).toContainText("הנחה: הנחה מסחרית");
+  const after = page.locator("tr.boq-after-discount");
+  await expect(after).toContainText("סה\"כ לאחר הנחות");
+  await expect(after).toContainText("85,000");
+  await expect(after).toContainText("42,500");
+  await expect.poll(async () => (await finance(page))?.data.discounts.map((d) => [d.description, d.kind, d.value]))
+    .toEqual([["הנחת מכרז", "pct", 10], ["הנחה מסחרית", "amount", 5000]]);
+
+  // changed: 8% -> 92,000 - 5,000; then removed
+  await rows.nth(0).click();
+  await fill(page, { value: 8 });
+  await expect(after).toContainText("87,000");
+  await rows.nth(1).click();
+  await page.locator("#budgetFormDeleteBtn").click();
+  await page.locator("#confirmYesBtn").click();
+  await expect(rows).toHaveCount(1);
+  await expect(after).toContainText("92,000");
+});
