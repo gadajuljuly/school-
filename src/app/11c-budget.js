@@ -307,8 +307,7 @@
   function renderBudgetItems() {
     budgetActions([["budgetAddItem", function () { budgetItemForm(null); }, "primary"],
       ["budgetImportCsv", function () { document.getElementById("budgetCsvInput").click(); }],
-      ["budgetExportCsv", budgetExport]].concat(budget.data.items.length ? [["boqAddDiscount", function () { budgetDiscountForm(null); }]] : [],
-      budget.data.discounts.length ? [["boqEditDiscounts", budgetPickDiscount]] : [], budget.data.items.length ? [["budgetDeleteBoq", budgetDeleteBoqForm]] : []));
+      ["budgetExportCsv", budgetExport]].concat(budget.data.items.length ? [[budget.data.discounts.length ? "boqDiscountsBtnN" : "boqDiscountsBtn", openBoqDiscounts]] : [], budget.data.items.length ? [["budgetDeleteBoq", budgetDeleteBoqForm]] : []));
     // in the order of the BOQ itself (as uploaded), not re-sorted by number; the
     // chapters in the order they come, and an item added by hand at its chapter's end
     var items = budget.data.items.slice();
@@ -648,19 +647,54 @@
       (d.kind === "amount" ? "" : " (" + budgetNum(d.value) + "%)") +
       (d.chapter ? " · " + tr("boqDiscountOnChapter").replace("{name}", d.chapter) : "");
   }
-  // ✏️ עריכת הנחות: which one - then its own form (change it / delete it)
-  function budgetPickDiscount() {
+  // 🏷 הנחות: the BOQ's discounts by name - a tap opens one to change it,
+  // a long press (a right click on a computer) offers to delete it
+  var boqDiscountsOverlay = document.getElementById("boqDiscountsOverlay");
+  var boqDiscountsList = document.getElementById("boqDiscountsList");
+  function openBoqDiscounts() {
+    boqDiscountsList.innerHTML = "";
     var list = budget.data.discounts;
-    if (list.length === 1) { budgetDiscountForm(list[0]); return; }
-    budgetForm(tr("boqEditDiscounts"), [
-      { key: "which", label: tr("boqWhichDiscount"), value: list[0].id,
-        options: list.map(function (d) { return [d.id, budgetDiscountLabel(d)]; }) }
-    ], function (v) {
-      var d = list.find(function (x) { return x.id === v.which; });
-      if (d) setTimeout(function () { budgetDiscountForm(d); }, 0);
-    }, null);
+    if (!list.length) boqDiscountsList.appendChild(bEl("p", "move-task-empty", tr("boqNoDiscounts")));
+    list.forEach(function (d) {
+      var btn = bEl("button", "boq-discount-btn");
+      btn.type = "button";
+      btn.appendChild(bEl("b", "", d.description || tr("boqDiscountNoName")));
+      btn.appendChild(bEl("small", "", (d.kind === "amount" ? budgetMoney(budgetNum(d.value)) : budgetNum(d.value) + "%") + " · " +
+        (d.chapter ? tr("boqDiscountOnChapter").replace("{name}", d.chapter) : tr("boqDiscountGeneralShort"))));
+      var timer = null, long = false;
+      var askDelete = function () {
+        boqDiscountsOverlay.hidden = true;
+        askConfirm(tr("boqDeleteDiscountQ").replace("{name}", d.description || tr("boqDiscountNoName")), function () {
+          budgetChange(budgetRemove("discounts", d.id));
+          setTimeout(openBoqDiscounts, 0);
+        });
+      };
+      var start = function () {
+        long = false;
+        clearTimeout(timer);
+        timer = setTimeout(function () { long = true; askDelete(); }, 600);
+      };
+      var stop = function () { clearTimeout(timer); };
+      btn.addEventListener("touchstart", start, { passive: true });
+      btn.addEventListener("mousedown", function (e) { if (e.button === 0) start(); });
+      ["touchend", "touchmove", "touchcancel", "mouseup", "mouseleave"].forEach(function (ev) { btn.addEventListener(ev, stop); });
+      btn.addEventListener("contextmenu", function (e) { e.preventDefault(); stop(); if (!long) { long = true; askDelete(); } });
+      btn.addEventListener("click", function () {
+        if (long) { long = false; return; }
+        boqDiscountsOverlay.hidden = true;
+        budgetDiscountForm(d, true);
+      });
+      boqDiscountsList.appendChild(btn);
+    });
+    boqDiscountsOverlay.hidden = false;
   }
-  function budgetDiscountForm(disc) {
+  document.getElementById("boqDiscountsAddBtn").addEventListener("click", function () {
+    boqDiscountsOverlay.hidden = true;
+    budgetDiscountForm(null, true);
+  });
+  document.getElementById("boqDiscountsCloseBtn").addEventListener("click", function () { boqDiscountsOverlay.hidden = true; });
+  // fromList: back to the discounts' list after it's saved
+  function budgetDiscountForm(disc, fromList) {
     var d = disc || { kind: "pct" };
     var chapters = [];
     budget.data.items.forEach(function (i) { var c = budgetChapterOf(i); if (chapters.indexOf(c) === -1) chapters.push(c); });
@@ -678,7 +712,8 @@
       var rec = Object.assign({}, d, { id: d.id || uid(), description: (v.description || "").trim(), kind: v.kind === "amount" ? "amount" : "pct",
         value: value, chapter: v.chapter || null });
       budgetChange(budgetUpsert("discounts", rec));
-    }, disc ? function () { budgetChange(budgetRemove("discounts", disc.id)); } : null);
+      if (fromList) setTimeout(openBoqDiscounts, 0);
+    }, disc ? function () { budgetChange(budgetRemove("discounts", disc.id)); if (fromList) setTimeout(openBoqDiscounts, 0); } : null);
   }
   function budgetExpenseForm(exp) {
     var e = exp || { date: todayISO() };

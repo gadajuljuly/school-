@@ -38,7 +38,7 @@
 <script src="vendor/supabase-js-2.118.0.js"></script>
 <script src="vendor/firebase-app-compat-10.7.1.js"></script>
 <script src="vendor/firebase-auth-compat-10.7.1.js"></script>
-<link rel="stylesheet" href="tasks.css?v=7e0a288af1">
+<link rel="stylesheet" href="tasks.css?v=844f5f11a0">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -348,6 +348,17 @@
         <button type="button" class="modal-btn modal-btn-no" id="shareTaskCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </form>
+  </div>
+</div>
+<div class="modal-overlay" id="boqDiscountsOverlay" hidden style="z-index:41">
+  <div class="modal-box">
+    <p class="modal-message" data-i18n="boqDiscountsTitle">הנחות כתב הכמויות</p>
+    <p class="boq-discounts-hint" data-i18n="boqDiscountsHint">לחיצה – עריכה · לחיצה ארוכה – מחיקה</p>
+    <div class="move-task-projects boq-discounts-list" id="boqDiscountsList"></div>
+    <div class="modal-actions">
+      <button type="button" class="modal-btn modal-btn-primary" id="boqDiscountsAddBtn" data-i18n="boqAddDiscountNew">＋ הנחה חדשה</button>
+      <button type="button" class="modal-btn modal-btn-no" id="boqDiscountsCloseBtn" data-i18n="closeBtn">סגירה</button>
+    </div>
   </div>
 </div>
 <div class="modal-overlay" id="budgetFormOverlay" hidden style="z-index:41">
@@ -1639,6 +1650,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=809010971c"></script>
+<script src="tasks-app.js?v=6c35eaffb1"></script>
 </body>
 </html>

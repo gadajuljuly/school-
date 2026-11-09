@@ -3735,3 +3735,6 @@
 .boq-table tr[hidden], .boq-table tbody[hidden] { display: none; }
 .boq-table tr.boq-discount td { background: #fff7e6; color: #9a5b00; font-weight: 700; cursor: pointer; }
 .boq-table .boq-before-discount { display: block; font-size: 0.65rem; color: var(--ink-muted); text-decoration: line-through; }
+.boq-discounts-hint { margin: -6px 0 10px; font-size: 0.78rem; color: var(--ink-muted); text-align: center; }
+.boq-discounts-list .boq-discount-btn { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.boq-discounts-list .boq-discount-btn small { color: var(--ink-muted); font-size: 0.78rem; }

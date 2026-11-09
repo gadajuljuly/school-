@@ -529,26 +529,37 @@ test("discounts on the BOQ: general or on one chapter, each described - a % or a
   const dig = page.locator(".budget-item", { hasText: "חפירה" });
   const pipe = page.locator(".budget-item", { hasText: "צינור" });
   const priceOf = (row) => row.locator("td").nth(5);
+  const panel = page.locator("#boqDiscountsOverlay");
+  const listed = panel.locator(".boq-discount-btn");
 
-  // 10% off the earthworks chapter only
-  await page.locator(".budget-actions button", { hasText: "＋ הנחה" }).click();
+  // 🏷 הנחות: the list (empty), ＋ a new one - 10% off the earthworks chapter only
+  await page.locator(".budget-actions button", { hasText: "🏷 הנחות" }).click();
+  await expect(panel).toBeVisible();
+  await expect(panel).toContainText("עדיין אין הנחות");
+  await page.locator("#boqDiscountsAddBtn").click();
   await expect(page.locator("#budgetFormFields [name=chapter] option")).toHaveText(["הנחה כללית – כל כתב הכמויות", "פרק 01 עבודות עפר", "פרק 02 ניקוז"]);
   await fill(page, { chapter: "פרק 01 עבודות עפר", description: "הנחת עפר", value: 10 });
+  await expect(panel).toBeVisible(); // back to the list
+  await expect(listed).toHaveCount(1);
+  await expect(listed.first()).toContainText("הנחת עפר");
+  await expect(listed.first()).toContainText("10% · פרק 01 עבודות עפר");
   await expect(priceOf(dig)).toContainText("90");
   await expect(priceOf(dig).locator(".boq-before-discount")).toHaveText("100");
   await expect(priceOf(pipe)).toHaveText("1,000");
   await expect(dig.locator("td.boq-contract-total")).toHaveText("90,000");
 
   // then a general 5,000 off what's left (90,000 + 100,000)
-  await page.locator(".budget-actions button", { hasText: "＋ הנחה" }).click();
+  await page.locator("#boqDiscountsAddBtn").click();
   await fill(page, { description: "הנחה מסחרית", kind: "סכום (₪)", value: 5000 });
+  await expect(listed).toHaveCount(2);
+  await expect(listed.nth(1)).toContainText("כללית");
+  await page.locator("#boqDiscountsCloseBtn").click();
 
   const rows = page.locator("tr.boq-discount");
   await expect(rows).toHaveCount(2);
   await expect(rows.nth(0)).toContainText("הנחה: הנחת עפר (10%) · פרק 01 עבודות עפר");
   await expect(rows.nth(0)).toContainText("-10,000");
   await expect(rows.nth(0)).toContainText("-5,000"); // half the earthworks done: half of it off that
-  await expect(rows.nth(1)).toContainText("הנחה: הנחה מסחרית");
   await expect(page.locator("tr.boq-before-discounts")).toContainText("200,000");
   const total = page.locator("tr.boq-total");
   await expect(total).toContainText("סה\"כ לאחר הנחות");
@@ -557,21 +568,32 @@ test("discounts on the BOQ: general or on one chapter, each described - a % or a
     .toEqual([["הנחת עפר", "pct", 10, "01 עבודות עפר"], ["הנחה מסחרית", "amount", 5000, null]]);
   await expect.poll(async () => (await finance(page)).data.items.map((i) => i.price)).toEqual([100, 1000]); // the typed prices stay
 
-  // edited from the "✏️ עריכת הנחות" button: which one, then its form
-  await page.locator(".budget-actions button", { hasText: "✏️ עריכת הנחות" }).click();
-  await fill(page, { which: "הנחה: הנחה מסחרית" });
+  // a tap on its name: changed
+  await page.locator(".budget-actions button", { hasText: "🏷 הנחות" }).click();
+  await listed.filter({ hasText: "הנחה מסחרית" }).click();
   await expect(page.locator("#budgetFormFields [name=description]")).toHaveValue("הנחה מסחרית");
   await fill(page, { description: "הנחה מסחרית מעודכנת", value: 10000 });
-  await expect(rows.nth(1)).toContainText("✏️ הנחה: הנחה מסחרית מעודכנת");
+  await expect(listed.nth(1)).toContainText("הנחה מסחרית מעודכנת");
   await expect(total).toContainText("180,000");
 
-  // removed: the prices back
-  await rows.nth(1).click();
-  await page.locator("#budgetFormDeleteBtn").click();
+  // a long press: delete it? no / yes
+  const longPress = async (loc) => {
+    const box = await loc.boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.waitForTimeout(800);
+    await page.mouse.up();
+  };
+  await longPress(listed.filter({ hasText: "הנחת עפר" }));
+  await expect(page.locator("#confirmOverlay")).toContainText("למחוק את ההנחה \"הנחת עפר\"?");
+  await expect(page.locator("#budgetFormOverlay")).toBeHidden(); // the long press didn't also open it
   await page.locator("#confirmYesBtn").click();
-  await rows.nth(0).click();
-  await page.locator("#budgetFormDeleteBtn").click();
+  await expect(panel).toBeVisible();
+  await expect(listed).toHaveCount(1);
+  await longPress(listed.first());
   await page.locator("#confirmYesBtn").click();
+  await expect(panel).toContainText("עדיין אין הנחות");
+  await page.locator("#boqDiscountsCloseBtn").click();
   await expect(rows).toHaveCount(0);
   await expect(priceOf(dig)).toHaveText("100");
   await expect(total).toContainText("200,000");
