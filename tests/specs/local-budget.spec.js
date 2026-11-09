@@ -40,7 +40,7 @@ test("a BOQ uploaded from Excel: its chapters and items, saved for the project",
   await expect(chapters.first().locator("tr.boq-ch .boq-desc")).toHaveText("עבודות עפר");
   await expect(chapters.first().locator(".budget-item")).toHaveCount(2);
   await expect(chapters.first().locator(".budget-item").first()).toContainText("חפירה כללית");
-  await expect(chapters.first().locator(".budget-item").first().locator("td.boq-strong")).toHaveText("5,400"); // the contract
+  await expect(chapters.first().locator(".budget-item").first().locator("td.boq-strong:not(.boq-actual)")).toHaveText("5,400"); // the contract
   await expect(chapters.first().locator("tr.boq-sub")).toContainText("10,200"); // the chapter's total
   // the contract: 5,400 + 4,800 + 42,000
   await expect(page.locator(".budget-card").first()).toContainText("52,200 ₪");
@@ -60,11 +60,15 @@ test("an item added by hand; expenses against it; spending ahead of the work sho
   await openBudget(page);
   await page.locator(".budget-actions button", { hasText: "＋ סעיף" }).click();
   // the work done is typed as a quantity: 40 of the 200 m = 20%
-  await fill(page, { code: "04.010", chapter: "חשמל", name: "תשתית חשמל", unit: "מ'", qty: 200, price: 300, cost: 40000, doneQty: 40 });
+  await fill(page, { code: "04.010", chapter: "חשמל", name: "תשתית חשמל", unit: "מ'", qty: 200, price: 300, actualPrice: 210, cost: 40000, doneQty: 40 });
   const item = page.locator(".budget-item", { hasText: "תשתית חשמל" });
-  await expect(item.locator("td.boq-strong")).toHaveText("60,000");
-  await expect(item.locator("td.boq-pct").first()).toContainText("40 מ'");
-  await expect.poll(async () => (await finance(page))?.data.items[0]).toMatchObject({ doneQty: 40, progress: 20 });
+  await expect(item.locator("td.boq-strong:not(.boq-actual)")).toHaveText("60,000");
+  // contract and actual side by side, the actual ones in red: 40 m done at 210 = 8,400
+  await expect(item.locator("td.boq-pct").first()).toContainText("40");
+  await expect(item.locator("td.boq-actual")).toHaveText(["40", "210", "8,400", "0"]);
+  await expect(item.locator("td.boq-actual").nth(2)).toHaveCSS("color", "rgb(198, 40, 40)");
+  await expect(page.locator(".boq-total td.boq-actual").first()).toHaveText("8,400");
+  await expect.poll(async () => (await finance(page))?.data.items[0]).toMatchObject({ doneQty: 40, progress: 20, actualPrice: 210 });
 
   // an expense: 20,000 on it - half the budget used for 20% of the work
   await page.locator(".budget-tabs button", { hasText: "הוצאות" }).click();
@@ -82,11 +86,11 @@ test("an item added by hand; expenses against it; spending ahead of the work sho
 
   // the work catches up: 60% done -> no overrun
   await item.click();
-  await expect(page.locator("#budgetFormFields label", { hasText: "כמות שבוצעה (מ')" })).toBeVisible();
+  await expect(page.locator("#budgetFormFields label", { hasText: "כמות בפועל (מ')" })).toBeVisible();
   await expect(page.locator("#budgetFormFields [name=doneQty]")).toHaveValue("40");
   await fill(page, { doneQty: 120 });
   await expect(item).not.toHaveClass(/over/);
-  await expect(item.locator("td.boq-pct").first()).toContainText("120 מ'");
+  await expect(item.locator("td.boq-pct").first()).toContainText("120");
   await expect.poll(async () => (await finance(page)).data.items[0].progress).toBe(60);
 
   // removed

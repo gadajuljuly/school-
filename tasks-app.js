@@ -541,12 +541,18 @@
     budgetDeleteAllItems: { he: "כל הסעיפים ({n})", en: "All the items ({n})", ar: "كل البنود ({n})", ru: "Все позиции ({n})" },
     budgetDeleteBoqConfirm: { he: "למחוק {n} סעיפים מכתב הכמויות?", en: "Delete {n} BOQ items?", ar: "حذف {n} بنداً من جدول الكميات؟", ru: "Удалить позиций сметы: {n}?" },
     budgetDeleteBoqLinked: { he: "{n} הוצאות / סעיפי חוזה של קבלנים מקושרים אליהם – הם יישארו, בלי סעיף.", en: "{n} expenses / contract lines point to them – they stay, with no item.", ar: "{n} مصروفات / بنود عقود مرتبطة بها – ستبقى بدون بند.", ru: "{n} расходов / строк договоров ссылаются на них – они останутся без позиции." },
+    boqContractQty: { he: "כמות חוזה", en: "Contract qty", ar: "كمية العقد", ru: "Кол-во по договору" },
+    boqActualQty: { he: "כמות בפועל", en: "Actual qty", ar: "الكمية الفعلية", ru: "Факт. кол-во" },
+    boqContractPrice: { he: "מחיר חוזה", en: "Contract price", ar: "سعر العقد", ru: "Цена по договору" },
+    boqActualPrice: { he: "מחיר בפועל", en: "Actual price", ar: "السعر الفعلي", ru: "Факт. цена" },
+    boqActualTotal: { he: "סה\"כ בפועל", en: "Actual total", ar: "الإجمالي الفعلي", ru: "Итого факт" },
+    budgetActualPriceField: { he: "מחיר בפועל ליחידה (העלות שלי)", en: "Actual unit price (my cost)", ar: "السعر الفعلي للوحدة (تكلفتي)", ru: "Факт. цена за ед. (моя стоимость)" },
     boqUnitPrice: { he: "מחיר יח'", en: "Unit price", ar: "سعر الوحدة", ru: "Цена ед." },
     boqContractTotal: { he: "סה\"כ חוזה", en: "Contract total", ar: "إجمالي العقد", ru: "Итого договор" },
     boqChapterTotal: { he: "סה\"כ פרק {name}", en: "Chapter {name} total", ar: "مجموع الفصل {name}", ru: "Итого раздел {name}" },
     boqTotal: { he: "סה\"כ כתב כמויות", en: "BOQ total", ar: "مجموع جدول الكميات", ru: "Итого смета" },
     boqNote: { he: "₪, לפני מע\"מ · גלול את הטבלה הצידה לעמודות נוספות · לחיצה על סעיף לעריכה", en: "₪, before VAT · scroll the table sideways for more · tap an item to edit", ar: "₪ قبل الضريبة · مرّر الجدول جانباً لمزيد من الأعمدة · اضغط على بند لتعديله", ru: "₪ без НДС · прокрутите таблицу вбок · нажмите позицию для правки" },
-    budgetDoneQtyField: { he: "כמות שבוצעה ({unit})", en: "Quantity done ({unit})", ar: "الكمية المنجزة ({unit})", ru: "Выполнено ({unit})" },
+    budgetDoneQtyField: { he: "כמות בפועל ({unit})", en: "Actual quantity ({unit})", ar: "الكمية الفعلية ({unit})", ru: "Факт. кол-во ({unit})" },
     boqDoneQty: { he: "בוצע", en: "Done", ar: "المنجز", ru: "Выполнено" },
     installBarText: { he: "התקנת ITASK במחשב – אייקון בשולחן העבודה, בחלון משלה", en: "Install ITASK on this computer – a desktop icon, its own window", ar: "تثبيت ITASK على الحاسوب – أيقونة على سطح المكتب ونافذة خاصة", ru: "Установить ITASK на компьютер – значок на рабочем столе, своё окно" },
     installBtn: { he: "התקנה", en: "Install", ar: "تثبيت", ru: "Установить" },
@@ -11124,9 +11130,10 @@
   // בקרה תקציבית: a project's money by its bill of quantities (כתב כמויות),
   // from its tile in the diary. Kept in project_finance (see
   // supabase/sql/team_and_finance.sql) as data: {
-  //   items:    [{ id, code, chapter, name, unit, qty, price, cost, progress }]
+  //   items:    [{ id, code, chapter, name, unit, qty, price, cost, progress, doneQty, actualPrice }]
   //             - a BOQ item: quantity x unit price is its contract value;
-  //               cost is its cost budget; progress its % done
+  //               cost is its cost budget; progress its % done; the quantity
+  //               done x actualPrice (what a unit costs me) its actual total
   //   expenses: [{ id, date, supplier, supplierCode, invoice, itemId, amount, note, by, at, billId }]
   //   generalBudget: { category: amount } - the project's own costs (overheads,
   //             insurance...) that sit on no BOQ item
@@ -11177,6 +11184,8 @@
     return Math.round(n || 0).toLocaleString("he-IL") + " ₪";
   }
   function budgetItemContract(item) { return budgetNum(item.qty) * budgetNum(item.price); }
+  // the quantity done at what a unit actually costs
+  function budgetItemActualTotal(item) { return budgetItemDoneQty(item) * budgetNum(item.actualPrice); }
   // the quantity done: typed in, or (an item from before that) its % of the quantity
   function budgetItemDoneQty(item) {
     if (item.doneQty != null && item.doneQty !== "") return budgetNum(item.doneQty);
@@ -11402,8 +11411,10 @@
     var wrap = bEl("div", "boq-wrap");
     var table = bEl("table", "boq-table");
     var head = bEl("tr");
-    [["budgetCode", "boq-code"], ["budgetName", "boq-desc"], ["budgetUnit"], ["budgetQty"], ["boqUnitPrice"], ["boqContractTotal"],
-      ["budgetCostBudget"], ["budgetActual"], ["boqDoneQty"], ["budgetUsed"]].forEach(function (c) {
+    // contract / actual side by side - the actual ones in red
+    [["budgetCode", "boq-code"], ["budgetName", "boq-desc"], ["budgetUnit"], ["boqContractQty"], ["boqActualQty", "boq-actual"],
+      ["boqContractPrice"], ["boqActualPrice", "boq-actual"], ["boqContractTotal"], ["boqActualTotal", "boq-actual"],
+      ["budgetCostBudget"], ["budgetActual", "boq-actual"], ["budgetUsed"]].forEach(function (c) {
       head.appendChild(bEl("th", c[1] || "", tr(c[0])));
     });
     var thead = bEl("thead");
@@ -11421,19 +11432,19 @@
       td.appendChild(bar);
       return td;
     };
-    var sumRow = function (cls, label, contract, cost, actual) {
+    var sumRow = function (cls, label, contract, cost, actual, actualTotal) {
       var tr_ = bEl("tr", cls);
       tr_.appendChild(bEl("td", "boq-code"));
       tr_.appendChild(bEl("td", "boq-desc", label));
-      [""].concat(["", ""]).forEach(function () { tr_.appendChild(bEl("td")); });
+      [0, 1, 2, 3, 4].forEach(function () { tr_.appendChild(bEl("td")); });
       tr_.appendChild(bEl("td", "", num(contract)));
+      tr_.appendChild(bEl("td", "boq-actual", num(actualTotal)));
       tr_.appendChild(bEl("td", "", num(cost)));
-      tr_.appendChild(bEl("td", "", num(actual)));
-      tr_.appendChild(bEl("td"));
+      tr_.appendChild(bEl("td", "boq-actual", num(actual)));
       tr_.appendChild(bEl("td", "", cost ? Math.round(actual * 100 / cost) + "%" : ""));
       return tr_;
     };
-    var all = { contract: 0, cost: 0, actual: 0 };
+    var all = { contract: 0, cost: 0, actual: 0, actualTotal: 0 };
     chapters.forEach(function (g) {
       var body = bEl("tbody", "budget-chapter");
       // the chapter's title row: its number (if it starts with one) and name
@@ -11442,14 +11453,15 @@
       ch.appendChild(bEl("td", "boq-code", m ? m[1] : ""));
       ch.appendChild(bEl("td", "boq-desc", m ? m[2] : g.name));
       var rest = bEl("td");
-      rest.colSpan = 8;
+      rest.colSpan = 10;
       ch.appendChild(rest);
       body.appendChild(ch);
-      var sum = { contract: 0, cost: 0, actual: 0 };
+      var sum = { contract: 0, cost: 0, actual: 0, actualTotal: 0 };
       g.items.forEach(function (item) {
         var actual = budgetItemActual(item), cost = budgetNum(item.cost), over = budgetItemOver(item, actual);
-        var contract = budgetItemContract(item);
+        var contract = budgetItemContract(item), actualTotal = budgetItemActualTotal(item);
         sum.contract += contract;
+        sum.actualTotal += actualTotal;
         sum.cost += cost;
         sum.actual += actual;
         var row = bEl("tr", "budget-item" + (over ? " over" : ""));
@@ -11464,27 +11476,31 @@
         row.appendChild(desc);
         row.appendChild(bEl("td", "", item.unit || ""));
         row.appendChild(bEl("td", "", qtyText(item.qty)));
-        row.appendChild(bEl("td", "", num(budgetNum(item.price))));
-        row.appendChild(bEl("td", "boq-strong", num(contract)));
-        row.appendChild(bEl("td", "", num(cost)));
-        row.appendChild(bEl("td", "", num(actual)));
-        // done: the quantity (in the item's unit), its bar showing how much of all of it
+        // done: the quantity, its bar showing how much of all of it
         var doneCell = pctCell(budgetNum(item.progress), "done");
-        doneCell.firstChild.textContent = qtyText(budgetItemDoneQty(item)) + (item.unit ? " " + item.unit : "");
+        doneCell.classList.add("boq-actual");
+        doneCell.firstChild.textContent = qtyText(budgetItemDoneQty(item));
         doneCell.title = Math.round(budgetNum(item.progress)) + "%";
         row.appendChild(doneCell);
+        row.appendChild(bEl("td", "", num(budgetNum(item.price))));
+        row.appendChild(bEl("td", "boq-actual", budgetNum(item.actualPrice) ? num(budgetNum(item.actualPrice)) : ""));
+        row.appendChild(bEl("td", "boq-strong", num(contract)));
+        row.appendChild(bEl("td", "boq-strong boq-actual", num(actualTotal)));
+        row.appendChild(bEl("td", "", num(cost)));
+        row.appendChild(bEl("td", "boq-actual", num(actual)));
         row.appendChild(pctCell(cost ? actual * 100 / cost : 0, over ? "over" : "used"));
         row.addEventListener("click", function () { budgetItemForm(item); });
         body.appendChild(row);
       });
-      body.appendChild(sumRow("boq-sub", tr("boqChapterTotal").replace("{name}", m ? m[1] : g.name), sum.contract, sum.cost, sum.actual));
+      body.appendChild(sumRow("boq-sub", tr("boqChapterTotal").replace("{name}", m ? m[1] : g.name), sum.contract, sum.cost, sum.actual, sum.actualTotal));
       all.contract += sum.contract;
       all.cost += sum.cost;
       all.actual += sum.actual;
+      all.actualTotal += sum.actualTotal;
       table.appendChild(body);
     });
     var foot = bEl("tbody");
-    foot.appendChild(sumRow("boq-total", tr("boqTotal"), all.contract, all.cost, all.actual));
+    foot.appendChild(sumRow("boq-total", tr("boqTotal"), all.contract, all.cost, all.actual, all.actualTotal));
     table.appendChild(foot);
     wrap.appendChild(table);
     budgetBody.appendChild(wrap);
@@ -11624,6 +11640,7 @@
       { key: "unit", label: tr("budgetUnit"), value: it.unit },
       { key: "qty", label: tr("budgetQty"), value: it.qty, type: "number" },
       { key: "price", label: tr("budgetPrice"), value: it.price, type: "number" },
+      { key: "actualPrice", label: tr("budgetActualPriceField"), value: it.actualPrice, type: "number" },
       { key: "cost", label: tr("budgetCostField"), value: it.cost, type: "number" },
       { key: "doneQty", label: tr("budgetDoneQtyField").replace("{unit}", it.unit || ""), value: item ? budgetItemDoneQty(it) : "", type: "number" }
     ], function (v) {
@@ -11632,7 +11649,7 @@
       var qty = budgetNum(v.qty), done = Math.max(0, budgetNum(v.doneQty));
       var rec = Object.assign({}, it, {
         id: it.id || uid(), code: v.code, chapter: v.chapter, name: v.name, unit: v.unit,
-        qty: qty, price: budgetNum(v.price), cost: budgetNum(v.cost),
+        qty: qty, price: budgetNum(v.price), actualPrice: budgetNum(v.actualPrice), cost: budgetNum(v.cost),
         doneQty: done, progress: qty ? Math.min(100, done * 100 / qty) : 0
       });
       budgetChange(budgetUpsert("items", rec));
@@ -11977,12 +11994,12 @@
     }, null);
   }
   function budgetExport() {
-    var rows = [[tr("budgetCode"), tr("budgetChapter"), tr("budgetName"), tr("budgetUnit"), tr("budgetQty"), tr("budgetPrice"),
-      tr("budgetContract"), tr("budgetCostBudget"), tr("budgetActual"), tr("budgetDone") + " %", tr("budgetUsed") + " %", tr("budgetForecastCost")]];
+    var rows = [[tr("budgetCode"), tr("budgetChapter"), tr("budgetName"), tr("budgetUnit"), tr("boqContractQty"), tr("boqActualQty"), tr("boqContractPrice"), tr("boqActualPrice"),
+      tr("budgetContract"), tr("boqActualTotal"), tr("budgetCostBudget"), tr("budgetActual"), tr("budgetDone") + " %", tr("budgetUsed") + " %", tr("budgetForecastCost")]];
     budget.data.items.forEach(function (i) {
       var actual = budgetItemActual(i), cost = budgetNum(i.cost);
-      rows.push([i.code || "", i.chapter || "", i.name || "", i.unit || "", budgetNum(i.qty), budgetNum(i.price),
-        Math.round(budgetItemContract(i)), Math.round(cost), Math.round(actual), Math.round(budgetNum(i.progress)),
+      rows.push([i.code || "", i.chapter || "", i.name || "", i.unit || "", budgetNum(i.qty), budgetItemDoneQty(i), budgetNum(i.price), budgetNum(i.actualPrice),
+        Math.round(budgetItemContract(i)), Math.round(budgetItemActualTotal(i)), Math.round(cost), Math.round(actual), Math.round(budgetNum(i.progress)),
         cost ? Math.round(actual * 100 / cost) : "", Math.round(budgetItemForecast(i, actual))]);
     });
     var csv = "\uFEFF" + rows.map(function (r) { return r.map(wpCsvCell).join(","); }).join("\r\n");

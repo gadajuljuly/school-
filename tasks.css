@@ -3654,7 +3654,7 @@
   .wp-undo-btn:disabled { opacity: 0.35; cursor: default; }
   /* the BOQ as a table (11c-budget.js): item no. + description fixed at the right, the rest scrolls */
   .boq-wrap { border: 1px solid var(--rule); border-radius: 10px; background: #fff; overflow-x: auto; margin-bottom: 6px; }
-  .boq-table { border-collapse: separate; border-spacing: 0; font-size: 0.75rem; min-width: 780px; width: 100%; }
+  .boq-table { border-collapse: separate; border-spacing: 0; font-size: 0.75rem; min-width: 960px; width: 100%; }
   .boq-table th, .boq-table td { padding: 6px; border-bottom: 1px solid #e6eef6; white-space: nowrap; text-align: left; background: #fff; }
   .boq-table th { background: #eef3f8; font-weight: 700; font-size: 0.7rem; text-align: center; }
   .boq-table .boq-code { position: sticky; right: 0; z-index: 2; width: 88px; min-width: 88px; max-width: 88px; font-size: 0.7rem; overflow: hidden; text-overflow: ellipsis; text-align: right; color: var(--ink-muted); direction: ltr; }
@@ -3668,6 +3668,9 @@
   .boq-table tr.boq-ch td { background: #f4f0e4; font-weight: 800; color: var(--accent); }
   .boq-table tr.boq-sub td { background: #fafaf6; font-weight: 700; }
   .boq-table tr.boq-total td { background: var(--accent); color: var(--accent-contrast); font-weight: 800; border-bottom: none; }
+  /* the actual (בפועל) columns: in red, beside their contract ones */
+  .boq-table td.boq-actual, .boq-table th.boq-actual { color: #c62828; }
+  .boq-table tr.boq-total td.boq-actual { color: #ffcdd2; }
   .boq-pct span:first-child { display: inline-block; min-width: 34px; }
   .boq-bar { display: inline-block; width: 44px; height: 6px; border-radius: 3px; background: var(--paper-alt); vertical-align: middle; margin-inline-start: 4px; overflow: hidden; }
   .boq-bar i { display: block; height: 100%; }
