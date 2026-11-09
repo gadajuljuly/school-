@@ -557,6 +557,14 @@ test("discounts on the BOQ: general or on one chapter, each described - a % or a
     .toEqual([["הנחת עפר", "pct", 10, "01 עבודות עפר"], ["הנחה מסחרית", "amount", 5000, null]]);
   await expect.poll(async () => (await finance(page)).data.items.map((i) => i.price)).toEqual([100, 1000]); // the typed prices stay
 
+  // edited from the "✏️ עריכת הנחות" button: which one, then its form
+  await page.locator(".budget-actions button", { hasText: "✏️ עריכת הנחות" }).click();
+  await fill(page, { which: "הנחה: הנחה מסחרית" });
+  await expect(page.locator("#budgetFormFields [name=description]")).toHaveValue("הנחה מסחרית");
+  await fill(page, { description: "הנחה מסחרית מעודכנת", value: 10000 });
+  await expect(rows.nth(1)).toContainText("✏️ הנחה: הנחה מסחרית מעודכנת");
+  await expect(total).toContainText("180,000");
+
   // removed: the prices back
   await rows.nth(1).click();
   await page.locator("#budgetFormDeleteBtn").click();

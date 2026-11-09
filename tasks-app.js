@@ -562,6 +562,8 @@
     boqDiscountGeneral: { he: "הנחה כללית – כל כתב הכמויות", en: "General – the whole BOQ", ar: "خصم عام – كل جدول الكميات", ru: "Общая – вся смета" },
     boqDiscountOnChapter: { he: "פרק {name}", en: "Chapter {name}", ar: "الفصل {name}", ru: "Раздел {name}" },
     boqBeforeDiscounts: { he: "סה\"כ לפני הנחות", en: "Total before discounts", ar: "الإجمالي قبل الخصومات", ru: "Итого до скидок" },
+    boqEditDiscounts: { he: "✏️ עריכת הנחות", en: "✏️ Edit discounts", ar: "✏️ تعديل الخصومات", ru: "✏️ Изменить скидки" },
+    boqWhichDiscount: { he: "איזו הנחה לערוך?", en: "Which discount?", ar: "أي خصم تريد تعديله؟", ru: "Какую скидку изменить?" },
     boqActualTotal: { he: "סה\"כ בפועל", en: "Actual total", ar: "الإجمالي الفعلي", ru: "Итого факт" },
     budgetActualPriceField: { he: "מחיר בפועל ליחידה (העלות שלי)", en: "Actual unit price (my cost)", ar: "السعر الفعلي للوحدة (تكلفتي)", ru: "Факт. цена за ед. (моя стоимость)" },
     boqUnitPrice: { he: "מחיר יח'", en: "Unit price", ar: "سعر الوحدة", ru: "Цена ед." },
@@ -11451,7 +11453,8 @@
   function renderBudgetItems() {
     budgetActions([["budgetAddItem", function () { budgetItemForm(null); }, "primary"],
       ["budgetImportCsv", function () { document.getElementById("budgetCsvInput").click(); }],
-      ["budgetExportCsv", budgetExport]].concat(budget.data.items.length ? [["boqAddDiscount", function () { budgetDiscountForm(null); }]] : [], budget.data.items.length ? [["budgetDeleteBoq", budgetDeleteBoqForm]] : []));
+      ["budgetExportCsv", budgetExport]].concat(budget.data.items.length ? [["boqAddDiscount", function () { budgetDiscountForm(null); }]] : [],
+      budget.data.discounts.length ? [["boqEditDiscounts", budgetPickDiscount]] : [], budget.data.items.length ? [["budgetDeleteBoq", budgetDeleteBoqForm]] : []));
     // in the order of the BOQ itself (as uploaded), not re-sorted by number; the
     // chapters in the order they come, and an item added by hand at its chapter's end
     var items = budget.data.items.slice();
@@ -11590,7 +11593,7 @@
       disc.lines.forEach(function (l) { offAll += l.amount; offDone += l.done; });
       foot.appendChild(discRow("boq-sub boq-before-discounts", tr("boqBeforeDiscounts"), all.doneAtContract + offDone, all.contract + offAll));
       disc.lines.forEach(function (l) {
-        foot.appendChild(discRow("boq-discount", budgetDiscountLabel(l.d), -l.done, -l.amount, function () { budgetDiscountForm(l.d); }));
+        foot.appendChild(discRow("boq-discount", "✏️ " + budgetDiscountLabel(l.d), -l.done, -l.amount, function () { budgetDiscountForm(l.d); }));
       });
     }
     foot.appendChild(sumRow("boq-total", tr(disc.lines.length ? "boqAfterDiscounts" : "boqTotal"), all.contract, all.cost, all.actual, all.actualTotal, all.doneAtContract));
@@ -11790,6 +11793,18 @@
     return tr("boqDiscountLine").replace("{text}", d.description || "") +
       (d.kind === "amount" ? "" : " (" + budgetNum(d.value) + "%)") +
       (d.chapter ? " · " + tr("boqDiscountOnChapter").replace("{name}", d.chapter) : "");
+  }
+  // ✏️ עריכת הנחות: which one - then its own form (change it / delete it)
+  function budgetPickDiscount() {
+    var list = budget.data.discounts;
+    if (list.length === 1) { budgetDiscountForm(list[0]); return; }
+    budgetForm(tr("boqEditDiscounts"), [
+      { key: "which", label: tr("boqWhichDiscount"), value: list[0].id,
+        options: list.map(function (d) { return [d.id, budgetDiscountLabel(d)]; }) }
+    ], function (v) {
+      var d = list.find(function (x) { return x.id === v.which; });
+      if (d) setTimeout(function () { budgetDiscountForm(d); }, 0);
+    }, null);
   }
   function budgetDiscountForm(disc) {
     var d = disc || { kind: "pct" };
