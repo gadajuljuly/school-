@@ -19,7 +19,8 @@
     var c = d.client || {};
     return {
       id: CLIENT_ID, name: tr("clientName"), retentionPct: c.retentionPct, advance: c.advance, advanceRecoveryPct: c.advanceRecoveryPct,
-      lines: d.items.map(function (i) { return { id: i.id, itemId: i.id, qty: i.qty, price: i.price }; })
+      // the unit prices with the BOQ's discounts in them (11c, budgetItemPrice)
+      lines: d.items.map(function (i) { return { id: i.id, itemId: i.id, qty: i.qty, price: budgetItemPrice(i) }; })
     };
   }
   // a new client bill: each item at its % done (never below what's been approved before)

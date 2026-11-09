@@ -8,8 +8,10 @@
   //               cost is its cost budget; progress its % done; the quantity
   //               done x actualPrice (what a unit costs me) its actual total
   //   expenses: [{ id, date, supplier, supplierCode, invoice, itemId, amount, note, by, at, billId }]
-  //   discounts: [{ id, description, kind: "pct" | "amount", value }] - off the
-  //             BOQ's contract total, one after the other (a % off what's left)
+  //   discounts: [{ id, description, kind: "pct" | "amount", value, chapter }] -
+  //             on the whole BOQ (no chapter) or one chapter, one after the
+  //             other (a % off what's left); they go into the unit prices
+  //             (budgetItemPrice), the item's own price stays as typed
   //   generalBudget: { category: amount } - the project's own costs (overheads,
   //             insurance...) that sit on no BOQ item
   //   imports:  [{ id, name, at, count }] - each BOQ file uploaded; its items
@@ -58,11 +60,46 @@
   function budgetMoney(n) {
     return Math.round(n || 0).toLocaleString("he-IL") + " ₪";
   }
-  function budgetItemContract(item) { return budgetNum(item.qty) * budgetNum(item.price); }
+  function budgetChapterOf(item) { return (item.chapter || "").trim() || tr("budgetNoChapter"); }
+  // the BOQ's discounts: each one's part of what was left of its chapters
+  // (all of them, for a general one) - a factor per chapter that the unit
+  // prices are multiplied by - and each one's amount off the contract and
+  // off the work done. Worked out once per screen drawing.
+  var budgetDiscCache = null;
+  function budgetDiscountCalc() {
+    if (budgetDiscCache && budgetDiscCache.data === budget.data) return budgetDiscCache.calc;
+    var base = {}, doneBase = {}, factor = {};
+    budget.data.items.forEach(function (i) {
+      var c = budgetChapterOf(i);
+      base[c] = (base[c] || 0) + budgetNum(i.qty) * budgetNum(i.price);
+      doneBase[c] = (doneBase[c] || 0) + budgetItemDoneQty(i) * budgetNum(i.price);
+      factor[c] = 1;
+    });
+    var chapters = Object.keys(base);
+    var lines = (budget.data.discounts || []).map(function (d) {
+      var scope = d.chapter ? chapters.filter(function (c) { return c === d.chapter; }) : chapters;
+      var left = 0, doneLeft = 0;
+      scope.forEach(function (c) { left += base[c] * factor[c]; doneLeft += doneBase[c] * factor[c]; });
+      var v = budgetNum(d.value);
+      var f = d.kind === "amount" ? (left > 0 ? Math.max(0, 1 - v / left) : 1) : Math.max(0, 1 - v / 100);
+      scope.forEach(function (c) { factor[c] *= f; });
+      return { d: d, amount: left * (1 - f), done: doneLeft * (1 - f) };
+    });
+    var calc = { factor: factor, lines: lines };
+    budgetDiscCache = { data: budget.data, calc: calc };
+    Promise.resolve().then(function () { budgetDiscCache = null; });
+    return calc;
+  }
+  // a unit's contract price, its chapter's / the BOQ's discounts taken off
+  function budgetItemPrice(item) {
+    var f = budgetDiscountCalc().factor[budgetChapterOf(item)];
+    return budgetNum(item.price) * (f == null ? 1 : f);
+  }
+  function budgetItemContract(item) { return budgetNum(item.qty) * budgetItemPrice(item); }
   // the quantity done at what a unit actually costs
   function budgetItemActualTotal(item) { return budgetItemDoneQty(item) * budgetNum(item.actualPrice); }
   // the quantity done at the contract's unit price (what it earns)
-  function budgetItemDoneAtContract(item) { return budgetItemDoneQty(item) * budgetNum(item.price); }
+  function budgetItemDoneAtContract(item) { return budgetItemDoneQty(item) * budgetItemPrice(item); }
   // the quantity done: typed in, or (an item from before that) its % of the quantity
   function budgetItemDoneQty(item) {
     if (item.doneQty != null && item.doneQty !== "") return budgetNum(item.doneQty);
@@ -97,25 +134,6 @@
     });
     return out;
   }
-  // the BOQ's discounts, in order: each line's amount off the contract total,
-  // and what's left (a % is off what the discounts before it left)
-  function budgetDiscounts(base) {
-    var left = base;
-    var lines = (budget.data.discounts || []).map(function (d) {
-      var v = budgetNum(d.value);
-      var amount = d.kind === "amount" ? v : left * v / 100;
-      left -= amount;
-      return { d: d, amount: amount };
-    });
-    return { lines: lines, after: left };
-  }
-  // what the discounts leave of the contract, as a part (0.95 = 5% off) - for
-  // the work done at contract prices too
-  function budgetDiscountFactor() {
-    var base = 0;
-    budget.data.items.forEach(function (i) { base += budgetItemContract(i); });
-    return base > 0 ? budgetDiscounts(base).after / base : 1;
-  }
   function budgetTotals() {
     var t = { contract: 0, cost: 0, actual: 0, earned: 0, forecast: 0 };
     budget.data.items.forEach(function (item) {
@@ -125,10 +143,6 @@
       t.earned += contract * Math.min(100, budgetNum(item.progress)) / 100;
       t.forecast += budgetItemForecast(item, actual);
     });
-    // after the BOQ's discounts
-    var factor = budgetDiscountFactor();
-    t.contract *= factor;
-    t.earned *= factor;
     budget.data.expenses.forEach(function (e) { t.actual += budgetNum(e.amount); });
     // the project's own costs: their budget, or what's been spent if more
     var cats = budgetByCategory();
@@ -385,7 +399,13 @@
         doneCell.firstChild.textContent = qtyText(budgetItemDoneQty(item));
         doneCell.title = Math.round(budgetNum(item.progress)) + "%";
         row.appendChild(doneCell);
-        row.appendChild(bEl("td", "", num(budgetNum(item.price))));
+        // the contract price with the discounts in it (and, small, the one before them)
+        var priceCell = bEl("td", "", num(budgetItemPrice(item)));
+        if (Math.abs(budgetItemPrice(item) - budgetNum(item.price)) > 0.005) {
+          priceCell.textContent = (Math.round(budgetItemPrice(item) * 100) / 100).toLocaleString("he-IL");
+          priceCell.appendChild(bEl("small", "boq-before-discount", num(budgetNum(item.price))));
+        }
+        row.appendChild(priceCell);
         row.appendChild(bEl("td", "boq-actual", budgetNum(item.actualPrice) ? num(budgetNum(item.actualPrice)) : ""));
         row.appendChild(bEl("td", "boq-strong", num(doneAtContract)));
         row.appendChild(bEl("td", "boq-strong boq-actual", num(actualTotal)));
@@ -406,10 +426,9 @@
       table.appendChild(body);
     });
     var foot = bEl("tbody");
-    foot.appendChild(sumRow("boq-total", tr("boqTotal"), all.contract, all.cost, all.actual, all.actualTotal, all.doneAtContract));
-    // the discounts under it, each off both the work done (at contract
-    // prices) and the contract; then what's left - tap one to change it
-    var disc = budgetDiscounts(all.contract);
+    // with discounts: the totals before them, each discount (tap to change
+    // it), then the BOQ's total - already after them, as its prices are
+    var disc = budgetDiscountCalc();
     if (disc.lines.length) {
       var discRow = function (cls, label, done, contract, onClick) {
         var r = bEl("tr", cls);
@@ -423,14 +442,14 @@
         if (onClick) r.addEventListener("click", onClick);
         return r;
       };
-      var share = all.contract > 0 ? all.doneAtContract / all.contract : 0;
+      var offAll = 0, offDone = 0;
+      disc.lines.forEach(function (l) { offAll += l.amount; offDone += l.done; });
+      foot.appendChild(discRow("boq-sub boq-before-discounts", tr("boqBeforeDiscounts"), all.doneAtContract + offDone, all.contract + offAll));
       disc.lines.forEach(function (l) {
-        var label = tr("boqDiscountLine").replace("{text}", l.d.description || "") +
-          (l.d.kind === "amount" ? "" : " (" + budgetNum(l.d.value) + "%)");
-        foot.appendChild(discRow("boq-discount", label, -l.amount * share, -l.amount, function () { budgetDiscountForm(l.d); }));
+        foot.appendChild(discRow("boq-discount", budgetDiscountLabel(l.d), -l.done, -l.amount, function () { budgetDiscountForm(l.d); }));
       });
-      foot.appendChild(discRow("boq-total boq-after-discount", tr("boqAfterDiscounts"), disc.after * share, disc.after));
     }
+    foot.appendChild(sumRow("boq-total", tr(disc.lines.length ? "boqAfterDiscounts" : "boqTotal"), all.contract, all.cost, all.actual, all.actualTotal, all.doneAtContract));
     table.appendChild(foot);
     wrap.appendChild(table);
     // search: by item number, description or chapter - the rows that match
@@ -623,9 +642,19 @@
       budgetChange(budgetUpsert("items", rec));
     }, item ? function () { budgetChange(budgetRemove("items", item.id)); } : null);
   }
+  function budgetDiscountLabel(d) {
+    return tr("boqDiscountLine").replace("{text}", d.description || "") +
+      (d.kind === "amount" ? "" : " (" + budgetNum(d.value) + "%)") +
+      (d.chapter ? " · " + tr("boqDiscountOnChapter").replace("{name}", d.chapter) : "");
+  }
   function budgetDiscountForm(disc) {
     var d = disc || { kind: "pct" };
+    var chapters = [];
+    budget.data.items.forEach(function (i) { var c = budgetChapterOf(i); if (chapters.indexOf(c) === -1) chapters.push(c); });
+    if (d.chapter && chapters.indexOf(d.chapter) === -1) chapters.push(d.chapter);
     budgetForm(tr(disc ? "boqEditDiscount" : "boqAddDiscountTitle"), [
+      { key: "chapter", label: tr("boqDiscountScope"), value: d.chapter || "",
+        options: [["", tr("boqDiscountGeneral")]].concat(chapters.map(function (c) { return [c, tr("boqDiscountOnChapter").replace("{name}", c)]; })) },
       { key: "description", label: tr("boqDiscountDesc"), value: d.description },
       { key: "kind", label: tr("boqDiscountKind"), value: d.kind || "pct",
         options: [["pct", tr("boqDiscountPct")], ["amount", tr("boqDiscountAmount")]] },
@@ -633,7 +662,8 @@
     ], function (v) {
       var value = budgetNum(v.value);
       if (!value) { alert(tr("budgetNeedAmount")); return false; }
-      var rec = Object.assign({}, d, { id: d.id || uid(), description: (v.description || "").trim(), kind: v.kind === "amount" ? "amount" : "pct", value: value });
+      var rec = Object.assign({}, d, { id: d.id || uid(), description: (v.description || "").trim(), kind: v.kind === "amount" ? "amount" : "pct",
+        value: value, chapter: v.chapter || null });
       budgetChange(budgetUpsert("discounts", rec));
     }, disc ? function () { budgetChange(budgetRemove("discounts", disc.id)); } : null);
   }
@@ -980,19 +1010,14 @@
       tr("boqDoneAtContract"), tr("boqActualTotal"), tr("budgetContract"), tr("budgetCostBudget"), tr("budgetActual"), tr("budgetDone") + " %", tr("budgetUsed") + " %", tr("budgetForecastCost")]];
     budget.data.items.forEach(function (i) {
       var actual = budgetItemActual(i), cost = budgetNum(i.cost);
-      rows.push([i.code || "", i.chapter || "", i.name || "", i.unit || "", budgetNum(i.qty), budgetItemDoneQty(i), budgetNum(i.price), budgetNum(i.actualPrice),
+      rows.push([i.code || "", i.chapter || "", i.name || "", i.unit || "", budgetNum(i.qty), budgetItemDoneQty(i), Math.round(budgetItemPrice(i) * 100) / 100, budgetNum(i.actualPrice),
         Math.round(budgetItemDoneAtContract(i)), Math.round(budgetItemActualTotal(i)), Math.round(budgetItemContract(i)), Math.round(cost), Math.round(actual), Math.round(budgetNum(i.progress)),
         cost ? Math.round(actual * 100 / cost) : "", Math.round(budgetItemForecast(i, actual))]);
     });
-    // the discounts, under the items: off the work done and the contract
-    var base = 0, doneBase = 0;
-    budget.data.items.forEach(function (i) { base += budgetItemContract(i); doneBase += budgetItemDoneAtContract(i); });
-    var disc = budgetDiscounts(base), share = base > 0 ? doneBase / base : 0;
-    disc.lines.forEach(function (l) {
-      var label = tr("boqDiscountLine").replace("{text}", l.d.description || "") + (l.d.kind === "amount" ? "" : " (" + budgetNum(l.d.value) + "%)");
-      rows.push(["", "", label, "", "", "", "", "", -Math.round(l.amount * share), "", -Math.round(l.amount)]);
+    // the discounts (already in the prices above), for the record
+    budgetDiscountCalc().lines.forEach(function (l) {
+      rows.push(["", "", budgetDiscountLabel(l.d), "", "", "", "", "", -Math.round(l.done), "", -Math.round(l.amount)]);
     });
-    if (disc.lines.length) rows.push(["", "", tr("boqAfterDiscounts"), "", "", "", "", "", Math.round(disc.after * share), "", Math.round(disc.after)]);
     var csv = "\uFEFF" + rows.map(function (r) { return r.map(wpCsvCell).join(","); }).join("\r\n");
     attemptShare(new Blob([csv], { type: "text/csv;charset=utf-8" }),
       tr("budgetTile") + " " + budget.sheet.name + " " + isoToFileNameDate(todayISO()) + ".csv", "text/csv");

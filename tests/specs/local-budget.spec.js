@@ -518,38 +518,53 @@ test("finding an item in the BOQ: by number, by words of its description, by cha
   await expect(page.locator(".boq-total")).toBeVisible();
 });
 
-test("discounts on the BOQ: several, each with its description - a % or an amount, one after the other", async ({ page }) => {
+test("discounts on the BOQ: general or on one chapter, each described - a % or an amount; they go into the unit prices", async ({ page }) => {
   await openBudget(page);
-  await page.locator(".budget-actions button", { hasText: "＋ סעיף" }).click();
-  await fill(page, { code: "01.010", chapter: "01 עבודות עפר", name: "חפירה", unit: "מ\"ק", qty: 1000, price: 100, doneQty: 500 });
-  await expect(page.locator(".budget-item", { hasText: "חפירה" })).toBeVisible();
+  for (const v of [{ code: "01.010", chapter: "01 עבודות עפר", name: "חפירה", unit: "מ\"ק", qty: 1000, price: 100, doneQty: 500 },
+                   { code: "02.010", chapter: "02 ניקוז", name: "צינור", unit: "מ'", qty: 100, price: 1000, doneQty: 0 }]) {
+    await page.locator(".budget-actions button", { hasText: "＋ סעיף" }).click();
+    await fill(page, v);
+    await expect(page.locator(".budget-item", { hasText: v.name })).toBeVisible();
+  }
+  const dig = page.locator(".budget-item", { hasText: "חפירה" });
+  const pipe = page.locator(".budget-item", { hasText: "צינור" });
+  const priceOf = (row) => row.locator("td").nth(5);
 
-  // 10% off the 100,000, then 5,000 more
+  // 10% off the earthworks chapter only
   await page.locator(".budget-actions button", { hasText: "＋ הנחה" }).click();
-  await fill(page, { description: "הנחת מכרז", value: 10 });
+  await expect(page.locator("#budgetFormFields [name=chapter] option")).toHaveText(["הנחה כללית – כל כתב הכמויות", "פרק 01 עבודות עפר", "פרק 02 ניקוז"]);
+  await fill(page, { chapter: "פרק 01 עבודות עפר", description: "הנחת עפר", value: 10 });
+  await expect(priceOf(dig)).toContainText("90");
+  await expect(priceOf(dig).locator(".boq-before-discount")).toHaveText("100");
+  await expect(priceOf(pipe)).toHaveText("1,000");
+  await expect(dig.locator("td.boq-contract-total")).toHaveText("90,000");
+
+  // then a general 5,000 off what's left (90,000 + 100,000)
   await page.locator(".budget-actions button", { hasText: "＋ הנחה" }).click();
   await fill(page, { description: "הנחה מסחרית", kind: "סכום (₪)", value: 5000 });
 
   const rows = page.locator("tr.boq-discount");
   await expect(rows).toHaveCount(2);
-  await expect(rows.nth(0)).toContainText("הנחה: הנחת מכרז (10%)");
+  await expect(rows.nth(0)).toContainText("הנחה: הנחת עפר (10%) · פרק 01 עבודות עפר");
   await expect(rows.nth(0)).toContainText("-10,000");
-  await expect(rows.nth(0)).toContainText("-5,000"); // half the work is done: half of it off that
+  await expect(rows.nth(0)).toContainText("-5,000"); // half the earthworks done: half of it off that
   await expect(rows.nth(1)).toContainText("הנחה: הנחה מסחרית");
-  const after = page.locator("tr.boq-after-discount");
-  await expect(after).toContainText("סה\"כ לאחר הנחות");
-  await expect(after).toContainText("85,000");
-  await expect(after).toContainText("42,500");
-  await expect.poll(async () => (await finance(page))?.data.discounts.map((d) => [d.description, d.kind, d.value]))
-    .toEqual([["הנחת מכרז", "pct", 10], ["הנחה מסחרית", "amount", 5000]]);
+  await expect(page.locator("tr.boq-before-discounts")).toContainText("200,000");
+  const total = page.locator("tr.boq-total");
+  await expect(total).toContainText("סה\"כ לאחר הנחות");
+  await expect(total).toContainText("185,000");
+  await expect.poll(async () => (await finance(page))?.data.discounts.map((d) => [d.description, d.kind, d.value, d.chapter]))
+    .toEqual([["הנחת עפר", "pct", 10, "01 עבודות עפר"], ["הנחה מסחרית", "amount", 5000, null]]);
+  await expect.poll(async () => (await finance(page)).data.items.map((i) => i.price)).toEqual([100, 1000]); // the typed prices stay
 
-  // changed: 8% -> 92,000 - 5,000; then removed
-  await rows.nth(0).click();
-  await fill(page, { value: 8 });
-  await expect(after).toContainText("87,000");
+  // removed: the prices back
   await rows.nth(1).click();
   await page.locator("#budgetFormDeleteBtn").click();
   await page.locator("#confirmYesBtn").click();
-  await expect(rows).toHaveCount(1);
-  await expect(after).toContainText("92,000");
+  await rows.nth(0).click();
+  await page.locator("#budgetFormDeleteBtn").click();
+  await page.locator("#confirmYesBtn").click();
+  await expect(rows).toHaveCount(0);
+  await expect(priceOf(dig)).toHaveText("100");
+  await expect(total).toContainText("200,000");
 });
