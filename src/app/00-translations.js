@@ -544,6 +544,7 @@
     boqActualQty: { he: "כמות בפועל", en: "Actual qty", ar: "الكمية الفعلية", ru: "Факт. кол-во" },
     boqContractPrice: { he: "מחיר חוזה", en: "Contract price", ar: "سعر العقد", ru: "Цена по договору" },
     boqActualPrice: { he: "מחיר בפועל", en: "Actual price", ar: "السعر الفعلي", ru: "Факт. цена" },
+    boqDoneAtContract: { he: "סה\"כ (מחיר חוזה)", en: "Total (contract price)", ar: "الإجمالي (سعر العقد)", ru: "Итого (по цене договора)" },
     boqActualTotal: { he: "סה\"כ בפועל", en: "Actual total", ar: "الإجمالي الفعلي", ru: "Итого факт" },
     budgetActualPriceField: { he: "מחיר בפועל ליחידה (העלות שלי)", en: "Actual unit price (my cost)", ar: "السعر الفعلي للوحدة (تكلفتي)", ru: "Факт. цена за ед. (моя стоимость)" },
     boqUnitPrice: { he: "מחיר יח'", en: "Unit price", ar: "سعر الوحدة", ru: "Цена ед." },

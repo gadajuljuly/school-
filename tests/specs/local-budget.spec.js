@@ -40,7 +40,7 @@ test("a BOQ uploaded from Excel: its chapters and items, saved for the project",
   await expect(chapters.first().locator("tr.boq-ch .boq-desc")).toHaveText("עבודות עפר");
   await expect(chapters.first().locator(".budget-item")).toHaveCount(2);
   await expect(chapters.first().locator(".budget-item").first()).toContainText("חפירה כללית");
-  await expect(chapters.first().locator(".budget-item").first().locator("td.boq-strong:not(.boq-actual)")).toHaveText("5,400"); // the contract
+  await expect(chapters.first().locator(".budget-item").first().locator("td.boq-contract-total")).toHaveText("5,400"); // the contract
   await expect(chapters.first().locator("tr.boq-sub")).toContainText("10,200"); // the chapter's total
   // the contract: 5,400 + 4,800 + 42,000
   await expect(page.locator(".budget-card").first()).toContainText("52,200 ₪");
@@ -62,7 +62,9 @@ test("an item added by hand; expenses against it; spending ahead of the work sho
   // the work done is typed as a quantity: 40 of the 200 m = 20%
   await fill(page, { code: "04.010", chapter: "חשמל", name: "תשתית חשמל", unit: "מ'", qty: 200, price: 300, actualPrice: 210, cost: 40000, doneQty: 40 });
   const item = page.locator(".budget-item", { hasText: "תשתית חשמל" });
-  await expect(item.locator("td.boq-strong:not(.boq-actual)")).toHaveText("60,000");
+  await expect(item.locator("td.boq-contract-total")).toHaveText("60,000");
+  // the work done at the contract price: 40 x 300
+  await expect(item.locator("td.boq-strong").first()).toHaveText("12,000");
   // contract and actual side by side, the actual ones in red: 40 m done at 210 = 8,400
   await expect(item.locator("td.boq-pct").first()).toContainText("40");
   await expect(item.locator("td.boq-actual")).toHaveText(["40", "210", "8,400", "0"]);
