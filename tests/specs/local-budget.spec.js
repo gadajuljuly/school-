@@ -482,3 +482,38 @@ test("the BOQ shows in the file's own order, not re-sorted by item number", asyn
   expect(await page.locator(".budget-item .boq-code").allInnerTexts()).toEqual(["51.01", "51.10", "51.02", "40.01"]);
   expect(await page.locator("tr.boq-ch .boq-desc").allInnerTexts()).toEqual(["ניקוז", "גינון"]);
 });
+
+test("finding an item in the BOQ: by number, by words of its description, by chapter", async ({ page }) => {
+  await openBudget(page);
+  for (const v of [{ code: "01.010", chapter: "01 עבודות עפר", name: "חפירה בשטח פתוח", unit: "מ\"ק", qty: 500, price: 45 },
+                   { code: "01.020", chapter: "01 עבודות עפר", name: "מצע סוג א מהודק", unit: "מ\"ק", qty: 300, price: 120 },
+                   { code: "02.010", chapter: "02 ניקוז", name: "צינור ניקוז קוטר 60", unit: "מ'", qty: 80, price: 900 }]) {
+    await page.locator(".budget-actions button", { hasText: "＋ סעיף" }).click();
+    await fill(page, v);
+    await expect(page.locator(".budget-item", { hasText: v.name })).toBeVisible();
+  }
+  const rows = page.locator(".boq-table tr.budget-item:visible");
+  const search = page.locator("#boqSearchInput");
+  await expect(rows).toHaveCount(3);
+  await search.fill("02.010");
+  await expect(rows).toHaveCount(1);
+  await expect(rows).toContainText("צינור ניקוז");
+  await expect(page.locator(".boq-search-count")).toHaveText("נמצאו 1");
+  await expect(page.locator(".boq-total")).toBeHidden();
+  await search.fill("מצע מהודק");
+  await expect(rows).toHaveCount(1);
+  await search.fill("עבודות עפר");
+  await expect(rows).toHaveCount(2);
+  await search.fill("אין כזה");
+  await expect(rows).toHaveCount(0);
+  await expect(page.locator(".boq-search-count")).toHaveText("נמצאו 0");
+  // still found after editing a found item
+  await search.fill("ניקוז");
+  await rows.first().click();
+  await fill(page, { doneQty: 10 });
+  await expect(search).toHaveValue("ניקוז");
+  await expect(rows).toHaveCount(1);
+  await search.fill("");
+  await expect(rows).toHaveCount(3);
+  await expect(page.locator(".boq-total")).toBeVisible();
+});

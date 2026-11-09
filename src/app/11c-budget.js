@@ -323,6 +323,7 @@
     var all = { contract: 0, cost: 0, actual: 0, actualTotal: 0, doneAtContract: 0 };
     chapters.forEach(function (g) {
       var body = bEl("tbody", "budget-chapter");
+      body.dataset.search = boqSearchText(g.name);
       // the chapter's title row: its number (if it starts with one) and name
       var m = /^(\d+(?:[.\-]\d+)*)\s+(.+)$/.exec(g.name);
       var ch = bEl("tr", "boq-ch");
@@ -368,6 +369,7 @@
         row.appendChild(bEl("td", "boq-actual", num(actual)));
         row.appendChild(pctCell(cost ? actual * 100 / cost : 0, over ? "over" : "used"));
         row.addEventListener("click", function () { budgetItemForm(item); });
+        row.dataset.search = boqSearchText([item.code, item.name, item.unit].join(" "));
         body.appendChild(row);
       });
       body.appendChild(sumRow("boq-sub", tr("boqChapterTotal").replace("{name}", m ? m[1] : g.name), sum.contract, sum.cost, sum.actual, sum.actualTotal, sum.doneAtContract));
@@ -382,8 +384,46 @@
     foot.appendChild(sumRow("boq-total", tr("boqTotal"), all.contract, all.cost, all.actual, all.actualTotal, all.doneAtContract));
     table.appendChild(foot);
     wrap.appendChild(table);
+    // search: by item number, description or chapter - the rows that match
+    // stay (a chapter that matches: all of it), the totals step aside
+    var search = bEl("div", "boq-search");
+    var input = bEl("input");
+    input.type = "search";
+    input.id = "boqSearchInput";
+    input.placeholder = tr("boqSearchPlaceholder");
+    input.value = budget.search || "";
+    var found = bEl("span", "boq-search-count");
+    search.appendChild(input);
+    search.appendChild(found);
+    var applySearch = function () {
+      budget.search = input.value;
+      var words = boqSearchText(input.value).split(" ").filter(Boolean);
+      var hits = function (text) { return words.every(function (w) { return text.indexOf(w) !== -1; }); };
+      var n = 0;
+      Array.prototype.forEach.call(table.querySelectorAll("tbody.budget-chapter"), function (body) {
+        var chapterHit = words.length && hits(body.dataset.search);
+        var any = false;
+        Array.prototype.forEach.call(body.querySelectorAll("tr.budget-item"), function (row) {
+          var show = !words.length || chapterHit || hits(row.dataset.search);
+          row.hidden = !show;
+          if (show) { any = true; if (words.length) n++; }
+        });
+        body.hidden = !any;
+        var sub = body.querySelector("tr.boq-sub");
+        if (sub) sub.hidden = !!words.length;
+      });
+      foot.hidden = !!words.length;
+      found.textContent = words.length ? tr("boqSearchFound").replace("{n}", n) : "";
+    };
+    input.addEventListener("input", applySearch);
+    applySearch();
+    budgetBody.appendChild(search);
     budgetBody.appendChild(wrap);
     budgetBody.appendChild(bEl("p", "budget-note", tr("boqNote")));
+  }
+  // for the BOQ search: lower case, no quote marks (מ"ק = מק), single spaces
+  function boqSearchText(s) {
+    return String(s || "").toLowerCase().replace(/["'״׳`]/g, "").replace(/\s+/g, " ").trim();
   }
   function budgetItemLabel(item) {
     return [item.code, item.name].filter(Boolean).join(" ");
