@@ -344,6 +344,7 @@
   var logoPickerCancelBtn = document.getElementById("logoPickerCancelBtn");
 
   addLogoBtn.addEventListener("click", function () {
+    logoForSheetId = null;
     state.menuOpen = false;
     render();
     logoFileInput.value = "";

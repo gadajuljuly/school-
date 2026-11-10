@@ -3738,3 +3738,7 @@
 .boq-discounts-hint { margin: -6px 0 10px; font-size: 0.78rem; color: var(--ink-muted); text-align: center; }
 .boq-discounts-list .boq-discount-btn { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .boq-discounts-list .boq-discount-btn small { color: var(--ink-muted); font-size: 0.78rem; }
+.sheet-title-logo { cursor: pointer; }
+.sheet-title-logo-empty { width: 28px; height: 28px; flex-shrink: 0; padding: 0; border: 1.5px dashed var(--ink-muted); border-radius: 4px; background: transparent; color: var(--ink-muted); font-size: 0.85rem; line-height: 1; cursor: pointer; }
+.sheet-title-logo-empty[hidden] { display: none; }
+.logo-picker-add .logo-picker-thumb { font-size: 1.6rem; color: var(--accent); }

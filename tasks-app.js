@@ -570,6 +570,8 @@
     boqDiscountNoName: { he: "הנחה ללא שם", en: "Unnamed discount", ar: "خصم بلا اسم", ru: "Скидка без названия" },
     boqDiscountGeneralShort: { he: "כללית", en: "General", ar: "عام", ru: "Общая" },
     boqDeleteDiscountQ: { he: "למחוק את ההנחה \"{name}\"?", en: "Delete the discount \"{name}\"?", ar: "حذف الخصم \"{name}\"؟", ru: "Удалить скидку «{name}»?" },
+    changeLogoTitle: { he: "החלפת לוגו", en: "Change logo", ar: "تغيير الشعار", ru: "Сменить логотип" },
+    logoAddNewOption: { he: "לוגו חדש", en: "New logo", ar: "شعار جديد", ru: "Новый логотип" },
     boqActualTotal: { he: "סה\"כ בפועל", en: "Actual total", ar: "الإجمالي الفعلي", ru: "Итого факт" },
     budgetActualPriceField: { he: "מחיר בפועל ליחידה (העלות שלי)", en: "Actual unit price (my cost)", ar: "السعر الفعلي للوحدة (تكلفتي)", ru: "Факт. цена за ед. (моя стоимость)" },
     boqUnitPrice: { he: "מחיר יח'", en: "Unit price", ar: "سعر الوحدة", ru: "Цена ед." },
@@ -8517,6 +8519,7 @@
   var logoPickerCancelBtn = document.getElementById("logoPickerCancelBtn");
 
   addLogoBtn.addEventListener("click", function () {
+    logoForSheetId = null;
     state.menuOpen = false;
     render();
     logoFileInput.value = "";
@@ -9026,24 +9029,35 @@
     });
   }
 
+  // a logo added from a project's logo picker: set on that project too
+  var logoForSheetId = null;
   logoFileInput.addEventListener("change", function () {
     var file = logoFileInput.files && logoFileInput.files[0];
+    var forSheetId = logoForSheetId;
+    logoForSheetId = null;
     if (!file) return;
     if (file.type.indexOf("image/") !== 0) { alert(tr("logoInvalidFileMsg")); return; }
     resizeImageFileToDataUrl(file).then(function (dataUrl) {
+      var newLogoId = uid();
       data.logos.push({
-        id: uid(),
+        id: newLogoId,
         name: file.name.replace(/\.[^.]+$/, "") || tr("chooseLogoTitle"),
         dataUrl: dataUrl,
         addedAt: Date.now()
       });
+      var forSheet = forSheetId && allSheets().find(function (s) { return s.id === forSheetId; });
+      if (forSheet) forSheet.logoId = newLogoId;
       saveData();
+      renderSheetTitleLogo();
       showToast(tr("logoAddedToast"));
     }).catch(function () {
       alert(tr("logoInvalidFileMsg"));
     });
   });
 
+  // the project's logo by its name - a tap opens the logos to change it; a
+  // project with none shows a square with an X there instead, which does the same
+  var sheetTitleLogoEmpty = document.getElementById("sheetTitleLogoEmpty");
   function renderSheetTitleLogo() {
     var sheet = activeSheet();
     var logo = sheet ? findLogo(sheet.logoId) : null;
@@ -9054,7 +9068,11 @@
       sheetTitleLogo.src = "";
       sheetTitleLogo.hidden = true;
     }
+    sheetTitleLogoEmpty.hidden = !!logo || !sheet || sheet.id === HEAD_OFFICE_SHEET_ID;
   }
+  sheetTitleLogo.addEventListener("click", function () { openLogoPickerModal(); });
+  sheetTitleLogo.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openLogoPickerModal(); } });
+  sheetTitleLogoEmpty.addEventListener("click", function () { openLogoPickerModal(); });
 
   function openLogoPickerModal(sheetId) {
     var sheet = sheetId ? allSheets().find(function (s) { return s.id === sheetId; }) : activeSheet();
@@ -9100,6 +9118,25 @@
       });
       logoPickerGrid.appendChild(item);
     });
+
+    // ＋ a new logo from the phone / computer - set on this project once it's in
+    var addItem = document.createElement("div");
+    addItem.className = "logo-picker-item logo-picker-add";
+    var addThumb = document.createElement("div");
+    addThumb.className = "logo-picker-thumb";
+    addThumb.textContent = "＋";
+    addItem.appendChild(addThumb);
+    var addName = document.createElement("div");
+    addName.className = "logo-picker-name";
+    addName.textContent = tr("logoAddNewOption");
+    addItem.appendChild(addName);
+    addItem.addEventListener("click", function () {
+      logoForSheetId = sheet.id;
+      closeLogoPickerModal();
+      logoFileInput.value = "";
+      logoFileInput.click();
+    });
+    logoPickerGrid.appendChild(addItem);
 
     if (!(data.logos || []).length) {
       var emptyMsg = document.createElement("div");
