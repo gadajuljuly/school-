@@ -643,3 +643,26 @@ test("the BOQ's header row stays in view while scrolling down a long BOQ", async
   await expect(page.locator(".boq-table thead th").first()).toBeInViewport();
   await expect(page.locator(".budget-item", { hasText: "סעיף 25" })).toBeInViewport();
 });
+
+test("a long BOQ filling the screen: scrolling up at its top carries on to the page above it", async ({ page }) => {
+  await openBudget(page);
+  for (let n = 1; n <= 25; n++) {
+    await page.locator(".budget-actions button", { hasText: "＋ סעיף" }).click();
+    await fill(page, { code: "01." + String(n).padStart(3, "0"), chapter: "01 עפר", name: "סעיף " + n, qty: 10, price: 100 });
+  }
+  const wrap = page.locator(".boq-wrap");
+  // down the page until the table fills the screen, then inside it
+  await wrap.evaluate((w) => w.scrollIntoView({ block: "start" }));
+  await wrap.evaluate((w) => { w.scrollTop = 200; });
+  const card = page.locator(".budget-card").first();
+  await expect(card).not.toBeInViewport();
+  // the box shows the screen's height less some room: the page above stays reachable
+  const h = await wrap.evaluate((w) => w.getBoundingClientRect().height);
+  expect(h).toBeLessThan(800 - 150);
+  // scrolling up over the table: its own rows first, then the page
+  const box = await wrap.boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + 100);
+  for (let k = 0; k < 15; k++) { await page.mouse.wheel(0, -300); await page.waitForTimeout(50); }
+  await expect.poll(() => wrap.evaluate((w) => w.scrollTop)).toBe(0);
+  await expect(card).toBeInViewport();
+});

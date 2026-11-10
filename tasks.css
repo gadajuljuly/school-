@@ -3653,8 +3653,10 @@
   .wp-undo-btn { font-size: 1.05rem; font-weight: 800; min-width: 38px; }
   .wp-undo-btn:disabled { opacity: 0.35; cursor: default; }
   /* the BOQ as a table (11c-budget.js): item no. + description fixed at the right, the rest scrolls */
-  /* scrolls both ways inside itself, so the header row can stay on top while scrolling down */
-  .boq-wrap { border: 1px solid var(--rule); border-radius: 10px; background: #fff; overflow: auto; max-height: calc(100vh - 110px); max-height: calc(100dvh - 110px); margin-bottom: 6px; overscroll-behavior: contain; }
+  /* scrolls both ways inside itself, so the header row can stay on top while scrolling down;
+     at its top / bottom the scroll carries on to the page (no overscroll-behavior: contain),
+     and it's a little shorter than the screen so the page above can be reached */
+  .boq-wrap { border: 1px solid var(--rule); border-radius: 10px; background: #fff; overflow: auto; max-height: calc(100vh - 190px); max-height: calc(100dvh - 190px); margin-bottom: 6px; }
   .boq-table { border-collapse: separate; border-spacing: 0; font-size: 0.75rem; min-width: 960px; width: 100%; }
   .boq-table th, .boq-table td { padding: 6px; border-bottom: 1px solid #e6eef6; white-space: nowrap; text-align: left; background: #fff; }
   .boq-table th { background: #eef3f8; font-weight: 700; font-size: 0.7rem; text-align: center; }
