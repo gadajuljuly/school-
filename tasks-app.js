@@ -572,6 +572,8 @@
     boqDeleteDiscountQ: { he: "למחוק את ההנחה \"{name}\"?", en: "Delete the discount \"{name}\"?", ar: "حذف الخصم \"{name}\"؟", ru: "Удалить скидку «{name}»?" },
     changeLogoTitle: { he: "החלפת לוגו", en: "Change logo", ar: "تغيير الشعار", ru: "Сменить логотип" },
     logoAddNewOption: { he: "לוגו חדש", en: "New logo", ar: "شعار جديد", ru: "Новый логотип" },
+    boqDiscountOnChapters: { he: "פרקים {names}", en: "Chapters {names}", ar: "الفصول {names}", ru: "Разделы {names}" },
+    boqDiscountNeedChapter: { he: "סמנו לפחות פרק אחד שההנחה חלה עליו", en: "Tick at least one chapter for the discount", ar: "حدد فصلاً واحداً على الأقل للخصم", ru: "Отметьте хотя бы один раздел" },
     boqActualTotal: { he: "סה\"כ בפועל", en: "Actual total", ar: "الإجمالي الفعلي", ru: "Итого факт" },
     budgetActualPriceField: { he: "מחיר בפועל ליחידה (העלות שלי)", en: "Actual unit price (my cost)", ar: "السعر الفعلي للوحدة (تكلفتي)", ru: "Факт. цена за ед. (моя стоимость)" },
     boqUnitPrice: { he: "מחיר יח'", en: "Unit price", ar: "سعر الوحدة", ru: "Цена ед." },
@@ -11197,8 +11199,9 @@
   //               cost is its cost budget; progress its % done; the quantity
   //               done x actualPrice (what a unit costs me) its actual total
   //   expenses: [{ id, date, supplier, supplierCode, invoice, itemId, amount, note, by, at, billId }]
-  //   discounts: [{ id, description, kind: "pct" | "amount", value, chapter }] -
-  //             on the whole BOQ (no chapter) or one chapter, one after the
+  //   discounts: [{ id, description, kind: "pct" | "amount", value, chapters }] -
+  //             on the whole BOQ (chapters null - every chapter, new ones
+  //             too) or the chapters named (chapter: one, before), one after the
   //             other (a % off what's left); they go into the unit prices
   //             (budgetItemPrice), the item's own price stays as typed
   //   generalBudget: { category: amount } - the project's own costs (overheads,
@@ -11249,6 +11252,16 @@
   function budgetMoney(n) {
     return Math.round(n || 0).toLocaleString("he-IL") + " ₪";
   }
+  // the chapters a discount is on, or null: all of them
+  function budgetDiscountChapters(d) {
+    if (Array.isArray(d.chapters) && d.chapters.length) return d.chapters;
+    return d.chapter ? [d.chapter] : null;
+  }
+  function budgetDiscountScopeText(d) {
+    var on = budgetDiscountChapters(d);
+    if (!on) return tr("boqDiscountGeneralShort");
+    return on.length === 1 ? tr("boqDiscountOnChapter").replace("{name}", on[0]) : tr("boqDiscountOnChapters").replace("{names}", on.join(", "));
+  }
   function budgetChapterOf(item) { return (item.chapter || "").trim() || tr("budgetNoChapter"); }
   // the BOQ's discounts: each one's part of what was left of its chapters
   // (all of them, for a general one) - a factor per chapter that the unit
@@ -11266,7 +11279,8 @@
     });
     var chapters = Object.keys(base);
     var lines = (budget.data.discounts || []).map(function (d) {
-      var scope = d.chapter ? chapters.filter(function (c) { return c === d.chapter; }) : chapters;
+      var on = budgetDiscountChapters(d);
+      var scope = on ? chapters.filter(function (c) { return on.indexOf(c) !== -1; }) : chapters;
       var left = 0, doneLeft = 0;
       scope.forEach(function (c) { left += base[c] * factor[c]; doneLeft += doneBase[c] * factor[c]; });
       var v = budgetNum(d.value);
@@ -11759,6 +11773,37 @@
     fields.forEach(function (f) {
       budgetFormFields.appendChild(bEl("label", "", f.label));
       var input;
+      if (f.checks) {
+        // ticks: f.all (if given) ticks / unticks them all
+        var box = bEl("div", "budget-checks");
+        box.dataset.key = f.key;
+        var ticks = [];
+        var tick = function (value, text, cls) {
+          var row = bEl("label", "budget-check" + (cls ? " " + cls : ""));
+          var cb = bEl("input");
+          cb.type = "checkbox";
+          cb.value = value;
+          row.appendChild(cb);
+          row.appendChild(bEl("span", "", text));
+          box.appendChild(row);
+          return cb;
+        };
+        var allBox = f.all ? tick("", f.all, "budget-check-all") : null;
+        f.checks.forEach(function (o) {
+          var cb = tick(o[0], o[1]);
+          cb.checked = (f.value || []).indexOf(o[0]) !== -1;
+          cb.dataset.tick = "1";
+          ticks.push(cb);
+        });
+        if (allBox) {
+          var syncAll = function () { allBox.checked = ticks.every(function (c) { return c.checked; }); };
+          syncAll();
+          allBox.addEventListener("change", function () { ticks.forEach(function (c) { c.checked = allBox.checked; }); });
+          ticks.forEach(function (c) { c.addEventListener("change", syncAll); });
+        }
+        budgetFormFields.appendChild(box);
+        return;
+      }
       if (f.options) {
         input = bEl("select");
         f.options.forEach(function (o) {
@@ -11780,12 +11825,16 @@
     budgetFormDelete = onDelete;
     document.getElementById("budgetFormDeleteBtn").hidden = !onDelete;
     budgetFormOverlay.hidden = false;
-    var first = budgetFormFields.querySelector("input");
+    var first = budgetFormFields.querySelector("input:not([type=checkbox])");
     if (first) first.focus();
   }
   function budgetFormValues() {
     var v = {};
-    Array.prototype.forEach.call(budgetFormFields.querySelectorAll("input, select"), function (i) { v[i.name] = i.value.trim(); });
+    Array.prototype.forEach.call(budgetFormFields.querySelectorAll("input:not([type=checkbox]), select"), function (i) { v[i.name] = i.value.trim(); });
+    Array.prototype.forEach.call(budgetFormFields.querySelectorAll(".budget-checks"), function (box) {
+      v[box.dataset.key] = Array.prototype.filter.call(box.querySelectorAll("input[data-tick]"), function (c) { return c.checked; })
+        .map(function (c) { return c.value; });
+    });
     return v;
   }
   document.getElementById("budgetForm").addEventListener("submit", function (e) {
@@ -11834,7 +11883,7 @@
   function budgetDiscountLabel(d) {
     return tr("boqDiscountLine").replace("{text}", d.description || "") +
       (d.kind === "amount" ? "" : " (" + budgetNum(d.value) + "%)") +
-      (d.chapter ? " · " + tr("boqDiscountOnChapter").replace("{name}", d.chapter) : "");
+      (budgetDiscountChapters(d) ? " · " + budgetDiscountScopeText(d) : "");
   }
   // 🏷 הנחות: the BOQ's discounts by name - a tap opens one to change it,
   // a long press (a right click on a computer) offers to delete it
@@ -11849,7 +11898,7 @@
       btn.type = "button";
       btn.appendChild(bEl("b", "", d.description || tr("boqDiscountNoName")));
       btn.appendChild(bEl("small", "", (d.kind === "amount" ? budgetMoney(budgetNum(d.value)) : budgetNum(d.value) + "%") + " · " +
-        (d.chapter ? tr("boqDiscountOnChapter").replace("{name}", d.chapter) : tr("boqDiscountGeneralShort"))));
+        budgetDiscountScopeText(d)));
       var timer = null, long = false;
       var askDelete = function () {
         boqDiscountsOverlay.hidden = true;
@@ -11887,10 +11936,12 @@
     var d = disc || { kind: "pct" };
     var chapters = [];
     budget.data.items.forEach(function (i) { var c = budgetChapterOf(i); if (chapters.indexOf(c) === -1) chapters.push(c); });
-    if (d.chapter && chapters.indexOf(d.chapter) === -1) chapters.push(d.chapter);
+    var on = budgetDiscountChapters(d);
+    (on || []).forEach(function (c) { if (chapters.indexOf(c) === -1) chapters.push(c); });
+    // every chapter ticked for a general one - untick those it isn't on
     budgetForm(tr(disc ? "boqEditDiscount" : "boqAddDiscountTitle"), [
-      { key: "chapter", label: tr("boqDiscountScope"), value: d.chapter || "",
-        options: [["", tr("boqDiscountGeneral")]].concat(chapters.map(function (c) { return [c, tr("boqDiscountOnChapter").replace("{name}", c)]; })) },
+      { key: "chapters", label: tr("boqDiscountScope"), all: tr("boqDiscountGeneral"), value: on || chapters,
+        checks: chapters.map(function (c) { return [c, tr("boqDiscountOnChapter").replace("{name}", c)]; }) },
       { key: "description", label: tr("boqDiscountDesc"), value: d.description },
       { key: "kind", label: tr("boqDiscountKind"), value: d.kind || "pct",
         options: [["pct", tr("boqDiscountPct")], ["amount", tr("boqDiscountAmount")]] },
@@ -11898,8 +11949,10 @@
     ], function (v) {
       var value = budgetNum(v.value);
       if (!value) { alert(tr("budgetNeedAmount")); return false; }
+      if (!v.chapters.length) { alert(tr("boqDiscountNeedChapter")); return false; }
+      var everyChapter = chapters.every(function (c) { return v.chapters.indexOf(c) !== -1; });
       var rec = Object.assign({}, d, { id: d.id || uid(), description: (v.description || "").trim(), kind: v.kind === "amount" ? "amount" : "pct",
-        value: value, chapter: v.chapter || null });
+        value: value, chapters: everyChapter ? null : v.chapters, chapter: null });
       budgetChange(budgetUpsert("discounts", rec));
       if (fromList) setTimeout(openBoqDiscounts, 0);
     }, disc ? function () { budgetChange(budgetRemove("discounts", disc.id)); if (fromList) setTimeout(openBoqDiscounts, 0); } : null);

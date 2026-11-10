@@ -537,8 +537,13 @@ test("discounts on the BOQ: general or on one chapter, each described - a % or a
   await expect(panel).toBeVisible();
   await expect(panel).toContainText("עדיין אין הנחות");
   await page.locator("#boqDiscountsAddBtn").click();
-  await expect(page.locator("#budgetFormFields [name=chapter] option")).toHaveText(["הנחה כללית – כל כתב הכמויות", "פרק 01 עבודות עפר", "פרק 02 ניקוז"]);
-  await fill(page, { chapter: "פרק 01 עבודות עפר", description: "הנחת עפר", value: 10 });
+  // every chapter ticked to start with (a general discount); the drainage one unticked
+  const ticks = page.locator("#budgetFormFields .budget-check");
+  await expect(ticks).toHaveText(["הנחה כללית – כל כתב הכמויות", "פרק 01 עבודות עפר", "פרק 02 ניקוז"]);
+  for (let k = 0; k < 3; k++) await expect(ticks.nth(k).locator("input")).toBeChecked();
+  await ticks.filter({ hasText: "פרק 02 ניקוז" }).click();
+  await expect(ticks.first().locator("input")).not.toBeChecked();
+  await fill(page, { description: "הנחת עפר", value: 10 });
   await expect(panel).toBeVisible(); // back to the list
   await expect(listed).toHaveCount(1);
   await expect(listed.first()).toContainText("הנחת עפר");
@@ -565,15 +570,30 @@ test("discounts on the BOQ: general or on one chapter, each described - a % or a
   await expect(total).toContainText("סה\"כ לאחר הנחות");
   await expect(total).toContainText("185,000");
   await expect.poll(async () => (await finance(page))?.data.discounts.map((d) => [d.description, d.kind, d.value, d.chapter]))
-    .toEqual([["הנחת עפר", "pct", 10, "01 עבודות עפר"], ["הנחה מסחרית", "amount", 5000, null]]);
+    .toEqual([["הנחת עפר", "pct", 10, null], ["הנחה מסחרית", "amount", 5000, null]]);
+  await expect.poll(async () => (await finance(page)).data.discounts.map((d) => d.chapters)).toEqual([["01 עבודות עפר"], null]);
   await expect.poll(async () => (await finance(page)).data.items.map((i) => i.price)).toEqual([100, 1000]); // the typed prices stay
 
   // a tap on its name: changed
   await page.locator(".budget-actions button", { hasText: "🏷 הנחות" }).click();
   await listed.filter({ hasText: "הנחה מסחרית" }).click();
   await expect(page.locator("#budgetFormFields [name=description]")).toHaveValue("הנחה מסחרית");
+  // a general one: every chapter ticked
+  for (let k = 0; k < 3; k++) await expect(ticks.nth(k).locator("input")).toBeChecked();
   await fill(page, { description: "הנחה מסחרית מעודכנת", value: 10000 });
   await expect(listed.nth(1)).toContainText("הנחה מסחרית מעודכנת");
+  await expect(total).toContainText("180,000");
+
+  // none ticked: not saved
+  await listed.filter({ hasText: "הנחה מסחרית מעודכנת" }).click();
+  await ticks.first().click();
+  await page.locator("#budgetForm button[type=submit]").click();
+  await expect(page.locator("#budgetFormOverlay")).toBeVisible();
+  // then only the drainage chapter: 10,000 off its 100,000
+  await ticks.filter({ hasText: "פרק 02 ניקוז" }).click();
+  await page.locator("#budgetForm button[type=submit]").click();
+  await expect(listed.nth(1)).toContainText("פרק 02 ניקוז");
+  await expect(priceOf(pipe)).toContainText("900");
   await expect(total).toContainText("180,000");
 
   // a long press: delete it? no / yes
