@@ -618,3 +618,24 @@ test("discounts on the BOQ: general or on one chapter, each described - a % or a
   await expect(priceOf(dig)).toHaveText("100");
   await expect(total).toContainText("200,000");
 });
+
+test("the BOQ's header row stays in view while scrolling down a long BOQ", async ({ page }) => {
+  await openBudget(page);
+  for (let n = 1; n <= 25; n++) {
+    await page.locator(".budget-actions button", { hasText: "＋ סעיף" }).click();
+    await fill(page, { code: "01." + String(n).padStart(3, "0"), chapter: "01 עפר", name: "סעיף " + n, qty: 10, price: 100 });
+  }
+  await expect(page.locator(".budget-item", { hasText: "סעיף 25" })).toHaveCount(1);
+  const wrap = page.locator(".boq-wrap");
+  await wrap.scrollIntoViewIfNeeded();
+  await wrap.evaluate((w) => { w.scrollTop = w.scrollHeight; });
+  const pos = await page.evaluate(() => {
+    const w = document.querySelector(".boq-wrap").getBoundingClientRect();
+    const h = document.querySelector(".boq-table thead th").getBoundingClientRect();
+    return { wrapTop: w.top, headTop: h.top, scrolled: document.querySelector(".boq-wrap").scrollTop };
+  });
+  expect(pos.scrolled).toBeGreaterThan(50);
+  expect(Math.abs(pos.headTop - pos.wrapTop)).toBeLessThan(3);
+  await expect(page.locator(".boq-table thead th").first()).toBeInViewport();
+  await expect(page.locator(".budget-item", { hasText: "סעיף 25" })).toBeInViewport();
+});
