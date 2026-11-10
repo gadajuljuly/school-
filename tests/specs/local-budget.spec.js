@@ -558,6 +558,10 @@ test("discounts on the BOQ: general or on one chapter, each described - a % or a
   await fill(page, { description: "הנחה מסחרית", kind: "סכום (₪)", value: 5000 });
   await expect(listed).toHaveCount(2);
   await expect(listed.nth(1)).toContainText("כללית");
+  // the price after each discount: 87.63 now, under it 90 (after the first) and 100 (before any), struck through
+  await expect(priceOf(dig)).toContainText("87.63");
+  await expect(priceOf(dig).locator(".boq-before-discount")).toHaveText(["90", "100"]);
+  await expect(priceOf(pipe).locator(".boq-before-discount")).toHaveText(["1,000"]);
   await page.locator("#boqDiscountsCloseBtn").click();
 
   const rows = page.locator("tr.boq-discount");

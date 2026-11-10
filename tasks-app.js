@@ -11270,12 +11270,13 @@
   var budgetDiscCache = null;
   function budgetDiscountCalc() {
     if (budgetDiscCache && budgetDiscCache.data === budget.data) return budgetDiscCache.calc;
-    var base = {}, doneBase = {}, factor = {};
+    var base = {}, doneBase = {}, factor = {}, steps = {};
     budget.data.items.forEach(function (i) {
       var c = budgetChapterOf(i);
       base[c] = (base[c] || 0) + budgetNum(i.qty) * budgetNum(i.price);
       doneBase[c] = (doneBase[c] || 0) + budgetItemDoneQty(i) * budgetNum(i.price);
       factor[c] = 1;
+      steps[c] = [];
     });
     var chapters = Object.keys(base);
     var lines = (budget.data.discounts || []).map(function (d) {
@@ -11285,10 +11286,14 @@
       scope.forEach(function (c) { left += base[c] * factor[c]; doneLeft += doneBase[c] * factor[c]; });
       var v = budgetNum(d.value);
       var f = d.kind === "amount" ? (left > 0 ? Math.max(0, 1 - v / left) : 1) : Math.max(0, 1 - v / 100);
-      scope.forEach(function (c) { factor[c] *= f; });
+      scope.forEach(function (c) {
+        if (f !== 1) steps[c].push(factor[c]); // the factor before this discount
+        factor[c] *= f;
+      });
       return { d: d, amount: left * (1 - f), done: doneLeft * (1 - f) };
     });
-    var calc = { factor: factor, lines: lines };
+    // steps: per chapter, the factor before each discount that touched it
+    var calc = { factor: factor, lines: lines, steps: steps };
     budgetDiscCache = { data: budget.data, calc: calc };
     Promise.resolve().then(function () { budgetDiscCache = null; });
     return calc;
@@ -11602,11 +11607,16 @@
         doneCell.firstChild.textContent = qtyText(budgetItemDoneQty(item));
         doneCell.title = Math.round(budgetNum(item.progress)) + "%";
         row.appendChild(doneCell);
-        // the contract price with the discounts in it (and, small, the one before them)
+        // the contract price with the discounts in it; under it, struck through,
+        // the price before each discount - the latest first, the original last
         var priceCell = bEl("td", "", num(budgetItemPrice(item)));
         if (Math.abs(budgetItemPrice(item) - budgetNum(item.price)) > 0.005) {
-          priceCell.textContent = (Math.round(budgetItemPrice(item) * 100) / 100).toLocaleString("he-IL");
-          priceCell.appendChild(bEl("small", "boq-before-discount", num(budgetNum(item.price))));
+          var p2 = function (n) { return (Math.round(n * 100) / 100).toLocaleString("he-IL"); };
+          priceCell.textContent = p2(budgetItemPrice(item));
+          var steps = budgetDiscountCalc().steps[budgetChapterOf(item)] || [];
+          steps.slice().reverse().forEach(function (f) {
+            priceCell.appendChild(bEl("small", "boq-before-discount", p2(budgetNum(item.price) * f)));
+          });
         }
         row.appendChild(priceCell);
         row.appendChild(bEl("td", "boq-actual", budgetNum(item.actualPrice) ? num(budgetNum(item.actualPrice)) : ""));
