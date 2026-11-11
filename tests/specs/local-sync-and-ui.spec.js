@@ -69,12 +69,18 @@ test("quoting a task in the project chat shows the quote above the input", async
   await expect(page.locator("#chatReplySender")).toContainText("משימה");
 });
 
-test("small phone: the diary icons don't run under its buttons", async ({ page }) => {
+test("small phone: the diary's list scrolls above its actions bar, nothing hidden under it", async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 640 });
   await openLocalApp(page);
   await page.locator("#calendarFabBtn").click();
   await expect(page.locator("#diaryView")).toBeVisible();
-  const last = await page.locator("#siteLogProcurementBtn").boundingBox();
-  const buttons = await page.locator(".diary-actions-fixed").boundingBox();
-  expect(last.y + last.height).toBeLessThanOrEqual(buttons.y + 1);
+  const bar = page.locator(".diary-actions-bar");
+  await expect(bar).toBeInViewport();
+  await expect(page.locator("#siteLogCloseBtn")).toBeInViewport();
+  // scrolled to its end: the last part sits above the bar, not under it
+  await page.locator("#diaryView").evaluate((v) => { v.scrollTop = v.scrollHeight; });
+  const last = await page.locator("#siteLogPlanBtn").boundingBox();
+  const barBox = await bar.boundingBox();
+  expect(last.y + last.height).toBeLessThanOrEqual(barBox.y + 1);
+  await expect(page.locator("#siteLogPlanBtn")).toBeInViewport();
 });

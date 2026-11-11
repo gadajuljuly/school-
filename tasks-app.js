@@ -575,6 +575,30 @@
     boqDiscountOnChapters: { he: "פרקים {names}", en: "Chapters {names}", ar: "الفصول {names}", ru: "Разделы {names}" },
     boqDiscountNeedChapter: { he: "סמנו לפחות פרק אחד שההנחה חלה עליו", en: "Tick at least one chapter for the discount", ar: "حدد فصلاً واحداً على الأقل للخصم", ru: "Отметьте хотя бы один раздел" },
     waAppliedToast: { he: "📱 עודכן מוואטסאפ – אפשר לבטל בעוזר", en: "📱 Updated from WhatsApp – undo in the assistant", ar: "📱 تم التحديث من واتساب – يمكن التراجع في المساعد", ru: "📱 Обновлено из WhatsApp – отменить можно в помощнике" },
+    diaryDayTitle: { he: "יומן מס' {n}", en: "Diary no. {n}", ar: "يومية رقم {n}", ru: "Журнал № {n}" },
+    diaryOpen: { he: "● פתוח", en: "● Open", ar: "● مفتوح", ru: "● Открыт" },
+    diaryClosed: { he: "✓ נסגר", en: "✓ Closed", ar: "✓ مغلق", ru: "✓ Закрыт" },
+    diaryFilled: { he: "מולאו {n} מתוך {total}", en: "{n} of {total} filled", ar: "تم ملء {n} من {total}", ru: "Заполнено {n} из {total}" },
+    diaryPrevDay: { he: "→ אתמול", en: "→ Previous day", ar: "→ اليوم السابق", ru: "→ Вчера" },
+    diaryNextDay: { he: "מחר ←", en: "Next day ←", ar: "اليوم التالي ←", ru: "Завтра ←" },
+    diaryDictate: { he: "הכתב ליומן", en: "Dictate to the diary", ar: "أملِ على اليومية", ru: "Надиктовать в журнал" },
+    diaryDictateHint: { he: "\"היו 8 פועלים, המכבש עבד, הגיעו 3 משאיות מצע...\"", en: "\"8 workers, the roller worked, 3 trucks of base came...\"", ar: "\"8 عمال، عملت المدحلة، وصلت 3 شاحنات...\"", ru: "\"8 рабочих, каток работал, пришли 3 машины...\"" },
+    diaryGroupSite: { he: "באתר היום", en: "On site today", ar: "في الموقع اليوم", ru: "На объекте сегодня" },
+    diaryGroupMaterials: { he: "חומרים ותיעוד", en: "Materials and records", ar: "مواد وتوثيق", ru: "Материалы и фото" },
+    diaryGroupTracking: { he: "מעקב", en: "Tracking", ar: "متابعة", ru: "Контроль" },
+    diaryGroupMoney: { he: "כספים", en: "Money", ar: "مالية", ru: "Финансы" },
+    diaryGroupMoneyNote: { he: "· רק למי שיש הרשאה", en: "· only with permission", ar: "· لمن لديه صلاحية فقط", ru: "· только с правами" },
+    diaryNotFilled: { he: "לא מולא", en: "Not filled", ar: "لم يُملأ", ru: "Не заполнено" },
+    diaryAdd: { he: "+ הוספה", en: "+ Add", ar: "+ إضافة", ru: "+ Добавить" },
+    diaryUpdate: { he: "עדכון", en: "Update", ar: "تحديث", ru: "Обновить" },
+    diarySumPhotos: { he: "{n} תמונות", en: "{n} photos", ar: "{n} صور", ru: "{n} фото" },
+    diarySumPlanned: { he: "עודכנו {n} פעילויות", en: "{n} activities updated", ar: "تم تحديث {n} نشاطات", ru: "Обновлено работ: {n}" },
+    diaryBudgetSub: { he: "תקציב, הוצאות ורווח", en: "Budget, expenses and profit", ar: "الميزانية والمصروفات والربح", ru: "Бюджет, расходы и прибыль" },
+    diaryActPreview: { he: "הצגה", en: "View", ar: "عرض", ru: "Просмотр" },
+    diaryActPeriodic: { he: "דו\"ח תקופתי", en: "Period report", ar: "تقرير دوري", ru: "Отчёт за период" },
+    diaryActShare: { he: "שיתוף", en: "Share", ar: "مشاركة", ru: "Поделиться" },
+    diaryActShareAfter: { he: "אחרי סגירה", en: "After closing", ar: "بعد الإغلاق", ru: "После закрытия" },
+    diaryCloseAgain: { he: "סגירה מחדש", en: "Close again", ar: "إغلاق من جديد", ru: "Закрыть заново" },
     boqActualTotal: { he: "סה\"כ בפועל", en: "Actual total", ar: "الإجمالي الفعلي", ru: "Итого факт" },
     budgetActualPriceField: { he: "מחיר בפועל ליחידה (העלות שלי)", en: "Actual unit price (my cost)", ar: "السعر الفعلي للوحدة (تكلفتي)", ru: "Факт. цена за ед. (моя стоимость)" },
     boqUnitPrice: { he: "מחיר יח'", en: "Unit price", ar: "سعر الوحدة", ru: "Цена ед." },
@@ -9895,6 +9919,7 @@
         liveLog.closedFile = { folderId: uploaded.folderId, entryId: uploaded.entry.id, path: uploaded.entry.path };
         saveData();
         updateSiteLogCloseShareButtons();
+        renderDiaryHome();
       });
     }).catch(function (err) {
       console.error("close site log failed:", err);
@@ -9902,6 +9927,7 @@
     }).then(function () {
       siteLogCloseBtn.disabled = false;
       siteLogCloseBtn.textContent = originalContent;
+      renderDiaryHome();
     });
   }
 
@@ -13716,6 +13742,125 @@
     buildPdfBlobFromElement(doc, tr("pnlTitle") + " " + budget.sheet.name + " " + isoToFileNameDate(todayISO()) + ".pdf").then(function (r) {
       attemptShare(r.blob, r.fileName, "application/pdf");
     }, function () { alert(tr("teamSaveError")); });
+  }
+  // ---------------------------------------------------------------------
+  // The diary's home (#diaryView): a card for the day - its log number,
+  // open / closed, how many of the 7 parts are filled, yesterday / tomorrow -
+  // "🎤 הכתב ליומן" (the assistant, listening), then the parts as a list in
+  // groups, each showing what's in it today (or "+ הוספה"), budget control
+  // last for whoever may see the money, and the log's actions in a bar at
+  // the bottom. The rows are the same buttons as before (same ids), so each
+  // still opens its own screen (11-diary-site-log.js and the others).
+  // ---------------------------------------------------------------------
+  var diaryMoneyGroup = document.getElementById("diaryMoneyGroup");
+  var diaryPrevDayBtn = document.getElementById("diaryPrevDayBtn");
+  var diaryNextDayBtn = document.getElementById("diaryNextDayBtn");
+  var diaryDictateBtn = document.getElementById("diaryDictateBtn");
+
+  function diaryShiftISO(iso, days) {
+    var p = iso.split("-");
+    var d = new Date(+p[0], +p[1] - 1, +p[2] + days);
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  function diaryWeekday(iso) {
+    var p = iso.split("-");
+    var locale = { he: "he-IL", en: "en-GB", ar: "ar", ru: "ru-RU" }[currentLang] || "he-IL";
+    try { return new Date(+p[0], +p[1] - 1, +p[2]).toLocaleDateString(locale, { weekday: "long" }); } catch (e) { return ""; }
+  }
+  function diaryJoin(list) {
+    return list.filter(function (x) { return String(x || "").trim(); }).join(", ");
+  }
+
+  // each part: what's in it today ("" when nothing)
+  function diaryParts(log) {
+    var people = [];
+    SITE_LOG_ATTENDANCE_COLUMNS.forEach(function (c) {
+      ((log.attendance || {})[c] || []).forEach(function (e) { people.push(e.name); });
+    });
+    var tools = [];
+    SITE_LOG_TOOLS_COLUMNS.forEach(function (c) {
+      var list = (log.tools || {})[c] || [];
+      if (!list.length) return;
+      var qty = list.reduce(function (s, e) { return s + (parseFloat(e.qty) || 1); }, 0);
+      tools.push(tr("siteLogCol" + c.charAt(0).toUpperCase() + c.slice(1)) + (qty > 1 ? " ×" + qty : ""));
+    });
+    var photos = (log.photos || []).length;
+    var planned = (log.planned || []).length;
+    return [
+      { id: "siteLogAttendanceBtn", sum: diaryJoin(people) },
+      { id: "siteLogToolsBtn", sum: tools.join(", ") },
+      { id: "siteLogContractorsBtn", sum: diaryJoin((log.contractors || []).map(function (e) { return e.name; })) },
+      { id: "siteLogWorksBtn", sum: (log.works || []).map(function (e) { return e.text; }).filter(Boolean).join(" · ") },
+      { id: "siteLogProcurementBtn", sum: diaryJoin((log.procurement || []).map(function (e) { return [e.item, e.quantity].filter(Boolean).join(" "); })) },
+      { id: "siteLogPhotosBtn", sum: photos ? tr("diarySumPhotos").replace("{n}", photos) : "" },
+      { id: "siteLogPlanBtn", sum: planned ? tr("diarySumPlanned").replace("{n}", planned) : "", emptyAction: "diaryUpdate" }
+    ];
+  }
+
+  function renderDiaryHome() {
+    var sheet = activeSheet();
+    if (!sheet) return;
+    var day = activeSiteLogDate || state.viewDate;
+    var log = getSiteLogOrEmpty(sheet, day);
+    var number = log.number || nextSiteLogNumber(sheet, log);
+    var today = todayISO();
+
+    document.getElementById("diaryDayTitle").textContent = tr("diaryDayTitle").replace("{n}", number);
+    document.getElementById("diaryDaySub").textContent = diaryWeekday(day) + " · " + isoToFullDisplay(day);
+    var chip = document.getElementById("diaryDayChip");
+    chip.textContent = tr(log.closed ? "diaryClosed" : "diaryOpen");
+    chip.classList.toggle("closed", !!log.closed);
+
+    var parts = diaryParts(log);
+    var filled = parts.filter(function (x) { return x.sum; }).length;
+    document.getElementById("diaryDayProgressText").textContent = tr("diaryFilled").replace("{n}", filled).replace("{total}", parts.length);
+    document.getElementById("diaryDayBar").style.width = Math.round(filled * 100 / parts.length) + "%";
+
+    diaryPrevDayBtn.textContent = tr("diaryPrevDay");
+    diaryNextDayBtn.textContent = tr("diaryNextDay");
+    diaryNextDayBtn.disabled = day >= today; // a diary is for days that happened
+    diaryDictateBtn.hidden = day !== today || !!log.closed;
+
+    parts.forEach(function (x) {
+      var sum = document.querySelector('[data-sum="' + x.id + '"]');
+      var end = document.querySelector('[data-end="' + x.id + '"]');
+      var row = document.getElementById(x.id);
+      row.classList.toggle("filled", !!x.sum);
+      sum.textContent = x.sum || tr("diaryNotFilled");
+      end.className = "diary-row-end " + (x.sum ? "ok" : "add");
+      end.textContent = x.sum ? "✓" : tr(x.emptyAction || "diaryAdd");
+    });
+
+    // budget control: last, for whoever may see the money (updateBudgetTile)
+    diaryMoneyGroup.hidden = siteLogBudgetBtn.hidden;
+    document.querySelector('[data-sum="siteLogBudgetBtn"]').textContent = tr("diaryBudgetSub");
+    var budgetEnd = document.querySelector('[data-end="siteLogBudgetBtn"]');
+    budgetEnd.className = "diary-row-end go";
+    budgetEnd.textContent = "‹";
+
+    document.getElementById("diaryShareCaption").textContent = tr(log.closed ? "diaryActShare" : "diaryActShareAfter");
+    if (!siteLogCloseBtn.disabled) siteLogCloseBtn.textContent = "✓ " + tr(log.closed ? "diaryCloseAgain" : "siteLogCloseBtn");
+  }
+
+  function diaryGoToDay(iso) {
+    if (iso > todayISO()) return;
+    state.viewDate = iso;
+    render();
+  }
+  diaryPrevDayBtn.addEventListener("click", function () { diaryGoToDay(diaryShiftISO(activeSiteLogDate || state.viewDate, -1)); });
+  diaryNextDayBtn.addEventListener("click", function () { diaryGoToDay(diaryShiftISO(activeSiteLogDate || state.viewDate, 1)); });
+
+  // 🎤 הכתב ליומן: the assistant, already listening when the phone can
+  diaryDictateBtn.addEventListener("click", function () {
+    openAssistant();
+    if (!assistantMicBtn.hidden) assistantMicBtn.click();
+  });
+
+  // back from any of its screens (they just unhide it): up to date again
+  if (window.MutationObserver) {
+    new MutationObserver(function () {
+      if (!diaryView.hidden) renderDiaryHome();
+    }).observe(diaryView, { attributes: true, attributeFilter: ["hidden"] });
   }
   // Every active shared project this account can act on - its own real
   // memberships plus (full read/write, via office_groups.sql) any project
@@ -18495,6 +18640,7 @@
       activeSiteLogDate = state.viewDate;
       updateSiteLogCloseShareButtons();
       updateBudgetTile();
+      renderDiaryHome();
       refreshOpenSiteLogViews();
       return;
     }

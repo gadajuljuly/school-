@@ -547,6 +547,7 @@
         liveLog.closedFile = { folderId: uploaded.folderId, entryId: uploaded.entry.id, path: uploaded.entry.path };
         saveData();
         updateSiteLogCloseShareButtons();
+        renderDiaryHome();
       });
     }).catch(function (err) {
       console.error("close site log failed:", err);
@@ -554,6 +555,7 @@
     }).then(function () {
       siteLogCloseBtn.disabled = false;
       siteLogCloseBtn.textContent = originalContent;
+      renderDiaryHome();
     });
   }
 

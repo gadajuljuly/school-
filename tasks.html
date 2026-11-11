@@ -38,7 +38,7 @@
 <script src="vendor/supabase-js-2.118.0.js"></script>
 <script src="vendor/firebase-app-compat-10.7.1.js"></script>
 <script src="vendor/firebase-auth-compat-10.7.1.js"></script>
-<link rel="stylesheet" href="tasks.css?v=7b6d8706af">
+<link rel="stylesheet" href="tasks.css?v=1efeb803c3">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -668,49 +668,82 @@
       </div>
       <div class="sheet-reports-list" id="sheetReportsList" hidden></div>
       <div id="diaryView" hidden>
-        <div class="library-grid site-log-categories-grid">
-          <div class="library-item" id="siteLogAttendanceBtn">
-            <div class="library-item-thumb"><img src="tasks-attendance-icon.webp" alt=""></div>
-            <div class="library-item-name" data-i18n="siteLogAttendance">נוכחות</div>
+        <div class="diary-home">
+          <div class="diary-day-card">
+            <div class="diary-day-top">
+              <div><div class="diary-day-title" id="diaryDayTitle"></div><div class="diary-day-sub" id="diaryDaySub"></div></div>
+              <span class="diary-day-chip" id="diaryDayChip"></span>
+            </div>
+            <div class="diary-day-progress"><span id="diaryDayProgressText"></span><span class="diary-day-bar"><i id="diaryDayBar"></i></span></div>
+            <div class="diary-day-nav">
+              <button type="button" id="diaryPrevDayBtn"></button>
+              <button type="button" id="diaryNextDayBtn"></button>
+            </div>
           </div>
-          <div class="library-item" id="siteLogToolsBtn">
-            <div class="library-item-thumb"><img src="tasks-tools-icon.webp" alt=""></div>
-            <div class="library-item-name" data-i18n="siteLogTools">כלים</div>
+          <button type="button" class="diary-dictate" id="diaryDictateBtn">
+            <span class="diary-dictate-mic">🎤</span>
+            <span><b data-i18n="diaryDictate">הכתב ליומן</b><small data-i18n="diaryDictateHint"></small></span>
+          </button>
+          <div class="diary-group" data-i18n="diaryGroupSite">באתר היום</div>
+          <div class="diary-list">
+            <button type="button" class="diary-row" id="siteLogAttendanceBtn">
+              <img src="tasks-attendance-icon.webp" alt="">
+              <span class="diary-row-text"><b data-i18n="siteLogAttendance"></b><span class="diary-row-sum" data-sum="siteLogAttendanceBtn"></span></span>
+              <span class="diary-row-end" data-end="siteLogAttendanceBtn"></span>
+            </button>
+            <button type="button" class="diary-row" id="siteLogToolsBtn">
+              <img src="tasks-tools-icon.webp" alt="">
+              <span class="diary-row-text"><b data-i18n="siteLogTools"></b><span class="diary-row-sum" data-sum="siteLogToolsBtn"></span></span>
+              <span class="diary-row-end" data-end="siteLogToolsBtn"></span>
+            </button>
+            <button type="button" class="diary-row" id="siteLogContractorsBtn">
+              <img src="tasks-contractors-icon.webp" alt="">
+              <span class="diary-row-text"><b data-i18n="siteLogContractors"></b><span class="diary-row-sum" data-sum="siteLogContractorsBtn"></span></span>
+              <span class="diary-row-end" data-end="siteLogContractorsBtn"></span>
+            </button>
+            <button type="button" class="diary-row" id="siteLogWorksBtn">
+              <img src="tasks-works-icon.webp" alt="">
+              <span class="diary-row-text"><b data-i18n="siteLogWorks"></b><span class="diary-row-sum" data-sum="siteLogWorksBtn"></span></span>
+              <span class="diary-row-end" data-end="siteLogWorksBtn"></span>
+            </button>
           </div>
-          <div class="library-item" id="siteLogContractorsBtn">
-            <div class="library-item-thumb"><img src="tasks-contractors-icon.webp" alt=""></div>
-            <div class="library-item-name" data-i18n="siteLogContractors">קבלנים</div>
+          <div class="diary-group" data-i18n="diaryGroupMaterials">חומרים ותיעוד</div>
+          <div class="diary-list">
+            <button type="button" class="diary-row" id="siteLogProcurementBtn">
+              <img src="tasks-procurement-icon.webp" alt="">
+              <span class="diary-row-text"><b data-i18n="siteLogProcurement"></b><span class="diary-row-sum" data-sum="siteLogProcurementBtn"></span></span>
+              <span class="diary-row-end" data-end="siteLogProcurementBtn"></span>
+            </button>
+            <button type="button" class="diary-row" id="siteLogPhotosBtn">
+              <img src="tasks-photos-icon.webp" alt="">
+              <span class="diary-row-text"><b data-i18n="diaryPhotosTile"></b><span class="diary-row-sum" data-sum="siteLogPhotosBtn"></span></span>
+              <span class="diary-row-end" data-end="siteLogPhotosBtn"></span>
+            </button>
           </div>
-          <div class="library-item" id="siteLogWorksBtn">
-            <div class="library-item-thumb"><img src="tasks-works-icon.webp" alt=""></div>
-            <div class="library-item-name" data-i18n="siteLogWorks">עבודות</div>
+          <div class="diary-group" data-i18n="diaryGroupTracking">מעקב</div>
+          <div class="diary-list">
+            <button type="button" class="diary-row" id="siteLogPlanBtn">
+              <img src="tasks-work-plan-icon.webp" alt="">
+              <span class="diary-row-text"><b data-i18n="workPlanPlannedVsDone"></b><span class="diary-row-sum" data-sum="siteLogPlanBtn"></span></span>
+              <span class="diary-row-end" data-end="siteLogPlanBtn"></span>
+            </button>
           </div>
-          <div class="library-item" id="siteLogProcurementBtn">
-            <div class="library-item-thumb"><img src="tasks-procurement-icon.webp" alt=""></div>
-            <div class="library-item-name" data-i18n="siteLogProcurement">רכש</div>
-          </div>
-          <div class="library-item" id="siteLogPlanBtn">
-            <div class="library-item-thumb"><img src="tasks-work-plan-icon.webp" alt=""></div>
-            <div class="library-item-name" data-i18n="workPlanPlannedVsDone">מתוכנן מול ביצוע</div>
-          </div>
-          <div class="library-item" id="siteLogBudgetBtn" hidden>
-            <div class="library-item-thumb"><img src="tasks-budget-icon.webp" alt=""></div>
-            <div class="library-item-name" data-i18n="budgetTile">בקרה תקציבית</div>
-          </div>
-          <div class="library-item" id="siteLogPhotosBtn">
-            <div class="library-item-thumb"><img src="tasks-photos-icon.webp" alt=""></div>
-            <div class="library-item-name" data-i18n="diaryPhotosTile">תמונות</div>
+          <div class="diary-money" id="diaryMoneyGroup" hidden>
+            <div class="diary-group"><span data-i18n="diaryGroupMoney">כספים</span> <small data-i18n="diaryGroupMoneyNote">· רק למי שיש הרשאה</small></div>
+            <div class="diary-list">
+            <button type="button" class="diary-row" id="siteLogBudgetBtn">
+              <img src="tasks-budget-icon.webp" alt="">
+              <span class="diary-row-text"><b data-i18n="budgetTile"></b><span class="diary-row-sum" data-sum="siteLogBudgetBtn"></span></span>
+              <span class="diary-row-end" data-end="siteLogBudgetBtn"></span>
+            </button>
+            </div>
           </div>
         </div>
-        <div class="diary-actions-fixed">
-          <div class="site-log-close-share-row">
-            <button type="button" class="site-log-preview-btn" id="siteLogPreviewBtn" data-i18n="siteLogPreviewBtn">הצגת יומן</button>
-            <button type="button" class="site-log-periodic-btn" id="siteLogPeriodicBtn" data-i18n="siteLogPeriodicBtn">דו"ח יומנים תקופתי</button>
-          </div>
-          <div class="site-log-close-share-row">
-            <button type="button" class="site-log-close-btn" id="siteLogCloseBtn" data-i18n="siteLogCloseBtn">סגירת יומן</button>
-            <button type="button" class="site-log-share-btn" id="siteLogShareGeneralBtn" data-i18n="siteLogShareBtn" disabled>שיתוף יומן</button>
-          </div>
+        <div class="diary-actions-bar">
+          <span class="diary-action"><button type="button" class="site-log-preview-btn" id="siteLogPreviewBtn" data-i18n-title="siteLogPreviewBtn" title="הצגת יומן">👁</button><small data-i18n="diaryActPreview">הצגה</small></span>
+          <span class="diary-action"><button type="button" class="site-log-periodic-btn" id="siteLogPeriodicBtn" data-i18n-title="siteLogPeriodicBtn" title="דו&quot;ח יומנים תקופתי">📊</button><small data-i18n="diaryActPeriodic">דו"ח תקופתי</small></span>
+          <span class="diary-action"><button type="button" class="site-log-share-btn" id="siteLogShareGeneralBtn" data-i18n-title="siteLogShareBtn" title="שיתוף יומן" disabled>📤</button><small id="diaryShareCaption"></small></span>
+          <button type="button" class="site-log-close-btn" id="siteLogCloseBtn" data-i18n="siteLogCloseBtn">סגירת יומן</button>
         </div>
       </div>
       <div id="libraryFoldersView" hidden>
@@ -1651,6 +1684,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=00d1bf4db0"></script>
+<script src="tasks-app.js?v=08d6ce9b92"></script>
 </body>
 </html>

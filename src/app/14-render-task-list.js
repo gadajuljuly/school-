@@ -485,6 +485,7 @@
       activeSiteLogDate = state.viewDate;
       updateSiteLogCloseShareButtons();
       updateBudgetTile();
+      renderDiaryHome();
       refreshOpenSiteLogViews();
       return;
     }

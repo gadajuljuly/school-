@@ -1,0 +1,71 @@
+const { test, expect } = require("@playwright/test");
+const { openWithSharedProject } = require("./helpers/local-app");
+
+// The diary's home: the day's card (number, open / closed, how much is
+// filled, yesterday / tomorrow), each part showing what's in it today, and
+// the actions bar.
+test.use({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
+
+const ME = "+972500000001";
+const pad = (n) => String(n).padStart(2, "0");
+const iso = (d0) => { const d = new Date(); d.setDate(d.getDate() + d0); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
+const LOGS = [
+  { id: "l0", date: iso(-1), number: 7, closed: true, works: [{ id: "w0", text: "חפירה", attachment: null }] },
+  { id: "l1", date: iso(0),
+    attendance: { foreman: [{ id: "a", name: "יוסי כהן" }], workers: [{ id: "b", name: "6 פועלים" }] },
+    tools: { roller: [{ id: "t", qty: "1", note: "" }], truck: [{ id: "u", qty: "2", note: "" }] },
+    works: [{ id: "w", text: "פיזור מצע", attachment: null }] },
+];
+
+test("the day's card and what each part holds; yesterday's closed log; no money row without permission", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheet: { id: "p1", name: "כביש הדקלים", members: [ME, "+972599999999"], createdBy: "+972599999999", tasks: [], siteLogs: LOGS } });
+  await page.locator("#calendarFabBtn").click();
+  const v = page.locator("#diaryView");
+  await expect(v).toBeVisible();
+
+  await expect(page.locator("#diaryDayTitle")).toHaveText("יומן מס' 8");
+  await expect(page.locator("#diaryDayChip")).toHaveText("● פתוח");
+  await expect(page.locator("#diaryDayProgressText")).toHaveText("מולאו 3 מתוך 7");
+  await expect(page.locator("#diaryNextDayBtn")).toBeDisabled();
+  await expect(page.locator("#diaryDictateBtn")).toBeVisible();
+
+  const row = (id) => page.locator("#" + id);
+  await expect(row("siteLogAttendanceBtn")).toHaveClass(/filled/);
+  await expect(row("siteLogAttendanceBtn")).toContainText("יוסי כהן, 6 פועלים");
+  await expect(row("siteLogToolsBtn")).toContainText("מכבש, משאית ×2");
+  await expect(row("siteLogWorksBtn")).toContainText("פיזור מצע");
+  await expect(row("siteLogContractorsBtn")).not.toHaveClass(/filled/);
+  await expect(row("siteLogContractorsBtn")).toContainText("לא מולא");
+  await expect(row("siteLogContractorsBtn").locator(".diary-row-end")).toHaveText("+ הוספה");
+  await expect(page.locator("#diaryMoneyGroup")).toBeHidden();
+  await expect(page.locator("#siteLogShareGeneralBtn")).toBeDisabled();
+  await expect(page.locator("#diaryShareCaption")).toHaveText("אחרי סגירה");
+
+  // a part opens its own screen; back - the home is up to date
+  await row("siteLogContractorsBtn").click();
+  await expect(page.locator("#siteLogContractorsView")).toBeVisible();
+  await page.locator("#siteLogContractorsBackBtn").click();
+  await expect(v).toBeVisible();
+
+  // yesterday: closed, its number, nothing to dictate, share on
+  await page.locator("#diaryPrevDayBtn").click();
+  await expect(page.locator("#diaryDayTitle")).toHaveText("יומן מס' 7");
+  await expect(page.locator("#diaryDayChip")).toHaveText("✓ נסגר");
+  await expect(page.locator("#diaryDayProgressText")).toHaveText("מולאו 1 מתוך 7");
+  await expect(page.locator("#diaryDictateBtn")).toBeHidden();
+  await expect(page.locator("#siteLogShareGeneralBtn")).toBeEnabled();
+  await expect(page.locator("#siteLogCloseBtn")).toHaveText("✓ סגירה מחדש");
+  await page.locator("#diaryNextDayBtn").click();
+  await expect(page.locator("#diaryDayTitle")).toHaveText("יומן מס' 8");
+
+  // 🎤 הכתב ליומן: the assistant
+  await page.locator("#diaryDictateBtn").click();
+  await expect(page.locator("#assistantView")).toBeVisible();
+});
+
+test("the project's owner sees budget control last, under money", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheet: { id: "p1", name: "כביש הדקלים", members: [ME], tasks: [], siteLogs: LOGS } });
+  await page.locator("#calendarFabBtn").click();
+  await expect(page.locator("#diaryMoneyGroup")).toBeVisible();
+  await expect(page.locator("#siteLogBudgetBtn")).toContainText("תקציב, הוצאות ורווח");
+});
