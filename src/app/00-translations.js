@@ -573,6 +573,7 @@
     logoAddNewOption: { he: "לוגו חדש", en: "New logo", ar: "شعار جديد", ru: "Новый логотип" },
     boqDiscountOnChapters: { he: "פרקים {names}", en: "Chapters {names}", ar: "الفصول {names}", ru: "Разделы {names}" },
     boqDiscountNeedChapter: { he: "סמנו לפחות פרק אחד שההנחה חלה עליו", en: "Tick at least one chapter for the discount", ar: "حدد فصلاً واحداً على الأقل للخصم", ru: "Отметьте хотя бы один раздел" },
+    waAppliedToast: { he: "📱 עודכן מוואטסאפ – אפשר לבטל בעוזר", en: "📱 Updated from WhatsApp – undo in the assistant", ar: "📱 تم التحديث من واتساب – يمكن التراجع في المساعد", ru: "📱 Обновлено из WhatsApp – отменить можно в помощнике" },
     boqActualTotal: { he: "סה\"כ בפועל", en: "Actual total", ar: "الإجمالي الفعلي", ru: "Итого факт" },
     budgetActualPriceField: { he: "מחיר בפועל ליחידה (העלות שלי)", en: "Actual unit price (my cost)", ar: "السعر الفعلي للوحدة (تكلفتي)", ru: "Факт. цена за ед. (моя стоимость)" },
     boqUnitPrice: { he: "מחיר יח'", en: "Unit price", ar: "سعر الوحدة", ru: "Цена ед." },

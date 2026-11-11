@@ -5,7 +5,8 @@
   "description": "Playwright tests for tasks.html. specs/local-*.spec.js run fully offline (no backend, fake native bridge) - run them before every push: npm run test:local. The others talk to live Firebase/Supabase and run in CI.",
   "scripts": {
     "test": "playwright test",
-    "test:local": "playwright test specs/local-"
+    "test:local": "playwright test specs/local-",
+    "test:unit": "node --experimental-strip-types --test unit/whatsapp-core.test.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.56.1",

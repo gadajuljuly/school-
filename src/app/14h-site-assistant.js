@@ -109,32 +109,36 @@
   function assistantLiveSheet(id) {
     return voiceTargetSheets().find(function (s) { return s.id === id; }) || null;
   }
-  function assistantDiaryPush(sheet, list, entry) {
-    var log = findOrCreateSiteLog(sheet, todayISO());
+  function assistantDiaryPush(sheet, list, entry, day) {
+    day = day || todayISO();
+    var log = findOrCreateSiteLog(sheet, day);
     if (!Array.isArray(log[list])) log[list] = [];
     log[list].push(entry);
     saveData();
     return function () {
       var cur = assistantLiveSheet(sheet.id);
-      var live = cur && findSiteLog(cur, todayISO());
+      var live = cur && findSiteLog(cur, day);
       if (live && Array.isArray(live[list])) live[list] = live[list].filter(function (e) { return e.id !== entry.id; });
       saveData();
     };
   }
-  function assistantDiaryColumnPush(sheet, group, column, entry) {
-    var log = findOrCreateSiteLog(sheet, todayISO());
+  function assistantDiaryColumnPush(sheet, group, column, entry, day) {
+    day = day || todayISO();
+    var log = findOrCreateSiteLog(sheet, day);
     if (!Array.isArray(log[group][column])) log[group][column] = [];
     log[group][column].push(entry);
     saveData();
     return function () {
       var cur = assistantLiveSheet(sheet.id);
-      var live = cur && findSiteLog(cur, todayISO());
+      var live = cur && findSiteLog(cur, day);
       if (live && Array.isArray(live[group][column])) live[group][column] = live[group][column].filter(function (e) { return e.id !== entry.id; });
       saveData();
     };
   }
-  // one action -> a Promise of its undo function (or null when nothing was done)
-  function assistantApply(a) {
+  // one action -> a Promise of its undo function (or null when nothing was done).
+  // day: the diary's date (a WhatsApp message applied later: the day it was sent)
+  function assistantApply(a, day) {
+    day = /^\d{4}-\d{2}-\d{2}$/.test(day || "") ? day : todayISO();
     var sheet = voiceTargetSheets().find(function (s) { return s.id === a.project_id; });
     if (!sheet) return Promise.resolve(null);
     var text = String(a.text || "").replace(/\s+/g, " ").trim();
@@ -168,32 +172,32 @@
         });
       case "diary_work":
         if (!text) return Promise.resolve(null);
-        return Promise.resolve(assistantDiaryPush(sheet, "works", { id: uid(), text: text, attachment: null }));
+        return Promise.resolve(assistantDiaryPush(sheet, "works", { id: uid(), text: text, attachment: null }, day));
       case "diary_contractor":
         if (!text) return Promise.resolve(null);
-        return Promise.resolve(assistantDiaryPush(sheet, "contractors", { id: uid(), name: text }));
+        return Promise.resolve(assistantDiaryPush(sheet, "contractors", { id: uid(), name: text }, day));
       case "diary_procurement":
         if (!text) return Promise.resolve(null);
-        return Promise.resolve(assistantDiaryPush(sheet, "procurement", { id: uid(), item: text, quantity: String(a.quantity || ""), supplier: String(a.supplier || "") }));
+        return Promise.resolve(assistantDiaryPush(sheet, "procurement", { id: uid(), item: text, quantity: String(a.quantity || ""), supplier: String(a.supplier || "") }, day));
       case "diary_attendance":
         if (!text || SITE_LOG_ATTENDANCE_COLUMNS.indexOf(a.column) === -1) return Promise.resolve(null);
-        return Promise.resolve(assistantDiaryColumnPush(sheet, "attendance", a.column, { id: uid(), name: text }));
+        return Promise.resolve(assistantDiaryColumnPush(sheet, "attendance", a.column, { id: uid(), name: text }, day));
       case "diary_tool":
         if (SITE_LOG_TOOLS_COLUMNS.indexOf(a.column) === -1) return Promise.resolve(null);
-        return Promise.resolve(assistantDiaryColumnPush(sheet, "tools", a.column, { id: uid(), qty: String(a.quantity || "1"), note: text }));
+        return Promise.resolve(assistantDiaryColumnPush(sheet, "tools", a.column, { id: uid(), qty: String(a.quantity || "1"), note: text }, day));
       case "activity_progress":
         var item = (sheet.workPlan || []).find(function (x) { return x.id === a.activity_id; });
         var pct = Math.max(0, Math.min(100, Math.round(Number(a.percent) || 0)));
         if (!item || !pct) return Promise.resolve(null);
         var before = JSON.parse(JSON.stringify(item));
-        var log0 = findSiteLog(sheet, todayISO());
+        var log0 = findSiteLog(sheet, day);
         var dayBefore = log0 && (log0.planned || []).find(function (e) { return e.itemId === item.id; });
         dayBefore = dayBefore ? JSON.parse(JSON.stringify(dayBefore)) : null;
-        setSiteLogPlanPct(sheet, todayISO(), item, pct);
+        setSiteLogPlanPct(sheet, day, item, pct);
         return Promise.resolve(function () {
           var cur = assistantLiveSheet(sheet.id);
           if (!cur) return;
-          var log = findSiteLog(cur, todayISO());
+          var log = findSiteLog(cur, day);
           if (log && Array.isArray(log.planned)) {
             log.planned = log.planned.filter(function (e) { return e.itemId !== item.id; });
             if (dayBefore) log.planned.push(dayBefore);

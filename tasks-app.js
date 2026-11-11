@@ -574,6 +574,7 @@
     logoAddNewOption: { he: "לוגו חדש", en: "New logo", ar: "شعار جديد", ru: "Новый логотип" },
     boqDiscountOnChapters: { he: "פרקים {names}", en: "Chapters {names}", ar: "الفصول {names}", ru: "Разделы {names}" },
     boqDiscountNeedChapter: { he: "סמנו לפחות פרק אחד שההנחה חלה עליו", en: "Tick at least one chapter for the discount", ar: "حدد فصلاً واحداً على الأقل للخصم", ru: "Отметьте хотя бы один раздел" },
+    waAppliedToast: { he: "📱 עודכן מוואטסאפ – אפשר לבטל בעוזר", en: "📱 Updated from WhatsApp – undo in the assistant", ar: "📱 تم التحديث من واتساب – يمكن التراجع في المساعد", ru: "📱 Обновлено из WhatsApp – отменить можно в помощнике" },
     boqActualTotal: { he: "סה\"כ בפועל", en: "Actual total", ar: "الإجمالي الفعلي", ru: "Итого факт" },
     budgetActualPriceField: { he: "מחיר בפועל ליחידה (העלות שלי)", en: "Actual unit price (my cost)", ar: "السعر الفعلي للوحدة (تكلفتي)", ru: "Факт. цена за ед. (моя стоимость)" },
     boqUnitPrice: { he: "מחיר יח'", en: "Unit price", ar: "سعر الوحدة", ru: "Цена ед." },
@@ -22679,32 +22680,36 @@
   function assistantLiveSheet(id) {
     return voiceTargetSheets().find(function (s) { return s.id === id; }) || null;
   }
-  function assistantDiaryPush(sheet, list, entry) {
-    var log = findOrCreateSiteLog(sheet, todayISO());
+  function assistantDiaryPush(sheet, list, entry, day) {
+    day = day || todayISO();
+    var log = findOrCreateSiteLog(sheet, day);
     if (!Array.isArray(log[list])) log[list] = [];
     log[list].push(entry);
     saveData();
     return function () {
       var cur = assistantLiveSheet(sheet.id);
-      var live = cur && findSiteLog(cur, todayISO());
+      var live = cur && findSiteLog(cur, day);
       if (live && Array.isArray(live[list])) live[list] = live[list].filter(function (e) { return e.id !== entry.id; });
       saveData();
     };
   }
-  function assistantDiaryColumnPush(sheet, group, column, entry) {
-    var log = findOrCreateSiteLog(sheet, todayISO());
+  function assistantDiaryColumnPush(sheet, group, column, entry, day) {
+    day = day || todayISO();
+    var log = findOrCreateSiteLog(sheet, day);
     if (!Array.isArray(log[group][column])) log[group][column] = [];
     log[group][column].push(entry);
     saveData();
     return function () {
       var cur = assistantLiveSheet(sheet.id);
-      var live = cur && findSiteLog(cur, todayISO());
+      var live = cur && findSiteLog(cur, day);
       if (live && Array.isArray(live[group][column])) live[group][column] = live[group][column].filter(function (e) { return e.id !== entry.id; });
       saveData();
     };
   }
-  // one action -> a Promise of its undo function (or null when nothing was done)
-  function assistantApply(a) {
+  // one action -> a Promise of its undo function (or null when nothing was done).
+  // day: the diary's date (a WhatsApp message applied later: the day it was sent)
+  function assistantApply(a, day) {
+    day = /^\d{4}-\d{2}-\d{2}$/.test(day || "") ? day : todayISO();
     var sheet = voiceTargetSheets().find(function (s) { return s.id === a.project_id; });
     if (!sheet) return Promise.resolve(null);
     var text = String(a.text || "").replace(/\s+/g, " ").trim();
@@ -22738,32 +22743,32 @@
         });
       case "diary_work":
         if (!text) return Promise.resolve(null);
-        return Promise.resolve(assistantDiaryPush(sheet, "works", { id: uid(), text: text, attachment: null }));
+        return Promise.resolve(assistantDiaryPush(sheet, "works", { id: uid(), text: text, attachment: null }, day));
       case "diary_contractor":
         if (!text) return Promise.resolve(null);
-        return Promise.resolve(assistantDiaryPush(sheet, "contractors", { id: uid(), name: text }));
+        return Promise.resolve(assistantDiaryPush(sheet, "contractors", { id: uid(), name: text }, day));
       case "diary_procurement":
         if (!text) return Promise.resolve(null);
-        return Promise.resolve(assistantDiaryPush(sheet, "procurement", { id: uid(), item: text, quantity: String(a.quantity || ""), supplier: String(a.supplier || "") }));
+        return Promise.resolve(assistantDiaryPush(sheet, "procurement", { id: uid(), item: text, quantity: String(a.quantity || ""), supplier: String(a.supplier || "") }, day));
       case "diary_attendance":
         if (!text || SITE_LOG_ATTENDANCE_COLUMNS.indexOf(a.column) === -1) return Promise.resolve(null);
-        return Promise.resolve(assistantDiaryColumnPush(sheet, "attendance", a.column, { id: uid(), name: text }));
+        return Promise.resolve(assistantDiaryColumnPush(sheet, "attendance", a.column, { id: uid(), name: text }, day));
       case "diary_tool":
         if (SITE_LOG_TOOLS_COLUMNS.indexOf(a.column) === -1) return Promise.resolve(null);
-        return Promise.resolve(assistantDiaryColumnPush(sheet, "tools", a.column, { id: uid(), qty: String(a.quantity || "1"), note: text }));
+        return Promise.resolve(assistantDiaryColumnPush(sheet, "tools", a.column, { id: uid(), qty: String(a.quantity || "1"), note: text }, day));
       case "activity_progress":
         var item = (sheet.workPlan || []).find(function (x) { return x.id === a.activity_id; });
         var pct = Math.max(0, Math.min(100, Math.round(Number(a.percent) || 0)));
         if (!item || !pct) return Promise.resolve(null);
         var before = JSON.parse(JSON.stringify(item));
-        var log0 = findSiteLog(sheet, todayISO());
+        var log0 = findSiteLog(sheet, day);
         var dayBefore = log0 && (log0.planned || []).find(function (e) { return e.itemId === item.id; });
         dayBefore = dayBefore ? JSON.parse(JSON.stringify(dayBefore)) : null;
-        setSiteLogPlanPct(sheet, todayISO(), item, pct);
+        setSiteLogPlanPct(sheet, day, item, pct);
         return Promise.resolve(function () {
           var cur = assistantLiveSheet(sheet.id);
           if (!cur) return;
-          var log = findSiteLog(cur, todayISO());
+          var log = findSiteLog(cur, day);
           if (log && Array.isArray(log.planned)) {
             log.planned = log.planned.filter(function (e) { return e.itemId !== item.id; });
             if (dayBefore) log.planned.push(dayBefore);
@@ -23125,6 +23130,63 @@
       alert(tr("shareFilesFailed"));
     });
   });
+  // ---------------------------------------------------------------------
+  // The ITASK bot on WhatsApp: what the user wrote it waits in whatsapp_inbox
+  // (supabase/functions/whatsapp-webhook decided the actions and already
+  // answered on WhatsApp). The app applies them here, through the in-app
+  // assistant's own code (assistantApply, 14h) - the diary lines on the day
+  // the message was sent - and shows the exchange in the assistant's chat,
+  // marked 📱, with ↶ to undo. Each message is claimed first (pending ->
+  // applying), so a phone and a computer open together don't both apply it.
+  // ---------------------------------------------------------------------
+  var waPulling = false;
+  function pullWhatsAppInbox() {
+    if (waPulling || !supabaseClient || !myPhoneNumber || dataLoadBlocked || !privateDataSettled || !sharedSheetsLoadedOnce) return;
+    waPulling = true;
+    supabaseClient.from("whatsapp_inbox").select("id, text, reply, actions, day, created_at")
+      .eq("phone", myPhoneNumber).eq("status", "pending").order("created_at", { ascending: true }).limit(20)
+      .then(function (res) {
+        var rows = (res && !res.error && res.data) || [];
+        return rows.reduce(function (p, row) {
+          return p.then(function () { return waApplyRow(row); });
+        }, Promise.resolve());
+      })
+      .then(null, function () {})
+      .then(function () { waPulling = false; });
+  }
+
+  function waApplyRow(row) {
+    // claim it: only one device moves it from pending
+    return supabaseClient.from("whatsapp_inbox").update({ status: "applying" })
+      .eq("id", row.id).eq("status", "pending").select("id")
+      .then(function (claim) {
+        if (!claim || claim.error || !claim.data || !claim.data.length) return;
+        var actions = Array.isArray(row.actions) ? row.actions : [];
+        var undos = [];
+        return actions.reduce(function (p, a) {
+          return p.then(function () {
+            return assistantApply(a, row.day).then(function (u) { if (u) undos.push(u); }, function () {});
+          });
+        }, Promise.resolve()).then(function () {
+          render();
+          var at = Date.parse(row.created_at) || Date.now();
+          assistantChat.push({ role: "user", text: "📱 " + String(row.text || ""), at: at });
+          assistantUndo = undos.length ? function () { undos.slice().reverse().forEach(function (u) { u(); }); } : null;
+          var reply = String(row.reply || "").split("\n\n📱")[0].trim() || tr(undos.length ? "assistantDone" : "assistantNothing");
+          assistantChat.push({ role: "assistant", text: reply, at: Date.now(), undoable: !!undos.length });
+          assistantSaveChat();
+          if (!assistantView.hidden) renderAssistant();
+          if (undos.length) showToast(tr("waAppliedToast"));
+          return supabaseClient.from("whatsapp_inbox").update({ status: "applied", applied_at: new Date().toISOString() }).eq("id", row.id);
+        });
+      });
+  }
+
+  setInterval(function () { if (!document.hidden) pullWhatsAppInbox(); }, 30000);
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden) pullWhatsAppInbox();
+  });
+  setTimeout(pullWhatsAppInbox, 4000);
   function loadFromLocalOrDefault() {
     return loadLocalData() || defaultData();
   }
@@ -23928,9 +23990,11 @@
       addSharedSheetForTest: function (sheet) {
         sheet.siteLogs = (sheet.siteLogs || []).map(normalizeSiteLog);
         sharedSheets.push(sheet);
+        sharedSheetsLoadedOnce = true;
         data.activeSheetId = sheet.id;
         render();
-      }
+      },
+      pullWhatsAppForTest: function () { pullWhatsAppInbox(); }
     });
   }
 })();

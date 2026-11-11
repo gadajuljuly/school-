@@ -801,9 +801,11 @@
       addSharedSheetForTest: function (sheet) {
         sheet.siteLogs = (sheet.siteLogs || []).map(normalizeSiteLog);
         sharedSheets.push(sheet);
+        sharedSheetsLoadedOnce = true;
         data.activeSheetId = sheet.id;
         render();
-      }
+      },
+      pullWhatsAppForTest: function () { pullWhatsAppInbox(); }
     });
   }
 })();
