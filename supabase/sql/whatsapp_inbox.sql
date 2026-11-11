@@ -7,7 +7,8 @@
 -- applied (src/app/14k-whatsapp-inbox.js).
 --
 -- status: received -> pending (actions waiting for the app) -> applying ->
--- applied; or answered (a question, nothing to apply), ignored (not text),
+-- applied; or answered (a question, nothing to apply), ignored (not text, or
+-- a voice message not understood / over a minute),
 -- unknown_user (the number isn't an ITASK user), failed (the AI call failed).
 -- day: the date in Israel when it was sent - diary lines go on that day's
 -- diary even when the app is opened only the next morning.

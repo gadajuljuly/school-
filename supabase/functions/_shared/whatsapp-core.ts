@@ -29,7 +29,8 @@ export async function verifySignature(rawBody: string, header: string | null, ap
   return diff === 0;
 }
 
-export type WaMessage = { id: string; from: string; type: string; text: string; timestamp: number };
+// mediaId: a voice message's audio (downloaded and transcribed by the webhook)
+export type WaMessage = { id: string; from: string; type: string; text: string; timestamp: number; mediaId: string };
 
 // The messages in one webhook call (statuses - delivered, read - are skipped).
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -46,6 +47,7 @@ export function extractMessages(payload: any): WaMessage[] {
           type: String(m.type || ""),
           text: m.type === "text" ? String((m.text && m.text.body) || "") : "",
           timestamp: Number(m.timestamp || 0),
+          mediaId: m.type === "audio" ? String((m.audio && m.audio.id) || "") : "",
         });
       }
     }
@@ -102,4 +104,40 @@ export function whatsappReplyText(reply: string, actionCount: number): string {
   const r = String(reply || "").trim();
   if (!actionCount) return r || "לא הבנתי מה לרשום. אפשר לכתוב שוב, למשל: \"הגיעו 3 משאיות מצע לכביש הדקלים\".";
   return (r || "רשמתי.") + "\n\n📱 יופיע ב-ITASK בפתיחה הבאה של האפליקציה.";
+}
+
+// bytes -> base64 (for the speech service), in pieces so a long recording
+// doesn't overflow the call stack
+export function bytesToBase64(bytes: Uint8Array): string {
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+
+// Google Speech-to-Text's request for a WhatsApp voice message (Ogg / Opus):
+// Hebrew first, Arabic, English and Russian also understood; numbers as digits
+export function speechRequest(audioBase64: string) {
+  return {
+    config: {
+      encoding: "OGG_OPUS",
+      sampleRateHertz: 16000,
+      languageCode: "he-IL",
+      alternativeLanguageCodes: ["ar-IL", "en-US", "ru-RU"],
+      enableAutomaticPunctuation: true,
+      model: "default",
+    },
+    audio: { content: audioBase64 },
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function transcriptFrom(response: any): string {
+  return ((response && response.results) || [])
+    .map((r: { alternatives?: { transcript?: string }[] }) => String((r.alternatives && r.alternatives[0] && r.alternatives[0].transcript) || "").trim())
+    .filter(Boolean).join(" ").trim();
+}
+
+// what the bot says it heard, before its answer - so a misheard word shows
+export function heardPrefix(transcript: string): string {
+  return transcript ? "🎤 שמעתי: «" + transcript + "»\n\n" : "";
 }

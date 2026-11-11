@@ -3,7 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createHmac, createHash } from "node:crypto";
-import { buildContext, extractMessages, israelNow, phoneFromWa, phoneToUuid, verifySignature, whatsappReplyText } from "../../supabase/functions/_shared/whatsapp-core.ts";
+import { buildContext, bytesToBase64, extractMessages, heardPrefix, israelNow, phoneFromWa, phoneToUuid, speechRequest, transcriptFrom, verifySignature, whatsappReplyText } from "../../supabase/functions/_shared/whatsapp-core.ts";
 
 test("a WhatsApp sender as the app writes phone numbers", () => {
   assert.equal(phoneFromWa("972523255088"), "+972523255088");
@@ -34,8 +34,8 @@ test("messages out of a webhook call; delivery statuses skipped", () => {
     statuses: [{ id: "wamid.0", status: "read" }],
   } }] }] };
   assert.deepEqual(extractMessages(payload), [
-    { id: "wamid.1", from: "972523255088", type: "text", text: "הגיעו 3 משאיות", timestamp: 1700000000 },
-    { id: "wamid.2", from: "972523255088", type: "audio", text: "", timestamp: 0 },
+    { id: "wamid.1", from: "972523255088", type: "text", text: "הגיעו 3 משאיות", timestamp: 1700000000, mediaId: "" },
+    { id: "wamid.2", from: "972523255088", type: "audio", text: "", timestamp: 0, mediaId: "a1" },
   ]);
   assert.deepEqual(extractMessages({}), []);
 });
@@ -65,4 +65,19 @@ test("the bot's answer says where the actions show", () => {
   assert.match(whatsappReplyText("רשמתי ביומן.", 2), /^רשמתי ביומן\.\n\n📱 יופיע ב-ITASK/);
   assert.equal(whatsappReplyText("פתוחות לך 3 משימות.", 0), "פתוחות לך 3 משימות.");
   assert.match(whatsappReplyText("", 0), /לא הבנתי/);
+});
+
+test("voice messages: the audio to base64 (also a long one), the request, the words out, what was heard", () => {
+  const big = new Uint8Array(200000).map((_, i) => i % 256);
+  assert.equal(bytesToBase64(big), Buffer.from(big).toString("base64"));
+  const req = speechRequest("QUJD");
+  assert.equal(req.config.encoding, "OGG_OPUS");
+  assert.equal(req.config.languageCode, "he-IL");
+  assert.deepEqual(req.config.alternativeLanguageCodes, ["ar-IL", "en-US", "ru-RU"]);
+  assert.equal(req.audio.content, "QUJD");
+  assert.equal(transcriptFrom({ results: [{ alternatives: [{ transcript: "הגיעו 3 משאיות מצע" }] }, { alternatives: [{ transcript: " המכבש עבד עד 2 " }] }] }),
+    "הגיעו 3 משאיות מצע המכבש עבד עד 2");
+  assert.equal(transcriptFrom({}), "");
+  assert.equal(heardPrefix("המכבש עבד"), "🎤 שמעתי: «המכבש עבד»\n\n");
+  assert.equal(heardPrefix(""), "");
 });
