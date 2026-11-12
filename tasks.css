@@ -2258,6 +2258,10 @@
     width: 2px;
     background: var(--margin);
     opacity: 0.55;
+    /* above the task list's own lines (ol.task-list draws them, on a paper
+       background); the diary's cards still cover it (#diaryView, z-index 2, later) */
+    z-index: 1;
+    pointer-events: none;
   }
 
   .sheet-title-wrap {
@@ -3811,12 +3815,14 @@
 /* ---- the project's row on every page (tasks, reports, library, chat): the
    same layout as the diary's own top row, but transparent - right to left:
    the logo (or the X square), the name, "משימות שבוצעו", the sketch ---- */
-.ruled-body .sheet-title-wrap { direction: rtl; justify-content: flex-start; gap: 10px; min-height: 50px; margin: -6px -10px 4px -24px; padding: 0 38px 0 0; }
+/* exactly one line (36px) tall, so the rows below start on the page's own lines */
+.ruled-body .sheet-title-wrap { direction: rtl; justify-content: center; gap: 10px; height: 36px; margin: 0 -10px 0 -24px; padding: 0 64px; }
 .ruled-body .sheet-title-wrap .sheet-title-logo,
 .ruled-body .sheet-title-wrap .sheet-title-logo-empty { order: 1; width: 34px; height: 34px; }
-.ruled-body .sheet-title-wrap .sheet-title { order: 2; flex: 1; min-width: 0; text-align: right; font-size: 1.1rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ruled-body .sheet-title-wrap .sheet-title { order: 2; flex: 0 1 auto; min-width: 0; text-align: center; font-size: 1.1rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ruled-body .sheet-title-wrap .completed-tasks-toggle-btn { order: 3; position: static; transform: none; flex-shrink: 0; }
-.ruled-body .sheet-title-wrap .sketch-btn { order: 4; position: static; transform: none; flex-shrink: 0; width: 50px; height: 50px; margin: -6px 0; }
+/* the logo and name in the middle; the sketch on its own at the left */
+.ruled-body .sheet-title-wrap .sketch-btn { position: absolute; left: 6px; right: auto; top: 50%; transform: translateY(-50%); width: 50px; height: 50px; margin: 0; }
 /* the done tasks: the done mark in the margin right of the red line (the
    page's 22px padding + 10px of the row's margin = the row ends 12px from
    the page's edge; the mark sits 6px past that, 3px clear of the red line), with how many */
@@ -3829,3 +3835,8 @@
 .done-x-btn.none { opacity: 0.35; }
 .done-x-btn.on { box-shadow: 0 0 0 3px #f3d9d1; background: #f3d9d1; }
 .done-x-btn:focus-visible { outline: 2px solid #35618f; outline-offset: 3px; }
+/* the tasks' lines move with the tasks: drawn on the list itself (scrolling
+   with it - background-attachment: local), over the page's fixed ones, so a
+   line never ends up through a task's text; the new-task row draws its own */
+ol.task-list { background-color: var(--paper); background-image: repeating-linear-gradient(var(--paper) 0, var(--paper) 35px, var(--rule) 35px, var(--rule) 36px); background-attachment: local; }
+.add-row { background: linear-gradient(var(--paper) 0, var(--paper) 35px, var(--rule) 35px, var(--rule) 36px); }

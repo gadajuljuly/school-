@@ -43,3 +43,22 @@ test("nothing done yet: the mark faint, no number", async ({ page }) => {
   await expect(page.locator("#doneTasksXBtn")).toHaveClass(/(^|\s)none(\s|$)/);
   await expect(page.locator("#doneTasksXCount")).toBeHidden();
 });
+
+test("the tasks page: the logo and name in the middle; the lines scroll with the tasks, on the page's own spacing", async ({ page }) => {
+  const tasks = [];
+  for (let i = 1; i <= 25; i++) tasks.push(T("t" + i, "משימה " + i, 0, iso(0)));
+  await page.setViewportSize({ width: 412, height: 700 });
+  await openWithSharedProject(page, { phone: ME, sheet: { id: "p1", name: "רכבת נתניה", members: [ME], tasks } });
+  const m = await page.evaluate(() => {
+    const ruled = document.querySelector(".ruled-body");
+    const top = ruled.getBoundingClientRect().top + parseFloat(getComputedStyle(ruled).paddingTop);
+    const list = document.getElementById("taskList");
+    const wrap = document.querySelector(".sheet-title-wrap").getBoundingClientRect();
+    const name = document.getElementById("sheetTitle").getBoundingClientRect();
+    return { listOffset: Math.round(list.getBoundingClientRect().top - top), attach: getComputedStyle(list).backgroundAttachment,
+      nameMid: Math.round(name.left + name.width / 2), wrapMid: Math.round(wrap.left + wrap.width / 2) };
+  });
+  expect(m.listOffset % 36).toBe(0); // the first task starts on a line
+  expect(m.attach).toBe("local"); // its lines move with it
+  expect(Math.abs(m.nameMid - m.wrapMid)).toBeLessThanOrEqual(25); // the name (with the logo beside it) in the middle
+});
