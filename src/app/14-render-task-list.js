@@ -473,6 +473,7 @@
       addForm.hidden = true;
       showCompletedTasksBtn.hidden = true;
       showActiveTasksBtn.hidden = true;
+      doneTasksXBtn.hidden = true;
       renderSheetReportsList();
       return;
     }
@@ -480,6 +481,7 @@
       addForm.hidden = true;
       showCompletedTasksBtn.hidden = true;
       showActiveTasksBtn.hidden = true;
+      doneTasksXBtn.hidden = true;
       // Kept in sync here (not just on entry) so changing the date via the
       // normal top date controls/swipe while already in diary mode updates
       // which day's log the icons below point to, same as it always did.
@@ -494,6 +496,7 @@
       addForm.hidden = true;
       showCompletedTasksBtn.hidden = true;
       showActiveTasksBtn.hidden = true;
+      doneTasksXBtn.hidden = true;
       // Kept in sync here (not just on entry) so switching project tabs
       // while already in library mode updates whose folders are shown,
       // same as diary mode does for the date above.
@@ -505,6 +508,7 @@
       addForm.hidden = true;
       showCompletedTasksBtn.hidden = true;
       showActiveTasksBtn.hidden = true;
+      doneTasksXBtn.hidden = true;
       var chatSheet = activeSheet();
       // A sheet switch while chat is open can land on a non-shared
       // project, which has no chat at all - fall back to tasks mode for
@@ -533,6 +537,7 @@
     var isHeadOfficeVirtualSheet = activeSheet().id === HEAD_OFFICE_SHEET_ID;
     showCompletedTasksBtn.hidden = viewingArchive || state.showingCompleted;
     showActiveTasksBtn.hidden = viewingArchive || !state.showingCompleted;
+    updateDoneTasksX();
     addForm.hidden = isPast || state.showingCompleted || isHeadOfficeVirtualSheet;
 
     // Browsing completed tasks shows every done task across every date in
@@ -959,3 +964,24 @@
     });
   }
 
+
+  // The tasks done in this project: the "done" mark itself (the same X with
+  // the red stroke as a done task's row), in the margin right of the red
+  // line, with how many - a tap shows them, another the open ones again.
+  var doneTasksXBtn = document.getElementById("doneTasksXBtn");
+  document.getElementById("doneTasksXMark").innerHTML = rowMarkSvg(2);
+  function updateDoneTasksX() {
+    doneTasksXBtn.hidden = viewingArchive;
+    var n = (activeSheet().tasks || []).filter(function (t) { return t.status === 2; }).length;
+    var count = document.getElementById("doneTasksXCount");
+    count.textContent = n ? String(n) : "";
+    count.hidden = !n;
+    doneTasksXBtn.classList.toggle("none", !n && !state.showingCompleted);
+    doneTasksXBtn.classList.toggle("on", !!state.showingCompleted);
+    var label = tr(state.showingCompleted ? "showActiveTasksBtn" : "showCompletedTasksBtn");
+    doneTasksXBtn.title = label;
+    doneTasksXBtn.setAttribute("aria-label", label + (n ? " (" + n + ")" : ""));
+  }
+  doneTasksXBtn.addEventListener("click", function () {
+    (state.showingCompleted ? showActiveTasksBtn : showCompletedTasksBtn).click();
+  });

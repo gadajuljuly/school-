@@ -3817,3 +3817,15 @@
 .ruled-body .sheet-title-wrap .sheet-title { order: 2; flex: 1; min-width: 0; text-align: right; font-size: 1.1rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ruled-body .sheet-title-wrap .completed-tasks-toggle-btn { order: 3; position: static; transform: none; flex-shrink: 0; }
 .ruled-body .sheet-title-wrap .sketch-btn { order: 4; position: static; transform: none; flex-shrink: 0; width: 50px; height: 50px; margin: -6px 0; }
+/* the done tasks: the done mark in the margin right of the red line (the
+   page's 22px padding + 10px of the row's margin = the row ends 12px from
+   the page's edge; the mark sits 6px past that, 3px clear of the red line), with how many */
+#showCompletedTasksBtn, #showActiveTasksBtn { display: none !important; }
+.done-x-btn { position: absolute; right: -6px; top: 50%; transform: translateY(-50%); width: 30px; height: 27px; padding: 0; border: none; background: none; color: var(--ink); cursor: pointer; border-radius: 6px; }
+.done-x-btn[hidden] { display: none; }
+.done-x-mark, .done-x-mark svg { display: block; width: 100%; height: 100%; }
+.done-x-count { position: absolute; right: -3px; top: -12px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: var(--danger); color: #fff; font: 700 10.5px/17px "Rubik", "Assistant", sans-serif; text-align: center; box-shadow: 0 0 0 2px var(--paper); }
+.done-x-count[hidden] { display: none; }
+.done-x-btn.none { opacity: 0.35; }
+.done-x-btn.on { box-shadow: 0 0 0 3px #f3d9d1; background: #f3d9d1; }
+.done-x-btn:focus-visible { outline: 2px solid #35618f; outline-offset: 3px; }
