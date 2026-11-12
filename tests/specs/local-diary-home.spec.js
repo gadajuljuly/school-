@@ -69,3 +69,18 @@ test("the project's owner sees budget control last, under money", async ({ page 
   await expect(page.locator("#diaryMoneyGroup")).toBeVisible();
   await expect(page.locator("#siteLogBudgetBtn")).toContainText("תקציב, הוצאות ורווח");
 });
+
+test("every part's row is the list's full width, its name and summary in the same place", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheet: { id: "p1", name: "כביש הדקלים", members: [ME], tasks: [], siteLogs: LOGS } });
+  await page.locator("#calendarFabBtn").click();
+  const ids = ["siteLogAttendanceBtn", "siteLogToolsBtn", "siteLogContractorsBtn", "siteLogWorksBtn", "siteLogProcurementBtn", "siteLogPhotosBtn", "siteLogPlanBtn"];
+  const boxes = await page.evaluate((ids) => ids.map((id) => {
+    const row = document.getElementById(id).getBoundingClientRect();
+    const name = document.getElementById(id).querySelector(".diary-row-text b").getBoundingClientRect();
+    return { w: Math.round(row.width), nameRight: Math.round(row.right - name.right) };
+  }), ids);
+  boxes.forEach((b) => {
+    expect(b.w).toBe(boxes[0].w);
+    expect(b.nameRight).toBe(boxes[0].nameRight);
+  });
+});
