@@ -3746,7 +3746,8 @@
 .boq-table thead th.boq-code, .boq-table thead th.boq-desc { z-index: 5; }
 /* ---- the diary's home (src/app/11h-diary-home.js): the day's card, the parts
    as a list in groups, the log's actions in a bar at the bottom ---- */
-#diaryView { position: relative; z-index: 2; background: var(--paper); margin: -10px -14px 0 -14px; padding: 2px 12px 0; }
+/* the page has 44px padding on the left, 22 on the right: pulled out further on the left, so the cards have the same gap on both sides */
+#diaryView { position: relative; z-index: 2; background: var(--paper); margin: -10px -14px 0 -36px; padding: 2px 12px 0; }
 .diary-home { display: flex; flex-direction: column; padding-bottom: 6px; }
 .diary-day-card { background: #fffdf8; border: 1px solid var(--rule); border-radius: 16px; padding: 12px 14px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); }
 .diary-day-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }

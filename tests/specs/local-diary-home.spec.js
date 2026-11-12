@@ -84,3 +84,16 @@ test("every part's row is the list's full width, its name and summary in the sam
     expect(b.nameRight).toBe(boxes[0].nameRight);
   });
 });
+
+test("the diary's cards have the same gap on the left and the right of the page", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheet: { id: "p1", name: "כביש הדקלים", members: [ME], tasks: [], siteLogs: LOGS } });
+  await page.locator("#calendarFabBtn").click();
+  const gaps = await page.evaluate(() => {
+    const page_ = document.querySelector(".ruled-body").getBoundingClientRect();
+    return [".diary-day-card", ".diary-dictate", ".diary-list"].map((s) => {
+      const r = document.querySelector(s).getBoundingClientRect();
+      return Math.abs((r.left - page_.left) - (page_.right - r.right));
+    });
+  });
+  gaps.forEach((g) => expect(g).toBeLessThanOrEqual(1));
+});
