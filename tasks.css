@@ -3803,7 +3803,8 @@
 .diary-proj-logo { flex-shrink: 0; width: 34px; height: 34px; padding: 0; border: none; border-radius: 6px; background: none; cursor: pointer; display: grid; place-items: center; }
 .diary-proj-logo img { width: 100%; height: 100%; object-fit: contain; border-radius: 6px; }
 .diary-proj-logo.empty { border: 1.5px dashed var(--ink-muted); color: var(--ink-muted); font-size: 0.9rem; }
-.diary-proj-sketch { flex-shrink: 0; width: 38px; height: 38px; padding: 4px; border: 1px solid var(--rule); border-radius: 10px; background: #fff; cursor: pointer; }
+/* the sketch as its artwork alone - no box, bigger, its own shadow like on the tasks page */
+.diary-proj-sketch { flex-shrink: 0; width: 50px; height: 50px; margin: -6px 0; padding: 0; border: none; border-radius: 0; background: transparent; cursor: pointer; filter: drop-shadow(0 3px 4px rgba(44, 42, 36, 0.3)); }
 .diary-proj-sketch img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .diary-proj-logo:focus-visible, .diary-proj-sketch:focus-visible { outline: 2px solid #35618f; outline-offset: 1px; }
 /* pinned (scrolled down): a whole card of its own, lifted above the list */
