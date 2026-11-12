@@ -3801,3 +3801,4 @@
 .diary-action small { font-size: 0.6rem; color: var(--ink-muted); white-space: nowrap; }
 .diary-actions-bar .site-log-close-btn { flex: 1; margin: 0; height: 46px; border: none; border-radius: 14px; background: #b5452a; color: #fff; font-weight: 800; font-size: 0.98rem; box-shadow: 0 2px 6px rgba(181, 69, 42, 0.25); cursor: pointer; }
 .diary-actions-bar .site-log-close-btn:disabled { opacity: 0.7; }
+.diary-row:focus-visible, .diary-dictate:focus-visible, .diary-day-nav button:focus-visible { outline: 2px solid #35618f; outline-offset: -2px; }
