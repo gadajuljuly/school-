@@ -44,10 +44,12 @@ test("scan: photograph pages, edit them, save one PDF into a chosen folder", asy
   await page.locator("#libraryBtn").click();
   const scanBtn = page.locator("#libraryScanBtn");
   await expect(scanBtn).toBeVisible();
-  // on the right, level with the add-folder "+" on the left
+  // on the left next to the add-folder "+", level with it; the right side is the project's logo and name
   const [scanBox, addBox] = [await scanBtn.boundingBox(), await page.locator("#libraryAddFolderBtn").boundingBox()];
   expect(Math.abs(scanBox.y - addBox.y)).toBeLessThan(2);
-  expect(scanBox.x).toBeGreaterThan(addBox.x + 200);
+  expect(scanBox.x).toBeGreaterThan(addBox.x + addBox.width);
+  const logoBox = await page.locator("#sheetTitleLogoEmpty").boundingBox();
+  expect(scanBox.x + scanBox.width).toBeLessThan(logoBox.x);
 
   await scanBtn.click();
   await expect(page.locator("#scanOverlay")).toBeVisible();
