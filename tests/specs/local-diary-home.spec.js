@@ -37,7 +37,7 @@ test("the day's card and what each part holds; yesterday's closed log; no money 
   await expect(row("siteLogContractorsBtn")).not.toHaveClass(/filled/);
   await expect(row("siteLogContractorsBtn")).toContainText("לא מולא");
   await expect(row("siteLogContractorsBtn").locator(".diary-row-end")).toHaveText("+ הוספה");
-  await expect(page.locator("#diaryMoneyGroup")).toBeHidden();
+  await expect(page.locator("#budgetFabBtn")).toBeHidden(); // not the owner
   await expect(page.locator("#siteLogShareGeneralBtn")).toBeDisabled();
   await expect(page.locator("#diaryShareCaption")).toHaveText("אחרי סגירה");
 
@@ -63,11 +63,20 @@ test("the day's card and what each part holds; yesterday's closed log; no money 
   await expect(page.locator("#assistantView")).toBeVisible();
 });
 
-test("the project's owner sees budget control last, under money", async ({ page }) => {
+test("budget control: the footer's button for the project's owner, not in the diary; the archive in the menu", async ({ page }) => {
   await openWithSharedProject(page, { phone: ME, sheet: { id: "p1", name: "כביש הדקלים", members: [ME], tasks: [], siteLogs: LOGS } });
   await page.locator("#calendarFabBtn").click();
-  await expect(page.locator("#diaryMoneyGroup")).toBeVisible();
-  await expect(page.locator("#siteLogBudgetBtn")).toContainText("תקציב, הוצאות ורווח");
+  await expect(page.locator("#diaryView")).not.toContainText("בקרה תקציבית");
+  const fab = page.locator("#budgetFabBtn");
+  await expect(fab).toBeVisible();
+  await fab.click();
+  await expect(page.locator("#budgetView")).toBeVisible();
+  await expect(fab).toHaveClass(/fab-active/);
+  await page.locator("#budgetBackBtn").click();
+  await expect(page.locator("#notebookFooter img[src*='archive']")).toHaveCount(0);
+  await page.locator("#menuBtn").click();
+  await expect(page.locator("#archiveBtn")).toBeVisible();
+  await expect(page.locator("#archiveBtn")).toHaveText("📦 ארכיון פרויקטים שהסתיימו");
 });
 
 test("every part's row is the list's full width, its name and summary in the same place", async ({ page }) => {

@@ -15,7 +15,8 @@
 
   var libraryBtn = document.getElementById("libraryBtn");
   var archiveBtn = document.getElementById("archiveBtn");
-  archiveBtn.addEventListener("click", function () { enterArchiveView(); });
+  // (in the menu - the footer's place went to budget control)
+  archiveBtn.addEventListener("click", function () { state.menuOpen = false; enterArchiveView(); });
   var libraryFoldersView = document.getElementById("libraryFoldersView");
   var libraryFoldersGrid = document.getElementById("libraryFoldersGrid");
   var libraryAddFolderBtn = document.getElementById("libraryAddFolderBtn");

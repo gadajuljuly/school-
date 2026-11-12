@@ -29,7 +29,8 @@
   // ---------------------------------------------------------------------
   var budgetView = document.getElementById("budgetView");
   var budgetBody = document.getElementById("budgetBody");
-  var siteLogBudgetBtn = document.getElementById("siteLogBudgetBtn");
+  // its button: in the footer (it was a tile in the diary), only for whoever may see the money
+  var budgetFabBtn = document.getElementById("budgetFabBtn");
   var budgetFormOverlay = document.getElementById("budgetFormOverlay");
   var budgetFormFields = document.getElementById("budgetFormFields");
   var FINANCE_TABLE = "project_finance";
@@ -50,7 +51,7 @@
     return owner && financeOwnerPhones().indexOf(owner) !== -1 ? owner : null;
   }
   function updateBudgetTile() {
-    siteLogBudgetBtn.hidden = !budgetOwnerFor(activeSheet());
+    budgetFabBtn.hidden = !budgetOwnerFor(activeSheet());
   }
 
   // ---- numbers -----------------------------------------------------------
@@ -1142,5 +1143,10 @@
     budgetView.hidden = false;
     budgetLoad();
   }
-  siteLogBudgetBtn.addEventListener("click", openBudgetView);
-  document.getElementById("budgetBackBtn").addEventListener("click", function () { budgetView.hidden = true; });
+  budgetFabBtn.addEventListener("click", function () {
+    state.menuOpen = false;
+    if (!workPlanView.hidden) closeWorkPlan();
+    openBudgetView();
+    updateActiveFabHighlight();
+  });
+  document.getElementById("budgetBackBtn").addEventListener("click", function () { budgetView.hidden = true; updateActiveFabHighlight(); });

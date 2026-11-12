@@ -14,8 +14,7 @@ const finance = (page) => page.evaluate(() => (window.__backend.tables.project_f
 
 async function openBudget(page) {
   await openWithSharedProject(page, { phone: ME, native: true, sheet: SHEET });
-  await page.locator("#calendarFabBtn").click();
-  await page.locator("#siteLogBudgetBtn").click();
+  await page.locator("#budgetFabBtn").click(); // in the footer
   await expect(page.locator("#budgetView")).toBeVisible();
 }
 async function fill(page, values) {
@@ -129,8 +128,7 @@ const SEEDED = {
 async function openSeeded(page) {
   await openWithSharedProject(page, { phone: ME, native: true, sheet: SHEET });
   await page.evaluate((data) => { window.__backend.tables.project_finance = [{ owner_phone: "+972500000001", project_id: "p1", data_version: 1, data }]; }, SEEDED);
-  await page.locator("#calendarFabBtn").click();
-  await page.locator("#siteLogBudgetBtn").click();
+  await page.locator("#budgetFabBtn").click(); // in the footer
   await expect(page.locator(".budget-item")).toHaveCount(2);
 }
 async function setQty(page, field, value) {
@@ -247,8 +245,7 @@ async function openReports(page) {
   // in a browser (not the phone app) the files download, so their text can be read
   await openWithSharedProject(page, { phone: ME, sheet: SHEET });
   await page.evaluate((data) => { window.__backend.tables.project_finance = [{ owner_phone: "+972500000001", project_id: "p1", data_version: 1, data }]; }, REPORT_DATA);
-  await page.locator("#calendarFabBtn").click();
-  await page.locator("#siteLogBudgetBtn").click();
+  await page.locator("#budgetFabBtn").click(); // in the footer
   await expect(page.locator(".budget-item")).toHaveCount(2);
   await page.locator(".budget-reports-btn", { hasText: "דוחות" }).click();
   await expect(page.locator("#budgetReportOverlay")).toBeVisible();
@@ -391,8 +388,7 @@ test("P&L analysis: headline tiles, what the numbers say, and the charts", async
     bills: [{ id: "c1", subId: "client", no: 1, date: "2026-10-01", status: "approved", lines: {}, totals: { cumulative: 12000, toPay: 12000, gross: 12000, retention: 0, advance: 0, previous: 0, asked: 12000 } }],
     receipts: [{ id: "r1", date: "2026-10-20", amount: 10000 }],
   });
-  await page.locator("#calendarFabBtn").click();
-  await page.locator("#siteLogBudgetBtn").click();
+  await page.locator("#budgetFabBtn").click(); // in the footer
   await page.locator(".budget-reports-btn", { hasText: "ניתוח רווח והפסד" }).click();
   // earned 10,000 + 2,500 = 12,500; spent 11,000 -> 1,500 (12%)
   await expect(page.locator(".pnl-tile").first()).toContainText("1,500 ₪");
@@ -476,8 +472,7 @@ test("the BOQ shows in the file's own order, not re-sorted by item number", asyn
     { id: "c", code: "51.02", chapter: "51 ניקוז", name: "מכסה", qty: 1, price: 1 },
     { id: "d", code: "40.01", chapter: "40 גינון", name: "דשא", qty: 1, price: 1 },
   ] } }]; });
-  await page.locator("#calendarFabBtn").click();
-  await page.locator("#siteLogBudgetBtn").click();
+  await page.locator("#budgetFabBtn").click(); // in the footer
   await expect(page.locator(".budget-item")).toHaveCount(4);
   expect(await page.locator(".budget-item .boq-code").allInnerTexts()).toEqual(["51.01", "51.10", "51.02", "40.01"]);
   expect(await page.locator("tr.boq-ch .boq-desc").allInnerTexts()).toEqual(["ניקוז", "גינון"]);

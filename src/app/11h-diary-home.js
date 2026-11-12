@@ -7,7 +7,6 @@
   // the bottom. The rows are the same buttons as before (same ids), so each
   // still opens its own screen (11-diary-site-log.js and the others).
   // ---------------------------------------------------------------------
-  var diaryMoneyGroup = document.getElementById("diaryMoneyGroup");
   var diaryPrevDayBtn = document.getElementById("diaryPrevDayBtn");
   var diaryNextDayBtn = document.getElementById("diaryNextDayBtn");
   var diaryDictateBtn = document.getElementById("diaryDictateBtn");
@@ -101,12 +100,6 @@
       end.textContent = x.sum ? "✓" : tr(x.emptyAction || "diaryAdd");
     });
 
-    // budget control: last, for whoever may see the money (updateBudgetTile)
-    diaryMoneyGroup.hidden = siteLogBudgetBtn.hidden;
-    document.querySelector('[data-sum="siteLogBudgetBtn"]').textContent = tr("diaryBudgetSub");
-    var budgetEnd = document.querySelector('[data-end="siteLogBudgetBtn"]');
-    budgetEnd.className = "diary-row-end go";
-    budgetEnd.textContent = "‹";
 
     document.getElementById("diaryShareCaption").textContent = tr(log.closed ? "diaryActShare" : "diaryActShareAfter");
     if (!siteLogCloseBtn.disabled) siteLogCloseBtn.textContent = "✓ " + tr(log.closed ? "diaryCloseAgain" : "siteLogCloseBtn");

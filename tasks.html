@@ -38,7 +38,7 @@
 <script src="vendor/supabase-js-2.118.0.js"></script>
 <script src="vendor/firebase-app-compat-10.7.1.js"></script>
 <script src="vendor/firebase-auth-compat-10.7.1.js"></script>
-<link rel="stylesheet" href="tasks.css?v=09e1b51551">
+<link rel="stylesheet" href="tasks.css?v=9e46d58adb">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -609,6 +609,10 @@
             <div class="menu-label" data-i18n="assistantMenuLabel">עוזר</div>
             <button type="button" id="assistantMenuBtn" data-i18n="assistantMenuBtn">💬 עוזר ITASK (ניסיון)</button>
           </div>
+          <div class="menu-section">
+            <div class="menu-label" data-i18n="archiveMenuLabel">פרויקטים</div>
+            <button type="button" id="archiveBtn" data-i18n="archiveMenuBtn">📦 ארכיון פרויקטים שהסתיימו</button>
+          </div>
           <div class="menu-section" id="teamMenuSection">
             <div class="menu-label" data-i18n="teamMenuLabel">צוות</div>
             <button type="button" id="teamBtn" data-i18n="teamBtn">מהנדסים ומנהלי עבודה</button>
@@ -751,16 +755,6 @@
               <span class="diary-row-end" data-end="siteLogPlanBtn"></span>
             </button>
           </div>
-          <div class="diary-money" id="diaryMoneyGroup" hidden>
-            <div class="diary-group"><span data-i18n="diaryGroupMoney">כספים</span> <small data-i18n="diaryGroupMoneyNote">· רק למי שיש הרשאה</small></div>
-            <div class="diary-list">
-            <button type="button" class="diary-row" id="siteLogBudgetBtn">
-              <img src="tasks-budget-icon.webp" alt="">
-              <span class="diary-row-text"><b data-i18n="budgetTile"></b><span class="diary-row-sum" data-sum="siteLogBudgetBtn"></span></span>
-              <span class="diary-row-end" data-end="siteLogBudgetBtn"></span>
-            </button>
-            </div>
-          </div>
         </div>
         <div class="diary-actions-bar">
           <span class="diary-action"><button type="button" class="site-log-preview-btn" id="siteLogPreviewBtn" data-i18n-title="siteLogPreviewBtn" title="הצגת יומן">👁</button><small data-i18n="diaryActPreview">הצגה</small></span>
@@ -828,8 +822,8 @@
       <button type="button" class="library-fab" id="libraryBtn" data-i18n-title="libraryBtnTitle" title="ספריית קבצים">
         <img src="tasks-library-icon.webp" alt="">
       </button>
-      <button type="button" class="library-fab" id="archiveBtn" data-i18n-title="archiveBtnTitle" title="ארכיון פרויקטים שהסתיימו">
-        <img src="tasks-archive-icon.webp" alt="">
+      <button type="button" class="library-fab" id="budgetFabBtn" data-i18n-title="budgetTile" title="בקרה תקציבית" hidden>
+        <img src="tasks-budget-icon.webp" alt="">
       </button>
     </div>
   </div>
@@ -1708,6 +1702,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=29cf70265a"></script>
+<script src="tasks-app.js?v=ea2b746223"></script>
 </body>
 </html>

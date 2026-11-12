@@ -77,13 +77,13 @@ test("on someone else's team: the menu says so, and their finances become this p
   expect(await page.evaluate(() => window.__hooks.financeOwnerPhones())).toEqual([ "+972500000001", "+972509999999" ]);
 });
 
-test("the diary's בקרה תקציבית tile: for the project's owner and the engineers on their team only", async ({ page }) => {
+test("the footer's בקרה תקציבית button: for the project's owner and the engineers on their team only", async ({ page }) => {
   const BOSS = "+972509999999";
   await openWithSharedProject(page, { phone: ME, native: true, sheets: [
     { id: "mine", name: "שלי", members: [ME], tasks: [] },
     { id: "boss", name: "של הבוס", members: [ME, BOSS], tasks: [], createdBy: BOSS },
   ] });
-  const tile = page.locator("#siteLogBudgetBtn");
+  const tile = page.locator("#budgetFabBtn");
   const diaryOf = async (name) => {
     await page.locator(".sheet-tab", { hasText: name }).click();
     await page.locator("#calendarFabBtn").click();

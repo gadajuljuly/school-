@@ -373,15 +373,15 @@
   // library's folder-detail screen is still a genuine full-screen overlay
   // that doesn't go through render(), so it calls this directly itself.
   function updateActiveFabHighlight() {
-    [tasksFabBtn, calendarFabBtn, reportFabBtn, chatBtn, libraryBtn, archiveBtn].forEach(function (btn) {
+    [tasksFabBtn, calendarFabBtn, reportFabBtn, chatBtn, libraryBtn, budgetFabBtn].forEach(function (btn) {
       btn.classList.remove("fab-active");
     });
     var active;
     workPlanBtn.classList.remove("fab-active");
-    if (!workPlanView.hidden) active = workPlanBtn;
+    if (!budgetView.hidden) active = budgetFabBtn;
+    else if (!workPlanView.hidden) active = workPlanBtn;
     else if (state.viewMode === "chat") active = chatBtn;
     else if (state.viewMode === "library" || !libraryView.hidden) active = libraryBtn;
-    else if (viewingArchive) active = archiveBtn;
     else if (state.viewMode === "reports") active = reportFabBtn;
     else if (state.viewMode === "diary") active = calendarFabBtn;
     else active = tasksFabBtn;
@@ -391,6 +391,7 @@
   var chatWasActiveLastRender = false;
   function render() {
     try { updateUrgentDot(); } catch (e) {}
+    updateBudgetTile(); // the footer's budget button: for whoever may see the money
     appLoadingOverlay.hidden = true;
     syncWorkPlanTasks();
     clearTimeout(longPressTimer);
@@ -487,7 +488,6 @@
       // which day's log the icons below point to, same as it always did.
       activeSiteLogDate = state.viewDate;
       updateSiteLogCloseShareButtons();
-      updateBudgetTile();
       renderDiaryHome();
       refreshOpenSiteLogViews();
       return;

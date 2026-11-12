@@ -586,14 +586,11 @@
     diaryGroupSite: { he: "באתר היום", en: "On site today", ar: "في الموقع اليوم", ru: "На объекте сегодня" },
     diaryGroupMaterials: { he: "חומרים ותיעוד", en: "Materials and records", ar: "مواد وتوثيق", ru: "Материалы и фото" },
     diaryGroupTracking: { he: "מעקב", en: "Tracking", ar: "متابعة", ru: "Контроль" },
-    diaryGroupMoney: { he: "כספים", en: "Money", ar: "مالية", ru: "Финансы" },
-    diaryGroupMoneyNote: { he: "· רק למי שיש הרשאה", en: "· only with permission", ar: "· لمن لديه صلاحية فقط", ru: "· только с правами" },
     diaryNotFilled: { he: "לא מולא", en: "Not filled", ar: "لم يُملأ", ru: "Не заполнено" },
     diaryAdd: { he: "+ הוספה", en: "+ Add", ar: "+ إضافة", ru: "+ Добавить" },
     diaryUpdate: { he: "עדכון", en: "Update", ar: "تحديث", ru: "Обновить" },
     diarySumPhotos: { he: "{n} תמונות", en: "{n} photos", ar: "{n} صور", ru: "{n} фото" },
     diarySumPlanned: { he: "עודכנו {n} פעילויות", en: "{n} activities updated", ar: "تم تحديث {n} نشاطات", ru: "Обновлено работ: {n}" },
-    diaryBudgetSub: { he: "תקציב, הוצאות ורווח", en: "Budget, expenses and profit", ar: "الميزانية والمصروفات والربح", ru: "Бюджет, расходы и прибыль" },
     diaryActPreview: { he: "הצגה", en: "View", ar: "عرض", ru: "Просмотр" },
     diaryActPeriodic: { he: "דו\"ח תקופתי", en: "Period report", ar: "تقرير دوري", ru: "Отчёт за период" },
     diaryActShare: { he: "שיתוף", en: "Share", ar: "مشاركة", ru: "Поделиться" },
@@ -613,6 +610,8 @@
     workPlanGroupEmpty: { he: "אין עדיין פעילויות", en: "No activities yet", ar: "لا توجد أنشطة بعد", ru: "Пока нет работ" },
     workPlanGroupMove: { he: "📁 העברה לקבוצה...", en: "📁 Move to a group...", ar: "📁 نقل إلى مجموعة...", ru: "📁 В группу..." },
     workPlanGroupMenuTitle: { he: "לאיזו קבוצה להעביר את \"{name}\"?", en: "Which group for \"{name}\"?", ar: "إلى أي مجموعة تنقل \"{name}\"؟", ru: "В какую группу перенести «{name}»?" },
+    archiveMenuLabel: { he: "פרויקטים", en: "Projects", ar: "المشاريع", ru: "Проекты" },
+    archiveMenuBtn: { he: "📦 ארכיון פרויקטים שהסתיימו", en: "📦 Archive of finished projects", ar: "📦 أرشيف المشاريع المنتهية", ru: "📦 Архив завершённых проектов" },
     boqActualTotal: { he: "סה\"כ בפועל", en: "Actual total", ar: "الإجمالي الفعلي", ru: "Итого факт" },
     budgetActualPriceField: { he: "מחיר בפועל ליחידה (העלות שלי)", en: "Actual unit price (my cost)", ar: "السعر الفعلي للوحدة (تكلفتي)", ru: "Факт. цена за ед. (моя стоимость)" },
     boqUnitPrice: { he: "מחיר יח'", en: "Unit price", ar: "سعر الوحدة", ru: "Цена ед." },
@@ -6437,7 +6436,8 @@
 
   var libraryBtn = document.getElementById("libraryBtn");
   var archiveBtn = document.getElementById("archiveBtn");
-  archiveBtn.addEventListener("click", function () { enterArchiveView(); });
+  // (in the menu - the footer's place went to budget control)
+  archiveBtn.addEventListener("click", function () { state.menuOpen = false; enterArchiveView(); });
   var libraryFoldersView = document.getElementById("libraryFoldersView");
   var libraryFoldersGrid = document.getElementById("libraryFoldersGrid");
   var libraryAddFolderBtn = document.getElementById("libraryAddFolderBtn");
@@ -11263,7 +11263,8 @@
   // ---------------------------------------------------------------------
   var budgetView = document.getElementById("budgetView");
   var budgetBody = document.getElementById("budgetBody");
-  var siteLogBudgetBtn = document.getElementById("siteLogBudgetBtn");
+  // its button: in the footer (it was a tile in the diary), only for whoever may see the money
+  var budgetFabBtn = document.getElementById("budgetFabBtn");
   var budgetFormOverlay = document.getElementById("budgetFormOverlay");
   var budgetFormFields = document.getElementById("budgetFormFields");
   var FINANCE_TABLE = "project_finance";
@@ -11284,7 +11285,7 @@
     return owner && financeOwnerPhones().indexOf(owner) !== -1 ? owner : null;
   }
   function updateBudgetTile() {
-    siteLogBudgetBtn.hidden = !budgetOwnerFor(activeSheet());
+    budgetFabBtn.hidden = !budgetOwnerFor(activeSheet());
   }
 
   // ---- numbers -----------------------------------------------------------
@@ -12376,8 +12377,13 @@
     budgetView.hidden = false;
     budgetLoad();
   }
-  siteLogBudgetBtn.addEventListener("click", openBudgetView);
-  document.getElementById("budgetBackBtn").addEventListener("click", function () { budgetView.hidden = true; });
+  budgetFabBtn.addEventListener("click", function () {
+    state.menuOpen = false;
+    if (!workPlanView.hidden) closeWorkPlan();
+    openBudgetView();
+    updateActiveFabHighlight();
+  });
+  document.getElementById("budgetBackBtn").addEventListener("click", function () { budgetView.hidden = true; updateActiveFabHighlight(); });
 
   // ---------------------------------------------------------------------
   // קבלני משנה, in the budget control (11c-budget.js): each subcontractor's
@@ -13768,7 +13774,6 @@
   // the bottom. The rows are the same buttons as before (same ids), so each
   // still opens its own screen (11-diary-site-log.js and the others).
   // ---------------------------------------------------------------------
-  var diaryMoneyGroup = document.getElementById("diaryMoneyGroup");
   var diaryPrevDayBtn = document.getElementById("diaryPrevDayBtn");
   var diaryNextDayBtn = document.getElementById("diaryNextDayBtn");
   var diaryDictateBtn = document.getElementById("diaryDictateBtn");
@@ -13862,12 +13867,6 @@
       end.textContent = x.sum ? "✓" : tr(x.emptyAction || "diaryAdd");
     });
 
-    // budget control: last, for whoever may see the money (updateBudgetTile)
-    diaryMoneyGroup.hidden = siteLogBudgetBtn.hidden;
-    document.querySelector('[data-sum="siteLogBudgetBtn"]').textContent = tr("diaryBudgetSub");
-    var budgetEnd = document.querySelector('[data-end="siteLogBudgetBtn"]');
-    budgetEnd.className = "diary-row-end go";
-    budgetEnd.textContent = "‹";
 
     document.getElementById("diaryShareCaption").textContent = tr(log.closed ? "diaryActShare" : "diaryActShareAfter");
     if (!siteLogCloseBtn.disabled) siteLogCloseBtn.textContent = "✓ " + tr(log.closed ? "diaryCloseAgain" : "siteLogCloseBtn");
@@ -18900,15 +18899,15 @@
   // library's folder-detail screen is still a genuine full-screen overlay
   // that doesn't go through render(), so it calls this directly itself.
   function updateActiveFabHighlight() {
-    [tasksFabBtn, calendarFabBtn, reportFabBtn, chatBtn, libraryBtn, archiveBtn].forEach(function (btn) {
+    [tasksFabBtn, calendarFabBtn, reportFabBtn, chatBtn, libraryBtn, budgetFabBtn].forEach(function (btn) {
       btn.classList.remove("fab-active");
     });
     var active;
     workPlanBtn.classList.remove("fab-active");
-    if (!workPlanView.hidden) active = workPlanBtn;
+    if (!budgetView.hidden) active = budgetFabBtn;
+    else if (!workPlanView.hidden) active = workPlanBtn;
     else if (state.viewMode === "chat") active = chatBtn;
     else if (state.viewMode === "library" || !libraryView.hidden) active = libraryBtn;
-    else if (viewingArchive) active = archiveBtn;
     else if (state.viewMode === "reports") active = reportFabBtn;
     else if (state.viewMode === "diary") active = calendarFabBtn;
     else active = tasksFabBtn;
@@ -18918,6 +18917,7 @@
   var chatWasActiveLastRender = false;
   function render() {
     try { updateUrgentDot(); } catch (e) {}
+    updateBudgetTile(); // the footer's budget button: for whoever may see the money
     appLoadingOverlay.hidden = true;
     syncWorkPlanTasks();
     clearTimeout(longPressTimer);
@@ -19014,7 +19014,6 @@
       // which day's log the icons below point to, same as it always did.
       activeSiteLogDate = state.viewDate;
       updateSiteLogCloseShareButtons();
-      updateBudgetTile();
       renderDiaryHome();
       refreshOpenSiteLogViews();
       return;
