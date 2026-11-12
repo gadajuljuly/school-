@@ -97,3 +97,29 @@ test("the diary's cards have the same gap on the left and the right of the page"
   });
   gaps.forEach((g) => expect(g).toBeLessThanOrEqual(1));
 });
+
+test("the project's row at the diary's top: name, logo (opens the logos), sketch; it stays while scrolling", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 700 });
+  await openWithSharedProject(page, { phone: ME, sheet: { id: "p1", name: "רכבת נתניה", members: [ME], tasks: [], siteLogs: LOGS } });
+  await page.locator("#calendarFabBtn").click();
+  await expect(page.locator("#diaryProjName")).toHaveText("רכבת נתניה");
+  await expect(page.locator(".sheet-title-wrap")).toBeHidden(); // not twice
+  await expect(page.locator("#diaryProjLogo")).toHaveText("✕");
+
+  await page.locator("#diaryView").evaluate((v) => { v.scrollTop = v.scrollHeight; v.dispatchEvent(new Event("scroll")); });
+  await expect(page.locator(".diary-proj")).toBeInViewport();
+  await expect(page.locator(".diary-proj")).toHaveClass(/stuck/);
+
+  await page.locator("#diaryProjLogo").click();
+  await expect(page.locator("#logoPickerOverlay")).toBeVisible();
+  await page.locator("#logoPickerCancelBtn").click();
+
+  // the sketch: the same as the tasks page's sketch button
+  await page.locator("#diaryProjSketch").click();
+  await expect(page.locator("#sketchView")).toBeVisible();
+  await page.evaluate(() => { document.getElementById("sketchView").hidden = true; });
+
+  // back on the tasks page: its own title row again
+  await page.locator("#tasksFabBtn").click();
+  await expect(page.locator(".sheet-title-wrap")).toBeVisible();
+});

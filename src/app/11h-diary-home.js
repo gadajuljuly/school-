@@ -55,6 +55,21 @@
   function renderDiaryHome() {
     var sheet = activeSheet();
     if (!sheet) return;
+    // the project: its logo (or the X square - both open the logos), its
+    // name and the sketch, at the top - and staying there while scrolling
+    document.getElementById("diaryProjName").textContent = sheet.name;
+    var logo = findLogo(sheet.logoId);
+    var logoBtn = document.getElementById("diaryProjLogo");
+    logoBtn.innerHTML = "";
+    logoBtn.classList.toggle("empty", !logo);
+    if (logo) {
+      var img = document.createElement("img");
+      img.src = logo.dataUrl;
+      img.alt = "";
+      logoBtn.appendChild(img);
+    } else {
+      logoBtn.textContent = "✕";
+    }
     var day = activeSiteLogDate || state.viewDate;
     var log = getSiteLogOrEmpty(sheet, day);
     var number = log.number || nextSiteLogNumber(sheet, log);
@@ -105,6 +120,9 @@
   diaryPrevDayBtn.addEventListener("click", function () { diaryGoToDay(diaryShiftISO(activeSiteLogDate || state.viewDate, -1)); });
   diaryNextDayBtn.addEventListener("click", function () { diaryGoToDay(diaryShiftISO(activeSiteLogDate || state.viewDate, 1)); });
 
+  document.getElementById("diaryProjLogo").addEventListener("click", function () { openLogoPickerModal(); });
+  document.getElementById("diaryProjSketch").addEventListener("click", function () { document.getElementById("sketchBtn").click(); });
+
   // 🎤 הכתב ליומן: the assistant, already listening when the phone can
   diaryDictateBtn.addEventListener("click", function () {
     openAssistant();
@@ -117,3 +135,9 @@
       if (!diaryView.hidden) renderDiaryHome();
     }).observe(diaryView, { attributes: true, attributeFilter: ["hidden"] });
   }
+
+  // the project row pinned at the top: shaped as its own card while the list scrolls under it
+  var diaryProjRow = document.querySelector(".diary-proj");
+  diaryView.addEventListener("scroll", function () {
+    diaryProjRow.classList.toggle("stuck", diaryView.scrollTop > 4);
+  }, { passive: true });

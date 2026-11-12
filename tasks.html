@@ -38,7 +38,7 @@
 <script src="vendor/supabase-js-2.118.0.js"></script>
 <script src="vendor/firebase-app-compat-10.7.1.js"></script>
 <script src="vendor/firebase-auth-compat-10.7.1.js"></script>
-<link rel="stylesheet" href="tasks.css?v=8abb42a8cc">
+<link rel="stylesheet" href="tasks.css?v=2f3d4a3df4">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -669,6 +669,11 @@
       <div class="sheet-reports-list" id="sheetReportsList" hidden></div>
       <div id="diaryView" hidden>
         <div class="diary-home">
+          <div class="diary-proj">
+            <button type="button" class="diary-proj-logo" id="diaryProjLogo" data-i18n-title="chooseLogoTitle" title="בחר לוגו"></button>
+            <b class="diary-proj-name" id="diaryProjName"></b>
+            <button type="button" class="diary-proj-sketch" id="diaryProjSketch" data-i18n-title="sketchTitle" title="סקיצה"><img src="tasks-sketch-icon.webp" alt=""></button>
+          </div>
           <div class="diary-day-card">
             <div class="diary-day-top">
               <div><div class="diary-day-title" id="diaryDayTitle"></div><div class="diary-day-sub" id="diaryDaySub"></div></div>
@@ -1684,6 +1689,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=08d6ce9b92"></script>
+<script src="tasks-app.js?v=e29213da07"></script>
 </body>
 </html>

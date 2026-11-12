@@ -3749,7 +3749,7 @@
 /* the page has 44px padding on the left, 22 on the right: pulled out further on the left, so the cards have the same gap on both sides */
 #diaryView { position: relative; z-index: 2; background: var(--paper); margin: -10px -14px 0 -36px; padding: 2px 12px 0; }
 .diary-home { display: flex; flex-direction: column; padding-bottom: 6px; }
-.diary-day-card { background: #fffdf8; border: 1px solid var(--rule); border-radius: 16px; padding: 12px 14px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); }
+.diary-day-card { background: #fffdf8; border: 1px solid var(--rule); border-top: 1px solid #f0e9da; border-radius: 0 0 16px 16px; padding: 10px 14px 12px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); }
 .diary-day-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
 .diary-day-title { font-weight: 800; font-size: 1.02rem; color: var(--ink); }
 .diary-day-sub { font-size: 0.82rem; color: var(--ink-muted); margin-top: 2px; }
@@ -3795,3 +3795,16 @@
 .diary-actions-bar .site-log-close-btn { flex: 1; margin: 0; height: 46px; border: none; border-radius: 14px; background: #b5452a; color: #fff; font-weight: 800; font-size: 0.98rem; box-shadow: 0 2px 6px rgba(181, 69, 42, 0.25); cursor: pointer; }
 .diary-actions-bar .site-log-close-btn:disabled { opacity: 0.7; }
 .diary-row:focus-visible, .diary-dictate:focus-visible, .diary-day-nav button:focus-visible { outline: 2px solid #35618f; outline-offset: -2px; }
+/* the diary's top row: the project (logo, name, sketch) - the day card's own
+   top, and staying at the top of the diary while it scrolls */
+.ruled-body.diary-mode .sheet-title-wrap { display: none; }
+.diary-proj { position: sticky; top: -2px; z-index: 3; display: flex; align-items: center; gap: 10px; padding: 10px 14px 8px; background: #fffdf8; border: 1px solid var(--rule); border-bottom: none; border-radius: 16px 16px 0 0; }
+.diary-proj-name { flex: 1; min-width: 0; font-size: 1.1rem; font-weight: 800; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.diary-proj-logo { flex-shrink: 0; width: 34px; height: 34px; padding: 0; border: none; border-radius: 6px; background: none; cursor: pointer; display: grid; place-items: center; }
+.diary-proj-logo img { width: 100%; height: 100%; object-fit: contain; border-radius: 6px; }
+.diary-proj-logo.empty { border: 1.5px dashed var(--ink-muted); color: var(--ink-muted); font-size: 0.9rem; }
+.diary-proj-sketch { flex-shrink: 0; width: 38px; height: 38px; padding: 4px; border: 1px solid var(--rule); border-radius: 10px; background: #fff; cursor: pointer; }
+.diary-proj-sketch img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.diary-proj-logo:focus-visible, .diary-proj-sketch:focus-visible { outline: 2px solid #35618f; outline-offset: 1px; }
+/* pinned (scrolled down): a whole card of its own, lifted above the list */
+.diary-proj.stuck { border-bottom: 1px solid var(--rule); border-radius: 16px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12); }

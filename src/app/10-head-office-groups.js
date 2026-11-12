@@ -530,6 +530,7 @@
       sheetTitleLogo.hidden = true;
     }
     sheetTitleLogoEmpty.hidden = !!logo || !sheet || sheet.id === HEAD_OFFICE_SHEET_ID;
+    if (!diaryView.hidden) renderDiaryHome(); // the diary shows the logo at its top too
   }
   sheetTitleLogo.addEventListener("click", function () { openLogoPickerModal(); });
   sheetTitleLogo.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openLogoPickerModal(); } });
