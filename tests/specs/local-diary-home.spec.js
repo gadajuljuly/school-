@@ -132,3 +132,16 @@ test("the project's row at the diary's top: name, logo (opens the logos), sketch
   await page.locator("#tasksFabBtn").click();
   await expect(page.locator(".sheet-title-wrap")).toBeVisible();
 });
+
+test("a small phone: the menu scrolls inside the screen, its last sections reachable", async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 640 });
+  await openWithSharedProject(page, { phone: ME, sheet: { id: "p1", name: "כביש הדקלים", members: [ME], tasks: [] } });
+  await page.locator("#menuBtn").click();
+  const panel = page.locator("#menuPanel");
+  const box = await panel.boundingBox();
+  expect(box.y + box.height).toBeLessThanOrEqual(640);
+  await page.locator("#archiveBtn").scrollIntoViewIfNeeded();
+  await expect(page.locator("#archiveBtn")).toBeInViewport();
+  await page.locator("#archiveBtn").click();
+  await expect(panel).toBeHidden();
+});

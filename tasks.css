@@ -1880,6 +1880,12 @@
     padding: 10px;
     width: 200px;
     z-index: 30;
+    /* longer than a phone's screen: it scrolls inside itself (it used to run
+       past the screen's bottom, its last sections out of reach) */
+    max-height: calc(100vh - 130px);
+    max-height: calc(100dvh - 130px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
   .menu-panel[hidden] { display: none; }
 

@@ -6437,7 +6437,11 @@
   var libraryBtn = document.getElementById("libraryBtn");
   var archiveBtn = document.getElementById("archiveBtn");
   // (in the menu - the footer's place went to budget control)
-  archiveBtn.addEventListener("click", function () { state.menuOpen = false; enterArchiveView(); });
+  archiveBtn.addEventListener("click", function () {
+    state.menuOpen = false;
+    render(); // the menu closes (also when there's nothing in the archive - just its message)
+    enterArchiveView();
+  });
   var libraryFoldersView = document.getElementById("libraryFoldersView");
   var libraryFoldersGrid = document.getElementById("libraryFoldersGrid");
   var libraryAddFolderBtn = document.getElementById("libraryAddFolderBtn");
