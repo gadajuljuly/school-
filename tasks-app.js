@@ -599,6 +599,20 @@
     diaryActShare: { he: "שיתוף", en: "Share", ar: "مشاركة", ru: "Поделиться" },
     diaryActShareAfter: { he: "אחרי סגירה", en: "After closing", ar: "بعد الإغلاق", ru: "После закрытия" },
     diaryCloseAgain: { he: "סגירה מחדש", en: "Close again", ar: "إغلاق من جديد", ru: "Закрыть заново" },
+    workPlanGroup: { he: "קבוצה (מקטע / אזור / סוג עבודה)", en: "Group (section / area / kind of work)", ar: "مجموعة (مقطع / منطقة / نوع عمل)", ru: "Группа (участок / зона / вид работ)" },
+    workPlanGroupGeneral: { he: "כללי", en: "General", ar: "عام", ru: "Общее" },
+    workPlanGroupAdd: { he: "+ קבוצה", en: "+ Group", ar: "+ مجموعة", ru: "+ Группа" },
+    workPlanGroupNewOption: { he: "+ קבוצה חדשה...", en: "+ New group...", ar: "+ مجموعة جديدة...", ru: "+ Новая группа..." },
+    workPlanGroupNewTitle: { he: "קבוצה חדשה", en: "New group", ar: "مجموعة جديدة", ru: "Новая группа" },
+    workPlanGroupEditTitle: { he: "עריכת קבוצה", en: "Edit group", ar: "تعديل المجموعة", ru: "Изменить группу" },
+    workPlanGroupPlaceholder: { he: "למשל: מקטע א' – ק\"מ 0-2, גשרים, ניקוז", en: "e.g. Section A – km 0-2, Bridges, Drainage", ar: "مثلاً: المقطع أ، الجسور، التصريف", ru: "напр.: Участок А, Мосты, Дренаж" },
+    workPlanGroupUp: { he: "⬆ למעלה", en: "⬆ Up", ar: "⬆ لأعلى", ru: "⬆ Выше" },
+    workPlanGroupDown: { he: "⬇ למטה", en: "⬇ Down", ar: "⬇ لأسفل", ru: "⬇ Ниже" },
+    workPlanGroupDelete: { he: "🗑 מחיקת הקבוצה", en: "🗑 Delete group", ar: "🗑 حذف المجموعة", ru: "🗑 Удалить группу" },
+    workPlanGroupDeleteConfirm: { he: "למחוק את הקבוצה \"{name}\"? הפעילויות שבה לא יימחקו – הן יעברו ל\"כללי\".", en: "Delete the group \"{name}\"? Its activities stay – in \"General\".", ar: "حذف المجموعة \"{name}\"؟ أنشطتها تبقى – في \"عام\".", ru: "Удалить группу «{name}»? Её работы останутся – в «Общее»." },
+    workPlanGroupEmpty: { he: "אין עדיין פעילויות", en: "No activities yet", ar: "لا توجد أنشطة بعد", ru: "Пока нет работ" },
+    workPlanGroupMove: { he: "📁 העברה לקבוצה...", en: "📁 Move to a group...", ar: "📁 نقل إلى مجموعة...", ru: "📁 В группу..." },
+    workPlanGroupMenuTitle: { he: "לאיזו קבוצה להעביר את \"{name}\"?", en: "Which group for \"{name}\"?", ar: "إلى أي مجموعة تنقل \"{name}\"؟", ru: "В какую группу перенести «{name}»?" },
     boqActualTotal: { he: "סה\"כ בפועל", en: "Actual total", ar: "الإجمالي الفعلي", ru: "Итого факт" },
     budgetActualPriceField: { he: "מחיר בפועל ליחידה (העלות שלי)", en: "Actual unit price (my cost)", ar: "السعر الفعلي للوحدة (تكلفتي)", ru: "Факт. цена за ед. (моя стоимость)" },
     boqUnitPrice: { he: "מחיר יח'", en: "Unit price", ar: "سعر الوحدة", ru: "Цена ед." },
@@ -1678,7 +1692,7 @@
           data: {
             tasks: sheet.tasks || [], reports: sheet.reports || [], files: [], folders: sheet.folders || null,
             siteLogs: sheet.siteLogs || [], ended: sheet.ended || false, endedDate: sheet.endedDate || null, logoId: sheet.logoId || null,
-            workPlan: sheet.workPlan || [], workHammocks: sheet.workHammocks || [], workBaseline: sheet.workBaseline || null, sketches: sheet.sketches || []
+            workPlan: sheet.workPlan || [], workHammocks: sheet.workHammocks || [], workGroups: sheet.workGroups || [], workBaseline: sheet.workBaseline || null, sketches: sheet.sketches || []
           },
           data_version: 1,
           members: sheet.members || [],
@@ -5160,6 +5174,7 @@
           siteLogs: privateSheet.siteLogs || [],
           workPlan: privateSheet.workPlan || [],
           workHammocks: privateSheet.workHammocks || [],
+          workGroups: privateSheet.workGroups || [],
           workBaseline: privateSheet.workBaseline || null,
           sketches: privateSheet.sketches || [],
           ended: privateSheet.ended || false,
@@ -14739,7 +14754,8 @@
   function wpGroups() {
     if (wpState.sheetId) {
       var sheet = allSheets().find(function (s) { return s.id === wpState.sheetId; });
-      return sheet ? [{ sheet: sheet, items: wpSorted(sheet.workPlan) }] : [];
+      // (a group's chip chosen: only its activities - 12h-work-plan-groups.js)
+      return sheet ? [{ sheet: sheet, items: wpFilterByGroup(sheet, wpSorted(sheet.workPlan)) }] : [];
     }
     return officeReportSheets().slice().sort(compareSheetNames).map(function (s) {
       return { sheet: s, items: wpSorted(s.workPlan) };
@@ -14854,7 +14870,18 @@
         host.appendChild(gh);
         if (collapsed) return;
       }
-      wpBuildHammockRows(host, g, range, dayW, forPdf, track, function (item, hammock) {
+      // a project split into groups: each group's row, then its hammocks and
+      // activities under it (12h-work-plan-groups.js)
+      var sections = wpGroupSections(g.sheet, g.items);
+      if (sections) {
+        sections.forEach(function (sec) {
+          if (wpBuildGroupRow(host, g.sheet, sec, range, dayW, forPdf, track)) return;
+          wpBuildHammockRows(host, { sheet: g.sheet, items: sec.items }, range, dayW, forPdf, track, drawItem);
+        });
+        return;
+      }
+      wpBuildHammockRows(host, g, range, dayW, forPdf, track, drawItem);
+      function drawItem(item, hammock) {
         var row = wpEl("div", "wp-row" + (hammock ? " wp-in-hammock" : ""));
         var name = wpEl("div", "wp-name");
         if (hammock) name.style.borderRightColor = hammock.color;
@@ -14912,13 +14939,14 @@
           row.addEventListener("click", function () { wpRowTapped(g.sheet, item); });
         }
         host.appendChild(row);
-      });
+      }
     });
   }
 
   function renderWorkPlan() {
     if (workPlanView.hidden) return;
     wpUpdateUndoBtn();
+    renderWpGroupChips();
     var groups = wpGroups();
     var range = wpRange(groups);
     workPlanRangeLabel.textContent = wpRangeLabel(range);
@@ -14952,6 +14980,7 @@
     wpState.sheetId = sheet.id === HEAD_OFFICE_SHEET_ID ? null : sheet.id;
     wpState.anchor = todayISO();
     wpState.zoom = "all"; // opens on the whole plan
+    wpState.groupFilter = null; // every group
     workPlanTitle.textContent = wpState.sheetId ? tr("workPlanTitle") + " – " + sheet.name : tr("workPlanOfficeTitle");
     workPlanView.hidden = false;
     wpFitAboveFooter();
@@ -15015,7 +15044,7 @@
     var start = wpState.zoom === "month" && wpState.anchor.slice(0, 7) !== todayISO().slice(0, 7) ? wpState.anchor.slice(0, 8) + "01" : todayISO();
     if (fromTask) start = fromTask.date && fromTask.date > todayISO() ? fromTask.date : todayISO();
     var copy = item ? JSON.parse(JSON.stringify(item)) :
-      { id: uid(), name: fromTask ? fromTask.text : "", start: start, end: start, by: "",
+      { id: uid(), name: fromTask ? fromTask.text : "", start: start, end: start, by: "", group: wpDefaultGroup(),
         status: fromTask && fromTask.status === 1 ? "prog" : "todo", progress: 0, note: "" };
     wpEditing = { sheetId: sheet ? sheet.id : null, item: copy, isNew: isNew, fromTaskId: fromTask ? fromTask.id : null };
     wpName.value = copy.name;
@@ -15046,6 +15075,7 @@
     wpFillAfterOptions(peopleSheet, copy);
     wpRenderLinksList(peopleSheet, copy);
     wpFillHammocks(peopleSheet, copy.hammock || null);
+    wpFillGroups(peopleSheet, copy.group || null);
     wpDeleteBtn.hidden = isNew;
     document.getElementById("workPlanEditTitle").textContent = tr(isNew ? "workPlanAddTitle" : "workPlanEditTitle");
     wpEditOverlay.hidden = false;
@@ -15122,6 +15152,7 @@
       actualStart: wpActualStart.value || null,
       actualEnd: wpActualEnd.value || null,
       hammock: wpHammockSelect.value && wpHammockSelect.value !== "__new" ? wpHammockSelect.value : null,
+      group: wpEditorGroup(),
       updatedBy: myPhoneNumber || null,
       updatedAt: Date.now()
     });
@@ -15161,6 +15192,7 @@
     wpFillAfterOptions(s, wpEditing.item);
     wpEditing.newHammock = null;
     wpFillHammocks(s, null);
+    wpFillGroups(s, null);
   });
   document.querySelectorAll(".wp-status").forEach(function (b) {
     b.addEventListener("click", function () {
@@ -16336,6 +16368,12 @@
       openWpHammockEdit(sheet, null, function (h) { if (h) choose(h.id, h); });
     });
     list.appendChild(add);
+    // its group (12h-work-plan-groups.js)
+    var toGroup = document.createElement("button");
+    toGroup.type = "button";
+    toGroup.textContent = tr("workPlanGroupMove");
+    toGroup.addEventListener("click", function () { openWpGroupMenu(sheet, item); });
+    list.appendChild(toGroup);
     if (item.hammock) {
       var none = document.createElement("button");
       none.type = "button";
@@ -16540,7 +16578,7 @@
     var groups = wpGroups();
     if (!groups.some(function (g) { return g.items.length; })) { showToast(tr("workPlanEmpty")); return; }
     var office = !wpState.sheetId;
-    var head = [tr("workPlanExcelActivity"), tr("workPlanHammock"), tr("workPlanBy"), tr("workPlanFrom"), tr("workPlanTo"),
+    var head = [tr("workPlanExcelActivity"), tr("workPlanGroup"), tr("workPlanHammock"), tr("workPlanBy"), tr("workPlanFrom"), tr("workPlanTo"),
       tr("workPlanExcelDays"), tr("workPlanStatus"), tr("workPlanExcelDone"), tr("workPlanStatusLate"),
       tr("workPlanExcelBaseStart"), tr("workPlanExcelBaseEnd"), tr("workPlanExcelSlip"),
       tr("workPlanActualStart"), tr("workPlanActualEnd"), tr("workPlanForecast"), tr("workPlanNote")];
@@ -16552,7 +16590,7 @@
       (g.sheet.workHammocks || []).forEach(function (h) { hams[h.id] = h.name; });
       g.items.forEach(function (x) {
         var base = wpBaselineOf(g.sheet, x);
-        var row = [x.name, hams[x.hammock] || "", x.by || "", wpExcelDate(x.start), wpExcelDate(x.end),
+        var row = [x.name, wpGroupName(g.sheet, x.group), hams[x.hammock] || "", x.by || "", wpExcelDate(x.start), wpExcelDate(x.end),
           wpDiff(x.start, x.end) + 1, statusText[x.status] || "", (x.status === "done" ? 100 : x.progress || 0) + "%",
           wpIsLate(x) ? "✓" : "", base ? wpExcelDate(base.start) : "", base ? wpExcelDate(base.end) : "",
           base ? wpDiff(base.end, x.end) : "", wpExcelDate(x.actualStart), wpExcelDate(x.actualEnd), wpExcelDate(wpForecastEnd(x)), x.note || ""];
@@ -16739,7 +16777,8 @@
     wpUndoStack.push({
       sheetId: sheet.id,
       plan: JSON.parse(JSON.stringify(sheet.workPlan || [])),
-      hammocks: JSON.parse(JSON.stringify(sheet.workHammocks || []))
+      hammocks: JSON.parse(JSON.stringify(sheet.workHammocks || [])),
+      groups: JSON.parse(JSON.stringify(sheet.workGroups || []))
     });
     if (wpUndoStack.length > 30) wpUndoStack.shift();
     wpUpdateUndoBtn();
@@ -16777,6 +16816,10 @@
         var now = (sheet.workPlan || []).find(function (y) { return y.id === x.id; });
         if (!now || JSON.stringify(now) !== JSON.stringify(x)) saveWorkPlanItem(sheet, JSON.parse(JSON.stringify(x)), false, hammockOf(x));
       });
+      // the groups (12h) as they were
+      if (snap.groups && JSON.stringify(snap.groups) !== JSON.stringify(sheet.workGroups || [])) {
+        saveWorkGroups(sheet, function () { return JSON.parse(JSON.stringify(snap.groups)); });
+      }
     } finally {
       wpUndoing = false;
     }
@@ -16784,6 +16827,310 @@
     showToast(tr("workPlanUndone"));
   }
   workPlanUndoBtn.addEventListener("click", workPlanUndo);
+  // ---------------------------------------------------------------------
+  // תוכנית עבודה – קבוצות: a project's plan split by section, area or kind
+  // of work ("מקטע א'", "גשרים"...), one level above the hammocks. Kept in
+  // the project's data as workGroups: [{ id, name }] (in their order), each
+  // activity's group in item.group; one with none (or a deleted group's) is
+  // in "כללי". With no groups the plan looks as before. On the chart: a row
+  // per group - its span and % done (weighted by length), tap to fold,
+  // long press to rename / move / delete - and above it a chip per group
+  // to show only that one (a new activity then joins it).
+  // ---------------------------------------------------------------------
+  var WP_GENERAL = "__general";
+  var wpGroupChips = document.getElementById("wpGroupChips");
+  var wpGroupSelect = document.getElementById("wpGroup");
+  var wpGroupEditOverlay = document.getElementById("wpGroupEditOverlay");
+  var wpGroupNameInput = document.getElementById("wpGroupName");
+  var wpGroupEditing = null; // { sheet, group (a copy), isNew, done(group|null) }
+
+  function wpSheetGroups(sheet) { return (sheet && sheet.workGroups) || []; }
+  function wpGroupKey(sheet, item) {
+    return item.group && wpSheetGroups(sheet).some(function (g) { return g.id === item.group; }) ? item.group : WP_GENERAL;
+  }
+  // the group's name for an export ("" while the project has no groups)
+  function wpGroupName(sheet, id) {
+    var groups = wpSheetGroups(sheet);
+    if (!groups.length) return "";
+    var g = groups.find(function (x) { return x.id === id; });
+    return g ? g.name : tr("workPlanGroupGeneral");
+  }
+  // the chosen chip: only that group's activities
+  function wpFilterByGroup(sheet, items) {
+    var f = wpState.groupFilter;
+    if (!f || !wpState.sheetId) return items;
+    return items.filter(function (x) { return wpGroupKey(sheet, x) === f; });
+  }
+  // the chart's sections: each group (in its order, even an empty one), then
+  // "כללי" when anything is in it; null when the project has no groups or
+  // one group is chosen (then no group rows at all)
+  function wpGroupSections(sheet, items) {
+    var groups = wpSheetGroups(sheet);
+    if (!groups.length || wpState.groupFilter || !wpState.sheetId) return null;
+    var out = groups.map(function (g) {
+      return { key: g.id, group: g, items: items.filter(function (x) { return x.group === g.id; }) };
+    });
+    var general = items.filter(function (x) { return wpGroupKey(sheet, x) === WP_GENERAL; });
+    if (general.length) out.push({ key: WP_GENERAL, group: null, items: general });
+    return out;
+  }
+
+  // Changes a project's groups (mutate(groups) -> the new list) - locally and,
+  // for a shared project, on the server's fresh copy. An activity whose group
+  // is gone is in "כללי" again.
+  function saveWorkGroups(sheet, mutate) {
+    sheet = allSheets().find(function (x) { return x.id === sheet.id; }) || sheet;
+    wpRememberForUndo(sheet); // (↶ - 12g-work-plan-undo.js)
+    var clean = function (plan, groups) {
+      return (plan || []).map(function (x) {
+        if (!x.group || groups.some(function (g) { return g.id === x.group; })) return x;
+        return Object.assign({}, x, { group: null });
+      });
+    };
+    sheet.workGroups = mutate(JSON.parse(JSON.stringify(sheet.workGroups || [])));
+    sheet.workPlan = clean(sheet.workPlan, sheet.workGroups);
+    if (!sheet.shared) {
+      saveData();
+      return;
+    }
+    if (!supabaseClient) return;
+    updateSharedSheetDataSafely(sheet.id, function (current) {
+      var groups = mutate(JSON.parse(JSON.stringify(current.workGroups || [])));
+      return Object.assign({}, current, { workGroups: groups, workPlan: clean(current.workPlan, groups) });
+    }).then(function (newData) {
+      var live = sharedSheets.find(function (s) { return s.id === sheet.id; });
+      if (live) {
+        live.workGroups = newData.workGroups || [];
+        live.workPlan = newData.workPlan || [];
+      }
+      refreshWorkPlanIfOpen();
+    }, function () {
+      alert(tr("workPlanSaveError"));
+    });
+  }
+
+  // ---- the chips above the chart ---------------------------------------------------
+  function renderWpGroupChips() {
+    var sheet = wpState.sheetId && allSheets().find(function (s) { return s.id === wpState.sheetId; });
+    wpGroupChips.hidden = !sheet;
+    wpGroupChips.innerHTML = "";
+    if (!sheet) return;
+    var groups = wpSheetGroups(sheet);
+    if (wpState.groupFilter && wpState.groupFilter !== WP_GENERAL && !groups.some(function (g) { return g.id === wpState.groupFilter; })) {
+      wpState.groupFilter = null;
+    }
+    var plan = sheet.workPlan || [];
+    var chip = function (key, text, count, cls) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "wp-group-chip" + (cls ? " " + cls : "") + ((wpState.groupFilter || null) === key ? " on" : "");
+      b.textContent = text;
+      if (count != null) b.appendChild(wpEl("small", "", " (" + count + ")"));
+      wpGroupChips.appendChild(b);
+      return b;
+    };
+    if (groups.length) {
+      chip(null, tr("workPlanAll"), plan.length).addEventListener("click", function () { wpChooseGroup(null); });
+      groups.forEach(function (g) {
+        var b = chip(g.id, g.name, plan.filter(function (x) { return x.group === g.id; }).length);
+        var fired = 0;
+        wpBindLongPress(b, function () { openWpGroupEdit(sheet, g); }, function () { fired = Date.now(); });
+        b.addEventListener("click", function () { if (Date.now() - fired > 800) wpChooseGroup(g.id); });
+      });
+      var general = plan.filter(function (x) { return wpGroupKey(sheet, x) === WP_GENERAL; }).length;
+      if (general) chip(WP_GENERAL, tr("workPlanGroupGeneral"), general).addEventListener("click", function () { wpChooseGroup(WP_GENERAL); });
+    }
+    chip("__add", tr("workPlanGroupAdd"), null, "add").addEventListener("click", function () {
+      openWpGroupEdit(sheet, null, function (g) { if (g) wpChooseGroup(g.id); });
+    });
+  }
+  function wpChooseGroup(key) {
+    wpState.groupFilter = key;
+    renderWorkPlan();
+  }
+
+  // ---- a group's row on the chart ---------------------------------------------------
+  function wpBuildGroupRow(host, sheet, sec, range, dayW, forPdf, track) {
+    var key = "g:" + sec.key, collapsed = !forPdf && wpState.collapsed[key];
+    var row = wpEl("div", "wp-row wp-group-row");
+    row.setAttribute("data-group", sec.key);
+    var name = wpEl("div", "wp-name wp-group-name");
+    name.appendChild(wpEl("span", "wp-name-text", (forPdf ? "" : collapsed ? "◂ " : "▾ ") + (sec.group ? sec.group.name : tr("workPlanGroupGeneral"))));
+    var sum = sec.items.length ? wpHammockSummary(sec.items) : null;
+    name.appendChild(wpEl("small", "", sum
+      ? (sum.allDone ? 100 : sum.progress) + "% · " + tr("workPlanHammockCount").replace("{n}", sec.items.length)
+      : tr("workPlanGroupEmpty")));
+    row.appendChild(name);
+    var t = track();
+    if (sum) {
+      var from = Math.max(0, wpDiff(range.start, sum.start));
+      var to = Math.min(range.days - 1, wpDiff(range.start, sum.end));
+      if (to >= 0 && from <= range.days - 1) {
+        var bar = wpEl("div", "wp-gbar" + (sum.late ? " wp-gbar-late" : ""));
+        var w = Math.max(6, (to - from + 1) * dayW - 2);
+        bar.style.right = (from * dayW + 1) + "px";
+        bar.style.width = w + "px";
+        var fill = wpEl("span", "wp-gbar-fill");
+        fill.style.width = (sum.allDone ? 100 : sum.progress) + "%";
+        bar.appendChild(fill);
+        if (w >= 30) bar.appendChild(wpEl("span", "wp-gbar-text", (sum.allDone ? 100 : sum.progress) + "%"));
+        t.appendChild(bar);
+      }
+    }
+    row.appendChild(t);
+    if (!forPdf) {
+      var fired = 0;
+      if (sec.group) wpBindLongPress(row, function () { openWpGroupEdit(sheet, sec.group); }, function () { fired = Date.now(); });
+      row.addEventListener("click", function () {
+        if (Date.now() - fired < 800) return;
+        wpState.collapsed[key] = !wpState.collapsed[key];
+        renderWorkPlan();
+      });
+    }
+    host.appendChild(row);
+    return collapsed;
+  }
+
+  // ---- naming / moving / deleting a group ---------------------------------------------
+  // group null = a new one (saved here, so it shows even before it has
+  // activities); done(g) gets the saved group (or null)
+  function openWpGroupEdit(sheet, group, done) {
+    // the project as it is now (a shared one may have been reloaded since the chart was drawn)
+    sheet = allSheets().find(function (x) { return x.id === sheet.id; }) || sheet;
+    var copy = group ? Object.assign({}, group) : { id: uid(), name: "" };
+    wpGroupEditing = { sheet: sheet, group: copy, isNew: !group, done: done || null };
+    document.getElementById("wpGroupEditTitle").textContent = tr(group ? "workPlanGroupEditTitle" : "workPlanGroupNewTitle");
+    wpGroupNameInput.value = copy.name;
+    wpGroupNameInput.placeholder = tr("workPlanGroupPlaceholder");
+    document.getElementById("wpGroupEditTools").hidden = !group;
+    if (group) {
+      var list = wpSheetGroups(sheet), i = list.findIndex(function (g) { return g.id === group.id; });
+      document.getElementById("wpGroupUpBtn").disabled = i <= 0;
+      document.getElementById("wpGroupDownBtn").disabled = i < 0 || i >= list.length - 1;
+    }
+    wpGroupEditOverlay.hidden = false;
+    wpGroupNameInput.focus();
+  }
+  function closeWpGroupEdit(saved) {
+    var ed = wpGroupEditing;
+    wpGroupEditing = null;
+    wpGroupEditOverlay.hidden = true;
+    if (ed && ed.done) ed.done(saved || null);
+  }
+  function wpSaveGroupEdit() {
+    var ed = wpGroupEditing;
+    if (!ed) return;
+    var name = wpGroupNameInput.value.replace(/\s+/g, " ").trim();
+    if (!name) { wpGroupNameInput.focus(); return; }
+    var g = Object.assign({}, ed.group, { name: name });
+    saveWorkGroups(ed.sheet, function (list) {
+      var i = list.findIndex(function (x) { return x.id === g.id; });
+      if (i >= 0) list[i] = g; else list.push(g);
+      return list;
+    });
+    closeWpGroupEdit(g);
+    renderWorkPlan();
+  }
+  function wpMoveGroup(delta) {
+    var ed = wpGroupEditing;
+    if (!ed) return;
+    saveWorkGroups(ed.sheet, function (list) {
+      var i = list.findIndex(function (x) { return x.id === ed.group.id; }), j = i + delta;
+      if (i < 0 || j < 0 || j >= list.length) return list;
+      var moved = list.splice(i, 1)[0];
+      list.splice(j, 0, moved);
+      return list;
+    });
+    closeWpGroupEdit(null);
+    renderWorkPlan();
+  }
+  document.getElementById("wpGroupEditOkBtn").addEventListener("click", wpSaveGroupEdit);
+  document.getElementById("wpGroupEditCancelBtn").addEventListener("click", function () { closeWpGroupEdit(null); });
+  document.getElementById("wpGroupUpBtn").addEventListener("click", function () { wpMoveGroup(-1); });
+  document.getElementById("wpGroupDownBtn").addEventListener("click", function () { wpMoveGroup(1); });
+  document.getElementById("wpGroupDeleteBtn").addEventListener("click", function () {
+    var ed = wpGroupEditing;
+    if (!ed) return;
+    wpGroupEditOverlay.hidden = true;
+    wpGroupEditing = null;
+    // its activities stay - in "כללי"
+    askConfirm(tr("workPlanGroupDeleteConfirm").replace("{name}", ed.group.name), function () {
+      saveWorkGroups(ed.sheet, function (list) { return list.filter(function (x) { return x.id !== ed.group.id; }); });
+      if (wpState.groupFilter === ed.group.id) wpState.groupFilter = null;
+      renderWorkPlan();
+    });
+  });
+  wpGroupNameInput.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); wpSaveGroupEdit(); }
+  });
+
+  // ---- an activity's group: in its editor, and from its long press ------------------------
+  function wpFillGroups(sheet, selected) {
+    wpGroupSelect.innerHTML = "";
+    var opt = function (value, text) {
+      var o = document.createElement("option");
+      o.value = value;
+      o.textContent = text;
+      wpGroupSelect.appendChild(o);
+    };
+    opt("", tr("workPlanGroupGeneral"));
+    wpSheetGroups(sheet).forEach(function (g) { opt(g.id, g.name); });
+    opt("__new", tr("workPlanGroupNewOption"));
+    wpGroupSelect.value = selected && wpSheetGroups(sheet).some(function (g) { return g.id === selected; }) ? selected : "";
+    wpGroupSelect.setAttribute("data-was", wpGroupSelect.value);
+  }
+  wpGroupSelect.addEventListener("change", function () {
+    if (wpGroupSelect.value !== "__new") { wpGroupSelect.setAttribute("data-was", wpGroupSelect.value); return; }
+    var was = wpGroupSelect.getAttribute("data-was") || "";
+    var sheet = wpEditing && allSheets().find(function (s) { return s.id === wpEditing.sheetId; });
+    if (!sheet) { wpGroupSelect.value = was; return; }
+    openWpGroupEdit(sheet, null, function (g) {
+      if (!wpEditing) return;
+      wpFillGroups(sheet, g ? g.id : was);
+    });
+  });
+  // the group an activity being edited ends up in
+  function wpEditorGroup() {
+    var v = wpGroupSelect.value;
+    return v && v !== "__new" ? v : null;
+  }
+  // a new activity joins the group whose chip is chosen
+  function wpDefaultGroup() {
+    return wpState.groupFilter && wpState.groupFilter !== WP_GENERAL ? wpState.groupFilter : null;
+  }
+
+  function openWpGroupMenu(sheet, item) {
+    document.getElementById("wpHammockMenuTitle").textContent = tr("workPlanGroupMenuTitle").replace("{name}", item.name);
+    var list = document.getElementById("wpHammockMenuList");
+    list.innerHTML = "";
+    var choose = function (groupId) {
+      wpHammockMenuOverlay.hidden = true;
+      if ((item.group || null) === (groupId || null)) return;
+      saveWorkPlanItem(sheet, Object.assign({}, item, { group: groupId || null, updatedBy: myPhoneNumber || null, updatedAt: Date.now() }), false);
+      renderWorkPlan();
+    };
+    var key = wpGroupKey(sheet, item);
+    var pick = function (id, text) {
+      var b = document.createElement("button");
+      b.type = "button";
+      var on = (id || WP_GENERAL) === key;
+      b.className = "wp-hammock-pick" + (on ? " on" : "");
+      b.textContent = (on ? "✓ " : "") + text;
+      b.addEventListener("click", function () { choose(id); });
+      list.appendChild(b);
+    };
+    wpSheetGroups(sheet).forEach(function (g) { pick(g.id, g.name); });
+    pick(null, tr("workPlanGroupGeneral"));
+    var add = document.createElement("button");
+    add.type = "button";
+    add.textContent = tr("workPlanGroupNewOption");
+    add.addEventListener("click", function () {
+      wpHammockMenuOverlay.hidden = true;
+      openWpGroupEdit(sheet, null, function (g) { if (g) choose(g.id); });
+    });
+    list.appendChild(add);
+    wpHammockMenuOverlay.hidden = false;
+  }
   function closeReportTypeModal() {
     reportTypeOverlay.hidden = true;
     pendingReportDraft = null;
@@ -23619,6 +23966,7 @@
       officeDirectory: d.officeDirectory || null,
       workPlan: d.workPlan || [],
       workHammocks: d.workHammocks || [],
+      workGroups: d.workGroups || [],
       workBaseline: d.workBaseline || null,
       sketches: d.sketches || [],
       ended: ended,

@@ -752,6 +752,7 @@
           siteLogs: privateSheet.siteLogs || [],
           workPlan: privateSheet.workPlan || [],
           workHammocks: privateSheet.workHammocks || [],
+          workGroups: privateSheet.workGroups || [],
           workBaseline: privateSheet.workBaseline || null,
           sketches: privateSheet.sketches || [],
           ended: privateSheet.ended || false,

@@ -21,7 +21,8 @@
     wpUndoStack.push({
       sheetId: sheet.id,
       plan: JSON.parse(JSON.stringify(sheet.workPlan || [])),
-      hammocks: JSON.parse(JSON.stringify(sheet.workHammocks || []))
+      hammocks: JSON.parse(JSON.stringify(sheet.workHammocks || [])),
+      groups: JSON.parse(JSON.stringify(sheet.workGroups || []))
     });
     if (wpUndoStack.length > 30) wpUndoStack.shift();
     wpUpdateUndoBtn();
@@ -59,6 +60,10 @@
         var now = (sheet.workPlan || []).find(function (y) { return y.id === x.id; });
         if (!now || JSON.stringify(now) !== JSON.stringify(x)) saveWorkPlanItem(sheet, JSON.parse(JSON.stringify(x)), false, hammockOf(x));
       });
+      // the groups (12h) as they were
+      if (snap.groups && JSON.stringify(snap.groups) !== JSON.stringify(sheet.workGroups || [])) {
+        saveWorkGroups(sheet, function () { return JSON.parse(JSON.stringify(snap.groups)); });
+      }
     } finally {
       wpUndoing = false;
     }

@@ -436,7 +436,7 @@
           data: {
             tasks: sheet.tasks || [], reports: sheet.reports || [], files: [], folders: sheet.folders || null,
             siteLogs: sheet.siteLogs || [], ended: sheet.ended || false, endedDate: sheet.endedDate || null, logoId: sheet.logoId || null,
-            workPlan: sheet.workPlan || [], workHammocks: sheet.workHammocks || [], workBaseline: sheet.workBaseline || null, sketches: sheet.sketches || []
+            workPlan: sheet.workPlan || [], workHammocks: sheet.workHammocks || [], workGroups: sheet.workGroups || [], workBaseline: sheet.workBaseline || null, sketches: sheet.sketches || []
           },
           data_version: 1,
           members: sheet.members || [],

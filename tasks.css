@@ -3840,3 +3840,25 @@
    line never ends up through a task's text; the new-task row draws its own */
 ol.task-list { background-color: var(--paper); background-image: repeating-linear-gradient(var(--paper) 0, var(--paper) 35px, var(--rule) 35px, var(--rule) 36px); background-attachment: local; }
 .add-row { background: linear-gradient(var(--paper) 0, var(--paper) 35px, var(--rule) 35px, var(--rule) 36px); }
+/* ---- the work plan's groups (src/app/12h-work-plan-groups.js) ---- */
+.wp-group-chips { display: flex; gap: 6px; padding: 2px 12px 8px; overflow-x: auto; scrollbar-width: none; }
+.wp-group-chips[hidden] { display: none; }
+.wp-group-chips::-webkit-scrollbar { display: none; }
+.wp-group-chip { flex-shrink: 0; border: 1.5px solid var(--rule); border-radius: 99px; padding: 5px 12px; background: #fff; color: var(--ink); font: inherit; font-size: 0.82rem; font-weight: 700; white-space: nowrap; cursor: pointer; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.wp-group-chip small { font-weight: 400; opacity: 0.7; }
+.wp-group-chip.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+.wp-group-chip.add { color: #35618f; border-style: dashed; }
+.wp-group-row, .wp-group-row .wp-name { background: #eef3ea; }
+.wp-group-row { cursor: pointer; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.wp-group-name .wp-name-text { font-weight: 800; }
+.wp-group-name small { color: #3d5a3e; font-weight: 700; }
+.wp-gbar { position: absolute; top: 14px; height: 14px; border-radius: 2px; background: #2f3a2c; z-index: 1; display: flex; align-items: center; overflow: visible; }
+.wp-gbar::before, .wp-gbar::after { content: ""; position: absolute; bottom: -7px; border: 5px solid transparent; border-top: 6px solid #2f3a2c; }
+.wp-gbar::before { right: -5px; }
+.wp-gbar::after { left: -5px; }
+.wp-gbar-fill { position: absolute; right: 0; top: 0; bottom: 0; background: #4f7a51; border-radius: 2px; }
+.wp-gbar-text { position: relative; margin: 0 auto; font-size: 0.62rem; font-weight: 800; color: #fff; line-height: 1; }
+.wp-gbar-late { box-shadow: 0 0 0 2px #e07b00; }
+.wp-group-edit-tools { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.wp-group-edit-tools[hidden] { display: none; }
+.wp-group-edit-tools .wp-group-delete { color: #b5452a; }

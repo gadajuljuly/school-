@@ -109,7 +109,7 @@
     var groups = wpGroups();
     if (!groups.some(function (g) { return g.items.length; })) { showToast(tr("workPlanEmpty")); return; }
     var office = !wpState.sheetId;
-    var head = [tr("workPlanExcelActivity"), tr("workPlanHammock"), tr("workPlanBy"), tr("workPlanFrom"), tr("workPlanTo"),
+    var head = [tr("workPlanExcelActivity"), tr("workPlanGroup"), tr("workPlanHammock"), tr("workPlanBy"), tr("workPlanFrom"), tr("workPlanTo"),
       tr("workPlanExcelDays"), tr("workPlanStatus"), tr("workPlanExcelDone"), tr("workPlanStatusLate"),
       tr("workPlanExcelBaseStart"), tr("workPlanExcelBaseEnd"), tr("workPlanExcelSlip"),
       tr("workPlanActualStart"), tr("workPlanActualEnd"), tr("workPlanForecast"), tr("workPlanNote")];
@@ -121,7 +121,7 @@
       (g.sheet.workHammocks || []).forEach(function (h) { hams[h.id] = h.name; });
       g.items.forEach(function (x) {
         var base = wpBaselineOf(g.sheet, x);
-        var row = [x.name, hams[x.hammock] || "", x.by || "", wpExcelDate(x.start), wpExcelDate(x.end),
+        var row = [x.name, wpGroupName(g.sheet, x.group), hams[x.hammock] || "", x.by || "", wpExcelDate(x.start), wpExcelDate(x.end),
           wpDiff(x.start, x.end) + 1, statusText[x.status] || "", (x.status === "done" ? 100 : x.progress || 0) + "%",
           wpIsLate(x) ? "✓" : "", base ? wpExcelDate(base.start) : "", base ? wpExcelDate(base.end) : "",
           base ? wpDiff(base.end, x.end) : "", wpExcelDate(x.actualStart), wpExcelDate(x.actualEnd), wpExcelDate(wpForecastEnd(x)), x.note || ""];

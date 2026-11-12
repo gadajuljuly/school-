@@ -161,6 +161,12 @@
       openWpHammockEdit(sheet, null, function (h) { if (h) choose(h.id, h); });
     });
     list.appendChild(add);
+    // its group (12h-work-plan-groups.js)
+    var toGroup = document.createElement("button");
+    toGroup.type = "button";
+    toGroup.textContent = tr("workPlanGroupMove");
+    toGroup.addEventListener("click", function () { openWpGroupMenu(sheet, item); });
+    list.appendChild(toGroup);
     if (item.hammock) {
       var none = document.createElement("button");
       none.type = "button";

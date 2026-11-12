@@ -48,7 +48,8 @@
   function wpGroups() {
     if (wpState.sheetId) {
       var sheet = allSheets().find(function (s) { return s.id === wpState.sheetId; });
-      return sheet ? [{ sheet: sheet, items: wpSorted(sheet.workPlan) }] : [];
+      // (a group's chip chosen: only its activities - 12h-work-plan-groups.js)
+      return sheet ? [{ sheet: sheet, items: wpFilterByGroup(sheet, wpSorted(sheet.workPlan)) }] : [];
     }
     return officeReportSheets().slice().sort(compareSheetNames).map(function (s) {
       return { sheet: s, items: wpSorted(s.workPlan) };
@@ -163,7 +164,18 @@
         host.appendChild(gh);
         if (collapsed) return;
       }
-      wpBuildHammockRows(host, g, range, dayW, forPdf, track, function (item, hammock) {
+      // a project split into groups: each group's row, then its hammocks and
+      // activities under it (12h-work-plan-groups.js)
+      var sections = wpGroupSections(g.sheet, g.items);
+      if (sections) {
+        sections.forEach(function (sec) {
+          if (wpBuildGroupRow(host, g.sheet, sec, range, dayW, forPdf, track)) return;
+          wpBuildHammockRows(host, { sheet: g.sheet, items: sec.items }, range, dayW, forPdf, track, drawItem);
+        });
+        return;
+      }
+      wpBuildHammockRows(host, g, range, dayW, forPdf, track, drawItem);
+      function drawItem(item, hammock) {
         var row = wpEl("div", "wp-row" + (hammock ? " wp-in-hammock" : ""));
         var name = wpEl("div", "wp-name");
         if (hammock) name.style.borderRightColor = hammock.color;
@@ -221,13 +233,14 @@
           row.addEventListener("click", function () { wpRowTapped(g.sheet, item); });
         }
         host.appendChild(row);
-      });
+      }
     });
   }
 
   function renderWorkPlan() {
     if (workPlanView.hidden) return;
     wpUpdateUndoBtn();
+    renderWpGroupChips();
     var groups = wpGroups();
     var range = wpRange(groups);
     workPlanRangeLabel.textContent = wpRangeLabel(range);
@@ -261,6 +274,7 @@
     wpState.sheetId = sheet.id === HEAD_OFFICE_SHEET_ID ? null : sheet.id;
     wpState.anchor = todayISO();
     wpState.zoom = "all"; // opens on the whole plan
+    wpState.groupFilter = null; // every group
     workPlanTitle.textContent = wpState.sheetId ? tr("workPlanTitle") + " – " + sheet.name : tr("workPlanOfficeTitle");
     workPlanView.hidden = false;
     wpFitAboveFooter();
@@ -324,7 +338,7 @@
     var start = wpState.zoom === "month" && wpState.anchor.slice(0, 7) !== todayISO().slice(0, 7) ? wpState.anchor.slice(0, 8) + "01" : todayISO();
     if (fromTask) start = fromTask.date && fromTask.date > todayISO() ? fromTask.date : todayISO();
     var copy = item ? JSON.parse(JSON.stringify(item)) :
-      { id: uid(), name: fromTask ? fromTask.text : "", start: start, end: start, by: "",
+      { id: uid(), name: fromTask ? fromTask.text : "", start: start, end: start, by: "", group: wpDefaultGroup(),
         status: fromTask && fromTask.status === 1 ? "prog" : "todo", progress: 0, note: "" };
     wpEditing = { sheetId: sheet ? sheet.id : null, item: copy, isNew: isNew, fromTaskId: fromTask ? fromTask.id : null };
     wpName.value = copy.name;
@@ -355,6 +369,7 @@
     wpFillAfterOptions(peopleSheet, copy);
     wpRenderLinksList(peopleSheet, copy);
     wpFillHammocks(peopleSheet, copy.hammock || null);
+    wpFillGroups(peopleSheet, copy.group || null);
     wpDeleteBtn.hidden = isNew;
     document.getElementById("workPlanEditTitle").textContent = tr(isNew ? "workPlanAddTitle" : "workPlanEditTitle");
     wpEditOverlay.hidden = false;
@@ -431,6 +446,7 @@
       actualStart: wpActualStart.value || null,
       actualEnd: wpActualEnd.value || null,
       hammock: wpHammockSelect.value && wpHammockSelect.value !== "__new" ? wpHammockSelect.value : null,
+      group: wpEditorGroup(),
       updatedBy: myPhoneNumber || null,
       updatedAt: Date.now()
     });
@@ -470,6 +486,7 @@
     wpFillAfterOptions(s, wpEditing.item);
     wpEditing.newHammock = null;
     wpFillHammocks(s, null);
+    wpFillGroups(s, null);
   });
   document.querySelectorAll(".wp-status").forEach(function (b) {
     b.addEventListener("click", function () {

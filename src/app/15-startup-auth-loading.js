@@ -232,6 +232,7 @@
       officeDirectory: d.officeDirectory || null,
       workPlan: d.workPlan || [],
       workHammocks: d.workHammocks || [],
+      workGroups: d.workGroups || [],
       workBaseline: d.workBaseline || null,
       sketches: d.sketches || [],
       ended: ended,

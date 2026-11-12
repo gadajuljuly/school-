@@ -38,7 +38,7 @@
 <script src="vendor/supabase-js-2.118.0.js"></script>
 <script src="vendor/firebase-app-compat-10.7.1.js"></script>
 <script src="vendor/firebase-auth-compat-10.7.1.js"></script>
-<link rel="stylesheet" href="tasks.css?v=a556d21f58">
+<link rel="stylesheet" href="tasks.css?v=09e1b51551">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -135,6 +135,8 @@
       </div>
       <label data-i18n="workPlanName">שם הפעילות</label>
       <input type="text" id="wpName" maxlength="120" required>
+      <label data-i18n="workPlanGroup">קבוצה</label>
+      <select id="wpGroup"></select>
       <label data-i18n="workPlanHammock">ערסל</label>
       <select id="wpHammock"></select>
       <div class="cal-form-row">
@@ -197,6 +199,21 @@
     <div class="move-task-projects" id="wpHammockMenuList"></div>
     <div class="modal-actions">
       <button type="button" class="modal-btn modal-btn-no" id="wpHammockMenuCancelBtn" data-i18n="cancelBtn">ביטול</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="wpGroupEditOverlay" hidden style="z-index:42">
+  <div class="modal-box" role="alertdialog" aria-modal="true">
+    <p class="modal-message" id="wpGroupEditTitle"></p>
+    <input type="text" id="wpGroupName" maxlength="60" autocomplete="off" class="wp-hammock-name-input">
+    <div class="wp-group-edit-tools" id="wpGroupEditTools">
+      <button type="button" class="wp-small-btn" id="wpGroupUpBtn" data-i18n="workPlanGroupUp">⬆ למעלה</button>
+      <button type="button" class="wp-small-btn" id="wpGroupDownBtn" data-i18n="workPlanGroupDown">⬇ למטה</button>
+      <button type="button" class="wp-small-btn wp-group-delete" id="wpGroupDeleteBtn" data-i18n="workPlanGroupDelete">🗑 מחיקת הקבוצה</button>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="modal-btn modal-btn-no" id="wpGroupEditCancelBtn" data-i18n="cancelBtn">ביטול</button>
+      <button type="button" class="modal-btn modal-btn-primary" id="wpGroupEditOkBtn" data-i18n="workPlanSave">שמירה</button>
     </div>
   </div>
 </div>
@@ -1363,6 +1380,7 @@
       <button type="button" class="wp-small-btn" id="workPlanBaselineBtn" data-i18n="workPlanBaseline">📌 קו בסיס</button>
       <button type="button" class="wp-small-btn" id="workPlanCopyWeekBtn" data-i18n="workPlanCopyWeek" hidden>העתק לשבוע הבא</button>
     </div>
+    <div class="wp-group-chips" id="wpGroupChips" hidden></div>
     <div class="wp-nav" id="workPlanNav">
       <button type="button" class="wp-arrow" id="workPlanPrevBtn" aria-label="prev">&#8250;</button>
       <span id="workPlanRangeLabel"></span>
@@ -1690,6 +1708,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=9acd876b55"></script>
+<script src="tasks-app.js?v=29cf70265a"></script>
 </body>
 </html>

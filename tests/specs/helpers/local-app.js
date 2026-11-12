@@ -249,7 +249,7 @@ async function openWithSharedProject(page, { phone = "+972500000001", sheet, she
     const copy = (o) => JSON.parse(JSON.stringify(o));
     window.__backend.tables.shared_projects = sheets.map((sheet) => ({
       id: sheet.id, name: sheet.name, members: sheet.members, created_by: sheet.createdBy || phone,
-      data: { tasks: copy(sheet.tasks || []), reports: [], siteLogs: copy(sheet.siteLogs || []), files: [], folders: null, ended: false, workPlan: copy(sheet.workPlan || []), workHammocks: copy(sheet.workHammocks || []), workBaseline: copy(sheet.workBaseline || null), sketches: copy(sheet.sketches || []) },
+      data: { tasks: copy(sheet.tasks || []), reports: [], siteLogs: copy(sheet.siteLogs || []), files: [], folders: null, ended: false, workPlan: copy(sheet.workPlan || []), workHammocks: copy(sheet.workHammocks || []), workGroups: copy(sheet.workGroups || []), workBaseline: copy(sheet.workBaseline || null), sketches: copy(sheet.sketches || []) },
       data_version: 1, messages: [], messages_version: 1,
     }));
     window.__hooks.setBackendForTest(window.__backend.client, phone);
