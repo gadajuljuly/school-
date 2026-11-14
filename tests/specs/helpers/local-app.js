@@ -33,7 +33,9 @@ const NATIVE_FAKE = () => {
         openExactAlarmSettings: () => ok(),
         openFile: (o) => { (native.opened = native.opened || []).push(o); return ok(); },
         // the assistant bubble (version 29) only when a test sets window.__bubble
-        features: () => ok(Object.assign({ quietAlarms: true, floatingTask: true }, window.__bubble ? { assistantBubble: true } : {})),
+        features: () => ok(Object.assign({ quietAlarms: true, floatingTask: true }, window.__bubble ? { assistantBubble: true } : {}, window.__printPdf ? { printPdf: true } : {})),
+        // Android's print screen (app version 32+, when window.__printPdf)
+        printPdf: (o) => { (native.printed = native.printed || []).push(o); return ok(); },
         bubbleStatus: () => ok({ on: !!native.bubbleOn, canDraw: !window.__floatNoPermission }),
         setBubbleOn: ({ on }) => { native.bubbleOn = on; return ok(); },
         // the floating task: on, and allowed over other apps unless a test says otherwise

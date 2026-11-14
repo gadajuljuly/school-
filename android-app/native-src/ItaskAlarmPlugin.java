@@ -7,6 +7,14 @@ import android.net.Uri;
 import android.provider.OpenableColumns;
 import android.util.Base64;
 import android.os.Build;
+import android.os.Bundle;
+import android.os.CancellationSignal;
+import android.os.ParcelFileDescriptor;
+import android.print.PageRange;
+import android.print.PrintAttributes;
+import android.print.PrintDocumentAdapter;
+import android.print.PrintDocumentInfo;
+import android.print.PrintManager;
 import android.provider.Settings;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
@@ -194,6 +202,65 @@ public class ItaskAlarmPlugin extends Plugin {
         return out;
     }
 
+    // Android's own print screen (printer, paper size, copies...) for a PDF the
+    // page made (13-meeting-reports-pdf.js / 14l-print-tasks.js) and wrote into
+    // the app's cache. Version 32+ (features.printPdf).
+    @PluginMethod
+    public void printPdf(PluginCall call) {
+        String path = call.getString("path", "");
+        final String name = call.getString("name", "ITASK");
+        final File file;
+        try {
+            String p = path.startsWith("file:") ? Uri.parse(path).getPath() : path;
+            file = new File(p == null ? "" : p).getCanonicalFile();
+            if (!file.getPath().startsWith(getContext().getCacheDir().getCanonicalPath() + File.separator) || !file.isFile()) {
+                call.reject("not a file of the app");
+                return;
+            }
+        } catch (Exception e) {
+            call.reject("bad path");
+            return;
+        }
+        if (getActivity() == null) { call.reject("no activity"); return; }
+        getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    PrintManager pm = (PrintManager) getActivity().getSystemService(android.content.Context.PRINT_SERVICE);
+                    pm.print(name, new PrintDocumentAdapter() {
+                        @Override
+                        public void onLayout(PrintAttributes oldAttributes, PrintAttributes newAttributes, CancellationSignal cancellationSignal,
+                                             LayoutResultCallback callback, Bundle extras) {
+                            if (cancellationSignal.isCanceled()) { callback.onLayoutCancelled(); return; }
+                            PrintDocumentInfo info = new PrintDocumentInfo.Builder(name)
+                                    .setContentType(PrintDocumentInfo.CONTENT_TYPE_DOCUMENT).build();
+                            callback.onLayoutFinished(info, true);
+                        }
+                        @Override
+                        public void onWrite(PageRange[] pages, ParcelFileDescriptor destination, CancellationSignal cancellationSignal,
+                                            WriteResultCallback callback) {
+                            try (InputStream in = new FileInputStream(file);
+                                 OutputStream out = new FileOutputStream(destination.getFileDescriptor())) {
+                                byte[] buf = new byte[65536];
+                                int r;
+                                while ((r = in.read(buf)) > 0) {
+                                    if (cancellationSignal.isCanceled()) { callback.onWriteCancelled(); return; }
+                                    out.write(buf, 0, r);
+                                }
+                                callback.onWriteFinished(new PageRange[]{PageRange.ALL_PAGES});
+                            } catch (Exception e) {
+                                callback.onWriteFailed(e.toString());
+                            }
+                        }
+                    }, null);
+                    call.resolve();
+                } catch (Exception e) {
+                    call.reject("print failed");
+                }
+            }
+        });
+    }
+
     // a shared file's bytes, for the page (base64) - only the copies above
     @PluginMethod
     public void readSharedFile(PluginCall call) {
@@ -229,6 +296,7 @@ public class ItaskAlarmPlugin extends Plugin {
         result.put("floatingTask", true);
         result.put("assistantBubble", true);
         result.put("shareFiles", true);
+        result.put("printPdf", true);
         call.resolve(result);
     }
 

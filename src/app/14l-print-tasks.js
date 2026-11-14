@@ -189,15 +189,25 @@
   document.getElementById("printTasksCancelBtn").addEventListener("click", function () { printTasksOverlay.hidden = true; });
   printTasksBtn.addEventListener("click", openPrintTasks);
 
+  // The phone: Android's own print screen (printer, paper, copies...) - app
+  // version 32+ (features.printPdf); before that, the PDF opened in the
+  // phone's PDF app, which prints (⋮ > Print).
   function openPrintPdfOnPhone(blob, fileName) {
     var name = sanitizeFileName(fileName);
-    var canOpen = nativeTaskAlarmPlugin && typeof nativeTaskAlarmPlugin.openFile === "function";
-    if (!canOpen) { attemptShare(blob, name, "application/pdf"); return; }
-    blobToBase64(blob).then(function (base64) {
+    var plugin = nativeTaskAlarmPlugin;
+    if (!plugin) { attemptShare(blob, name, "application/pdf"); return; }
+    var features = typeof plugin.features === "function" ? plugin.features().catch(function () { return {}; }) : Promise.resolve({});
+    var written = blobToBase64(blob).then(function (base64) {
       return window.Capacitor.Plugins.Filesystem.writeFile({ path: name, data: base64, directory: "CACHE" });
-    }).then(function (written) {
+    });
+    Promise.all([features, written]).then(function (r) {
+      var f = r[0] || {}, file = r[1];
+      if (f.printPdf && typeof plugin.printPdf === "function") {
+        return plugin.printPdf({ path: file.uri, name: name.replace(/\.pdf$/i, "") });
+      }
+      if (typeof plugin.openFile !== "function") throw new Error("no viewer");
       showToast(tr("printTasksOpenPdf"), 4000);
-      return nativeTaskAlarmPlugin.openFile({ path: written.uri, mimeType: "application/pdf" });
+      return plugin.openFile({ path: file.uri, mimeType: "application/pdf" });
     }).catch(function () {
       attemptShare(blob, name, "application/pdf");
     });

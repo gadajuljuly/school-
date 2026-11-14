@@ -67,3 +67,23 @@ test("the toolbox's scanner: into this project's library", async ({ page }) => {
   await page.locator("#toolboxScan").click();
   await expect(page.locator("#scanOverlay")).toBeVisible();
 });
+
+test("the phone app: the printer - Android's print screen (version 32+), or the PDF in the phone's PDF app before", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, native: true, sheet: { id: "p1", name: "רכבת נתניה", members: [ME], tasks: [T("t1", "סגירת ביוב", 0)] } });
+  const print = async () => {
+    await page.locator("#toolboxBtn").click();
+    await page.locator("#toolboxPrint").click();
+    await page.locator("#printTasksPrinterBtn").click();
+  };
+  // an older app: the PDF opened
+  await print();
+  await expect.poll(() => page.evaluate(() => (window.__native.opened || []).map((o) => o.mimeType))).toEqual(["application/pdf"]);
+  // version 32+: straight to the print screen
+  await page.evaluate(() => { window.__printPdf = true; });
+  await print();
+  await expect.poll(() => page.evaluate(() => (window.__native.printed || []).length)).toBe(1);
+  const printed = await page.evaluate(() => window.__native.printed[0]);
+  expect(printed.path).toMatch(/\.pdf$/);
+  expect(printed.name).toContain("רכבת נתניה");
+  expect(await page.evaluate(() => window.__native.opened.length)).toBe(1); // not opened again
+});
