@@ -470,6 +470,7 @@
     document.getElementById("sketchBtn").hidden = libraryMode; // no sketch icon in the library
     ruledBodyEl.classList.toggle("chat-mode", chatMode);
     ruledBodyEl.classList.toggle("diary-mode", diaryMode); // its title is in the diary's own top row
+    ruledBodyEl.classList.toggle("tasks-mode", !(reportsMode || diaryMode || libraryMode || chatMode)); // 🖨 only on the tasks page
     if (reportsMode) {
       addForm.hidden = true;
       showCompletedTasksBtn.hidden = true;

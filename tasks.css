@@ -3866,3 +3866,17 @@ ol.task-list { background-color: var(--paper); background-image: repeating-linea
 .wp-group-edit-tools { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .wp-group-edit-tools[hidden] { display: none; }
 .wp-group-edit-tools .wp-group-delete { color: #b5452a; }
+/* 🖨 printing the tasks (src/app/14l-print-tasks.js): its button by the sketch, its picker */
+.ruled-body .sheet-title-wrap { padding: 0 104px; }
+.print-tasks-btn { position: absolute; left: 58px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; padding: 0; border: none; background: transparent; cursor: pointer; filter: drop-shadow(0 2px 3px rgba(44, 42, 36, 0.3)); }
+.print-tasks-btn img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.ruled-body:not(.tasks-mode) .print-tasks-btn { display: none; }
+.print-tasks-list { max-height: 46vh; overflow-y: auto; margin: 4px 0 10px; border: 1px solid var(--rule); border-radius: 10px; background: #fff; }
+.print-task-pick { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-top: 1px solid #f0e9da; font-size: 0.9rem; cursor: pointer; text-align: right; }
+.print-tasks-list .print-task-pick:first-child { border-top: none; }
+.print-task-pick input { width: 18px; height: 18px; margin: 0; flex-shrink: 0; accent-color: var(--accent); }
+.print-task-pick span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.print-task-pick span.done { color: var(--ink-muted); }
+.print-task-all { font-weight: 700; border-top: none; padding: 4px 10px 6px; }
+.print-task-all small { color: var(--ink-muted); font-weight: 400; }
+.print-tasks-actions { flex-wrap: wrap; }

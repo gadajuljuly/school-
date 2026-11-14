@@ -38,7 +38,7 @@
 <script src="vendor/supabase-js-2.118.0.js"></script>
 <script src="vendor/firebase-app-compat-10.7.1.js"></script>
 <script src="vendor/firebase-auth-compat-10.7.1.js"></script>
-<link rel="stylesheet" href="tasks.css?v=ad5d98c32b">
+<link rel="stylesheet" href="tasks.css?v=3c6cc98c29">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -199,6 +199,18 @@
     <div class="move-task-projects" id="wpHammockMenuList"></div>
     <div class="modal-actions">
       <button type="button" class="modal-btn modal-btn-no" id="wpHammockMenuCancelBtn" data-i18n="cancelBtn">ביטול</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="printTasksOverlay" hidden style="z-index:41">
+  <div class="modal-box">
+    <p class="modal-message" data-i18n="printTasksTitle">הדפסת משימות</p>
+    <label class="print-task-pick print-task-all"><input type="checkbox" id="printTasksAll"><span data-i18n="printTasksAllLabel">כל המשימות</span><small id="printTasksCount"></small></label>
+    <div class="print-tasks-list" id="printTasksList"></div>
+    <div class="modal-actions print-tasks-actions">
+      <button type="button" class="modal-btn modal-btn-primary" id="printTasksPdfBtn" data-i18n="printTasksPdf">📄 PDF</button>
+      <button type="button" class="modal-btn modal-btn-primary" id="printTasksPrinterBtn" data-i18n="printTasksPrinter">🖨 מדפסת</button>
+      <button type="button" class="modal-btn modal-btn-no" id="printTasksCancelBtn" data-i18n="cancelBtn">ביטול</button>
     </div>
   </div>
 </div>
@@ -668,6 +680,7 @@
 
     <div class="ruled-body">
       <div class="sheet-title-wrap" id="sheetTitleWrap">
+        <button type="button" class="print-tasks-btn" id="printTasksBtn" data-i18n-title="printTasksTitle" title="הדפסת משימות"><img src="tasks-print-icon.webp" alt=""></button>
         <button type="button" class="sketch-btn" id="sketchBtn" data-i18n-title="sketchTitle" title="סקיצה"><img src="tasks-sketch-icon.webp" alt=""></button>
         <button type="button" class="completed-tasks-toggle-btn" id="showCompletedTasksBtn" data-i18n="showCompletedTasksBtn">משימות שבוצעו</button>
         <button type="button" class="completed-tasks-toggle-btn" id="showActiveTasksBtn" data-i18n="showActiveTasksBtn" hidden>משימות לא בוצעו</button>
@@ -1702,6 +1715,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=61dd79a16c"></script>
+<script src="tasks-app.js?v=a3c4e6409b"></script>
 </body>
 </html>
