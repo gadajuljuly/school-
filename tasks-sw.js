@@ -26,7 +26,7 @@ var CORE_ASSETS = [
   "./tasks-work-plan-icon.webp",
   "./tasks-sketch-icon.webp",
   "./tasks-print-icon.webp",
-  "./tasks-toolbox-icon.webp",
+  "./tasks-toolbox.webp",
   "./tasks-folder-add-icon.webp",
   "./tasks-photos-icon.webp",
   "./tasks-budget-icon.webp",
