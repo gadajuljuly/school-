@@ -114,7 +114,7 @@
   diaryNextDayBtn.addEventListener("click", function () { diaryGoToDay(diaryShiftISO(activeSiteLogDate || state.viewDate, 1)); });
 
   document.getElementById("diaryProjLogo").addEventListener("click", function () { openLogoPickerModal(); });
-  document.getElementById("diaryProjSketch").addEventListener("click", function () { document.getElementById("sketchBtn").click(); });
+  // (its toolbox: 14m-toolbox.js)
 
   // 🎤 הכתב ליומן: the assistant, already listening when the phone can
   diaryDictateBtn.addEventListener("click", function () {

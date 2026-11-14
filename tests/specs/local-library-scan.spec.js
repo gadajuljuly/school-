@@ -42,16 +42,14 @@ test("scan: photograph pages, edit them, save one PDF into a chosen folder", asy
   // save one PDF into a chosen folder", async ({ page }) => {
   await openWithSharedProject(page, { phone: ME, sheet: { id: "p1", name: "בניין A", members: [ME], tasks: [] } });
   await page.locator("#libraryBtn").click();
-  const scanBtn = page.locator("#libraryScanBtn");
-  await expect(scanBtn).toBeVisible();
-  // on the left next to the add-folder "+", level with it; the right side is the project's logo and name
-  const [scanBox, addBox] = [await scanBtn.boundingBox(), await page.locator("#libraryAddFolderBtn").boundingBox()];
-  expect(Math.abs(scanBox.y - addBox.y)).toBeLessThan(2);
-  expect(scanBox.x).toBeGreaterThan(addBox.x + addBox.width);
-  const logoBox = await page.locator("#sheetTitleLogoEmpty").boundingBox();
-  expect(scanBox.x + scanBox.width).toBeLessThan(logoBox.x);
-
-  await scanBtn.click();
+  // the scanner: in the toolbox, as on every page (no button of its own); the add-folder "+" on the right
+  await expect(page.locator("#libraryScanBtn")).toBeHidden();
+  const addBox = await page.locator("#libraryAddFolderBtn").boundingBox();
+  const tbBox = await page.locator("#toolboxBtn").boundingBox();
+  expect(addBox.x).toBeGreaterThan(page.viewportSize().width / 2);
+  expect(tbBox.x).toBeLessThan(80);
+  await page.locator("#toolboxBtn").click();
+  await page.locator("#toolboxScan").click();
   await expect(page.locator("#scanOverlay")).toBeVisible();
   await expect(page.locator("#scanSaveBtn")).toBeDisabled();
   await expect(page.locator("#scanName")).toHaveValue(/^סריקה \d\d-\d\d-\d{4} \d\d-\d\d$/);
@@ -126,7 +124,8 @@ test("scan: photograph pages, edit them, save one PDF into a chosen folder", asy
 test("scan: ביטול with pages asks first", async ({ page }) => {
   await openWithSharedProject(page, { phone: ME, sheet: { id: "p1", name: "בניין A", members: [ME], tasks: [] } });
   await page.locator("#libraryBtn").click();
-  await page.locator("#libraryScanBtn").click();
+  await page.locator("#toolboxBtn").click();
+  await page.locator("#toolboxScan").click();
   await page.locator("#scanCameraInput").setInputFiles({ name: "p1.jpg", mimeType: "image/jpeg", buffer: await pagePhoto(page, 300, 400) });
   await page.locator("#scanEditDoneBtn").click();
   await expect(page.locator(".scan-page")).toHaveCount(1);

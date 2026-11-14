@@ -51,14 +51,15 @@ test("a day with no tasks: a message; printing only on the tasks page; the scann
   await page.locator("#toolboxBtn").click();
   await page.locator("#toolboxPrint").click();
   await expect(page.locator("#printTasksOverlay")).toBeHidden();
-  // other pages: the toolbox without printing; the library: no toolbox (its own scan button)
+  // other pages, the library too: the toolbox without printing
   await page.locator("#reportFabBtn").click();
   await page.locator("#toolboxBtn").click();
   await expect(page.locator("#toolboxPop .toolbox-item:visible")).toHaveText(["סורק PDF", "סקיצה"]);
   await page.locator("#toolboxBtn").click();
   await expect(page.locator("#toolboxPop")).toBeHidden();
   await page.locator("#libraryBtn").click();
-  await expect(page.locator("#toolboxBtn")).toBeHidden();
+  await page.locator("#toolboxBtn").click();
+  await expect(page.locator("#toolboxPop .toolbox-item:visible")).toHaveText(["סורק PDF", "סקיצה"]);
 });
 
 test("the toolbox's scanner: into this project's library", async ({ page }) => {
