@@ -13,10 +13,12 @@ const T = (id, text, status, extra) => Object.assign({ id, text, status, type: "
 test("the print button on the tasks page: all ticked, untick one, a PDF of the rest", async ({ page }) => {
   await openWithSharedProject(page, { phone: ME, sheet: { id: "p1", name: "רכבת נתניה", members: [ME],
     tasks: [T("t1", "סגירת ביוב", 0), T("t2", "שוחות ניקוז", 1), T("t3", "להזמין אספלט", 0, { urgent: true })] } });
-  const btn = page.locator("#printTasksBtn");
-  await expect(btn).toBeVisible();
-
-  await btn.click();
+  // in the toolbox
+  await page.locator("#toolboxBtn").click();
+  await expect(page.locator("#toolboxPop")).toBeVisible();
+  await expect(page.locator("#toolboxPop .toolbox-item:visible")).toHaveText(["הדפסה", "סורק PDF", "סקיצה"]);
+  await page.locator("#toolboxPrint").click();
+  await expect(page.locator("#toolboxPop")).toBeHidden();
   const boxes = page.locator("#printTasksList input");
   await expect(boxes).toHaveCount(3);
   for (let i = 0; i < 3; i++) await expect(boxes.nth(i)).toBeChecked();
@@ -44,10 +46,24 @@ test("the print button on the tasks page: all ticked, untick one, a PDF of the r
   await expect(page.locator("#printTasksOverlay")).toBeHidden();
 });
 
-test("not on the other pages; a day with no tasks: a message", async ({ page }) => {
+test("a day with no tasks: a message; printing only on the tasks page; the scanner from the toolbox", async ({ page }) => {
   await openWithSharedProject(page, { phone: ME, sheet: { id: "p1", name: "רכבת נתניה", members: [ME], tasks: [] } });
-  await page.locator("#printTasksBtn").click();
+  await page.locator("#toolboxBtn").click();
+  await page.locator("#toolboxPrint").click();
   await expect(page.locator("#printTasksOverlay")).toBeHidden();
-  await page.locator("#calendarFabBtn").click();
-  await expect(page.locator("#printTasksBtn")).toBeHidden();
+  // other pages: the toolbox without printing; the library: no toolbox (its own scan button)
+  await page.locator("#reportFabBtn").click();
+  await page.locator("#toolboxBtn").click();
+  await expect(page.locator("#toolboxPop .toolbox-item:visible")).toHaveText(["סורק PDF", "סקיצה"]);
+  await page.locator("#toolboxBtn").click();
+  await expect(page.locator("#toolboxPop")).toBeHidden();
+  await page.locator("#libraryBtn").click();
+  await expect(page.locator("#toolboxBtn")).toBeHidden();
+});
+
+test("the toolbox's scanner: into this project's library", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheet: { id: "p1", name: "רכבת נתניה", members: [ME], tasks: [] } });
+  await page.locator("#toolboxBtn").click();
+  await page.locator("#toolboxScan").click();
+  await expect(page.locator("#scanOverlay")).toBeVisible();
 });

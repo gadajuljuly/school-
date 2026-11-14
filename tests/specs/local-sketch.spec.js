@@ -22,8 +22,8 @@ async function drag(page, from, to, hold) {
 
 test("sketch: lines, scale, dimension, callout, text, eraser, undo; the draft stays; saved as PDF to a folder", async ({ page }) => {
   await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
-  await expect(page.locator("#sketchBtn")).toBeVisible();
-  await page.locator("#sketchBtn").click();
+  await expect(page.locator("#toolboxBtn")).toBeVisible(); // the sketch: in the toolbox
+  await page.locator("#toolboxBtn").click(); await page.locator("#toolboxSketch").click();
   await expect(page.locator("#sketchView")).toBeVisible();
   await expect(page.locator("#sketchTitle")).toContainText("בניין A");
 
@@ -79,7 +79,7 @@ test("sketch: lines, scale, dimension, callout, text, eraser, undo; the draft st
 
   // the draft is kept: close and reopen
   await page.locator("#sketchCloseBtn").click();
-  await page.locator("#sketchBtn").click();
+  await page.locator("#toolboxBtn").click(); await page.locator("#toolboxSketch").click();
   await expect.poll(async () => (await els(page)).length).toBe(5);
 
   // save into a library folder as a PDF
@@ -111,7 +111,7 @@ const wobblyCircle = (cx, cy, rx, ry) => Array.from({ length: 40 }, (_, i) => {
 
 test("sketch: a held hand-drawn circle becomes a circle, a box a rectangle - and stays so as the finger lifts", async ({ page }) => {
   await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
-  await page.locator("#sketchBtn").click();
+  await page.locator("#toolboxBtn").click(); await page.locator("#toolboxSketch").click();
   await page.locator(".sk-tool[data-tool=pen]").click();
 
   await drawHeld(page, wobblyCircle(120, 140, 60, 56));
@@ -145,7 +145,7 @@ test("sketch eraser: only the piece between crossings or corners goes", async ({
       { type: "rect", a: { x: 60, y: 240 }, b: { x: 300, y: 360 }, color: "#c62828", w: 3 },
     ] }));
   });
-  await page.locator("#sketchBtn").click();
+  await page.locator("#toolboxBtn").click(); await page.locator("#toolboxSketch").click();
   await page.locator(".sk-tool[data-tool=eraser]").click();
   const box = await page.locator("#sketchCanvas").boundingBox();
   // the middle of the long line, between the two crossings
@@ -168,7 +168,7 @@ test("sketch eraser: only the piece between crossings or corners goes", async ({
 
 test("sketch: several lines in one held stroke each straighten, keeping their direction", async ({ page }) => {
   await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
-  await page.locator("#sketchBtn").click();
+  await page.locator("#toolboxBtn").click(); await page.locator("#toolboxSketch").click();
   await page.locator(".sk-tool[data-tool=pen]").click();
   // a wobbly zig-zag: right, then down-right at a slant, then right again
   const corners = [[40, 100], [180, 110], [250, 260], [340, 250]];
@@ -209,7 +209,7 @@ const wobblyPolygon = (cx, cy, r, n, rot) => {
 
 test("sketch: a held triangle, pentagon or hexagon becomes a perfect one", async ({ page }) => {
   await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
-  await page.locator("#sketchBtn").click();
+  await page.locator("#toolboxBtn").click(); await page.locator("#toolboxSketch").click();
   await page.locator(".sk-tool[data-tool=pen]").click();
   const shapes = [[120, 140, 70, 3, -Math.PI / 2], [280, 300, 70, 5, -Math.PI / 2], [140, 460, 65, 6, 0]];
   for (const s of shapes) await drawHeld(page, wobblyPolygon(...s));
@@ -226,7 +226,7 @@ test("sketch: a held triangle, pentagon or hexagon becomes a perfect one", async
 
 test("sketch: pressing a dimension and dragging moves it back and forth, with extension lines", async ({ page }) => {
   await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
-  await page.locator("#sketchBtn").click();
+  await page.locator("#toolboxBtn").click(); await page.locator("#toolboxSketch").click();
   await page.locator(".sk-tool[data-tool=dim]").click();
   await drag(page, [40, 160], [240, 160]);
   await page.locator("#sketchTextForm button[type=submit]").click();
@@ -253,7 +253,7 @@ test("sketch: pressing a dimension and dragging moves it back and forth, with ex
 
 test("sketch: a new dimension can start where another ends", async ({ page }) => {
   await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
-  await page.locator("#sketchBtn").click();
+  await page.locator("#toolboxBtn").click(); await page.locator("#toolboxSketch").click();
   await page.locator(".sk-tool[data-tool=dim]").click();
   await drag(page, [40, 160], [240, 160]);
   await page.locator("#sketchTextForm button[type=submit]").click();
@@ -266,7 +266,7 @@ test("sketch: a new dimension can start where another ends", async ({ page }) =>
 
 test("sketch share: a shared project's sketch can go straight into its chat as a picture", async ({ page }) => {
   await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME, "+972500000002"], tasks: [] }] });
-  await page.locator("#sketchBtn").click();
+  await page.locator("#toolboxBtn").click(); await page.locator("#toolboxSketch").click();
   await page.locator(".sk-tool[data-tool=line]").click();
   await drag(page, [40, 160], [240, 160]);
   await page.locator("#sketchShareBtn").click();
@@ -289,7 +289,7 @@ test("sketch share: a shared project's sketch can go straight into its chat as a
 
 test("sketch fill: a closed area is painted under its lines; an open one isn't; painting again recolours", async ({ page }) => {
   await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
-  await page.locator("#sketchBtn").click();
+  await page.locator("#toolboxBtn").click(); await page.locator("#toolboxSketch").click();
   await page.locator(".sk-tool[data-tool=line]").click();
   // a closed square, and a U open at the top next to it
   for (const [a, b] of [[[60, 100], [200, 100]], [[200, 100], [200, 240]], [[200, 240], [60, 240]], [[60, 240], [60, 100]],
@@ -327,7 +327,7 @@ test("sketch fill: a closed area is painted under its lines; an open one isn't; 
 
 test("sketch objects: placed from the menu, moved by dragging, sized and turned by the yellow dot", async ({ page }) => {
   await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
-  await page.locator("#sketchBtn").click();
+  await page.locator("#toolboxBtn").click(); await page.locator("#toolboxSketch").click();
   await page.locator("#sketchObjBtn").click();
   await expect(page.locator(".sk-obj-pick")).toHaveCount(13);
   await page.locator(".sk-obj-pick[data-obj=car]").click();
@@ -378,7 +378,7 @@ test("sketch objects: placed from the menu, moved by dragging, sized and turned 
 
 test("sketch fill: textures - paving, road (with a centre line), grass, soil, base course, water", async ({ page }) => {
   await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
-  await page.locator("#sketchBtn").click();
+  await page.locator("#toolboxBtn").click(); await page.locator("#toolboxSketch").click();
   await page.locator(".sk-tool[data-tool=line]").click();
   for (const [a, b] of [[[40, 100], [340, 100]], [[340, 100], [340, 160]], [[340, 160], [40, 160]], [[40, 160], [40, 100]]]) await drag(page, a, b);
   const box = await page.locator("#sketchCanvas").boundingBox();
@@ -409,7 +409,7 @@ test("sketch fill: textures - paving, road (with a centre line), grass, soil, ba
 
 test("sketch objects: each comes in a top view and a side view", async ({ page }) => {
   await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
-  await page.locator("#sketchBtn").click();
+  await page.locator("#toolboxBtn").click(); await page.locator("#toolboxSketch").click();
   await page.locator("#sketchObjBtn").click();
   await expect(page.locator(".sk-view-switch button[data-view=top]")).toHaveClass(/on/);
   await page.locator(".sk-obj-pick[data-obj=truck]").click();
@@ -430,7 +430,7 @@ test("sketch objects: each comes in a top view and a side view", async ({ page }
 
 test("sketch fill: back to a plain colour after a texture", async ({ page }) => {
   await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
-  await page.locator("#sketchBtn").click();
+  await page.locator("#toolboxBtn").click(); await page.locator("#toolboxSketch").click();
   await page.locator(".sk-tool[data-tool=line]").click();
   for (const [a, b] of [[[60, 100], [200, 100]], [[200, 100], [200, 240]], [[200, 240], [60, 240]], [[60, 240], [60, 100]]]) await drag(page, a, b);
   const box = await page.locator("#sketchCanvas").boundingBox();
@@ -449,17 +449,17 @@ test("sketch fill: back to a plain colour after a texture", async ({ page }) => 
 
 test("the sketch icon is hidden in the library and back with the tasks", async ({ page }) => {
   await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
-  await expect(page.locator("#sketchBtn")).toBeVisible();
+  await expect(page.locator("#toolboxBtn")).toBeVisible(); // the sketch: in the toolbox
   await page.locator("#libraryBtn").click();
   await expect(page.locator("#libraryFoldersView")).toBeVisible();
   await expect(page.locator("#sketchBtn")).toBeHidden();
   await page.locator("#tasksFabBtn").click();
-  await expect(page.locator("#sketchBtn")).toBeVisible();
+  await expect(page.locator("#toolboxBtn")).toBeVisible(); // the sketch: in the toolbox
 });
 
 test("sketch #: a new line starting near the end of another is caught exactly on it", async ({ page }) => {
   await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
-  await page.locator("#sketchBtn").click();
+  await page.locator("#toolboxBtn").click(); await page.locator("#toolboxSketch").click();
   await page.locator(".sk-tool[data-tool=line]").click();
   // one line drawn off the grid (# off)...
   await page.locator("#sketchSnapBtn").click();
@@ -484,7 +484,7 @@ test("sketch #: a new line starting near the end of another is caught exactly on
 
 test("sketch background: the 🖼 button offers a photo, a picture from the gallery, and removing it", async ({ page }) => {
   await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
-  await page.locator("#sketchBtn").click();
+  await page.locator("#toolboxBtn").click(); await page.locator("#toolboxSketch").click();
   await page.locator("#sketchBgBtn").click();
   await expect(page.locator("#sketchBgMenu")).toBeVisible();
   await expect(page.locator("#sketchBgCameraBtn")).toBeVisible();
@@ -507,7 +507,7 @@ test("sketch background: the 🖼 button offers a photo, a picture from the gall
 
 test("sketch background: a PDF - one page goes straight in, of several I pick the page", async ({ page }) => {
   await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
-  await page.locator("#sketchBtn").click();
+  await page.locator("#toolboxBtn").click(); await page.locator("#toolboxSketch").click();
   expect(await page.locator("#sketchImageInput").getAttribute("accept")).toContain("application/pdf");
   // a landscape A4 plan with two pages, made with jsPDF
   const pdf = await page.evaluate(async () => {
@@ -540,7 +540,7 @@ test("sketch background: a PDF - one page goes straight in, of several I pick th
 
 test("sketch background: a long press on it picks it up and moves it; a quick stroke over it still draws", async ({ page }) => {
   await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
-  await page.locator("#sketchBtn").click();
+  await page.locator("#toolboxBtn").click(); await page.locator("#toolboxSketch").click();
   await page.locator("#sketchImageInput").setInputFiles(require("path").join(__dirname, "../../tasks-icon-192.png"));
   await expect.poll(async () => (await els(page)).filter((e) => e.type === "image").length).toBe(1);
   const bg0 = (await els(page))[0];
@@ -587,7 +587,7 @@ test("sketch background: a long press on it picks it up and moves it; a quick st
 
 test("sketch save / share: just a marked area of it", async ({ page }) => {
   await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME, "+972500000002"], tasks: [] }] });
-  await page.locator("#sketchBtn").click();
+  await page.locator("#toolboxBtn").click(); await page.locator("#toolboxSketch").click();
   await page.locator(".sk-tool[data-tool=line]").click();
   await drag(page, [40, 160], [340, 160]);
   await drag(page, [40, 400], [340, 400]);
@@ -640,7 +640,7 @@ test("sketch background: a picture from the project's library (any folder)", asy
     const from = st.from;
     st.from = (b) => Object.assign(from(b), { createSignedUrl: () => Promise.resolve({ data: { signedUrl: location.origin + "/tasks-icon-192.png" }, error: null }) });
   });
-  await page.locator("#sketchBtn").click();
+  await page.locator("#toolboxBtn").click(); await page.locator("#toolboxSketch").click();
   await page.locator("#sketchBgBtn").click();
   await page.locator("#sketchBgLibraryBtn").click();
   await expect(page.locator("#sketchLibOverlay")).toBeVisible();
@@ -666,7 +666,7 @@ test("sketch background: a picture from the project's library (any folder)", asy
 
 test("sketch fill: with a scale, a painted area knows its size in m²", async ({ page }) => {
   await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
-  await page.locator("#sketchBtn").click();
+  await page.locator("#toolboxBtn").click(); await page.locator("#toolboxSketch").click();
   await page.locator("#sketchScaleBtn").click();
   await page.locator("#sketchScalePer").fill("100"); // a square (20 units) = 1 m
   await page.locator("#sketchScaleSaveBtn").click();

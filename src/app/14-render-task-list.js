@@ -468,6 +468,8 @@
     libraryFoldersView.hidden = !libraryMode;
     chatView.hidden = !chatMode;
     document.getElementById("sketchBtn").hidden = libraryMode; // no sketch icon in the library
+    toolboxBtn.hidden = libraryMode; // (the library has its own scan button)
+    if (libraryMode) closeToolbox();
     ruledBodyEl.classList.toggle("chat-mode", chatMode);
     ruledBodyEl.classList.toggle("diary-mode", diaryMode); // its title is in the diary's own top row
     ruledBodyEl.classList.toggle("tasks-mode", !(reportsMode || diaryMode || libraryMode || chatMode)); // 🖨 only on the tasks page

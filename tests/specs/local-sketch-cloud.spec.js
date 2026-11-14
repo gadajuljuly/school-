@@ -30,7 +30,7 @@ async function drag(page, from, to) {
 test("what's drawn goes up to the project (file + list entry); leaving sends it at once", async ({ page }) => {
   await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME, DANA], tasks: [] }] });
   await keepingStorage(page);
-  await page.locator("#sketchBtn").click();
+  await page.locator("#toolboxBtn").click(); await page.locator("#toolboxSketch").click();
   await expect(page.locator("#sketchTitle")).toHaveText("סקיצה 1 ▾ · בניין A");
   await page.locator(".sk-tool[data-tool=line]").click();
   await drag(page, [40, 160], [240, 160]);
@@ -50,7 +50,7 @@ test("another member's phone opens the project's sketch from the server", async 
   await openWithSharedProject(page, { phone: DANA, sheets: [{ id: "p1", name: "בניין A", members: [ME, DANA], tasks: [],
     sketches: [{ id: "s1", name: "חתך קיר", updatedAt: Date.now() - 60000, updatedBy: ME }] }] });
   await keepingStorage(page, { "p1/sketches/s1.json": JSON.stringify({ name: "חתך קיר", els, scale: null }) });
-  await page.locator("#sketchBtn").click();
+  await page.locator("#toolboxBtn").click(); await page.locator("#toolboxSketch").click();
   await expect(page.locator("#sketchTitle")).toHaveText("חתך קיר ▾ · בניין A");
   await expect.poll(() => page.evaluate(() => {
     const k = Object.keys(localStorage).find((x) => x.startsWith("itask-sketch:p1:s1"));
@@ -63,7 +63,7 @@ test("the list: a new sketch, switching, renaming, deleting; the old single draf
   await keepingStorage(page);
   // a draft from before (one per project)
   await page.evaluate(() => localStorage.setItem("itask-sketch:p1", JSON.stringify({ els: [{ type: "line", a: { x: 0, y: 0 }, b: { x: 50, y: 0 } }], scale: null, view: { x: 0, y: 0, z: 1 } })));
-  await page.locator("#sketchBtn").click();
+  await page.locator("#toolboxBtn").click(); await page.locator("#toolboxSketch").click();
   await expect(page.locator("#sketchTitle")).toHaveText("סקיצה 1 ▾ · בניין A");
   expect(await page.evaluate(() => localStorage.getItem("itask-sketch:p1"))).toBe(null); // moved
   await expect.poll(async () => ((await server(page)).sketches || []).length, { timeout: 8000 }).toBe(1); // and sent up
