@@ -46,7 +46,8 @@ var CORE_ASSETS = [
   "./vendor/leaflet-1.9.4.js",
   "./vendor/leaflet-1.9.4.css",
   "./tasks-weather-icon.webp",
-  "./tasks-map-measure-icon.webp"
+  "./tasks-map-measure-icon.webp",
+  "./tasks-measure-icon.webp"
 ];
 
 self.addEventListener("install", function (event) {
