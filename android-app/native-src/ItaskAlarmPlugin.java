@@ -21,7 +21,9 @@ import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
+import com.getcapacitor.annotation.ActivityCallback;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import androidx.activity.result.ActivityResult;
 import androidx.core.content.FileProvider;
 import androidx.core.content.pm.ShortcutManagerCompat;
 import java.io.ByteArrayOutputStream;
@@ -297,7 +299,48 @@ public class ItaskAlarmPlugin extends Plugin {
         result.put("assistantBubble", true);
         result.put("shareFiles", true);
         result.put("printPdf", true);
+        result.put("arMeasure", true);
         call.resolve(result);
+    }
+
+    // The camera tape (version 33): ItaskMeasureActivity, ARCore. Resolves
+    // { lines: ["קו 1: 2.35 מ'", ...] }, or { unsupported: true } on a phone
+    // without ARCore, or { lines: [] } when closed without measuring.
+    @PluginMethod
+    public void measureAR(PluginCall call) {
+        try {
+            com.google.ar.core.ArCoreApk.Availability a = com.google.ar.core.ArCoreApk.getInstance().checkAvailability(getContext());
+            if (a != null && a.isUnsupported()) {
+                JSObject r = new JSObject();
+                r.put("unsupported", true);
+                call.resolve(r);
+                return;
+            }
+        } catch (Throwable t) {
+            JSObject r = new JSObject();
+            r.put("unsupported", true);
+            call.resolve(r);
+            return;
+        }
+        Intent intent = new Intent(getContext(), ItaskMeasureActivity.class);
+        intent.putExtra("lang", call.getString("lang", "he"));
+        startActivityForResult(call, intent, "measureARResult");
+    }
+
+    @ActivityCallback
+    private void measureARResult(PluginCall call, ActivityResult result) {
+        if (call == null) return;
+        JSObject r = new JSObject();
+        JSArray lines = new JSArray();
+        Intent data = result.getData();
+        if (data != null && data.getBooleanExtra("unsupported", false)) {
+            r.put("unsupported", true);
+        } else if (data != null) {
+            ArrayList<String> got = data.getStringArrayListExtra(ItaskMeasureActivity.EXTRA_LINES);
+            if (got != null) for (String l : got) lines.put(l);
+        }
+        r.put("lines", lines);
+        call.resolve(r);
     }
 
     // The floating task (ItaskFloatReceiver): on / off, and whether Android

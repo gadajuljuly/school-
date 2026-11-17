@@ -1,0 +1,2 @@
+    <meta-data android:name="com.google.ar.core" android:value="optional" />
+    <activity android:name=".ItaskMeasureActivity" android:exported="false" android:screenOrientation="portrait" android:theme="@style/AppTheme.NoActionBar" android:configChanges="orientation|screenSize|keyboardHidden" />

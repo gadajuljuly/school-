@@ -263,3 +263,15 @@ The one-time edits from the sections above (`AndroidManifest.xml`,
   template's manifest). Older app versions fall back to the share sheet.
 
 Both need the manifest additions in `native-src/AndroidManifest-additions.xml`.
+
+## Version 33: the camera tape (ARCore)
+
+`native-src/ItaskMeasureActivity.java` - the toolbox's "מדידה" > "מטר במצלמה"
+(src/app/14n-site-tools.js calls `ItaskAlarm.measureAR`). `prepare-android.bat`
+adds, once:
+- `implementation "com.google.ar:core:1.46.0"` in `android/app/build.gradle`;
+- `minSdkVersion = 24` in `android/variables.gradle` (ARCore needs Android 7+);
+- the activity and `<meta-data android:name="com.google.ar.core" android:value="optional" />`
+  in AndroidManifest.xml (AR is optional: the app still installs on phones
+  without ARCore - the page then says the phone doesn't support it), plus the
+  CAMERA permission.

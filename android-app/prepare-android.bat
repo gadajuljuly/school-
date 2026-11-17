@@ -36,6 +36,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command "$f='android\app\src\main
 rem ...and files: photos, PDFs, documents (version 31+)
 powershell -NoProfile -ExecutionPolicy Bypass -Command "$f='android\app\src\main\AndroidManifest.xml'; $x=[IO.File]::ReadAllText($f); if ($x -notmatch 'android.intent.action.SEND_MULTIPLE') { $a=$x.IndexOf('.MainActivity'); $e=$x.IndexOf('</activity>', $a); $r=[IO.File]::ReadAllText('native-src\manifest-share-files.xml'); $x=$x.Substring(0,$e)+$r+$x.Substring($e); [IO.File]::WriteAllText($f,$x); Write-Host 'share files added' } else { Write-Host 'already there' }" || goto :error
 
+echo === camera tape (ARCore) in AndroidManifest.xml and build.gradle (added once) ===
+rem the camera tape (version 33): its activity, ARCore as optional, the camera permission
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$f='android\app\src\main\AndroidManifest.xml'; $x=[IO.File]::ReadAllText($f); if ($x -notmatch 'ItaskMeasureActivity') { $r=[IO.File]::ReadAllText('native-src\manifest-ar.xml'); $i=$x.LastIndexOf('</application>'); $x=$x.Substring(0,$i)+$r+$x.Substring($i); Write-Host 'activity added' } if ($x -notmatch 'android.hardware.camera.ar') { $i=$x.IndexOf('<application'); $p=[IO.File]::ReadAllText('native-src\manifest-ar-permission.xml'); $x=$x.Substring(0,$i)+$p+$x.Substring($i); Write-Host 'permission added' } [IO.File]::WriteAllText($f,$x)" || goto :error
+rem ...ARCore itself, and Android 7+ (ARCore needs it)
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$f='android\app\build.gradle'; $x=[IO.File]::ReadAllText($f); if ($x -notmatch 'com.google.ar:core') { $i=$x.IndexOf('dependencies {'); $x=$x.Substring(0,$i+14)+[Environment]::NewLine+'    implementation \"com.google.ar:core:1.46.0\"'+$x.Substring($i+14); [IO.File]::WriteAllText($f,$x); Write-Host 'ARCore added' } else { Write-Host 'already there' }" || goto :error
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$f='android\variables.gradle'; $x=[IO.File]::ReadAllText($f); $y=[regex]::Replace($x,'minSdkVersion\s*=\s*2[0-3]\b','minSdkVersion = 24'); if ($y -ne $x) { [IO.File]::WriteAllText($f,$y); Write-Host 'minSdk 24' } else { Write-Host 'minSdk ok' }" || goto :error
+
 echo.
 echo Done. Now in Android Studio: raise versionCode/versionName in build.gradle (:app), Sync, then Build ^> Generate Signed App Bundle.
 pause
