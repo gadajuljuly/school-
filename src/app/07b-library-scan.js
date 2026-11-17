@@ -450,7 +450,7 @@
         else pdf.addPage("a4", landscape ? "landscape" : "portrait");
         pdf.addImage(c.toDataURL("image/jpeg", 0.75), "JPEG", (pw - w) / 2, (ph - h) / 2, w, h);
       });
-      return pdf.output("blob");
+      return brandPdf(pdf).then(function () { return pdf.output("blob"); });
     });
   }
 

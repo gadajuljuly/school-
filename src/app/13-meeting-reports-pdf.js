@@ -1211,7 +1211,10 @@
           heightLeft -= pageHeight;
         }
         document.body.removeChild(container);
-        return { blob: pdf.output("blob"), fileName: fileName };
+        // the app's signature on every page (a page drawing its own: as is)
+        return (element.getAttribute("data-branded") ? Promise.resolve(pdf) : brandPdf(pdf)).then(function () {
+          return { blob: pdf.output("blob"), fileName: fileName };
+        });
       }).catch(function (err) {
         if (container.parentNode) document.body.removeChild(container);
         throw err;

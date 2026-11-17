@@ -1268,6 +1268,89 @@
     if (installBar.contains(e.target)) return;
     if (installPrompt && !installBar.hidden) askInstall();
   }, true);
+  // ---------------------------------------------------------------------
+  // The app's signature on everything it makes: the app's icon and ITASK,
+  // small, at the top left - on every page of its PDFs (reports, the diary,
+  // the work plan, scans, sketches, the tasks page) and on its pictures
+  // (diary photos, a sketch shared as a picture).
+  // ---------------------------------------------------------------------
+  var brandIconImg = null, brandIconLoaded = null;
+  function brandIcon() {
+    if (brandIconImg) return brandIconImg;
+    brandIconImg = new Promise(function (resolve) {
+      var img = new Image();
+      img.onload = function () { brandIconLoaded = img; resolve(img); };
+      img.onerror = function () { resolve(null); };
+      img.src = "tasks-icon-192.png";
+    });
+    return brandIconImg;
+  }
+  // the mark itself, `h` pixels tall: a light rounded plate (readable on a
+  // photo or a drawing), the icon, then I (red) TASK (green)
+  function drawBrandMark(ctx, x, y, h, icon) {
+    var pad = h * 0.16, iconS = h - 2 * pad, font = Math.round(h * 0.56);
+    ctx.save();
+    ctx.font = "800 " + font + "px Rubik, Assistant, Arial, sans-serif";
+    ctx.direction = "ltr";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    var iW = ctx.measureText("I").width, tW = ctx.measureText("TASK").width;
+    var w = pad + (icon ? iconS + pad * 1.2 : 0) + iW + tW + pad * 1.6;
+    ctx.fillStyle = "rgba(255, 255, 255, 0.82)";
+    var r = h * 0.22;
+    ctx.beginPath();
+    ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.fill();
+    var cx = x + pad;
+    if (icon) {
+      ctx.drawImage(icon, cx, y + pad, iconS, iconS);
+      cx += iconS + pad * 1.2;
+    }
+    ctx.fillStyle = "#bf4e30";
+    ctx.fillText("I", cx, y + h / 2 + h * 0.03);
+    ctx.fillStyle = "#44563c";
+    ctx.fillText("TASK", cx + iW, y + h / 2 + h * 0.03);
+    ctx.restore();
+    return w;
+  }
+  // on a picture (a canvas), in its top-left corner - at once (the icon
+  // is loaded when the app starts; until then, the name alone)
+  function brandCanvas(canvas) {
+    var h = Math.max(22, Math.round(Math.min(canvas.width, canvas.height) * 0.045));
+    drawBrandMark(canvas.getContext("2d"), Math.round(h * 0.4), Math.round(h * 0.4), h, brandIconLoaded);
+    return canvas;
+  }
+  // the mark as a picture of its own (for PDFs and the printed tasks page): { url, ratio }
+  var brandMarkCached = null;
+  function brandMarkImage() {
+    return brandIcon().then(function (icon) {
+      if (brandMarkCached) return brandMarkCached;
+      var h = 96, c = document.createElement("canvas");
+      c.width = 600; c.height = h;
+      var w = Math.ceil(drawBrandMark(c.getContext("2d"), 0, 0, h, icon));
+      var out = document.createElement("canvas");
+      out.width = w; out.height = h;
+      out.getContext("2d").drawImage(c, 0, 0);
+      brandMarkCached = { url: out.toDataURL("image/png"), ratio: w / h };
+      return brandMarkCached;
+    });
+  }
+  // on every page of a jsPDF document (mm), at the top left
+  var BRAND_PDF_MM = { x: 4, y: 3.5, h: 6 };
+  function brandPdf(pdf) {
+    return brandMarkImage().then(function (mark) {
+      var n = pdf.internal.getNumberOfPages();
+      for (var i = 1; i <= n; i++) {
+        pdf.setPage(i);
+        pdf.addImage(mark.url, "PNG", BRAND_PDF_MM.x, BRAND_PDF_MM.y, BRAND_PDF_MM.h * mark.ratio, BRAND_PDF_MM.h);
+      }
+      return pdf;
+    }, function () { return pdf; });
+  }
+  setTimeout(brandMarkImage, 1500);
   var LANG_STORAGE_KEY = "itask-lang";
   var currentLang = (function () {
     try {
@@ -7936,7 +8019,7 @@
         else pdf.addPage("a4", landscape ? "landscape" : "portrait");
         pdf.addImage(c.toDataURL("image/jpeg", 0.75), "JPEG", (pw - w) / 2, (ph - h) / 2, w, h);
       });
-      return pdf.output("blob");
+      return brandPdf(pdf).then(function () { return pdf.output("blob"); });
     });
   }
 
@@ -11131,6 +11214,7 @@
             var when = file.lastModified && Math.abs(Date.now() - file.lastModified) < 3 * 86400000 ? file.lastModified : Date.now();
             return scanLoadImage(file).then(function (canvas) {
               diaryStampPhoto(canvas, sheet, when, weather);
+              brandCanvas(canvas);
               return new Promise(function (res) { canvas.toBlob(res, "image/jpeg", 0.88); });
             }).then(function (blob) {
               var d = new Date(when);
@@ -15271,7 +15355,7 @@
           if (y > 0) pdf.addPage("a4", "landscape");
           pdf.addImage(img, "JPEG", 0, -y, pw, imgH);
         }
-        attemptShare(pdf.output("blob"), fileName, "application/pdf");
+        return brandPdf(pdf).then(function () { attemptShare(pdf.output("blob"), fileName, "application/pdf"); });
       }, function (err) {
         if (wrap.parentNode) document.body.removeChild(wrap);
         throw err;
@@ -18365,7 +18449,10 @@
           heightLeft -= pageHeight;
         }
         document.body.removeChild(container);
-        return { blob: pdf.output("blob"), fileName: fileName };
+        // the app's signature on every page (a page drawing its own: as is)
+        return (element.getAttribute("data-branded") ? Promise.resolve(pdf) : brandPdf(pdf)).then(function () {
+          return { blob: pdf.output("blob"), fileName: fileName };
+        });
       }).catch(function (err) {
         if (container.parentNode) document.body.removeChild(container);
         throw err;
@@ -21600,7 +21687,7 @@
       var pw = landscape ? 297 : 210, ph = landscape ? 210 : 297, m = 8;
       var k = Math.min((pw - 2 * m) / canvas.width, (ph - 2 * m) / canvas.height);
       pdf.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", (pw - canvas.width * k) / 2, (ph - canvas.height * k) / 2, canvas.width * k, canvas.height * k);
-      return pdf.output("blob");
+      return brandPdf(pdf).then(function () { return pdf.output("blob"); });
     });
   }
   // into a library folder of the project, as a PDF
@@ -21644,12 +21731,12 @@
   var sketchShareOverlay = document.getElementById("sketchShareOverlay");
   var skSharePending = null;
   function skShareToApps(canvas) {
-    canvas.toBlob(function (blob) { attemptShare(blob, skFileName() + ".png", "image/png"); }, "image/png");
+    brandCanvas(canvas).toBlob(function (blob) { attemptShare(blob, skFileName() + ".png", "image/png"); }, "image/png");
   }
   function skShareToChat(canvas, sheetId) {
     var fileName = skFileName() + ".png";
     showToast(tr("sketchSendingToChat"));
-    canvas.toBlob(function (blob) {
+    brandCanvas(canvas).toBlob(function (blob) {
       var path = sheetId + "/files/" + uid() + "-" + safeStorageFileName(fileName);
       supabaseClient.storage.from(LIBRARY_BUCKET).upload(path, blob, { contentType: "image/png" })
         .then(function (result) {
@@ -23786,6 +23873,7 @@
   }
 
   function openPrintTasks() {
+    brandMarkImage(); // (ready for the page by the time it is made)
     var tasks = printTasksOnScreen().filter(function (t) { return (t.text || "").trim(); });
     if (!tasks.length) { showToast(tr("printTasksNone")); return; }
     printTasksList.innerHTML = "";
@@ -23853,12 +23941,19 @@
     var page = printEl("div", "width:794px;min-height:1123px;display:flex;flex-direction:column;box-sizing:border-box;padding:36px 34px 40px;background:" + PRINT_C.paper +
       ";direction:rtl;font-family:'Rubik','Assistant','Segoe UI',Arial,sans-serif;color:" + PRINT_C.ink + ";");
     page.className = "print-tasks-page";
+    // the app's signature at the top left, as on every PDF (drawn here, so the
+    // computer's own printing has it too)
+    page.style.position = "relative";
+    page.setAttribute("data-branded", "1");
+    if (brandMarkCached) {
+      var mark = printEl("img", "position:absolute;left:15px;top:13px;height:23px;width:" + Math.round(23 * brandMarkCached.ratio) + "px;");
+      mark.src = brandMarkCached.url;
+      mark.alt = "ITASK";
+      page.appendChild(mark);
+    }
 
-    // ITASK · the project (and its logo) · the date
+    // the project (and its logo) · the date
     var head = printEl("div", "display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 6px 14px;border-bottom:2px solid " + PRINT_C.rule + ";");
-    var app = printEl("div", "font-weight:800;font-size:26px;letter-spacing:2px;direction:ltr;");
-    app.appendChild(printEl("span", "color:" + PRINT_C.red + ";", "I"));
-    app.appendChild(printEl("span", "color:" + PRINT_C.green + ";", "TASK"));
     var mid = printEl("div", "display:flex;align-items:center;gap:10px;min-width:0;");
     var logo = sheet && findLogo(sheet.logoId);
     if (logo) {
@@ -23869,11 +23964,10 @@
     mid.appendChild(printEl("div", "font-weight:800;font-size:24px;", sheet ? sheet.name : ""));
     var when = printEl("div", "font-weight:700;font-size:18px;direction:ltr;",
       state.showingCompleted ? tr("printTasksDoneTitle") : isoToFullDisplay(state.viewDate));
-    // right to left: the project, then the date and ITASK
+    // right to left: the project, then the date
     head.appendChild(mid);
     var right = printEl("div", "display:flex;align-items:center;gap:22px;");
     right.appendChild(when);
-    right.appendChild(app);
     head.appendChild(right);
     page.appendChild(head);
 
@@ -24857,7 +24951,9 @@
         data.activeSheetId = sheet.id;
         render();
       },
-      pullWhatsAppForTest: function () { pullWhatsAppInbox(); }
+      pullWhatsAppForTest: function () { pullWhatsAppInbox(); },
+      brandCanvas: brandCanvas,
+      brandMarkImage: brandMarkImage
     });
   }
 })();

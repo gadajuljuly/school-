@@ -806,7 +806,9 @@
         data.activeSheetId = sheet.id;
         render();
       },
-      pullWhatsAppForTest: function () { pullWhatsAppInbox(); }
+      pullWhatsAppForTest: function () { pullWhatsAppInbox(); },
+      brandCanvas: brandCanvas,
+      brandMarkImage: brandMarkImage
     });
   }
 })();

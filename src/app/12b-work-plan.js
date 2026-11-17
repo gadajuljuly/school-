@@ -544,7 +544,7 @@
           if (y > 0) pdf.addPage("a4", "landscape");
           pdf.addImage(img, "JPEG", 0, -y, pw, imgH);
         }
-        attemptShare(pdf.output("blob"), fileName, "application/pdf");
+        return brandPdf(pdf).then(function () { attemptShare(pdf.output("blob"), fileName, "application/pdf"); });
       }, function (err) {
         if (wrap.parentNode) document.body.removeChild(wrap);
         throw err;

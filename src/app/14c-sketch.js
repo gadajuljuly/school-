@@ -1393,7 +1393,7 @@
       var pw = landscape ? 297 : 210, ph = landscape ? 210 : 297, m = 8;
       var k = Math.min((pw - 2 * m) / canvas.width, (ph - 2 * m) / canvas.height);
       pdf.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", (pw - canvas.width * k) / 2, (ph - canvas.height * k) / 2, canvas.width * k, canvas.height * k);
-      return pdf.output("blob");
+      return brandPdf(pdf).then(function () { return pdf.output("blob"); });
     });
   }
   // into a library folder of the project, as a PDF
@@ -1437,12 +1437,12 @@
   var sketchShareOverlay = document.getElementById("sketchShareOverlay");
   var skSharePending = null;
   function skShareToApps(canvas) {
-    canvas.toBlob(function (blob) { attemptShare(blob, skFileName() + ".png", "image/png"); }, "image/png");
+    brandCanvas(canvas).toBlob(function (blob) { attemptShare(blob, skFileName() + ".png", "image/png"); }, "image/png");
   }
   function skShareToChat(canvas, sheetId) {
     var fileName = skFileName() + ".png";
     showToast(tr("sketchSendingToChat"));
-    canvas.toBlob(function (blob) {
+    brandCanvas(canvas).toBlob(function (blob) {
       var path = sheetId + "/files/" + uid() + "-" + safeStorageFileName(fileName);
       supabaseClient.storage.from(LIBRARY_BUCKET).upload(path, blob, { contentType: "image/png" })
         .then(function (result) {

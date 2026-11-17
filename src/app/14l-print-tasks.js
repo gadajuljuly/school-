@@ -29,6 +29,7 @@
   }
 
   function openPrintTasks() {
+    brandMarkImage(); // (ready for the page by the time it is made)
     var tasks = printTasksOnScreen().filter(function (t) { return (t.text || "").trim(); });
     if (!tasks.length) { showToast(tr("printTasksNone")); return; }
     printTasksList.innerHTML = "";
@@ -96,12 +97,19 @@
     var page = printEl("div", "width:794px;min-height:1123px;display:flex;flex-direction:column;box-sizing:border-box;padding:36px 34px 40px;background:" + PRINT_C.paper +
       ";direction:rtl;font-family:'Rubik','Assistant','Segoe UI',Arial,sans-serif;color:" + PRINT_C.ink + ";");
     page.className = "print-tasks-page";
+    // the app's signature at the top left, as on every PDF (drawn here, so the
+    // computer's own printing has it too)
+    page.style.position = "relative";
+    page.setAttribute("data-branded", "1");
+    if (brandMarkCached) {
+      var mark = printEl("img", "position:absolute;left:15px;top:13px;height:23px;width:" + Math.round(23 * brandMarkCached.ratio) + "px;");
+      mark.src = brandMarkCached.url;
+      mark.alt = "ITASK";
+      page.appendChild(mark);
+    }
 
-    // ITASK · the project (and its logo) · the date
+    // the project (and its logo) · the date
     var head = printEl("div", "display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 6px 14px;border-bottom:2px solid " + PRINT_C.rule + ";");
-    var app = printEl("div", "font-weight:800;font-size:26px;letter-spacing:2px;direction:ltr;");
-    app.appendChild(printEl("span", "color:" + PRINT_C.red + ";", "I"));
-    app.appendChild(printEl("span", "color:" + PRINT_C.green + ";", "TASK"));
     var mid = printEl("div", "display:flex;align-items:center;gap:10px;min-width:0;");
     var logo = sheet && findLogo(sheet.logoId);
     if (logo) {
@@ -112,11 +120,10 @@
     mid.appendChild(printEl("div", "font-weight:800;font-size:24px;", sheet ? sheet.name : ""));
     var when = printEl("div", "font-weight:700;font-size:18px;direction:ltr;",
       state.showingCompleted ? tr("printTasksDoneTitle") : isoToFullDisplay(state.viewDate));
-    // right to left: the project, then the date and ITASK
+    // right to left: the project, then the date
     head.appendChild(mid);
     var right = printEl("div", "display:flex;align-items:center;gap:22px;");
     right.appendChild(when);
-    right.appendChild(app);
     head.appendChild(right);
     page.appendChild(head);
 

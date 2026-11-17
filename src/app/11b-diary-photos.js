@@ -176,6 +176,7 @@
             var when = file.lastModified && Math.abs(Date.now() - file.lastModified) < 3 * 86400000 ? file.lastModified : Date.now();
             return scanLoadImage(file).then(function (canvas) {
               diaryStampPhoto(canvas, sheet, when, weather);
+              brandCanvas(canvas);
               return new Promise(function (res) { canvas.toBlob(res, "image/jpeg", 0.88); });
             }).then(function (blob) {
               var d = new Date(when);
