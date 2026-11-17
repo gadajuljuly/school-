@@ -3885,7 +3885,7 @@ ol.task-list { background-color: var(--paper); background-image: repeating-linea
 /* 🧰 the toolbox (src/app/14m-toolbox.js): where the sketch was, and its box of tools */
 .ruled-body .sheet-title-wrap { padding: 0 64px; }
 .ruled-body .sheet-title-wrap .sketch-btn, .ruled-body .sheet-title-wrap .print-tasks-btn { display: none; }
-.toolbox-btn { position: absolute; left: 2px; top: 50%; transform: translateY(-50%); width: 62px; height: 62px; padding: 0; border: none; background: transparent; cursor: pointer; z-index: 2; filter: drop-shadow(0 3px 4px rgba(44, 42, 36, 0.35)); }
+.toolbox-btn { position: absolute; left: -12px; top: 50%; transform: translateY(-50%); width: 62px; height: 62px; padding: 0; border: none; background: transparent; cursor: pointer; z-index: 2; filter: drop-shadow(0 3px 4px rgba(44, 42, 36, 0.35)); }
 .toolbox-btn img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .toolbox-pop { position: fixed; z-index: 45; display: flex; flex-direction: column; gap: 2px; padding: 6px; background: var(--paper); border: 1px solid var(--rule); border-radius: 14px; box-shadow: 0 10px 26px var(--shadow); direction: rtl; }
 .toolbox-pop[hidden] { display: none; }
