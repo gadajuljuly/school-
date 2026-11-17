@@ -38,7 +38,7 @@
 <script src="vendor/supabase-js-2.118.0.js"></script>
 <script src="vendor/firebase-app-compat-10.7.1.js"></script>
 <script src="vendor/firebase-auth-compat-10.7.1.js"></script>
-<link rel="stylesheet" href="tasks.css?v=8b5b0035ce">
+<link rel="stylesheet" href="tasks.css?v=81aae4af2d">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -1720,8 +1720,10 @@
     <div class="site-log-attendance-wrap">
       <div class="site-log-attendance-columns" id="siteLogAttendanceColumns"></div>
     </div>
-    <button type="button" class="site-log-copy-prev-btn" id="siteLogAttendanceCopyPrevBtn" data-i18n="siteLogCopyPrevBtn">העתקת יומן קודם</button>
-    <button type="button" class="site-log-copy-prev-btn" id="siteLogAttendanceOrderBtn" data-i18n="siteLogAttendanceOrderBtn">שגר דוח נוכחות</button>
+    <div class="site-log-bottom-btns">
+      <button type="button" class="site-log-copy-prev-btn" id="siteLogAttendanceCopyPrevBtn" data-i18n="siteLogCopyPrevBtn">העתקת יומן קודם</button>
+      <button type="button" class="site-log-copy-prev-btn" id="siteLogAttendanceOrderBtn" data-i18n="siteLogAttendanceOrderBtn">שגר דוח נוכחות</button>
+    </div>
   </div>
 
   <div class="report-view" id="siteLogToolsView" hidden>
@@ -1736,8 +1738,10 @@
     <div class="site-log-attendance-wrap">
       <div class="site-log-attendance-columns" id="siteLogToolsColumns"></div>
     </div>
-    <button type="button" class="site-log-copy-prev-btn" id="siteLogToolsCopyPrevBtn" data-i18n="siteLogCopyPrevBtn">העתקת יומן קודם</button>
-    <button type="button" class="site-log-copy-prev-btn" id="siteLogToolsOrderBtn" data-i18n="siteLogToolsOrderBtn">שגר דוח כלים</button>
+    <div class="site-log-bottom-btns">
+      <button type="button" class="site-log-copy-prev-btn" id="siteLogToolsCopyPrevBtn" data-i18n="siteLogCopyPrevBtn">העתקת יומן קודם</button>
+      <button type="button" class="site-log-copy-prev-btn" id="siteLogToolsOrderBtn" data-i18n="siteLogToolsOrderBtn">שגר דוח כלים</button>
+    </div>
   </div>
 
   <div class="report-view" id="siteLogPlanView" hidden>

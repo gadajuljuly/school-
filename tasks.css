@@ -4047,3 +4047,6 @@ body.diary-binder-on #diaryView .diary-actions-bar { margin-left: 50px; }
 body.diary-binder-on .report-view.binder-page { inset: auto; top: var(--binder-top); left: calc(var(--binder-left) + 64px); right: var(--binder-right); bottom: var(--binder-bottom); border: 2px solid var(--accent); border-radius: 0 0 16px 0; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12); background: #fffdf8; overflow-y: auto; }
 body.diary-binder-on #siteLogAttendanceColumns { grid-template-columns: repeat(2, 1fr); }
 body.diary-binder-on #diaryView .diary-dictate { width: auto; }
+/* attendance / tools: "העתקת יומן קודם" and "שגר דוח" - small, side by side, at the bottom */
+.site-log-bottom-btns { display: flex; gap: 8px; margin-top: auto; padding: 8px 12px calc(10px + env(safe-area-inset-bottom)); }
+.site-log-bottom-btns .site-log-copy-prev-btn { flex: 1; margin: 0; padding: 7px 6px; font-size: 0.82rem; border-radius: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
