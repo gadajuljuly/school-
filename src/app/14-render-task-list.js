@@ -106,9 +106,8 @@
     // it, same as any other tab, with no rename or long-press wiring at all.
     var isHeadOfficeSheetTab = sheet.id === HEAD_OFFICE_SHEET_ID;
 
-    var tabLongPressFired = false;
     tab.addEventListener("click", function () {
-      if (tabLongPressFired) { tabLongPressFired = false; return; }
+      if (longPressJustFired("tab:" + sheet.id)) return; // (its menu is open)
       if (isHeadOfficeSheetTab) {
         selectSheet(sheet.id);
       } else if (sheet.id === data.activeSheetId) {
@@ -126,27 +125,11 @@
         render();
       });
 
-      var tabPressStartX = 0, tabPressStartY = 0;
       var startTabPress = function (e) {
-        var point = e.touches ? e.touches[0] : e;
-        tabPressStartX = point.clientX;
-        tabPressStartY = point.clientY;
-        tabLongPressFired = false;
-        clearTimeout(longPressTimer);
-        longPressTimer = setTimeout(function () {
-          tabLongPressFired = true;
-          openSheetActionModal(sheet.id);
-        }, 1000);
+        startLongPress("tab:" + sheet.id, e, function () { openSheetActionModal(sheet.id); });
       };
-      var cancelTabPress = function () {
-        clearTimeout(longPressTimer);
-      };
-      var moveTabPress = function (e) {
-        var point = e.touches ? e.touches[0] : e;
-        if (Math.abs(point.clientX - tabPressStartX) > 10 || Math.abs(point.clientY - tabPressStartY) > 10) {
-          cancelTabPress();
-        }
-      };
+      var cancelTabPress = cancelLongPress;
+      var moveTabPress = moveLongPress;
       tab.addEventListener("mousedown", startTabPress);
       tab.addEventListener("mouseup", cancelTabPress);
       tab.addEventListener("mouseleave", cancelTabPress);
@@ -197,8 +180,42 @@
   // tab is always the one closer to the task list below it (via flex
   // `order`), so switching between a private and a shared project visibly
   // swaps which row is "in front."
-  function renderSheetsBar() {
+  // A long press on a project's tab or on a task, kept apart from the element
+  // itself: the page is drawn again whenever the server answers (a sync, the
+  // shared projects' poll), and a long press spanning that used to come to
+  // nothing (the redraw cancelled it). Now it goes on, and the new element
+  // carries it on.
+  var activePress = null; // { key: "tab:<id>" / "task:<id>", x, y }
+  var pressFiredOn = null; // the key whose long press just opened its menu (its click is not a tap)
+  function startLongPress(key, e, onLong) {
+    var point = e.touches ? e.touches[0] : e;
+    pressFiredOn = null;
     clearTimeout(longPressTimer);
+    activePress = { key: key, x: point.clientX, y: point.clientY };
+    longPressTimer = setTimeout(function () {
+      activePress = null;
+      pressFiredOn = key;
+      onLong();
+    }, 1000);
+  }
+  function cancelLongPress() {
+    if (!activePress) return;
+    activePress = null;
+    clearTimeout(longPressTimer);
+  }
+  function moveLongPress(e) {
+    if (!activePress) return;
+    var point = e.touches ? e.touches[0] : e;
+    if (Math.abs(point.clientX - activePress.x) > 10 || Math.abs(point.clientY - activePress.y) > 10) cancelLongPress();
+  }
+  // its click: the end of the long press (not a tap) - once
+  function longPressJustFired(key) {
+    if (pressFiredOn !== key) return false;
+    pressFiredOn = null;
+    return true;
+  }
+  function renderSheetsBar() {
+    if (!activePress) clearTimeout(longPressTimer);
     sheetsBarPrivate.innerHTML = "";
     sheetsBarShared.innerHTML = "";
 
@@ -394,7 +411,7 @@
     updateBudgetTile(); // the footer's budget button: for whoever may see the money
     appLoadingOverlay.hidden = true;
     syncWorkPlanTasks();
-    clearTimeout(longPressTimer);
+    if (!activePress) clearTimeout(longPressTimer); // (a long press under way goes on - see activePress)
     if (chatWasActiveLastRender && state.viewMode !== "chat") teardownChatView();
     chatWasActiveLastRender = state.viewMode === "chat";
     if (isHeadOfficeMode) {
@@ -577,36 +594,20 @@
       var li = document.createElement("li");
       li.className = "task" + (t.status === 1 ? " partial" : "") + (t.status === 2 ? " done" : "") + (rowEditable ? "" : " readonly") + (t.isHeadOffice ? " head-office-task" : "") + (t.headOfficeVirtual ? " head-office-notification-task" : "");
       li.dataset.taskId = t.id;
-      var longPressFired = false;
+
       if (rowEditable && state.editingTaskId !== t.id) {
         li.addEventListener("click", function () {
-          if (longPressFired) { longPressFired = false; return; }
+          if (longPressJustFired("task:" + t.id)) return; // (its menu is open)
           if (isNote) return;
           cycleStatus(t.id);
         });
 
-        var pressStartX = 0, pressStartY = 0;
         var startPress = function (e) {
           if (e.target.closest("input, button")) return;
-          var point = e.touches ? e.touches[0] : e;
-          pressStartX = point.clientX;
-          pressStartY = point.clientY;
-          longPressFired = false;
-          clearTimeout(longPressTimer);
-          longPressTimer = setTimeout(function () {
-            longPressFired = true;
-            openMoveTaskModal(t.id);
-          }, 1000);
+          startLongPress("task:" + t.id, e, function () { openMoveTaskModal(t.id); });
         };
-        var cancelPress = function () {
-          clearTimeout(longPressTimer);
-        };
-        var movePress = function (e) {
-          var point = e.touches ? e.touches[0] : e;
-          if (Math.abs(point.clientX - pressStartX) > 10 || Math.abs(point.clientY - pressStartY) > 10) {
-            cancelPress();
-          }
-        };
+        var cancelPress = cancelLongPress;
+        var movePress = moveLongPress;
         li.addEventListener("mousedown", startPress);
         li.addEventListener("mouseup", cancelPress);
         li.addEventListener("mouseleave", cancelPress);
