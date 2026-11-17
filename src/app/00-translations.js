@@ -794,6 +794,7 @@
     sketchSave: { he: "שמירה", en: "Save", ar: "حفظ", ru: "Сохранить" },
     sketchShare: { he: "שיתוף", en: "Share", ar: "مشاركة", ru: "Поделиться" },
     sketchPrint: { he: "הדפסה", en: "Print", ar: "طباعة", ru: "Печать" },
+    diaryTabHome: { he: "יומן", en: "Diary", ar: "اليومية", ru: "Журнал" },
     rbTitle: { he: "הזמנת ברזל", en: "Rebar order", ar: "طلب حديد", ru: "Заказ арматуры" },
     rbNew: { he: "+ הזמנה חדשה", en: "+ New order", ar: "+ طلب جديد", ru: "+ Новый заказ" },
     rbEmpty: { he: "עוד אין הזמנות ברזל בפרויקט הזה", en: "No rebar orders yet", ar: "لا توجد طلبات بعد", ru: "Заказов пока нет" },

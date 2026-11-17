@@ -94,17 +94,15 @@ test("every part's row is the list's full width, its name and summary in the sam
   });
 });
 
-test("the diary's cards have the same gap on the left and the right of the page", async ({ page }) => {
+test("the diary's cards: beside its tabs on the left, not under them", async ({ page }) => {
   await openWithSharedProject(page, { phone: ME, sheet: { id: "p1", name: "כביש הדקלים", members: [ME], tasks: [], siteLogs: LOGS } });
   await page.locator("#calendarFabBtn").click();
-  const gaps = await page.evaluate(() => {
-    const page_ = document.querySelector(".ruled-body").getBoundingClientRect();
-    return [".diary-day-card", ".diary-dictate", ".diary-list"].map((s) => {
-      const r = document.querySelector(s).getBoundingClientRect();
-      return Math.abs((r.left - page_.left) - (page_.right - r.right));
-    });
+  await expect(page.locator("#diaryTabs")).toBeVisible();
+  const edges = await page.evaluate(() => {
+    const tabs = document.querySelector(".diary-tab:not(.on)").getBoundingClientRect();
+    return [".diary-day-card", ".diary-dictate", ".diary-list"].map((s) => document.querySelector(s).getBoundingClientRect().left - tabs.right);
   });
-  gaps.forEach((g) => expect(g).toBeLessThanOrEqual(1));
+  edges.forEach((g) => expect(g).toBeGreaterThanOrEqual(-1));
 });
 
 test("the project's row at the diary's top: name, logo (opens the logos), sketch; it stays while scrolling", async ({ page }) => {

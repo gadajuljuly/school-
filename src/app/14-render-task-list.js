@@ -465,6 +465,7 @@
     if (reportsMode || diaryMode || libraryMode || chatMode) emptyState.style.display = "none";
     sheetReportsList.hidden = !reportsMode;
     diaryView.hidden = !diaryMode;
+    if (!diaryMode) closeDiaryTabViews(); // (a page of the diary's binder, left open)
     libraryFoldersView.hidden = !libraryMode;
     chatView.hidden = !chatMode;
     document.getElementById("sketchBtn").hidden = libraryMode; // no sketch icon in the library
