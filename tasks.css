@@ -4029,16 +4029,16 @@ ol.task-list { background-color: var(--paper); background-image: repeating-linea
 .rb-dia-other { font-weight: 700; font-size: 0.85rem; }
 
 /* the diary as a binder: tabs down its left side (src/app/11i-diary-tabs.js) */
-.diary-tabs { position: fixed; z-index: 21; width: 66px; display: flex; flex-direction: column; gap: 5px; overflow-y: auto; scrollbar-width: none; padding: 0 0 6px; box-sizing: border-box; }
+.diary-tabs { position: fixed; z-index: 21; width: 66px; display: flex; flex-direction: column; gap: 3px; overflow-y: auto; scrollbar-width: none; padding: 0 0 6px; box-sizing: border-box; }
 .diary-tabs::-webkit-scrollbar { display: none; }
 .diary-tabs[hidden] { display: none; }
-.diary-tab { position: relative; flex: 0 0 auto; width: 60px; height: 62px; padding: 0; border: 1.5px solid #c9bfa8; border-right: none; border-radius: 14px 0 0 14px; background: #e7dfcc; box-shadow: -2px 2px 5px rgba(0, 0, 0, 0.08); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; margin-left: 6px; transition: margin 0.12s, width 0.12s; }
+.diary-tab { position: relative; flex: 0 0 auto; width: 60px; height: 50px; padding: 0; border: 1.5px solid #c9bfa8; border-right: none; border-radius: 14px 0 0 14px; background: #e7dfcc; box-shadow: -2px 2px 5px rgba(0, 0, 0, 0.08); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; margin-left: 6px; transition: margin 0.12s, width 0.12s; }
 .diary-tab img { width: 46px; height: 46px; object-fit: contain; opacity: 0.8; }
 .diary-tab.on { width: 66px; margin-left: 0; background: #fffdf8; box-shadow: -3px 2px 7px rgba(0, 0, 0, 0.14); border-color: var(--accent); border-width: 2px; border-right: none; }
 .diary-tab.on img { opacity: 1; }
-.diary-tab-home small { font-size: 0.72rem; font-weight: 800; color: #44563c; line-height: 1; }
-.diary-tab img.diary-tab-book { width: 36px; height: 36px; }
-.diary-tab-dot { position: absolute; top: 5px; left: 5px; width: 11px; height: 11px; border-radius: 50%; background: #44563c; border: 1.5px solid #fffdf8; display: none; }
+.diary-tab-home small { font-size: 0.68rem; font-weight: 800; color: #44563c; line-height: 1; margin-top: -1px; }
+.diary-tab img.diary-tab-book { width: 30px; height: 30px; }
+.diary-tab-dot { position: absolute; top: 3px; left: 4px; width: 11px; height: 11px; border-radius: 50%; background: #44563c; border: 1.5px solid #fffdf8; display: none; }
 .diary-tab.filled .diary-tab-dot { display: block; }
 /* the diary's own page: beside the tabs */
 body.diary-binder-on #diaryView .diary-home > :not(.diary-proj) { margin-left: 62px; }
