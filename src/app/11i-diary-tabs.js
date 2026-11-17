@@ -35,7 +35,12 @@
     b.setAttribute("data-tab", t.key);
     if (t.key === "home") {
       b.classList.add("diary-tab-home");
-      b.innerHTML = "<span class='diary-tab-book'>📖</span>";
+      // the diary's own icon (the footer's)
+      var book = document.createElement("img");
+      book.alt = "";
+      book.className = "diary-tab-book";
+      book.src = "tasks-calendar-icon.webp";
+      b.appendChild(book);
       var cap = document.createElement("small");
       cap.setAttribute("data-i18n", "diaryTabHome");
       cap.textContent = tr("diaryTabHome");

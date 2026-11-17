@@ -4037,7 +4037,7 @@ ol.task-list { background-color: var(--paper); background-image: repeating-linea
 .diary-tab.on { width: 66px; margin-left: 0; background: #fffdf8; box-shadow: -3px 2px 7px rgba(0, 0, 0, 0.14); border-color: var(--accent); border-width: 2px; border-right: none; }
 .diary-tab.on img { opacity: 1; }
 .diary-tab-home small { font-size: 0.72rem; font-weight: 800; color: #44563c; line-height: 1; }
-.diary-tab-book { font-size: 1.75rem; line-height: 1.1; }
+.diary-tab img.diary-tab-book { width: 36px; height: 36px; }
 .diary-tab-dot { position: absolute; top: 5px; left: 5px; width: 11px; height: 11px; border-radius: 50%; background: #44563c; border: 1.5px solid #fffdf8; display: none; }
 .diary-tab.filled .diary-tab-dot { display: block; }
 /* the diary's own page: beside the tabs */
