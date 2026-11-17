@@ -1,9 +1,9 @@
 // ITASK
 // © 2026 Ahmad Juljoly. All rights reserved.
-var CACHE_NAME = "tasks-app-v520";
+var CACHE_NAME = "tasks-app-v523";
 var CORE_ASSETS = [
-  "./tasks-app.js?v=1222abd216",
-  "./tasks.css?v=41f4c46346",
+  "./tasks-app.js?v=108029f347",
+  "./tasks.css?v=d9f430767a",
   "./tasks.html",
   "./tasks-manifest.json",
   "./tasks-icon-192.png",
@@ -42,7 +42,11 @@ var CORE_ASSETS = [
   "./tasks-head-office-icon.webp",
   "./tasks-reminder-icon.webp",
   "./vendor/html2canvas.min.js",
-  "./vendor/jspdf.umd.min.js"
+  "./vendor/jspdf.umd.min.js",
+  "./vendor/leaflet-1.9.4.js",
+  "./vendor/leaflet-1.9.4.css",
+  "./tasks-weather-icon.webp",
+  "./tasks-map-measure-icon.webp"
 ];
 
 self.addEventListener("install", function (event) {

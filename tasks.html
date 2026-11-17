@@ -38,7 +38,7 @@
 <script src="vendor/supabase-js-2.118.0.js"></script>
 <script src="vendor/firebase-app-compat-10.7.1.js"></script>
 <script src="vendor/firebase-auth-compat-10.7.1.js"></script>
-<link rel="stylesheet" href="tasks.css?v=41f4c46346">
+<link rel="stylesheet" href="tasks.css?v=d9f430767a">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -685,6 +685,10 @@
           <button type="button" class="toolbox-item" id="toolboxPrint"><img src="tasks-print-icon.webp" alt=""><span data-i18n="toolboxPrint">הדפסה</span></button>
           <button type="button" class="toolbox-item" id="toolboxScan"><img src="tasks-scan-icon.webp" alt=""><span data-i18n="toolboxScan">סורק PDF</span></button>
           <button type="button" class="toolbox-item" id="toolboxSketch"><img src="tasks-sketch-icon.webp" alt=""><span data-i18n="toolboxSketch">סקיצה</span></button>
+          <button type="button" class="toolbox-item" id="toolboxMeasure"><span class="toolbox-emoji" data-emoji="📐"></span><span data-i18n="toolMeasure">מדידה</span></button>
+          <button type="button" class="toolbox-item" id="toolboxCamera"><img src="tasks-photos-icon.webp" alt=""><span data-i18n="toolCamera">מצלמת אתר</span></button>
+          <button type="button" class="toolbox-item" id="toolboxWeather"><img src="tasks-weather-icon.webp" alt=""><span data-i18n="toolWeather">תחזית לאתר</span></button>
+          <button type="button" class="toolbox-item" id="toolboxMap"><img src="tasks-map-measure-icon.webp" alt=""><span data-i18n="toolMap">מדידה על מפה</span></button>
         </div>
         <button type="button" class="print-tasks-btn" id="printTasksBtn" data-i18n-title="printTasksTitle" title="הדפסת משימות"><img src="tasks-print-icon.webp" alt=""></button>
         <button type="button" class="sketch-btn" id="sketchBtn" data-i18n-title="sketchTitle" title="סקיצה"><img src="tasks-sketch-icon.webp" alt=""></button>
@@ -1413,6 +1417,70 @@
     </div>
   </div>
 
+  <!-- the toolbox's site tools (src/app/14n-site-tools.js) -->
+  <div class="report-view" id="weatherToolView" hidden>
+    <div class="report-head">
+      <button type="button" class="report-back-btn" id="weatherToolBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
+      <div class="report-head-title" data-i18n="toolWeather">תחזית לאתר</div>
+    </div>
+    <div class="wt-place" id="weatherToolPlace"></div>
+    <div class="wt-hours" id="weatherToolHours"></div>
+    <div class="wt-days" id="weatherToolDays"></div>
+    <div class="wt-credit">Open-Meteo.com</div>
+  </div>
+
+  <div class="report-view" id="levelToolView" hidden>
+    <div class="report-head">
+      <button type="button" class="report-back-btn" id="levelToolBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
+      <div class="report-head-title" data-i18n="toolMeasure">מדידה</div>
+    </div>
+    <div class="lv-tabs">
+      <button type="button" class="lv-tab" data-lv="ar" data-i18n="lvTabAr">מטר במצלמה</button>
+      <button type="button" class="lv-tab" data-lv="slope" data-i18n="lvTabSlope">שיפוע</button>
+      <button type="button" class="lv-tab" data-lv="level" data-i18n="lvTabLevel">פלס</button>
+    </div>
+    <div class="lv-pane" id="lvPaneAr" hidden>
+      <div class="lv-ar-pic">📏</div>
+      <p class="lv-ar-text" id="lvArText"></p>
+      <button type="button" class="site-log-preview-btn" id="lvArStartBtn" data-i18n="lvArStart">פתיחת המצלמה למדידה</button>
+      <div class="lv-ar-results" id="lvArResults"></div>
+    </div>
+    <div class="lv-pane" id="lvPaneSlope" hidden>
+      <div class="lv-slope-hint" id="lvSlopeHint"></div>
+      <div class="lv-slope-arrow" id="lvSlopeArrow">➜</div>
+      <div class="lv-big" id="lvSlopeDeg">0.0°</div>
+      <div class="lv-mid" id="lvSlopePct">0.0%</div>
+      <div class="lv-small" id="lvSlopeMm"></div>
+    </div>
+    <div class="lv-pane" id="lvPaneLevel" hidden>
+      <div class="lv-vial" id="lvVial"><div class="lv-ring"></div><div class="lv-bubble" id="lvBubble"></div></div>
+      <div class="lv-axes"><span id="lvAxisX">0.0°</span><span id="lvAxisY">0.0°</span></div>
+    </div>
+    <div class="lv-foot" id="lvFoot">
+      <button type="button" class="site-log-periodic-btn" id="lvHoldBtn" data-i18n="lvHold">⏸ הקפאה</button>
+      <button type="button" class="site-log-periodic-btn" id="lvZeroBtn" data-i18n="lvZero">איפוס (כיול)</button>
+    </div>
+    <div class="lv-nosensor" id="lvNoSensor" hidden data-i18n="lvNoSensor">אין חיישן הטיה במכשיר הזה - הכלי עובד בטלפון.</div>
+  </div>
+
+  <div class="report-view map-measure-view" id="mapMeasureView" hidden>
+    <div class="report-head">
+      <button type="button" class="report-back-btn" id="mapMeasureBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
+      <div class="report-head-title" data-i18n="toolMap">מדידה על מפה</div>
+    </div>
+    <div class="mm-bar">
+      <button type="button" class="mm-mode on" data-mm="line" data-i18n="mmLine">📏 מרחק</button>
+      <button type="button" class="mm-mode" data-mm="area" data-i18n="mmArea">⬠ שטח</button>
+      <button type="button" class="sk-mini" id="mmUndoBtn" title="↶">↶</button>
+      <button type="button" class="sk-mini" id="mmClearBtn" data-i18n-title="mmClear" title="ניקוי">🗑</button>
+      <button type="button" class="sk-mini" id="mmLocateBtn" data-i18n-title="mmLocate" title="המיקום שלי">📍</button>
+    </div>
+    <div class="mm-map" id="mmMap"></div>
+    <div class="mm-result" id="mmResult"></div>
+  </div>
+
+  <input type="file" accept="image/*" capture="environment" id="toolboxCameraInput" hidden>
+
   <div class="report-view" id="diaryPhotosView" hidden>
     <div class="report-head">
       <button type="button" class="report-back-btn" id="diaryPhotosBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
@@ -1722,6 +1790,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=1222abd216"></script>
+<script src="tasks-app.js?v=108029f347"></script>
 </body>
 </html>

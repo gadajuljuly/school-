@@ -125,7 +125,7 @@ test("the project's row at the diary's top: name, logo (opens the logos), sketch
 
   // the toolbox (in the sketch's place): its sketch, scanner, no printing
   await page.locator("#diaryProjSketch").click();
-  await expect(page.locator("#toolboxPop .toolbox-item:visible")).toHaveText(["סורק PDF", "סקיצה"]);
+  await expect(page.locator("#toolboxPop .toolbox-item:visible")).toHaveText(["סורק PDF", "סקיצה", "מדידה", "מצלמת אתר", "תחזית לאתר", "מדידה על מפה"]);
   await page.locator("#toolboxSketch").click();
   await expect(page.locator("#sketchView")).toBeVisible();
   await page.evaluate(() => { document.getElementById("sketchView").hidden = true; });

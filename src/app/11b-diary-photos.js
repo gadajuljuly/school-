@@ -164,8 +164,9 @@
   }
 
   // ---- taking / adding photos ------------------------------------------------------------
-  function diaryAddPhotos(files) {
-    var sheet = activeSheet(), dateISO = activeSiteLogDate;
+  // (dateISO: the toolbox's site camera - today's diary, from any page)
+  function diaryAddPhotos(files, forDate) {
+    var sheet = activeSheet(), dateISO = forDate || activeSiteLogDate;
     if (!sheet || !dateISO || !supabaseClient || !files.length) return;
     showToast(tr("diaryPhotosSaving"));
     diaryWeatherNow(sheet).then(function (weather) {
