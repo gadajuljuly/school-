@@ -9,6 +9,12 @@ const { openWithSharedProject } = require("./helpers/local-app");
 test.use({ viewport: { width: 1280, height: 800 }, serviceWorkers: "block" });
 const ME = "+972500000001";
 
+// another member's change arriving: the page drawn again
+const serverChange = () => {
+  window.__backend.tables.shared_projects.forEach((r) => { r.data_version = (r.data_version || 1) + 1; });
+  return window.__hooks.loadSharedSheets();
+};
+
 async function longPressWithRedraw(page, tab, redraw) {
   const box = await tab.boundingBox();
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
@@ -25,7 +31,7 @@ test("a long press on a project's tab opens its menu even when the tabs are redr
   await page.locator("#sheetsBarPrivate .rename-input").fill("פרויקט בדיקה");
   await page.locator("#sheetsBarPrivate .rename-input").press("Enter");
   const tab = page.locator("#sheetsBarPrivate .sheet-tab", { hasText: "פרויקט בדיקה" });
-  await longPressWithRedraw(page, tab, () => window.__hooks.loadSharedSheets());
+  await longPressWithRedraw(page, tab, serverChange);
   await expect(page.locator("#sheetActionOverlay")).toBeVisible();
   // the press didn't also count as a tap (which would open the renaming)
   await expect(page.locator("#sheetsBarPrivate .rename-input")).toHaveCount(0);
@@ -39,7 +45,7 @@ test("a short press (a tap) with a redraw in the middle is still just a tap", as
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
   await page.waitForTimeout(200);
-  await page.evaluate(() => window.__hooks.loadSharedSheets());
+  await page.evaluate(serverChange);
   await page.waitForTimeout(100);
   await page.mouse.up();
   await page.waitForTimeout(1200);
@@ -50,7 +56,7 @@ test("a long press on a task opens its menu even when the list is redrawn during
   const today = new Date().toISOString().slice(0, 10);
   await openWithSharedProject(page, { phone: ME, sheet: { id: "p1", name: "בניין A", members: [ME], tasks: [{ id: "t1", text: "להזמין בטון", status: 0, type: "task", date: today, createdAt: 1 }] } });
   const row = page.locator("#taskList li.task", { hasText: "להזמין בטון" });
-  await longPressWithRedraw(page, row.locator(".task-text, span").first(), () => window.__hooks.loadSharedSheets());
+  await longPressWithRedraw(page, row.locator(".task-text, span").first(), serverChange);
   await expect(page.locator("#moveTaskOverlay")).toBeVisible();
   await expect(page.locator("#taskList li.task", { hasText: "להזמין בטון" })).not.toHaveClass(/partial|done/);
 });

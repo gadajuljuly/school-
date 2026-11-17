@@ -332,14 +332,31 @@
       var fetched = stale.length ? supabaseClient.from(SHARED_TABLE).select("*").in("id", stale) : Promise.resolve({ data: [] });
       return fetched.then(function (full) {
         if (full && full.error) throw full.error;
-        ((full && full.data) || []).forEach(function (row) { sharedRowCache[row.id] = row; });
+        var fetchedRows = (full && full.data) || [];
+        fetchedRows.forEach(function (row) { sharedRowCache[row.id] = row; });
         var ids = {};
         list.forEach(function (r) { ids[r.id] = true; });
-        Object.keys(sharedRowCache).forEach(function (id) { if (!ids[id]) delete sharedRowCache[id]; });
-        // a deep copy each time: the sheets built from it get edited in place
-        return { data: list.filter(function (r) { return sharedRowCache[r.id]; }).map(function (r) {
-          return JSON.parse(JSON.stringify(sharedRowCache[r.id]));
-        }) };
+        var removed = false;
+        Object.keys(sharedRowCache).forEach(function (id) { if (!ids[id]) { delete sharedRowCache[id]; removed = true; } });
+        var kept = list.filter(function (r) { return sharedRowCache[r.id]; });
+        return {
+          // nothing new on the server: no row fetched, none gone, the same
+          // projects in the same order as the ones on screen
+          unchanged: !fetchedRows.length && !removed &&
+            kept.map(function (r) { return r.id; }).join("|") === sharedSheets.map(function (sh) { return sh.id; }).join("|"),
+          // a deep copy each time: the sheets built from it get edited in place
+          data: kept.map(function (r) { return JSON.parse(JSON.stringify(sharedRowCache[r.id])); })
+        };
+      });
+    });
+  }
+  // An open task left on an earlier day moves to today (rollSheetsForward) -
+  // whether any would, so a quiet refresh after midnight still shows them
+  function sheetsNeedRollForward(sheets) {
+    var today = todayISO();
+    return sheets.some(function (sheet) {
+      return (sheet.tasks || []).some(function (t) {
+        return typeof t.date !== "string" || (t.type !== "note" && t.status !== 2 && t.date < today);
       });
     });
   }
@@ -347,6 +364,18 @@
     if (!supabaseClient || !myPhoneNumber) return Promise.resolve();
     return fetchSharedRows()
       .then(function (result) {
+        // Nothing changed on the server (most of the 10-second checks):
+        // the projects on screen stay as they are - the same objects, no
+        // redraw (a redraw every few seconds cost battery, and what was
+        // under the finger: a long press, an open picker, the scroll).
+        if (sharedSheetsLoadedOnce && result && result.unchanged) {
+          if (sheetsNeedRollForward(sharedSheets)) {
+            rollSheetsForward(sharedSheets);
+            if (privateDataSettled) render();
+          }
+          tryOpenPendingChat();
+          return;
+        }
         var rows = (result && result.data) || [];
         var previousById = {};
         sharedSheets.forEach(function (s) { previousById[s.id] = s; });
