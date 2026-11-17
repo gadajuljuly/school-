@@ -84,6 +84,15 @@ test("login, create a project, add a task, cycle its status, clean up", async ({
   // project is deleted instead, via the same long-press-the-tab flow a
   // real user would use.
   const tab = page.locator("#sheetsBarPrivate .sheet-tab", { hasText: projectName });
+  // as a person would: once its tab is in sight and has stopped moving (the
+  // tab bar glides to it - this account holds ~200 projects, so it's long)
+  let lastX = null;
+  await expect.poll(async () => {
+    const b = await tab.boundingBox();
+    const settled = !!b && b.x >= 0 && b.x + b.width <= page.viewportSize().width && lastX === b.x;
+    lastX = b ? b.x : null;
+    return settled;
+  }, { intervals: [250], timeout: 10000 }).toBe(true);
   const box = await tab.boundingBox();
   if (!box) throw new Error("project tab not found for cleanup");
   // what's under the pointer (this step failed only here, against the real
