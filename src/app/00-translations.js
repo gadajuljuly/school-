@@ -793,6 +793,8 @@
     sketchTitle: { he: "סקיצה", en: "Sketch", ar: "رسم تخطيطي", ru: "Эскиз" },
     sketchSave: { he: "שמירה", en: "Save", ar: "حفظ", ru: "Сохранить" },
     sketchShare: { he: "שיתוף", en: "Share", ar: "مشاركة", ru: "Поделиться" },
+    sketchPrint: { he: "הדפסה", en: "Print", ar: "طباعة", ru: "Печать" },
+    sketchAreaPrintTitle: { he: "מה להדפיס?", en: "What to print?", ar: "ماذا تريد أن تطبع؟", ru: "Что напечатать?" },
     sketchShareHow: { he: "איך לשתף את הסקיצה?", en: "How to share the sketch?", ar: "كيف تريد مشاركة الرسم؟", ru: "Как поделиться эскизом?" },
     sketchShareToChat: { he: "💬 לצ'אט של הפרויקט", en: "💬 To the project chat", ar: "💬 إلى دردشة المشروع", ru: "💬 В чат проекта" },
     sketchShareToApps: { he: "📤 לאפליקציות אחרות", en: "📤 To other apps", ar: "📤 إلى تطبيقات أخرى", ru: "📤 В другие приложения" },

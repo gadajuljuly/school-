@@ -794,6 +794,8 @@
     sketchTitle: { he: "סקיצה", en: "Sketch", ar: "رسم تخطيطي", ru: "Эскиз" },
     sketchSave: { he: "שמירה", en: "Save", ar: "حفظ", ru: "Сохранить" },
     sketchShare: { he: "שיתוף", en: "Share", ar: "مشاركة", ru: "Поделиться" },
+    sketchPrint: { he: "הדפסה", en: "Print", ar: "طباعة", ru: "Печать" },
+    sketchAreaPrintTitle: { he: "מה להדפיס?", en: "What to print?", ar: "ماذا تريد أن تطبع؟", ru: "Что напечатать?" },
     sketchShareHow: { he: "איך לשתף את הסקיצה?", en: "How to share the sketch?", ar: "كيف تريد مشاركة الرسم؟", ru: "Как поделиться эскизом?" },
     sketchShareToChat: { he: "💬 לצ'אט של הפרויקט", en: "💬 To the project chat", ar: "💬 إلى دردشة المشروع", ru: "💬 В чат проекта" },
     sketchShareToApps: { he: "📤 לאפליקציות אחרות", en: "📤 To other apps", ar: "📤 إلى تطبيقات أخرى", ru: "📤 В другие приложения" },
@@ -21690,6 +21692,56 @@
       return brandPdf(pdf).then(function () { return pdf.output("blob"); });
     });
   }
+  // to the printer: on the phone, Android's print screen (app version 32+;
+  // the PDF in the phone's PDF app before that - 14l-print-tasks.js); on a
+  // computer, the browser's print dialog for the drawing alone, on A4
+  document.getElementById("sketchPrintBtn").addEventListener("click", function () {
+    skPickExportArea("sketchAreaPrintTitle", skPrint);
+  });
+  function skPrint(canvas) {
+    var fileName = skFileName() + ".pdf";
+    if (capacitorShareAvailable) {
+      showToast(tr("printTasksMaking"));
+      skBuildPdf(canvas).then(function (blob) { openPrintPdfOnPhone(blob, fileName); }, function () { alert(tr("reportPdfError")); });
+      return;
+    }
+    var landscape = canvas.width > canvas.height;
+    brandMarkImage().then(function (mark) { return mark; }, function () { return null; }).then(function (mark) {
+      var frame = document.createElement("iframe");
+      frame.setAttribute("aria-hidden", "true");
+      frame.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;";
+      document.body.appendChild(frame);
+      var doc = frame.contentWindow.document;
+      doc.open();
+      doc.write('<!doctype html><html><head><meta charset="utf-8"><title>' + fileName.replace(/\.pdf$/, "").replace(/[<&]/g, "") + '</title><style>' +
+        "@page{size:A4 " + (landscape ? "landscape" : "portrait") + ";margin:0}html,body{margin:0;height:100%}" +
+        ".pg{position:relative;width:100vw;height:100vh;box-sizing:border-box;padding:8mm;display:flex;align-items:center;justify-content:center}" +
+        ".pg>img.d{max-width:100%;max-height:100%;object-fit:contain}" +
+        ".pg>img.m{position:absolute;left:4mm;top:3.5mm;height:6mm}</style></head><body></body></html>");
+      doc.close();
+      var pg = doc.createElement("div");
+      pg.className = "pg";
+      var img = doc.createElement("img");
+      img.className = "d";
+      img.src = canvas.toDataURL("image/png");
+      pg.appendChild(img);
+      if (mark) {
+        var m = doc.createElement("img");
+        m.className = "m";
+        m.src = mark.url;
+        pg.appendChild(m);
+      }
+      doc.body.appendChild(pg);
+      var go = function () {
+        try { frame.contentWindow.focus(); frame.contentWindow.print(); } catch (e) {}
+        setTimeout(function () { if (frame.parentNode) frame.parentNode.removeChild(frame); }, 60000);
+      };
+      Promise.all(Array.prototype.slice.call(doc.images).map(function (im) {
+        return im.complete ? null : new Promise(function (res) { im.onload = im.onerror = res; });
+      })).then(function () { setTimeout(go, 50); });
+    });
+  }
+
   // into a library folder of the project, as a PDF
   document.getElementById("sketchSaveBtn").addEventListener("click", function () {
     skPickExportArea("sketchAreaSaveTitle", skSaveToLibrary);

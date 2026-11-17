@@ -682,3 +682,35 @@ test("sketch fill: with a scale, a painted area knows its size in m²", async ({
   expect(m2).toBeLessThan(50.5);
   expect(fill.mid.x).toBeCloseTo((await els(page))[0].a.x + 100, -1);
 });
+
+test("sketch print: the computer's print dialog for the drawing (with the app's signature); the phone app: Android's print screen", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
+  // a frame's print(): counted
+  await page.evaluate(() => {
+    window.__framePrints = [];
+    new MutationObserver((list) => list.forEach((m) => m.addedNodes.forEach((n) => {
+      if (n.tagName === "IFRAME") n.contentWindow.print = () => window.__framePrints.push(Array.from(n.contentWindow.document.images).map((i) => i.className));
+    }))).observe(document.body, { childList: true });
+  });
+  await page.locator("#toolboxBtn").click(); await page.locator("#toolboxSketch").click();
+  await page.locator(".sk-tool[data-tool=line]").click();
+  await drag(page, [40, 160], [240, 160]);
+  await page.locator("#sketchPrintBtn").click();
+  await expect(page.locator("#sketchAreaChoiceTitle")).toHaveText("מה להדפיס?");
+  await page.locator("#sketchAreaAllBtn").click();
+  await expect.poll(() => page.evaluate(() => window.__framePrints)).toEqual([["d", "m"]]);
+});
+
+test("sketch print on the phone app (version 32+): Android's print screen with the PDF", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, native: true, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
+  await page.evaluate(() => { window.__printPdf = true; });
+  await page.locator("#toolboxBtn").click(); await page.locator("#toolboxSketch").click();
+  await page.locator(".sk-tool[data-tool=line]").click();
+  await drag(page, [40, 160], [240, 160]);
+  await page.locator("#sketchPrintBtn").click();
+  await page.locator("#sketchAreaAllBtn").click();
+  await expect.poll(() => page.evaluate(() => (window.__native.printed || []).length)).toBe(1);
+  const printed = await page.evaluate(() => window.__native.printed[0]);
+  expect(printed.path).toMatch(/\.pdf$/);
+  expect(printed.name).toContain("סקיצה בניין A");
+});
