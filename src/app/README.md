@@ -3,12 +3,19 @@
 `tasks.html` loads `tasks-app.js`, which is **built** from the files here:
 
 ```
+npm install              # once, in the repo's root (esbuild)
 node tools/build-app.js
 ```
 
-joins `src/app/*.js` in name order into `tasks-app.js` and re-stamps the
-`?v=` URLs in `tasks.html` / `tasks-sw.js` (so phones fetch the new code).
+joins `src/app/*.js` in name order, minifies the result into `tasks-app.js`
+(about half the size: no comments, short local names) with
+`tasks-app.js.map` pointing back to these files, and re-stamps the `?v=`
+URLs in `tasks.html` / `tasks-sw.js` (so phones fetch the new code).
 Edit these files, never `tasks-app.js` itself; CI fails if it's out of date.
+
+An error from a phone (the `app_errors` table) names a place in the
+minified file; `node tools/decode-stack.js "<stack>"` turns it into the
+file and line here (with the map of that same build).
 
 The files are consecutive slices of one `(function () { ... })();` — the
 first opens it, the last closes it — so everything still shares one scope,

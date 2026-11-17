@@ -8,6 +8,8 @@ on:
       - "tasks-app.js"
       - "src/**"
       - "tools/**"
+      - "package.json"
+      - "package-lock.json"
       - "tasks-sw.js"
       - "tests/**"
       - ".github/workflows/e2e-tests.yml"
@@ -18,6 +20,8 @@ on:
       - "tasks-app.js"
       - "src/**"
       - "tools/**"
+      - "package.json"
+      - "package-lock.json"
       - "tasks-sw.js"
       - "tests/**"
       - ".github/workflows/e2e-tests.yml"
@@ -36,6 +40,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+
+      - name: Install build tools (esbuild)
+        run: npm ci
 
       - name: tasks-app.js matches src/app
         run: node tools/build-app.js --check

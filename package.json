@@ -1,0 +1,8 @@
+{
+  "name": "itask-build",
+  "private": true,
+  "description": "Build tools for the ITASK site: node tools/build-app.js joins src/app/*.js into tasks-app.js and minifies it (esbuild).",
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}
