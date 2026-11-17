@@ -143,7 +143,8 @@
   // Task long-press -> התראה -> לוח שנה: the calendar opens on today's day
   // view; tapping a time opens the event editor with the task's text, and
   // saving puts the task in the phone's calendar AND sets the task's
-  // ringing reminder (dinging, snooze...) for that same moment.
+  // reminder - one chime 15 minutes before (no ringing on, no snooze: app
+  // version 33+, 02-reminders-native-alarms.js).
   var calPickBanner = document.getElementById("calPickBanner");
   function openCalendarForTaskReminder(sheetId, task) {
     if (!calPlugin || !task) return;

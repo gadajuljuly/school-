@@ -24,7 +24,7 @@ import org.json.JSONObject;
 // presses "כבה" or "נודניק". "כבה" (or swiping it away) turns the
 // reminder off for good: it's unscheduled here and queued for tasks.html
 // to remove from the task (takeTurnedOff).
-// Each alarm is {id, title, body, at (epoch ms), repeatMinutes?, snooze?, quiet?}.
+// Each alarm is {id, title, body, at (epoch ms), repeatMinutes?, snooze?, quiet?, once?}.
 // quiet (work-plan notices): an ordinary notification instead of ringing,
 // opening the app on the work plan.
 public final class TaskAlarmScheduler {
@@ -92,6 +92,7 @@ public final class TaskAlarmScheduler {
             if (a == null) continue;
             if (!id.equals(a.optString("id"))) { next.put(a); continue; }
             if (a.optBoolean("quiet")) showQuiet(c, id, a.optString("title"), a.optString("body"), a.optString("view", viewFor(id)));
+            else if (a.optBoolean("once")) showOnce(c, id, a.optString("title"), a.optString("body"), a.optString("view", viewFor(id)));
             else showRinging(c, id, a.optString("title"), a.optString("body"));
             markFired(c, id, a.optLong("at", 0));
             long repeatMinutes = a.optLong("repeatMinutes", 0);
@@ -369,6 +370,50 @@ public final class TaskAlarmScheduler {
                 .setContentTitle(title)
                 .setContentText(body)
                 .setStyle(new NotificationCompat.BigTextStyle().bigText(body))
+                .setContentIntent(open)
+                .setAutoCancel(true)
+                .build();
+        nm.notify(id.hashCode(), n);
+    }
+
+    // once (a task's phone-calendar event, version 33): one chime and a
+    // notification on top of the screen - no ringing on, no snooze. Done at
+    // once: reported as turned off, so the page marks the link as rung.
+    private static final String ONCE_CHANNEL_ID = "task_calendar_once";
+    private static void showOnce(Context c, String id, String title, String body, String view) {
+        JSONArray off = loadArray(c, KEY_TURNED_OFF);
+        off.put(baseId(id));
+        saveArray(c, KEY_TURNED_OFF, off);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                c.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        NotificationManager nm = c.getSystemService(NotificationManager.class);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && nm.getNotificationChannel(ONCE_CHANNEL_ID) == null) {
+            NotificationChannel channel = new NotificationChannel(ONCE_CHANNEL_ID, "תזכורות מלוח השנה",
+                    NotificationManager.IMPORTANCE_HIGH);
+            channel.setDescription("התראה אחת עם צלצול קצר, 15 דקות לפני אירוע של משימה בלוח השנה");
+            channel.enableVibration(true);
+            channel.setVibrationPattern(DING_DONG_VIBRATION);
+            channel.setSound(Uri.parse("android.resource://" + c.getPackageName() + "/raw/task_alarm_dingdong"),
+                    new AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .build());
+            nm.createNotificationChannel(channel);
+        }
+        PendingIntent open = PendingIntent.getActivity(c, id.hashCode(), ItaskAlarmPlugin.openAppIntent(c, view),
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        Notification n = new NotificationCompat.Builder(c, ONCE_CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.ic_menu_my_calendar)
+                .setContentTitle(title)
+                .setContentText(body)
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(body))
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setCategory(NotificationCompat.CATEGORY_REMINDER)
+                .setVibrate(DING_DONG_VIBRATION)
+                .setSound(Uri.parse("android.resource://" + c.getPackageName() + "/raw/task_alarm_dingdong"))
+                .setOnlyAlertOnce(true)
                 .setContentIntent(open)
                 .setAutoCancel(true)
                 .build();

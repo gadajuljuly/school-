@@ -151,7 +151,7 @@ test("an old calendar-set reminder is converted to a calendar link", async ({ pa
   await expect(calendarIcon(page)).toHaveCount(1);
   await expect(alarmIcon(page)).toHaveCount(0);
   await expect.poll(() => alarms(page)).toEqual([
-    expect.objectContaining({ id: "s1:t1:cal", at: when.ms - 15 * 60000 }),
+    expect.objectContaining({ id: "s1:t1:cal", at: when.ms - 15 * 60000, once: true }),
   ]);
 });
 

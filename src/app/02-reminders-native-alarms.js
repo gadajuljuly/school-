@@ -168,7 +168,8 @@
         if (migrateCalendarReminderToLink(t)) flagged = true;
         var link = getMyCalendarLink(sheet, t);
         if (t.status !== 2 && isCalendarLinkAlarmDue(link)) {
-          alarms.push({ id: sheet.id + ":" + t.id + ":cal", title: sheet.name, body: t.text, at: Date.parse(link.fireAt) });
+          // once: one chime, no ringing on / snooze (app version 33+; an older app rings as before)
+          alarms.push({ id: sheet.id + ":" + t.id + ":cal", title: sheet.name, body: t.text, at: Date.parse(link.fireAt), once: true });
         }
         var r = t.reminder;
         if (t.status === 2 || !isTaskReminderActive(r) || !isMyTaskReminder(sheet, r)) return;

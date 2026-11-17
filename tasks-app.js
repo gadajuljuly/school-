@@ -2704,7 +2704,8 @@
         if (migrateCalendarReminderToLink(t)) flagged = true;
         var link = getMyCalendarLink(sheet, t);
         if (t.status !== 2 && isCalendarLinkAlarmDue(link)) {
-          alarms.push({ id: sheet.id + ":" + t.id + ":cal", title: sheet.name, body: t.text, at: Date.parse(link.fireAt) });
+          // once: one chime, no ringing on / snooze (app version 33+; an older app rings as before)
+          alarms.push({ id: sheet.id + ":" + t.id + ":cal", title: sheet.name, body: t.text, at: Date.parse(link.fireAt), once: true });
         }
         var r = t.reminder;
         if (t.status === 2 || !isTaskReminderActive(r) || !isMyTaskReminder(sheet, r)) return;
@@ -3067,7 +3068,8 @@
   // Task long-press -> התראה -> לוח שנה: the calendar opens on today's day
   // view; tapping a time opens the event editor with the task's text, and
   // saving puts the task in the phone's calendar AND sets the task's
-  // ringing reminder (dinging, snooze...) for that same moment.
+  // reminder - one chime 15 minutes before (no ringing on, no snooze: app
+  // version 33+, 02-reminders-native-alarms.js).
   var calPickBanner = document.getElementById("calPickBanner");
   function openCalendarForTaskReminder(sheetId, task) {
     if (!calPlugin || !task) return;
