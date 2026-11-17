@@ -11142,7 +11142,10 @@
                 return resolveFileUrl(path);
               }).then(function (url) {
                 var entry = { id: uid(), name: name, path: path, type: "image/jpeg", size: blob.size || 0, uploadedAt: Date.now() };
-                var log = findOrCreateSiteLog(sheet, dateISO);
+                // the project as it is now: a refresh while uploading (the
+                // app coming back from the camera) puts a new copy in its place
+                var liveSheet = data.sheets.concat(sharedSheets).find(function (s) { return s.id === sheet.id; }) || sheet;
+                var log = findOrCreateSiteLog(liveSheet, dateISO);
                 log.photos.push({ id: entry.id, name: name, path: path, url: url, type: "image/jpeg", at: when, weather: weather ? diaryWeatherText(weather) : null });
                 if (weather && !log.weather) log.weather = diaryWeatherText(weather);
                 saveData();

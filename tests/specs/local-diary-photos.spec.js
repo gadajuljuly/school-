@@ -66,3 +66,57 @@ test("no location: the site's town is asked once, then used", async ({ page, con
   expect(asked.some((u) => u.includes("geocoding"))).toBe(true);
   expect(asked.some((u) => u.includes("latitude=32.23"))).toBe(true);
 });
+
+test.describe("back from the camera", () => {
+  test.use({ geolocation: { latitude: 32.1, longitude: 34.9 }, permissions: ["geolocation"] });
+  test("the project refreshed while the photo uploads: the photo still goes on the diary", async ({ page }) => {
+    await openWithSharedProject(page, { phone: ME, sheet: { id: "p1", name: "בניין A", members: [ME], tasks: [] } });
+    await fakeWeather(page, []);
+    // the upload waits until released
+    await page.evaluate(() => {
+      const st = window.__backend.client.storage, from = st.from.bind(st);
+      st.from = (b) => { const o = from(b), up = o.upload; o.upload = (...a) => new Promise((res) => { window.__releaseUpload = () => res(up(...a)); }); return o; };
+    });
+    await page.locator("#calendarFabBtn").click();
+    await page.locator("#siteLogPhotosBtn").click();
+    await page.locator("#diaryPhotosCameraInput").setInputFiles(PNG);
+    await page.waitForFunction(() => !!window.__releaseUpload);
+    await page.evaluate(() => window.__hooks.loadSharedSheets()); // the app back in front: a refresh
+    await page.waitForTimeout(300);
+    await page.evaluate(() => window.__releaseUpload());
+    await expect(page.locator("#diaryPhotosGrid .library-item")).toHaveCount(1);
+    await expect.poll(async () => ((await server(page)).siteLogs || [])[0]?.photos?.length).toBe(1);
+  });
+});
+
+test.describe("back from the camera, a private project", () => {
+  test.use({ geolocation: { latitude: 32.1, longitude: 34.9 }, permissions: ["geolocation"] });
+  test("the other device's save comes in while the photo uploads: the photo still goes on the diary", async ({ page }) => {
+    await openWithSharedProject(page, { phone: ME, sheet: { id: "p1", name: "בניין A", members: [ME], tasks: [] } });
+    await page.locator("#sheetsBarPrivate .sheet-tab:not(.add-sheet-tab)").first().click();
+    await fakeWeather(page, []);
+    await page.evaluate(() => {
+      const st = window.__backend.client.storage, from = st.from.bind(st);
+      st.from = (b) => { const o = from(b), up = o.upload; o.upload = (...a) => new Promise((res) => { window.__releaseUpload = () => res(up(...a)); }); return o; };
+    });
+    await page.locator("#calendarFabBtn").click();
+    await page.locator("#siteLogPhotosBtn").click();
+    await page.locator("#diaryPhotosCameraInput").setInputFiles(PNG);
+    await page.waitForFunction(() => !!window.__releaseUpload);
+    // back in front: the server's newer row (the computer's save) is taken in
+    await expect.poll(() => page.evaluate(() => !!(window.__backend.tables.app_state || [])[0])).toBe(true);
+    await page.evaluate(() => {
+      const r = window.__backend.tables.app_state[0];
+      r.data.sheets[0].tasks.push({ id: "pc1", text: "מהמחשב", status: 0, type: "task", date: new Date().toISOString().slice(0, 10), createdAt: Date.now() });
+      r.updated_at = new Date(Date.now() + 1000).toISOString();
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    await page.waitForTimeout(500);
+    await page.evaluate(() => window.__releaseUpload());
+    await expect(page.locator("#diaryPhotosGrid .library-item")).toHaveCount(1);
+    await expect.poll(() => page.evaluate(() => {
+      const s = window.__backend.tables.app_state[0].data.sheets[0];
+      return [(s.siteLogs || []).reduce((n, l) => n + (l.photos || []).length, 0), s.tasks.length];
+    })).toEqual([1, 1]);
+  });
+});
