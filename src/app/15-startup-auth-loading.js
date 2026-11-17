@@ -233,6 +233,7 @@
       workPlan: d.workPlan || [],
       workHammocks: d.workHammocks || [],
       workGroups: d.workGroups || [],
+      rebarOrders: d.rebarOrders || [],
       workBaseline: d.workBaseline || null,
       sketches: d.sketches || [],
       ended: ended,

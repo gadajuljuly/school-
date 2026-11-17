@@ -16,7 +16,7 @@ test("the print button on the tasks page: all ticked, untick one, a PDF of the r
   // in the toolbox
   await page.locator("#toolboxBtn").click();
   await expect(page.locator("#toolboxPop")).toBeVisible();
-  await expect(page.locator("#toolboxPop .toolbox-item:visible")).toHaveText(["הדפסה", "סורק PDF", "סקיצה", "מדידה", "מצלמת אתר", "תחזית לאתר", "מדידה על מפה"]);
+  await expect(page.locator("#toolboxPop .toolbox-item:visible")).toHaveText(["הדפסה", "סורק PDF", "סקיצה", "מדידה", "מצלמת אתר", "תחזית לאתר", "הזמנת ברזל", "מדידה על מפה"]);
   await page.locator("#toolboxPrint").click();
   await expect(page.locator("#toolboxPop")).toBeHidden();
   const boxes = page.locator("#printTasksList input");
@@ -54,12 +54,12 @@ test("a day with no tasks: a message; printing only on the tasks page; the scann
   // other pages, the library too: the toolbox without printing
   await page.locator("#reportFabBtn").click();
   await page.locator("#toolboxBtn").click();
-  await expect(page.locator("#toolboxPop .toolbox-item:visible")).toHaveText(["סורק PDF", "סקיצה", "מדידה", "מצלמת אתר", "תחזית לאתר", "מדידה על מפה"]);
+  await expect(page.locator("#toolboxPop .toolbox-item:visible")).toHaveText(["סורק PDF", "סקיצה", "מדידה", "מצלמת אתר", "תחזית לאתר", "הזמנת ברזל", "מדידה על מפה"]);
   await page.locator("#toolboxBtn").click();
   await expect(page.locator("#toolboxPop")).toBeHidden();
   await page.locator("#libraryBtn").click();
   await page.locator("#toolboxBtn").click();
-  await expect(page.locator("#toolboxPop .toolbox-item:visible")).toHaveText(["סורק PDF", "סקיצה", "מדידה", "מצלמת אתר", "תחזית לאתר", "מדידה על מפה"]);
+  await expect(page.locator("#toolboxPop .toolbox-item:visible")).toHaveText(["סורק PDF", "סקיצה", "מדידה", "מצלמת אתר", "תחזית לאתר", "הזמנת ברזל", "מדידה על מפה"]);
 });
 
 test("the toolbox's scanner: into this project's library", async ({ page }) => {

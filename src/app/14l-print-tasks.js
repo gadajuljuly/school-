@@ -221,7 +221,8 @@
   }
 
   // the browser's own print dialog, for just this page (in a frame of its own)
-  function printPageInFrame(page) {
+  // (title / paper: the rebar order's page too - 14o-rebar-orders.js)
+  function printPageInFrame(page, title, paper) {
     var frame = document.createElement("iframe");
     frame.setAttribute("aria-hidden", "true");
     frame.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;";
@@ -229,8 +230,8 @@
     var doc = frame.contentWindow.document;
     doc.open();
     doc.write('<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>' +
-      printTasksFileName().replace(/\.pdf$/, "").replace(/[<&]/g, "") + '</title><style>' +
-      "@page{size:A4;margin:0}html,body{margin:0;background:" + PRINT_C.paper + ";-webkit-print-color-adjust:exact;print-color-adjust:exact}" +
+      (title || printTasksFileName()).replace(/\.pdf$/, "").replace(/[<&]/g, "") + '</title><style>' +
+      "@page{size:A4;margin:0}html,body{margin:0;background:" + (paper || PRINT_C.paper) + ";-webkit-print-color-adjust:exact;print-color-adjust:exact}" +
       ".print-tasks-page{width:100%!important;min-height:100vh}</style></head><body></body></html>");
     doc.close();
     doc.body.appendChild(doc.importNode(page, true));

@@ -38,7 +38,7 @@
 <script src="vendor/supabase-js-2.118.0.js"></script>
 <script src="vendor/firebase-app-compat-10.7.1.js"></script>
 <script src="vendor/firebase-auth-compat-10.7.1.js"></script>
-<link rel="stylesheet" href="tasks.css?v=d9f430767a">
+<link rel="stylesheet" href="tasks.css?v=e2caf71466">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -688,6 +688,7 @@
           <button type="button" class="toolbox-item" id="toolboxMeasure"><img src="tasks-measure-icon.webp" alt=""><span data-i18n="toolMeasure">מדידה</span></button>
           <button type="button" class="toolbox-item" id="toolboxCamera"><img src="tasks-photos-icon.webp" alt=""><span data-i18n="toolCamera">מצלמת אתר</span></button>
           <button type="button" class="toolbox-item" id="toolboxWeather"><img src="tasks-weather-icon.webp" alt=""><span data-i18n="toolWeather">תחזית לאתר</span></button>
+          <button type="button" class="toolbox-item" id="toolboxRebar"><img src="tasks-rebar-icon.webp" alt=""><span data-i18n="rbTitle">הזמנת ברזל</span></button>
           <button type="button" class="toolbox-item" id="toolboxMap"><img src="tasks-map-measure-icon.webp" alt=""><span data-i18n="toolMap">מדידה על מפה</span></button>
         </div>
         <button type="button" class="print-tasks-btn" id="printTasksBtn" data-i18n-title="printTasksTitle" title="הדפסת משימות"><img src="tasks-print-icon.webp" alt=""></button>
@@ -1479,6 +1480,70 @@
     <div class="mm-result" id="mmResult"></div>
   </div>
 
+  <!-- 🧱 rebar orders (src/app/14o-rebar-orders.js) -->
+  <div class="report-view" id="rebarListView" hidden>
+    <div class="report-head">
+      <button type="button" class="report-back-btn" id="rebarListBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
+      <div class="report-head-title" data-i18n="rbTitle">הזמנת ברזל</div>
+    </div>
+    <div class="rb-list" id="rebarList"></div>
+    <button type="button" class="rb-new-btn" id="rebarNewBtn" data-i18n="rbNew">+ הזמנה חדשה</button>
+  </div>
+
+  <div class="report-view" id="rebarOrderView" hidden>
+    <div class="report-head">
+      <button type="button" class="report-back-btn" id="rebarOrderBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
+      <div class="report-head-title" id="rebarOrderTitle"></div>
+      <button type="button" class="sk-mini" id="rebarDeleteBtn" data-i18n-title="rbDelete" title="מחיקה">🗑</button>
+    </div>
+    <div class="rb-body" id="rebarBody">
+      <div class="rb-info">
+        <label class="rb-f"><span data-i18n="rbEditDate">תאריך הטופס</span><input type="date" id="rbEditDate"></label>
+        <label class="rb-f"><span data-i18n="rbProject">פרויקט</span><input type="text" id="rbProjectName" readonly tabindex="-1"></label>
+        <label class="rb-f rb-wide"><span data-i18n="rbSupplier">ספק</span><input type="text" id="rbSupplier" autocomplete="off"></label>
+        <label class="rb-f rb-wide"><span data-i18n="rbDelivery">אספקה</span><span class="rb-when"><input type="date" id="rbDate"><input type="time" id="rbTime"></span></label>
+        <label class="rb-f rb-wide"><span data-i18n="rbElement">אלמנט / מיקום</span><input type="text" id="rbElement" autocomplete="off"></label>
+      </div>
+      <table class="rb-table">
+        <colgroup><col class="rb-c-no"><col><col class="rb-c-dia"><col class="rb-c-len"><col class="rb-c-kgm"><col class="rb-c-units"><col class="rb-c-tot"></colgroup>
+        <thead><tr><th data-i18n="rbColNo">מס׳</th><th data-i18n="rbColSketch">סקיצה</th><th data-i18n="rbColDia">קוטר</th><th data-i18n="rbColLen">אורך (מ׳)</th><th data-i18n="rbColKgm">ק״ג למ׳</th><th data-i18n="rbColUnits">יח׳</th><th data-i18n="rbColTotal">סה״כ (ק״ג)</th></tr></thead>
+        <tbody id="rbRows"></tbody>
+        <tbody><tr class="rb-add"><td colspan="7"><button type="button" id="rbAddRowBtn" data-i18n="rbAddRow">+ שורה</button></td></tr></tbody>
+        <tfoot><tr class="rb-sum"><td colspan="5" data-i18n="rbSum">סה״כ</td><td id="rbSumUnits"></td><td id="rbSumKg"></td></tr></tfoot>
+      </table>
+      <div class="rb-hint" data-i18n="rbHint">לחיצה ארוכה על שורה - מחיקה</div>
+      <div class="rb-bydia" id="rbByDia"></div>
+      <label class="rb-f rb-notes"><span data-i18n="rbNotes">הערות לספק</span><textarea id="rbNotes" rows="2"></textarea></label>
+    </div>
+    <div class="rb-bar">
+      <button type="button" class="rb-btn" id="rbPrintBtn"><img src="tasks-print-icon.webp" alt=""><span data-i18n="rbPrint">הדפסה</span></button>
+      <button type="button" class="rb-btn rb-primary" id="rbShareBtn" data-i18n="rbShare">שיתוף</button>
+    </div>
+  </div>
+
+  <div class="rb-sheet-overlay" id="rbShapeOverlay" hidden>
+    <div class="rb-sheet">
+      <h3 id="rbShapeTitle"></h3>
+      <div class="rb-shapes" id="rbShapes"></div>
+      <div class="rb-preview"><canvas id="rbShapePreview" width="560" height="240"></canvas></div>
+      <div class="rb-draw-tools" id="rbDrawTools" hidden><span data-i18n="rbDrawHint">ציירו את המוט באצבע</span><button type="button" class="sk-mini" id="rbDrawClearBtn">🗑</button></div>
+      <div class="rb-dims" id="rbDims"></div>
+      <div class="rb-calc" id="rbShapeCalc"></div>
+      <div class="rb-sheet-btns">
+        <button type="button" class="rb-btn" id="rbShapeCancelBtn" data-i18n="cancelBtn">ביטול</button>
+        <button type="button" class="rb-btn rb-primary" id="rbShapeOkBtn" data-i18n="rbOk">אישור</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="rb-sheet-overlay" id="rbDiaOverlay" hidden>
+    <div class="rb-sheet">
+      <h3 id="rbDiaTitle"></h3>
+      <div class="rb-dias" id="rbDias"></div>
+      <div class="rb-calc" data-i18n="rbDiaHint">המשקל למ׳ מתמלא לבד לפי הקוטר</div>
+    </div>
+  </div>
+
   <input type="file" accept="image/*" capture="environment" id="toolboxCameraInput" hidden>
 
   <div class="report-view" id="diaryPhotosView" hidden>
@@ -1790,6 +1855,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=108029f347"></script>
+<script src="tasks-app.js?v=3cd77eb791"></script>
 </body>
 </html>

@@ -753,6 +753,7 @@
           workPlan: privateSheet.workPlan || [],
           workHammocks: privateSheet.workHammocks || [],
           workGroups: privateSheet.workGroups || [],
+          rebarOrders: privateSheet.rebarOrders || [],
           workBaseline: privateSheet.workBaseline || null,
           sketches: privateSheet.sketches || [],
           ended: privateSheet.ended || false,
