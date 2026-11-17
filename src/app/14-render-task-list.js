@@ -233,11 +233,15 @@
     sheetsBarPrivate.style.order = activeIsShared ? "0" : "1";
     sheetsBarShared.style.order = activeIsShared ? "1" : "0";
 
-    if (data.activeSheetId !== lastScrolledSheetId) {
-      lastScrolledSheetId = data.activeSheetId;
-      var visible = activeIsShared ? sharedSheetsVisible : privateSheets;
+    // the open project's tab in view: when another project is opened - and
+    // when its tab moved (renamed, the tabs are in name order: a new
+    // project's tab used to jump out of sight once it got its name)
+    var visible = activeIsShared ? sharedSheetsVisible : privateSheets;
+    var activeIndex = visible.findIndex(function (s) { return s.id === data.activeSheetId; });
+    var scrollKey = data.activeSheetId + "@" + (activeIsShared ? "s" : "p") + activeIndex;
+    if (scrollKey !== lastScrolledSheetId) {
+      lastScrolledSheetId = scrollKey;
       var activeBar = activeIsShared ? sheetsBarShared : sheetsBarPrivate;
-      var activeIndex = visible.findIndex(function (s) { return s.id === data.activeSheetId; });
       var anchorSheet = activeIndex > 0 ? visible[activeIndex - 1] : visible[activeIndex];
       if (anchorSheet) {
         var anchorTabEl = activeBar.querySelector('[data-sheet-id="' + anchorSheet.id + '"]');

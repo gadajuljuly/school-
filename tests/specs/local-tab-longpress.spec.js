@@ -60,3 +60,24 @@ test("a long press on a task opens its menu even when the list is redrawn during
   await expect(page.locator("#moveTaskOverlay")).toBeVisible();
   await expect(page.locator("#taskList li.task", { hasText: "להזמין בטון" })).not.toHaveClass(/partial|done/);
 });
+
+test("a new project's tab stays in sight once it gets its name (the tabs are in name order), and its long press works", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await openWithSharedProject(page, { phone: ME, sheet: { id: "p1", name: "בניין A", members: [ME], tasks: [] } });
+  // many projects before it: its tab's place, once named, is far along the bar
+  for (let i = 0; i < 16; i++) {
+    await page.locator("#sheetsBarPrivate .add-sheet-tab").click();
+    await page.locator("#sheetsBarPrivate .rename-input").fill("E2E 17630" + String(i).padStart(5, "0"));
+    await page.locator("#sheetsBarPrivate .rename-input").press("Enter");
+  }
+  await page.locator("#sheetsBarPrivate .add-sheet-tab").click();
+  await page.locator("#sheetsBarPrivate .rename-input").fill("E2E 1763999999");
+  await page.locator("#sheetsBarPrivate .rename-input").press("Enter");
+  const tab = page.locator("#sheetsBarPrivate .sheet-tab", { hasText: "E2E 1763999999" });
+  await expect.poll(async () => {
+    const b = await tab.boundingBox();
+    return b && b.x >= 0 && b.x + b.width <= 1280;
+  }).toBe(true);
+  await longPressWithRedraw(page, tab, () => 0);
+  await expect(page.locator("#sheetActionOverlay")).toBeVisible();
+});
