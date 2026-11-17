@@ -86,6 +86,21 @@ test("login, create a project, add a task, cycle its status, clean up", async ({
   const tab = page.locator("#sheetsBarPrivate .sheet-tab", { hasText: projectName });
   const box = await tab.boundingBox();
   if (!box) throw new Error("project tab not found for cleanup");
+  // what's under the pointer (this step failed only here, against the real
+  // account: printed so the CI log says why)
+  console.log("[cleanup] " + JSON.stringify(await page.evaluate(([x, y, name]) => {
+    const el = document.elementFromPoint(x, y);
+    const bar = document.getElementById("sheetsBarPrivate");
+    return {
+      at: el ? (el.id || "") + "." + String(el.className) + " '" + (el.textContent || "").trim().slice(0, 30) + "'" : null,
+      x, y, vw: innerWidth, vh: innerHeight,
+      tabs: bar.querySelectorAll(".sheet-tab").length,
+      barScroll: [bar.scrollLeft, bar.scrollWidth, bar.clientWidth],
+      overlays: Array.from(document.querySelectorAll(".modal-overlay:not([hidden]), .report-view:not([hidden])")).map((o) => o.id),
+      active: document.querySelector("#sheetsBarPrivate .sheet-tab.active") ? document.querySelector("#sheetsBarPrivate .sheet-tab.active").textContent : null,
+      name,
+    };
+  }, [box.x + box.width / 2, box.y + box.height / 2, projectName])));
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
   await page.waitForTimeout(1200);
