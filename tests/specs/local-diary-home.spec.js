@@ -1,9 +1,10 @@
 const { test, expect } = require("@playwright/test");
 const { openWithSharedProject } = require("./helpers/local-app");
 
-// The diary's home: the day's card (number, open / closed, how much is
-// filled, yesterday / tomorrow), each part showing what's in it today, and
-// the actions bar.
+// The diary's home: the day's diary itself (as it's sent - the same tables),
+// each part under its icon with "✎ עריכה" / "+ הוספה" opening its screen;
+// above it yesterday / tomorrow, open or closed, how much is filled; under
+// it the actions bar.
 test.use({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
 
 const ME = "+972500000001";
@@ -23,19 +24,25 @@ test("the day's card and what each part holds; yesterday's closed log; no money 
   const v = page.locator("#diaryView");
   await expect(v).toBeVisible();
 
-  await expect(page.locator("#diaryDayTitle")).toHaveText("יומן מס' 8");
+  await expect(page.locator("#diaryDayTitle")).toHaveText("יומן עבודה מס' 8");
   await expect(page.locator("#diaryDayChip")).toHaveText("● פתוח");
   await expect(page.locator("#diaryDayProgressText")).toHaveText("מולאו 3 מתוך 7");
   await expect(page.locator("#diaryNextDayBtn")).toBeDisabled();
   await expect(page.locator("#diaryDictateBtn")).toBeVisible();
 
   const row = (id) => page.locator("#" + id);
+  const body = (id) => page.locator(`[data-doc="${id}"]`);
+  await expect(page.locator("#diaryDocProject")).toHaveText("כביש הדקלים");
   await expect(row("siteLogAttendanceBtn")).toHaveClass(/filled/);
-  await expect(row("siteLogAttendanceBtn")).toContainText("יוסי כהן, 6 פועלים");
-  await expect(row("siteLogToolsBtn")).toContainText("מכבש, משאית ×2");
-  await expect(row("siteLogWorksBtn")).toContainText("פיזור מצע");
+  await expect(row("siteLogAttendanceBtn").locator(".diary-row-end")).toHaveText("✎ עריכה");
+  // the parts' content as in the sent diary: tables
+  await expect(body("siteLogAttendanceBtn").locator("table")).toContainText("יוסי כהן");
+  await expect(body("siteLogAttendanceBtn").locator("table")).toContainText("6 פועלים");
+  await expect(body("siteLogToolsBtn").locator("table")).toContainText("מכבש");
+  await expect(body("siteLogToolsBtn").locator("table")).toContainText("משאית");
+  await expect(body("siteLogWorksBtn")).toContainText("פיזור מצע");
   await expect(row("siteLogContractorsBtn")).not.toHaveClass(/filled/);
-  await expect(row("siteLogContractorsBtn")).toContainText("לא מולא");
+  await expect(body("siteLogContractorsBtn")).toHaveText("לא מולא");
   await expect(row("siteLogContractorsBtn").locator(".diary-row-end")).toHaveText("+ הוספה");
   await expect(page.locator("#budgetFabBtn")).toBeHidden(); // not the owner
   await expect(page.locator("#siteLogShareGeneralBtn")).toBeDisabled();
@@ -49,14 +56,14 @@ test("the day's card and what each part holds; yesterday's closed log; no money 
 
   // yesterday: closed, its number, nothing to dictate, share on
   await page.locator("#diaryPrevDayBtn").click();
-  await expect(page.locator("#diaryDayTitle")).toHaveText("יומן מס' 7");
+  await expect(page.locator("#diaryDayTitle")).toHaveText("יומן עבודה מס' 7");
   await expect(page.locator("#diaryDayChip")).toHaveText("✓ נסגר");
   await expect(page.locator("#diaryDayProgressText")).toHaveText("מולאו 1 מתוך 7");
   await expect(page.locator("#diaryDictateBtn")).toBeHidden();
   await expect(page.locator("#siteLogShareGeneralBtn")).toBeEnabled();
   await expect(page.locator("#siteLogCloseBtn")).toHaveText("✓ סגירה מחדש");
   await page.locator("#diaryNextDayBtn").click();
-  await expect(page.locator("#diaryDayTitle")).toHaveText("יומן מס' 8");
+  await expect(page.locator("#diaryDayTitle")).toHaveText("יומן עבודה מס' 8");
 
   // 🎤 הכתב ליומן: the assistant
   await page.locator("#diaryDictateBtn").click();
@@ -94,15 +101,13 @@ test("every part's row is the list's full width, its name and summary in the sam
   });
 });
 
-test("the diary's cards: beside its tabs on the left, not under them", async ({ page }) => {
+test("no tabs on the side: the diary's page is the screen's full width", async ({ page }) => {
   await openWithSharedProject(page, { phone: ME, sheet: { id: "p1", name: "כביש הדקלים", members: [ME], tasks: [], siteLogs: LOGS } });
   await page.locator("#calendarFabBtn").click();
-  await expect(page.locator("#diaryTabs")).toBeVisible();
-  const edges = await page.evaluate(() => {
-    const tabs = document.querySelector(".diary-tab:not(.on)").getBoundingClientRect();
-    return [".diary-day-card", ".diary-dictate", ".diary-list"].map((s) => document.querySelector(s).getBoundingClientRect().left - tabs.right);
-  });
-  edges.forEach((g) => expect(g).toBeGreaterThanOrEqual(-1));
+  await expect(page.locator("#diaryTabs")).toHaveCount(0);
+  const [doc, proj] = await Promise.all([page.locator(".diary-doc").boundingBox(), page.locator(".diary-proj").boundingBox()]);
+  expect(Math.abs(doc.x - proj.x)).toBeLessThan(2);
+  expect(Math.abs(doc.width - proj.width)).toBeLessThan(2);
 });
 
 test("the project's row at the diary's top: name, logo (opens the logos), sketch; it stays while scrolling", async ({ page }) => {

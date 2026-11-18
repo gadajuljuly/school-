@@ -4028,25 +4028,40 @@ ol.task-list { background-color: var(--paper); background-image: repeating-linea
 .rb-dia.on small { color: #dfe8d6; }
 .rb-dia-other { font-weight: 700; font-size: 0.85rem; }
 
-/* the diary as a binder: tabs down its left side (src/app/11i-diary-tabs.js) */
-.diary-tabs { position: fixed; z-index: 21; width: 66px; display: flex; flex-direction: column; gap: 3px; overflow-y: auto; scrollbar-width: none; padding: 0 0 6px; box-sizing: border-box; }
-.diary-tabs::-webkit-scrollbar { display: none; }
-.diary-tabs[hidden] { display: none; }
-.diary-tab { position: relative; flex: 0 0 auto; width: 60px; height: 50px; padding: 0; border: 1.5px solid #c9bfa8; border-right: none; border-radius: 14px 0 0 14px; background: #e7dfcc; box-shadow: -2px 2px 5px rgba(0, 0, 0, 0.08); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; margin-left: 6px; transition: margin 0.12s, width 0.12s; }
-.diary-tab img { width: 46px; height: 46px; object-fit: contain; opacity: 0.8; }
-.diary-tab.on { width: 66px; margin-left: 0; background: #fffdf8; box-shadow: -3px 2px 7px rgba(0, 0, 0, 0.14); border-color: var(--accent); border-width: 2px; border-right: none; }
-.diary-tab.on img { opacity: 1; }
-.diary-tab-home small { font-size: 0.68rem; font-weight: 800; color: #44563c; line-height: 1; margin-top: -1px; }
-.diary-tab img.diary-tab-book { width: 30px; height: 30px; }
-.diary-tab-dot { position: absolute; top: 3px; left: 4px; width: 11px; height: 11px; border-radius: 50%; background: #44563c; border: 1.5px solid #fffdf8; display: none; }
-.diary-tab.filled .diary-tab-dot { display: block; }
-/* the diary's own page: beside the tabs */
-body.diary-binder-on #diaryView .diary-home > :not(.diary-proj) { margin-left: 62px; }
-body.diary-binder-on #diaryView .diary-actions-bar { margin-left: 50px; }
-/* a part's page: in the binder (its place measured off the diary) */
-body.diary-binder-on .report-view.binder-page { inset: auto; top: var(--binder-top); left: calc(var(--binder-left) + 64px); right: var(--binder-right); bottom: var(--binder-bottom); border: 2px solid var(--accent); border-radius: 0 0 16px 0; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12); background: #fffdf8; overflow-y: auto; }
-body.diary-binder-on #siteLogAttendanceColumns { grid-template-columns: repeat(2, 1fr); }
-body.diary-binder-on #diaryView .diary-dictate { width: auto; }
 /* attendance / tools: "העתקת יומן קודם" and "שגר דוח" - small, side by side, at the bottom */
 .site-log-bottom-btns { display: flex; gap: 8px; margin-top: auto; padding: 8px 12px calc(10px + env(safe-area-inset-bottom)); }
 .site-log-bottom-btns .site-log-copy-prev-btn { flex: 1; margin: 0; padding: 7px 6px; font-size: 0.82rem; border-radius: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* the diary's home: the day's diary itself, filled from right here (src/app/11h-diary-home.js) */
+.diary-daybar { display: flex; align-items: center; gap: 6px; padding: 6px 10px 8px; background: #fffdf8; border: 1px solid var(--rule); border-top: 1px solid #f0e9da; }
+.diary-day-arrow { width: 32px; height: 32px; flex-shrink: 0; border-radius: 50%; border: 1px solid var(--rule); background: #fff; color: var(--accent); font-weight: 800; font-size: 0.95rem; display: grid; place-items: center; padding: 0; cursor: pointer; }
+.diary-day-arrow:disabled { color: #cfc8b8; cursor: default; }
+.diary-daybar-mid { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; font-size: 0.78rem; font-weight: 700; color: var(--ink-muted); }
+.diary-daybar .diary-day-chip { font-size: 0.7rem; padding: 1px 8px; }
+#diaryView .diary-daybar .diary-dictate { width: 34px; height: 34px; flex-shrink: 0; margin: 0; padding: 0; border-radius: 50%; display: grid; place-items: center; }
+#diaryView .diary-daybar .diary-dictate[hidden] { display: none; }
+.diary-daybar .diary-dictate-mic { width: auto; height: auto; background: none; font-size: 16px; }
+.diary-doc { background: #fff; border: 1px solid var(--rule); border-top: none; border-radius: 0 0 16px 16px; padding: 10px 14px 14px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); }
+.diary-doc-head { text-align: center; padding-bottom: 8px; margin-bottom: 4px; }
+.diary-doc-project { color: #2f5d8a; font-size: 1.3rem; font-weight: 800; padding-bottom: 6px; border-bottom: 3px solid #2f5d8a; margin-bottom: 8px; font-family: "Rubik", "Assistant", sans-serif; }
+.diary-doc-head .diary-day-title { font-size: 1.1rem; font-weight: 800; color: var(--ink); }
+.diary-doc-head .diary-day-sub { font-size: 0.88rem; color: var(--ink-muted); }
+.diary-sec { padding: 8px 0 6px; }
+.diary-sec .diary-row { width: 100%; display: flex; align-items: center; gap: 8px; padding: 0; margin: 0 0 6px; border: none; background: transparent; box-shadow: none; text-align: right; cursor: pointer; font: inherit; color: inherit; }
+.diary-sec .diary-row img { width: 32px; height: 32px; object-fit: contain; flex-shrink: 0; }
+.diary-sec .diary-row-text { flex: 1; min-width: 0; }
+.diary-sec .diary-row-text b { color: #2f5d8a; font-size: 1.05rem; font-weight: 800; }
+.diary-sec .diary-row-sum { display: none; }
+.diary-sec .diary-row-end { flex-shrink: 0; font-size: 0.75rem; font-weight: 700; border-radius: 999px; padding: 2px 10px; white-space: nowrap; }
+.diary-sec .diary-row-end.edit { color: #2f5d8a; background: #f4f8fc; border: 1px solid #c9d9e8; }
+.diary-sec .diary-row-end.add { color: #bf4e30; background: #fff; border: 1.5px dashed #e3a99a; }
+.diary-sec .diary-row:not(.filled) img { opacity: 0.55; filter: grayscale(0.5); }
+.diary-sec-body.pdf-doc { width: auto; padding: 0; background: transparent; box-shadow: none; min-height: 0; }
+.diary-sec-body.pdf-doc table { width: 100%; }
+.diary-sec-body .pdf-doc-works-frame { margin: 0; }
+.diary-sec-body .pdf-doc-photos { display: flex; flex-wrap: wrap; gap: 6px; }
+.diary-sec-body .pdf-doc-photos img { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; cursor: zoom-in; }
+.diary-sec-empty { color: #b3ab98; font-size: 0.85rem; margin-right: 40px; }
+.diary-sec + .diary-sec { border-top: 1px solid #eee6d4; }
+.diary-sec-body.pdf-doc th { font-size: 0.72rem; padding: 4px 3px; }
+.diary-sec-body.pdf-doc td { font-size: 0.88rem; padding: 5px 4px; }

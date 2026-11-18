@@ -1,11 +1,12 @@
   // ---------------------------------------------------------------------
-  // The diary's home (#diaryView): a card for the day - its log number,
-  // open / closed, how many of the 7 parts are filled, yesterday / tomorrow -
-  // "🎤 הכתב ליומן" (the assistant, listening), then the parts as a list in
-  // groups, each showing what's in it today (or "+ הוספה"), budget control
-  // last for whoever may see the money, and the log's actions in a bar at
-  // the bottom. The rows are the same buttons as before (same ids), so each
-  // still opens its own screen (11-diary-site-log.js and the others).
+  // The diary's home (#diaryView): the day's diary itself, as it's sent
+  // (the same tables as its PDF - 13-meeting-reports-pdf.js) - and filled
+  // from right here: each part under its icon and name, with "✎ עריכה" when
+  // it has something, "+ הוספה" when not; the name opens the part's own
+  // screen (the same buttons as before, same ids - 11-diary-site-log.js and
+  // the others), and coming back shows the day again, up to date. Above it:
+  // yesterday / tomorrow, open or closed, how much is filled, dictation;
+  // under it, the log's actions.
   // ---------------------------------------------------------------------
   var diaryPrevDayBtn = document.getElementById("diaryPrevDayBtn");
   var diaryNextDayBtn = document.getElementById("diaryNextDayBtn");
@@ -51,6 +52,56 @@
     ];
   }
 
+  // a part's content, as its PDF shows it (the same table builders)
+  function diaryDocBody(id, sheet, log, body) {
+    if (id === "siteLogAttendanceBtn") body.appendChild(buildAttendanceTableElement(log, true));
+    else if (id === "siteLogToolsBtn") body.appendChild(buildToolsTableElement(log, true));
+    else if (id === "siteLogProcurementBtn") body.appendChild(buildProcurementTableElement(log, true));
+    else if (id === "siteLogContractorsBtn") {
+      filledContractors(log).forEach(function (c) {
+        var line = document.createElement("div");
+        line.className = "pdf-doc-contractor-line";
+        line.textContent = c.name;
+        body.appendChild(line);
+      });
+    } else if (id === "siteLogWorksBtn") {
+      var frame = document.createElement("div");
+      frame.className = "pdf-doc-works-frame";
+      filledWorks(log).forEach(function (w) {
+        var rowEl = document.createElement("div");
+        rowEl.className = "pdf-doc-work-row";
+        var textEl = document.createElement("div");
+        textEl.className = "pdf-doc-work-row-text";
+        textEl.textContent = w.text;
+        rowEl.appendChild(textEl);
+        if (w.attachment && isImageFile(w.attachment)) {
+          var imgEl = document.createElement("img");
+          imgEl.className = "pdf-doc-work-row-image";
+          imgEl.src = w.attachment.url;
+          rowEl.appendChild(imgEl);
+        }
+        frame.appendChild(rowEl);
+      });
+      body.appendChild(frame);
+    } else if (id === "siteLogPhotosBtn") {
+      var grid = document.createElement("div");
+      grid.className = "pdf-doc-photos";
+      (log.photos || []).forEach(function (p) {
+        if (!p.url) return;
+        var img = document.createElement("img");
+        img.src = p.url;
+        img.alt = "";
+        img.addEventListener("click", function (e) { e.stopPropagation(); openImageViewer(p.url, p.name); });
+        grid.appendChild(img);
+      });
+      body.appendChild(grid);
+    } else if (id === "siteLogPlanBtn") {
+      appendPlannedPdfSection(body, log);
+      var heading = body.querySelector(".pdf-doc-section-heading");
+      if (heading) heading.remove(); // (its name is the part's own, above)
+    }
+  }
+
   function renderDiaryHome() {
     var sheet = activeSheet();
     if (!sheet) return;
@@ -74,8 +125,12 @@
     var number = log.number || nextSiteLogNumber(sheet, log);
     var today = todayISO();
 
+    document.getElementById("diaryDocProject").textContent = sheet.name;
     document.getElementById("diaryDayTitle").textContent = tr("diaryDayTitle").replace("{n}", number);
-    document.getElementById("diaryDaySub").textContent = diaryWeekday(day) + " · " + isoToFullDisplay(day);
+    document.getElementById("diaryDaySub").textContent = isoToFullDisplay(day) + " - " + diaryWeekday(day);
+    var weatherEl = document.getElementById("diaryDayWeather");
+    weatherEl.hidden = !log.weather;
+    weatherEl.textContent = log.weather ? tr("diaryWeatherLine").replace("{w}", log.weather) : "";
     var chip = document.getElementById("diaryDayChip");
     chip.textContent = tr(log.closed ? "diaryClosed" : "diaryOpen");
     chip.classList.toggle("closed", !!log.closed);
@@ -85,8 +140,10 @@
     document.getElementById("diaryDayProgressText").textContent = tr("diaryFilled").replace("{n}", filled).replace("{total}", parts.length);
     document.getElementById("diaryDayBar").style.width = Math.round(filled * 100 / parts.length) + "%";
 
-    diaryPrevDayBtn.textContent = tr("diaryPrevDay");
-    diaryNextDayBtn.textContent = tr("diaryNextDay");
+    diaryPrevDayBtn.textContent = "→";
+    diaryPrevDayBtn.title = tr("diaryPrevDay").replace(/[→←]/g, "").trim();
+    diaryNextDayBtn.textContent = "←";
+    diaryNextDayBtn.title = tr("diaryNextDay").replace(/[→←]/g, "").trim();
     diaryNextDayBtn.disabled = day >= today; // a diary is for days that happened
     diaryDictateBtn.hidden = day !== today || !!log.closed;
 
@@ -96,8 +153,19 @@
       var row = document.getElementById(x.id);
       row.classList.toggle("filled", !!x.sum);
       sum.textContent = x.sum || tr("diaryNotFilled");
-      end.className = "diary-row-end " + (x.sum ? "ok" : "add");
-      end.textContent = x.sum ? "✓" : tr(x.emptyAction || "diaryAdd");
+      end.className = "diary-row-end " + (x.sum ? "edit" : "add");
+      end.textContent = x.sum ? tr("diaryEdit") : tr(x.emptyAction || "diaryAdd");
+      // what's in it, as in the sent diary
+      var body = document.querySelector('[data-doc="' + x.id + '"]');
+      body.innerHTML = "";
+      if (x.sum) {
+        try { diaryDocBody(x.id, sheet, log, body); } catch (e) { body.textContent = x.sum; }
+      } else {
+        var none = document.createElement("div");
+        none.className = "diary-sec-empty";
+        none.textContent = tr("diaryNotFilled");
+        body.appendChild(none);
+      }
     });
 
 

@@ -38,7 +38,7 @@
 <script src="vendor/supabase-js-2.118.0.js"></script>
 <script src="vendor/firebase-app-compat-10.7.1.js"></script>
 <script src="vendor/firebase-auth-compat-10.7.1.js"></script>
-<link rel="stylesheet" href="tasks.css?v=81aae4af2d">
+<link rel="stylesheet" href="tasks.css?v=931f870624">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -720,64 +720,77 @@
             <b class="diary-proj-name" id="diaryProjName"></b>
             <button type="button" class="diary-proj-sketch toolbox-opener" id="diaryProjSketch" data-i18n-title="toolboxTitle" title="ארגז כלים" aria-haspopup="true"><img src="tasks-toolbox.webp" alt=""></button>
           </div>
-          <div class="diary-day-card">
-            <div class="diary-day-top">
-              <div><div class="diary-day-title" id="diaryDayTitle"></div><div class="diary-day-sub" id="diaryDaySub"></div></div>
-              <span class="diary-day-chip" id="diaryDayChip"></span>
+          <!-- the day: yesterday / tomorrow, open or closed, how much is filled, dictation -->
+          <div class="diary-daybar">
+            <button type="button" class="diary-day-arrow" id="diaryPrevDayBtn"></button>
+            <div class="diary-daybar-mid"><span class="diary-day-chip" id="diaryDayChip"></span><span id="diaryDayProgressText"></span><span class="diary-day-bar" hidden><i id="diaryDayBar"></i></span></div>
+            <button type="button" class="diary-day-arrow" id="diaryNextDayBtn"></button>
+            <button type="button" class="diary-dictate" id="diaryDictateBtn" data-i18n-title="diaryDictate" title="הכתב ליומן"><span class="diary-dictate-mic">🎤</span></button>
+          </div>
+          <!-- the day's diary itself, as it's sent (13-meeting-reports-pdf.js), each part filled from right here (11h-diary-home.js) -->
+          <div class="diary-doc">
+            <div class="diary-doc-head">
+              <div class="diary-doc-project" id="diaryDocProject"></div>
+              <div class="diary-day-title" id="diaryDayTitle"></div>
+              <div class="diary-day-sub" id="diaryDaySub"></div>
+              <div class="diary-day-sub" id="diaryDayWeather" hidden></div>
             </div>
-            <div class="diary-day-progress"><span id="diaryDayProgressText"></span><span class="diary-day-bar"><i id="diaryDayBar"></i></span></div>
-            <div class="diary-day-nav">
-              <button type="button" id="diaryPrevDayBtn"></button>
-              <button type="button" id="diaryNextDayBtn"></button>
-            </div>
-          </div>
-          <button type="button" class="diary-dictate" id="diaryDictateBtn">
-            <span class="diary-dictate-mic">🎤</span>
-            <span><b data-i18n="diaryDictate">הכתב ליומן</b><small data-i18n="diaryDictateHint"></small></span>
-          </button>
-          <div class="diary-group" data-i18n="diaryGroupSite">באתר היום</div>
-          <div class="diary-list">
-            <button type="button" class="diary-row" id="siteLogAttendanceBtn">
-              <img src="tasks-attendance-icon.webp" alt="">
-              <span class="diary-row-text"><b data-i18n="siteLogAttendance"></b><span class="diary-row-sum" data-sum="siteLogAttendanceBtn"></span></span>
-              <span class="diary-row-end" data-end="siteLogAttendanceBtn"></span>
-            </button>
-            <button type="button" class="diary-row" id="siteLogToolsBtn">
-              <img src="tasks-tools-icon.webp" alt="">
-              <span class="diary-row-text"><b data-i18n="siteLogTools"></b><span class="diary-row-sum" data-sum="siteLogToolsBtn"></span></span>
-              <span class="diary-row-end" data-end="siteLogToolsBtn"></span>
-            </button>
-            <button type="button" class="diary-row" id="siteLogContractorsBtn">
-              <img src="tasks-contractors-icon.webp" alt="">
-              <span class="diary-row-text"><b data-i18n="siteLogContractors"></b><span class="diary-row-sum" data-sum="siteLogContractorsBtn"></span></span>
-              <span class="diary-row-end" data-end="siteLogContractorsBtn"></span>
-            </button>
-            <button type="button" class="diary-row" id="siteLogWorksBtn">
-              <img src="tasks-works-icon.webp" alt="">
-              <span class="diary-row-text"><b data-i18n="siteLogWorks"></b><span class="diary-row-sum" data-sum="siteLogWorksBtn"></span></span>
-              <span class="diary-row-end" data-end="siteLogWorksBtn"></span>
-            </button>
-          </div>
-          <div class="diary-group" data-i18n="diaryGroupMaterials">חומרים ותיעוד</div>
-          <div class="diary-list">
-            <button type="button" class="diary-row" id="siteLogProcurementBtn">
-              <img src="tasks-procurement-icon.webp" alt="">
-              <span class="diary-row-text"><b data-i18n="siteLogProcurement"></b><span class="diary-row-sum" data-sum="siteLogProcurementBtn"></span></span>
-              <span class="diary-row-end" data-end="siteLogProcurementBtn"></span>
-            </button>
-            <button type="button" class="diary-row" id="siteLogPhotosBtn">
-              <img src="tasks-photos-icon.webp" alt="">
-              <span class="diary-row-text"><b data-i18n="diaryPhotosTile"></b><span class="diary-row-sum" data-sum="siteLogPhotosBtn"></span></span>
-              <span class="diary-row-end" data-end="siteLogPhotosBtn"></span>
-            </button>
-          </div>
-          <div class="diary-group" data-i18n="diaryGroupTracking">מעקב</div>
-          <div class="diary-list">
-            <button type="button" class="diary-row" id="siteLogPlanBtn">
-              <img src="tasks-work-plan-icon.webp" alt="">
-              <span class="diary-row-text"><b data-i18n="workPlanPlannedVsDone"></b><span class="diary-row-sum" data-sum="siteLogPlanBtn"></span></span>
-              <span class="diary-row-end" data-end="siteLogPlanBtn"></span>
-            </button>
+            <section class="diary-sec">
+              <button type="button" class="diary-row" id="siteLogAttendanceBtn">
+                <img src="tasks-attendance-icon.webp" alt="">
+                <span class="diary-row-text"><b data-i18n="siteLogAttendance"></b><span class="diary-row-sum" data-sum="siteLogAttendanceBtn"></span></span>
+                <span class="diary-row-end" data-end="siteLogAttendanceBtn"></span>
+              </button>
+              <div class="diary-sec-body pdf-doc" data-doc="siteLogAttendanceBtn"></div>
+            </section>
+            <section class="diary-sec">
+              <button type="button" class="diary-row" id="siteLogToolsBtn">
+                <img src="tasks-tools-icon.webp" alt="">
+                <span class="diary-row-text"><b data-i18n="siteLogTools"></b><span class="diary-row-sum" data-sum="siteLogToolsBtn"></span></span>
+                <span class="diary-row-end" data-end="siteLogToolsBtn"></span>
+              </button>
+              <div class="diary-sec-body pdf-doc" data-doc="siteLogToolsBtn"></div>
+            </section>
+            <section class="diary-sec">
+              <button type="button" class="diary-row" id="siteLogContractorsBtn">
+                <img src="tasks-contractors-icon.webp" alt="">
+                <span class="diary-row-text"><b data-i18n="siteLogContractors"></b><span class="diary-row-sum" data-sum="siteLogContractorsBtn"></span></span>
+                <span class="diary-row-end" data-end="siteLogContractorsBtn"></span>
+              </button>
+              <div class="diary-sec-body pdf-doc" data-doc="siteLogContractorsBtn"></div>
+            </section>
+            <section class="diary-sec">
+              <button type="button" class="diary-row" id="siteLogWorksBtn">
+                <img src="tasks-works-icon.webp" alt="">
+                <span class="diary-row-text"><b data-i18n="siteLogWorks"></b><span class="diary-row-sum" data-sum="siteLogWorksBtn"></span></span>
+                <span class="diary-row-end" data-end="siteLogWorksBtn"></span>
+              </button>
+              <div class="diary-sec-body pdf-doc" data-doc="siteLogWorksBtn"></div>
+            </section>
+            <section class="diary-sec">
+              <button type="button" class="diary-row" id="siteLogProcurementBtn">
+                <img src="tasks-procurement-icon.webp" alt="">
+                <span class="diary-row-text"><b data-i18n="siteLogProcurement"></b><span class="diary-row-sum" data-sum="siteLogProcurementBtn"></span></span>
+                <span class="diary-row-end" data-end="siteLogProcurementBtn"></span>
+              </button>
+              <div class="diary-sec-body pdf-doc" data-doc="siteLogProcurementBtn"></div>
+            </section>
+            <section class="diary-sec">
+              <button type="button" class="diary-row" id="siteLogPhotosBtn">
+                <img src="tasks-photos-icon.webp" alt="">
+                <span class="diary-row-text"><b data-i18n="diaryPhotosTile"></b><span class="diary-row-sum" data-sum="siteLogPhotosBtn"></span></span>
+                <span class="diary-row-end" data-end="siteLogPhotosBtn"></span>
+              </button>
+              <div class="diary-sec-body pdf-doc" data-doc="siteLogPhotosBtn"></div>
+            </section>
+            <section class="diary-sec">
+              <button type="button" class="diary-row" id="siteLogPlanBtn">
+                <img src="tasks-work-plan-icon.webp" alt="">
+                <span class="diary-row-text"><b data-i18n="workPlanPlannedVsDone"></b><span class="diary-row-sum" data-sum="siteLogPlanBtn"></span></span>
+                <span class="diary-row-end" data-end="siteLogPlanBtn"></span>
+              </button>
+              <div class="diary-sec-body pdf-doc" data-doc="siteLogPlanBtn"></div>
+            </section>
           </div>
         </div>
         <div class="diary-actions-bar">
@@ -1859,6 +1872,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=f3e558900f"></script>
+<script src="tasks-app.js?v=681763bd09"></script>
 </body>
 </html>
