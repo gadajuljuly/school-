@@ -21,8 +21,12 @@ import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.WindowManager;
-import android.view.animation.AccelerateInterpolator;
-import android.view.animation.DecelerateInterpolator;
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.ValueAnimator;
+import android.view.animation.LinearInterpolator;
+import com.airbnb.lottie.LottieAnimationView;
+import com.airbnb.lottie.LottieDrawable;
 import android.widget.TextView;
 
 import org.json.JSONArray;
@@ -36,9 +40,10 @@ import java.util.List;
 import java.util.Locale;
 
 // The floating task (version 25): round the clock - every quarter hour from
-// 06:00 to 18:00, every half hour through the evening and night - a small bar - "project: task" - shows over whatever is on screen for 8
-// seconds, then goes - sliding in from the right edge of the screen and
-// back out to it, like a ticker. Each time it's the next open task (today's and
+// 06:00 to 18:00, every half hour through the evening and night - a small bar - "project: task" - shows over whatever is on screen: since
+// version 35 a construction machine (a Lottie animation: loader, roller,
+// excavator - a different one each time) drives slowly across the screen
+// from right to left in 8 seconds, pulling the bar behind it on a chain. Each time it's the next open task (today's and
 // earlier) of the next project, round and round: the 1st task of every
 // project, then the 2nd of every project... It reads the same open-tasks
 // list the home-screen widget gets from the app (ItaskWidgetProvider), and
@@ -50,8 +55,9 @@ public class ItaskFloatReceiver extends BroadcastReceiver {
     private static final String KEY_ON = "on";
     private static final String KEY_LAST = "lastTask";
     private static final int DAY_FROM = 6, DAY_TO = 18; // every 15 minutes; else every 30
-    private static final long SHOW_MS = 8000;
-    private static final long SLIDE_IN_MS = 700, SLIDE_OUT_MS = 600;
+    private static final long CROSS_MS = 8000; // right edge to left edge, one slow steady drive
+    private static final String KEY_LAST_VEHICLE = "lastVehicle";
+    private static final String[] VEHICLES = { "lottie/itask_loader.json", "lottie/itask_roller.json", "lottie/itask_excavator.json" };
     private static final int REQUEST_CODE = 7301;
 
     private static SharedPreferences prefs(Context c) {
@@ -162,38 +168,50 @@ public class ItaskFloatReceiver extends BroadcastReceiver {
         line.setSpan(new StyleSpan(Typeface.BOLD), 0, line.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         ((TextView) view.findViewById(R.id.itask_float_text)).setText(line);
 
+        // the machine: a different one from last time
+        final LottieAnimationView vehicle = (LottieAnimationView) view.findViewById(R.id.itask_float_vehicle);
+        try {
+            String last = prefs(c).getString(KEY_LAST_VEHICLE, "");
+            List<String> choices = new ArrayList<>();
+            for (String v : VEHICLES) if (!v.equals(last)) choices.add(v);
+            String pick = choices.get((int) (Math.random() * choices.size()));
+            prefs(c).edit().putString(KEY_LAST_VEHICLE, pick).apply();
+            vehicle.setAnimation(pick);
+            vehicle.setRepeatCount(LottieDrawable.INFINITE);
+            vehicle.playAnimation();
+        } catch (Throwable t) {
+            // no machine (the animation couldn't load): the bar alone
+            vehicle.setVisibility(View.GONE);
+            view.findViewById(R.id.itask_float_chain).setVisibility(View.GONE);
+        }
+
         int type = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
                 ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
                 : WindowManager.LayoutParams.TYPE_PHONE;
-        WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
+        // the window is only as big as the machine and the bar (touches
+        // elsewhere go on to the app below), and it itself drives across
+        final WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT, type,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+                        | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
                 PixelFormat.TRANSLUCENT);
-        lp.gravity = Gravity.TOP | Gravity.RIGHT;
+        lp.gravity = Gravity.TOP | Gravity.LEFT;
         float dp = c.getResources().getDisplayMetrics().density;
-        lp.x = 0; // against the right edge: the card comes in from there
-        lp.y = Math.round(30 * dp);
-        final View card = view.findViewById(R.id.itask_float_card);
-        // off screen until it's measured, then in from the right
-        card.setTranslationX(c.getResources().getDisplayMetrics().widthPixels);
+        final int screenW = c.getResources().getDisplayMetrics().widthPixels;
+        lp.x = screenW; // off the right edge to start
+        lp.y = Math.round(24 * dp);
 
         final boolean[] gone = { false };
+        final ValueAnimator[] drive = { null };
         final Runnable remove = new Runnable() {
             @Override
             public void run() {
                 if (gone[0]) return;
                 gone[0] = true;
+                if (drive[0] != null) drive[0].cancel();
+                vehicle.cancelAnimation();
                 try { wm.removeView(view); } catch (Exception e) { /* already gone */ }
                 pending.finish();
-            }
-        };
-        // back out to the right, then away
-        final Runnable slideOut = new Runnable() {
-            @Override
-            public void run() {
-                if (gone[0]) return;
-                card.animate().translationX(card.getWidth() + 16 * dp).setDuration(SLIDE_OUT_MS)
-                        .setInterpolator(new AccelerateInterpolator()).withEndAction(remove).start();
             }
         };
         view.setOnClickListener(new View.OnClickListener() {
@@ -209,14 +227,32 @@ public class ItaskFloatReceiver extends BroadcastReceiver {
             pending.finish();
             return;
         }
+        // once measured: from just off the right edge to just off the left one, steadily
         view.post(new Runnable() {
             @Override
             public void run() {
-                card.setTranslationX(card.getWidth() + 16 * dp);
-                card.animate().translationX(0).setDuration(SLIDE_IN_MS)
-                        .setInterpolator(new DecelerateInterpolator()).start();
+                if (gone[0]) return;
+                int w = view.getWidth();
+                ValueAnimator a = ValueAnimator.ofInt(screenW, -w);
+                a.setDuration(CROSS_MS);
+                a.setInterpolator(new LinearInterpolator());
+                a.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+                    @Override
+                    public void onAnimationUpdate(ValueAnimator va) {
+                        if (gone[0]) return;
+                        lp.x = (Integer) va.getAnimatedValue();
+                        try { wm.updateViewLayout(view, lp); } catch (Exception e) { /* gone */ }
+                    }
+                });
+                a.addListener(new AnimatorListenerAdapter() {
+                    @Override
+                    public void onAnimationEnd(Animator animation) { remove.run(); }
+                });
+                drive[0] = a;
+                a.start();
             }
         });
-        new Handler(Looper.getMainLooper()).postDelayed(slideOut, SLIDE_IN_MS + SHOW_MS);
+        // in any case: gone a little after the drive
+        new Handler(Looper.getMainLooper()).postDelayed(remove, CROSS_MS + 1500);
     }
 }

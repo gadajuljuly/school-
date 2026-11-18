@@ -1,19 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- the floating task: "project: task" on one line, the ITASK mark at its
-     start, cream with a gold border (ItaskFloatReceiver). The window sits
-     against the screen's right edge, so the card slides in and out there. -->
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- the floating task (ItaskFloatReceiver): a construction machine (a Lottie
+     animation, a different one each time) drives across the screen from
+     right to left, pulling the card - "project: task", the ITASK mark at its
+     start, cream with a gold border - on a short chain behind it. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:paddingLeft="6dp"
-    android:paddingTop="6dp"
-    android:paddingRight="10dp"
+    android:gravity="center_vertical"
+    android:layoutDirection="ltr"
+    android:orientation="horizontal"
+    android:paddingTop="2dp"
     android:paddingBottom="6dp">
+
+    <com.airbnb.lottie.LottieAnimationView
+        android:id="@+id/itask_float_vehicle"
+        android:layout_width="84dp"
+        android:layout_height="84dp"
+        android:contentDescription="@null" />
+
+    <View
+        android:id="@+id/itask_float_chain"
+        android:layout_width="22dp"
+        android:layout_height="4dp"
+        android:layout_marginStart="-14dp"
+        android:layout_marginTop="14dp"
+        android:background="@drawable/itask_float_chain" />
 
     <LinearLayout
         android:id="@+id/itask_float_card"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
         android:background="@drawable/itask_float_bg"
         android:elevation="6dp"
         android:gravity="center_vertical"
@@ -43,4 +60,4 @@
             android:textDirection="firstStrongRtl"
             android:textSize="14sp" />
     </LinearLayout>
-</FrameLayout>
+</LinearLayout>

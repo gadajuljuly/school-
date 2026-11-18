@@ -275,3 +275,12 @@ adds, once:
   in AndroidManifest.xml (AR is optional: the app still installs on phones
   without ARCore - the page then says the phone doesn't support it), plus the
   CAMERA permission.
+
+## Version 35: the floating task's machines (Lottie)
+
+The floating task (`ItaskFloatReceiver`) is now pulled across the screen,
+right to left in 8 seconds, by a construction machine - a Lottie animation
+from `native-src/assets/lottie/` (loader, roller, excavator; a different one
+each time). `prepare-android.bat` copies `native-src/assets` into
+`android/app/src/main/assets` and adds `implementation "com.airbnb.android:lottie:6.6.0"`
+to `android/app/build.gradle`, once.

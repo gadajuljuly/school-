@@ -17,6 +17,8 @@ call npx cap sync android || goto :error
 echo === copying native sources ===
 copy /Y native-src\*.java android\app\src\main\java\com\gadajuljuly\itask\ || goto :error
 xcopy /E /Y /I native-src\res android\app\src\main\res || goto :error
+rem the floating task's machines (Lottie animations, version 35)
+xcopy /E /Y /I native-src\assets android\app\src\main\assets || goto :error
 rem Gemini Nano plugin - only once enable-gemini-nano.bat has added it
 if exist android\app\src\main\java\com\gadajuljuly\itask\ItaskAIPlugin.kt copy /Y native-src-ai\*.kt android\app\src\main\java\com\gadajuljuly\itask\ || goto :error
 echo === assistant widget in AndroidManifest.xml (added once) ===
@@ -41,6 +43,8 @@ rem the camera tape (version 33): its activity, ARCore as optional, the camera p
 powershell -NoProfile -ExecutionPolicy Bypass -Command "$f='android\app\src\main\AndroidManifest.xml'; $x=[IO.File]::ReadAllText($f); if ($x -notmatch 'ItaskMeasureActivity') { $r=[IO.File]::ReadAllText('native-src\manifest-ar.xml'); $i=$x.LastIndexOf('</application>'); $x=$x.Substring(0,$i)+$r+$x.Substring($i); Write-Host 'activity added' } if ($x -notmatch 'android.hardware.camera.ar') { $i=$x.IndexOf('<application'); $p=[IO.File]::ReadAllText('native-src\manifest-ar-permission.xml'); $x=$x.Substring(0,$i)+$p+$x.Substring($i); Write-Host 'permission added' } [IO.File]::WriteAllText($f,$x)" || goto :error
 rem ...the measuring screen turns with the phone (a fixed portrait screen made Play require a portrait screen - not on every device)
 powershell -NoProfile -ExecutionPolicy Bypass -Command "$f='android\app\src\main\AndroidManifest.xml'; $x=[IO.File]::ReadAllText($f); $y=$x.Replace(' android:screenOrientation=\"portrait\"',''); if ($y -notmatch 'android.hardware.screen.portrait') { $i=$y.IndexOf('<application'); $y=$y.Substring(0,$i)+'<uses-feature android:name=\"android.hardware.screen.portrait\" android:required=\"false\" />'+[Environment]::NewLine+$y.Substring($i) } if ($y -ne $x) { [IO.File]::WriteAllText($f,$y); Write-Host 'portrait fixed' } else { Write-Host 'portrait ok' }" || goto :error
+rem ...Lottie: the floating task's machines (version 35)
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$f='android\app\build.gradle'; $x=[IO.File]::ReadAllText($f); if ($x -notmatch 'com.airbnb.android:lottie') { $i=$x.IndexOf('dependencies {'); $x=$x.Substring(0,$i+14)+[Environment]::NewLine+'    implementation \"com.airbnb.android:lottie:6.6.0\"'+$x.Substring($i+14); [IO.File]::WriteAllText($f,$x); Write-Host 'Lottie added' } else { Write-Host 'already there' }" || goto :error
 rem ...ARCore itself, and Android 7+ (ARCore needs it)
 powershell -NoProfile -ExecutionPolicy Bypass -Command "$f='android\app\build.gradle'; $x=[IO.File]::ReadAllText($f); if ($x -notmatch 'com.google.ar:core') { $i=$x.IndexOf('dependencies {'); $x=$x.Substring(0,$i+14)+[Environment]::NewLine+'    implementation \"com.google.ar:core:1.46.0\"'+$x.Substring($i+14); [IO.File]::WriteAllText($f,$x); Write-Host 'ARCore added' } else { Write-Host 'already there' }" || goto :error
 powershell -NoProfile -ExecutionPolicy Bypass -Command "$f='android\variables.gradle'; $x=[IO.File]::ReadAllText($f); $y=[regex]::Replace($x,'minSdkVersion\s*=\s*2[0-3]\b','minSdkVersion = 24'); if ($y -ne $x) { [IO.File]::WriteAllText($f,$y); Write-Host 'minSdk 24' } else { Write-Host 'minSdk ok' }" || goto :error
