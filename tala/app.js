@@ -631,17 +631,17 @@ function tabDetails(s) {
     <table class="table">
       <tr><th>${T("סוג התמיכה")}</th><th style="width:110px">${T("מספר השעות")}</th><th>${T("שם המורה / המטפל")}</th><th></th></tr>
       ${s.supports.map((m, i) => `<tr>
-        <td><input type="text" data-path="supports.${i}.type" value="${esc(m.type)}" list="supportKinds"></td>
+        <td>${choiceWithNew(`supports.${i}.type`, supportKinds(), m.type, T("סוג התמיכה"))}</td>
         <td><input type="text" data-path="supports.${i}.hours" value="${esc(m.hours)}" inputmode="decimal"></td>
         <td><input type="text" data-path="supports.${i}.teacher" value="${esc(m.teacher)}"></td>
         <td style="width:40px"><button class="btn small danger" data-act="del-support" data-i="${i}" aria-label="${T("מחיקה")}">✕</button></td>
       </tr>`).join('')}
     </table>
-    <datalist id="supportKinds">${SUPPORT_KINDS.map(r => `<option value="${r}">`).join('')}</datalist>
     <button class="btn ghost" data-act="add-support" style="margin-top:8px">+ ${T("הוספת תמיכה")}</button>
   </div>
   <div class="card"><h2>${T("התאמות בהמלצת בית הספר")}</h2>
-    <div class="checks">${ACCOMMODATIONS.map(a => `<label class="check"><input type="checkbox" data-path="accommodations.${a}" ${s.accommodations[a] ? 'checked' : ''}> ${T(a)}</label>`).join('')}</div>
+    <div class="checks">${accommodationList().map(a => `<label class="check"><input type="checkbox" data-path="accommodations.${a}" ${s.accommodations[a] ? 'checked' : ''}> ${esc(T(a))}</label>`).join('')}</div>
+    <button class="btn small ghost" data-act="add-acc" style="margin-top:8px">+ ${T("הוספת התאמה אחרת")}</button>
     ${field('accommodationsOther', T("אחר / התאמות בדרכי הוראה ולמידה"), 'textarea', 'wide')}
   </div>
   <div class="card"><h2>${T("צוות")}</h2>
@@ -1248,7 +1248,7 @@ function docSchool(s) {
   const kv = (k, v) => v ? `<tr><td>${k}</td><td class="pre" dir="auto">${esc(v)}</td></tr>` : '';
   const support = SUPPORT_WHEN.map(w => [w, SUPPORT_TYPES.filter(t => s.support[`${w}|${t}`])]).filter(([, l]) => l.length);
   const diag = DIAGNOSES.filter(d => s.diagnoses[d]);
-  const acc = ACCOMMODATIONS.filter(a => s.accommodations[a]);
+  const acc = accommodationList().filter(a => s.accommodations[a]);
   const mapping = MAP_GROUPS.map(grp => {
     const rows = grp.sections.flatMap(x => x.items).filter(i => rating(s, i.id));
     const notes = s.mapNotes[grp.id];
@@ -1476,6 +1476,18 @@ document.addEventListener('click', e => {
 // ---------- events ----------
 function touch(s) { s.updatedAt = Date.now(); save(); }
 
+// Lists the teacher can extend: the built-in options plus every option she added for any of her students.
+const NEW_OPTION = '__new';
+const supportKinds = () => [...new Set([...SUPPORT_KINDS, ...students.flatMap(x => x.supports.map(m => (m.type || '').trim()))].filter(Boolean))];
+const accommodationList = () => [...new Set([...ACCOMMODATIONS, ...students.flatMap(x => Object.keys(x.accommodations || {}))])];
+const optionName = v => String(v || '').replace(/[.]/g, ' ').replace(/\s+/g, ' ').trim();
+function choiceWithNew(path, options, value, label) {
+  const list = value && !options.includes(value) ? [...options, value] : options;
+  return `<select data-path="${path}" aria-label="${esc(label)}"><option value=""></option>
+    ${list.map(o => `<option value="${esc(o)}" ${o === value ? 'selected' : ''}>${esc(o)}</option>`).join('')}
+    <option value="${NEW_OPTION}">➕ ${T("הוספת אפשרות אחרת…")}</option></select>`;
+}
+
 function onEdit(e) {
   const t = e.target;
   if (t.id === 'adminQ') {
@@ -1496,6 +1508,12 @@ function onEdit(e) {
   // Selects/checkboxes/radios commit on change; text fields on input.
   const isChoice = t.tagName === 'SELECT' || t.type === 'checkbox' || t.type === 'radio';
   if (isChoice !== (e.type === 'change')) return;
+  if (t.value === NEW_OPTION) {
+    const v = optionName(prompt(T("הקלידי את האפשרות החדשה:")));
+    if (v) { setPath(s, path, v); touch(s); }
+    render();
+    return;
+  }
   setPath(s, path, t.type === 'checkbox' ? t.checked : t.value);
   if (t.hasAttribute('data-status')) t.className = 'status ' + statusOf(t.value).cls;
   if (t.type === 'radio' && path.startsWith('ratings.')) {
@@ -1686,6 +1704,12 @@ document.addEventListener('click', e => {
     }
     case 'add-team': s.team.push({ name: '', role: '' }); break;
     case 'add-support': s.supports.push({ type: '', hours: '', teacher: '' }); break;
+    case 'add-acc': {
+      const v = optionName(prompt(T("הקלידי את ההתאמה החדשה:")));
+      if (!v) return;
+      s.accommodations[v] = true;
+      break;
+    }
     case 'del-support': s.supports.splice(+d.i, 1); break;
     case 'excel': ({ integrative: exportExcelIntegrative, detailed: exportExcelDetailed }[view.format] || exportExcel)(s); return;
     case 'format': view.format = d.v; break;
