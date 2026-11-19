@@ -1421,7 +1421,27 @@ async function quickAI(btn) {
 }
 
 function aiLabel(el) {
-  return el.closest('label')?.firstChild?.textContent?.trim() || el.closest('tr')?.querySelector('td')?.textContent?.trim() || '';
+  const path = el.dataset.path || '';
+  let label = el.closest('label')?.firstChild?.textContent?.trim() || (el.closest('tr')?.querySelector('td b') || el.closest('tr')?.querySelector('td'))?.textContent?.trim() || '';
+  // Profile tables: say which column (strengths / areas to strengthen) the cell is in.
+  const td = el.closest('td'), table = el.closest('table');
+  if (td && table) {
+    const head = table.rows[0]?.cells[td.cellIndex]?.textContent?.trim();
+    if (head) label = `${label} – ${head}`;
+  }
+  const style = aiStyle(path);
+  return style ? `${label}\n(${style})` : label;
+}
+// Writing style for descriptive fields, so they don't come out worded as objectives.
+function aiStyle(path) {
+  const notObjective = 'Do NOT word it as objectives: no lines starting with "ان" / "أن", "התלמיד י..." or "The student will".';
+  if (/(^|\.)strengths$/.test(path))
+    return `Strengths: list general areas in which the student shows ability and skills, one per line, as short noun phrases naming the area (for example "تنظيم المهام وتنفيذها باستقلالية", "ארגון וביצוע משימות באופן עצמאי"). ${notObjective}`;
+  if (/(^|\.)(focus|difficulties)$/.test(path))
+    return `Areas to strengthen: list general areas that need strengthening, one per line, as short noun phrases naming the area (for example "الانتباه والتركيز خلال الفعاليات", "קשב וריכוז במהלך פעילויות"). ${notObjective}`;
+  if (/(^|\.)(current|background|summary|parentsView|teachersView)$/.test(path) || /^assessments\./.test(path))
+    return `A description of the present situation in the third person, in the present tense. ${notObjective}`;
+  return '';
 }
 function showAIError(pop, m) {
   pop.innerHTML = `<div class="ai-head">✨</div><p class="ai-err">${{
