@@ -1878,7 +1878,9 @@
     border-radius: 10px;
     box-shadow: 0 10px 26px var(--shadow);
     padding: 10px;
-    width: 200px;
+    /* wide: its labels and switches on fewer lines */
+    width: min(340px, calc(100vw - 32px));
+    box-sizing: border-box;
     z-index: 30;
     /* longer than a phone's screen: it scrolls inside itself (it used to run
        past the screen's bottom, its last sections out of reach) */
@@ -4065,3 +4067,11 @@ ol.task-list { background-color: var(--paper); background-image: repeating-linea
 .diary-sec + .diary-sec { border-top: 1px solid #eee6d4; }
 .diary-sec-body.pdf-doc th { font-size: 0.72rem; padding: 4px 3px; }
 .diary-sec-body.pdf-doc td { font-size: 0.88rem; padding: 5px 4px; }
+/* the menu: wide, and its one-button sections two to a row (fewer lines) */
+.menu-panel:not([hidden]) { display: grid; grid-template-columns: 1fr 1fr; column-gap: 8px; align-content: start; }
+.menu-panel > .menu-section, .menu-panel > .menu-copyright { grid-column: span 2; }
+.menu-panel > .menu-section.menu-half { grid-column: span 1; }
+.menu-panel .menu-half button { text-align: center; padding: 6px 4px; font-size: 0.82rem; }
+.menu-panel .menu-row2 { display: flex; gap: 6px; }
+.menu-panel .menu-row2 button { text-align: center; padding: 6px 4px; font-size: 0.82rem; }
+.menu-panel > .menu-section + .menu-section { margin-top: 0; padding-top: 8px; padding-bottom: 8px; }

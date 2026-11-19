@@ -38,7 +38,7 @@
 <script src="vendor/supabase-js-2.118.0.js"></script>
 <script src="vendor/firebase-app-compat-10.7.1.js"></script>
 <script src="vendor/firebase-auth-compat-10.7.1.js"></script>
-<link rel="stylesheet" href="tasks.css?v=4a03e0fb3f">
+<link rel="stylesheet" href="tasks.css?v=6f0fbdc341">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -617,27 +617,29 @@
             </select>
             <p class="reminder-status" id="chatNotifStatus" hidden></p>
           </div>
-          <div class="menu-section">
+          <div class="menu-section menu-half">
             <div class="menu-label" data-i18n="assistantMenuLabel">עוזר</div>
             <button type="button" id="assistantMenuBtn" data-i18n="assistantMenuBtn">💬 עוזר ITASK (ניסיון)</button>
           </div>
-          <div class="menu-section">
+          <div class="menu-section menu-half">
             <div class="menu-label" data-i18n="archiveMenuLabel">פרויקטים</div>
             <button type="button" id="archiveBtn" data-i18n="archiveMenuBtn">📦 ארכיון פרויקטים שהסתיימו</button>
           </div>
-          <div class="menu-section" id="teamMenuSection">
+          <div class="menu-section menu-half" id="teamMenuSection">
             <div class="menu-label" data-i18n="teamMenuLabel">צוות</div>
             <button type="button" id="teamBtn" data-i18n="teamBtn">מהנדסים ומנהלי עבודה</button>
             <p class="team-my-roles" id="teamMyRoles" hidden></p>
           </div>
-          <div class="menu-section">
+          <div class="menu-section menu-half">
             <div class="menu-label" data-i18n="menuLabelAllProjects">כל הפרויקטים</div>
             <button id="companyDashboardBtn" data-i18n="companyDashboardBtn">תמונת מצב פרויקטים</button>
           </div>
           <div class="menu-section">
             <div class="menu-label" data-i18n="menuLabelApp">האפליקציה</div>
-            <button id="shareAppBtn" data-i18n="shareAppBtn">שיתוף קישור להתקנה</button>
-            <button id="addLogoBtn" data-i18n="addLogoBtn">הוספת לוגו</button>
+            <div class="menu-row2">
+              <button id="shareAppBtn" data-i18n="shareAppBtn">שיתוף קישור להתקנה</button>
+              <button id="addLogoBtn" data-i18n="addLogoBtn">הוספת לוגו</button>
+            </div>
           </div>
           <div class="menu-section">
             <button type="button" id="officeGroupCreateBtn" data-i18n="officeGroupCreateBtn">הקמת קבוצת משרד</button>
