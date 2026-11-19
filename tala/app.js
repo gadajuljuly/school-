@@ -989,6 +989,14 @@ function interimPage(s) {
   </div>`;
 }
 
+// Excel sheet "Recommendations to parents" (one per line), when there are any.
+function parentRecsSheet(s) {
+  const lines = s.parentRecs.split('\n').map(x => x.trim()).filter(Boolean);
+  if (!lines.length) return [];
+  const rows = [[{ v: `${T("המלצות להורים")} – ${fullName(s)}`, s: 'title' }], [], ...lines.map(x => [{ v: '• ' + x, s: 'wrap' }])];
+  return [{ name: T("המלצות להורים"), cols: [100], rows }];
+}
+
 // ---- Integrative IEP / ILP form 2026–2027 ----
 const ROLE = {
   teacher: /מחנכ|مرب|homeroom/i,
@@ -1053,7 +1061,7 @@ function exportExcelIntegrative(s) {
     rows.push(cells(g).map(c => C(c)));
     rows.push([]);
   }
-  const blob = XLSX.build([{ name: T("תח\"י אינטגרטיבית"), landscape: true, cols: [42, 42, 34, 34], rows, merges }]);
+  const blob = XLSX.build([{ name: T("תח\"י אינטגרטיבית"), landscape: true, cols: [42, 42, 34, 34], rows, merges }, ...parentRecsSheet(s)]);
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = `${T("תח\"י אינטגרטיבית")} - ${fullName(s)}.xlsx`.replace(/[\\/:*?"<>|]/g, '_');
@@ -1132,7 +1140,7 @@ function exportExcelDetailed(s) {
     for (const r of goalRows(g)) { rows.push([...r.map(v => C(v)), C(''), C('')]); merges.push(`E${rows.length}:G${rows.length}`); }
     rows.push([]);
   }
-  const blob = XLSX.build([{ name: T("תח\"י מפורטת"), landscape: true, cols: [24, 34, 14, 22, 22, 18, 34], rows, merges }]);
+  const blob = XLSX.build([{ name: T("תח\"י מפורטת"), landscape: true, cols: [24, 34, 14, 22, 22, 18, 34], rows, merges }, ...parentRecsSheet(s)]);
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = `${T("תח\"י מפורטת")} - ${fullName(s)}.xlsx`.replace(/[\\/:*?"<>|]/g, '_');
@@ -1230,10 +1238,7 @@ function exportExcel(s) {
   if (map.length > 3) sheets.push({ name: T("מיפוי"), cols: [50, 12, 30, 20], rows: map, merges: mm });
 
   // 5. Recommendations to parents
-  if (s.parentRecs.trim()) {
-    const rec = [[C(T("המלצות להורים"), 'title')], [], ...s.parentRecs.split('\n').filter(x => x.trim()).map(x => [C('• ' + x.trim(), 'wrap')])];
-    sheets.push({ name: T("המלצות להורים"), cols: [100], rows: rec });
-  }
+  sheets.push(...parentRecsSheet(s));
 
   const blob = XLSX.build(sheets);
   const a = document.createElement('a');
