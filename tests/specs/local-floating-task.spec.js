@@ -1,7 +1,7 @@
 const { test, expect } = require("@playwright/test");
 const { openLocalApp } = require("./helpers/local-app");
 
-// The floating task (the phone shows it, every quarter hour 06:00-18:00):
+// The floating task (the phone shows it, every 10 minutes 06:00-18:00):
 // the app asks once for "display over other apps", and the menu has its
 // switch. Fake phone: window.__native records the calls.
 test.use({ viewport: { width: 390, height: 800 }, serviceWorkers: "block" });

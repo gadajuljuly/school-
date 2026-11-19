@@ -39,11 +39,11 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-// The floating task (version 25): round the clock - every quarter hour from
-// 06:00 to 18:00, every half hour through the evening and night - a small bar - "project: task" - shows over whatever is on screen: since
+// The floating task (version 25): round the clock - every quarter hour (now 10 minutes) from
+// 06:00 to 18:00 (every 10 minutes since version 36), every half hour through the evening and night - a small bar - "project: task" - shows over whatever is on screen: since
 // version 35 a construction machine (a Lottie animation: loader, roller,
 // excavator - a different one each time) drives slowly across the screen
-// from right to left in 8 seconds, pulling the bar behind it on a chain. Each time it's the next open task (today's and
+// from right to left in 12 seconds (version 36), pulling the bar behind it on a chain. Each time it's the next open task (today's and
 // earlier) of the next project, round and round: the 1st task of every
 // project, then the 2nd of every project... It reads the same open-tasks
 // list the home-screen widget gets from the app (ItaskWidgetProvider), and
@@ -54,8 +54,8 @@ public class ItaskFloatReceiver extends BroadcastReceiver {
     private static final String PREFS = "itask_float";
     private static final String KEY_ON = "on";
     private static final String KEY_LAST = "lastTask";
-    private static final int DAY_FROM = 6, DAY_TO = 18; // every 15 minutes; else every 30
-    private static final long CROSS_MS = 8000; // right edge to left edge, one slow steady drive
+    private static final int DAY_FROM = 6, DAY_TO = 18; // every 10 minutes; else every 30
+    private static final long CROSS_MS = 12000; // right edge to left edge, one slow steady drive
     private static final String KEY_LAST_VEHICLE = "lastVehicle";
     private static final String[] VEHICLES = { "lottie/itask_loader.json", "lottie/itask_roller.json", "lottie/itask_excavator.json" };
     private static final int REQUEST_CODE = 7301;
@@ -81,10 +81,14 @@ public class ItaskFloatReceiver extends BroadcastReceiver {
         cal.setTimeInMillis(now);
         cal.set(Calendar.SECOND, 0);
         cal.set(Calendar.MILLISECOND, 0);
-        cal.add(Calendar.MINUTE, 15 - cal.get(Calendar.MINUTE) % 15);
-        int h = cal.get(Calendar.HOUR_OF_DAY), m = cal.get(Calendar.MINUTE);
-        boolean day = h >= DAY_FROM && (h < DAY_TO || (h == DAY_TO && m == 0));
-        if (!day && m % 30 != 0) cal.add(Calendar.MINUTE, 15);
+        cal.add(Calendar.MINUTE, 10 - cal.get(Calendar.MINUTE) % 10);
+        // the evening and night: on the half hours only
+        for (int i = 0; i < 3; i++) {
+            int h = cal.get(Calendar.HOUR_OF_DAY), m = cal.get(Calendar.MINUTE);
+            boolean day = h >= DAY_FROM && (h < DAY_TO || (h == DAY_TO && m == 0));
+            if (day || m % 30 == 0) break;
+            cal.add(Calendar.MINUTE, 10);
+        }
         return cal.getTimeInMillis();
     }
 
