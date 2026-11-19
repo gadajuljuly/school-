@@ -1213,7 +1213,7 @@ function exportExcel(s) {
     const im = ['A1:G1', 'A2:G2'];
     for (const [sec, items] of interimRows) {
       const start = ir.length + 1;
-      items.forEach(([id, label], k) => ir.push([C(k ? '' : sec.sec.replace(T("التقييم المرحلي – "), ''), 'label'), C(label), ...levels.map(n => C(rating(s, id) === n ? '✓' : '', 'center'))]));
+      items.forEach(([id, label], k) => ir.push([C(k ? '' : sec.sec.replace(T("التقييم المرحلي – "), ''), 'label'), C(label), ...levels.map(n => C(rating(s, id) === n ? '✓' : '', rating(s, id) === n ? 'r' + n : 'center'))]));
       if (items.length > 1) im.push(`A${start}:A${ir.length}`);
     }
     ir.push([], [C(T("ملاحظات:"), 'label'), C(s.mapNotes.arabic || ''), C(''), C(''), C(''), C(''), C('')]); im.push(`B${ir.length}:G${ir.length}`);
@@ -1231,7 +1231,7 @@ function exportExcel(s) {
     if (s.mapNotes[grp.id]) { map.push([C(T("נתונים והערות"), 'label'), C(s.mapNotes[grp.id]), C(''), C('')]); mm.push(`B${map.length}:D${map.length}`); }
     if (items.length) {
       map.push([C(T("המיומנות"), 'head'), C(T("הערכה (1–5)"), 'head'), C(T("הערה"), 'head'), C('', 'head')]); mm.push(`C${map.length}:D${map.length}`);
-      for (const i of items) { map.push([C(i.label), C(rating(s, i.id), 'center'), C(s.ratings[i.id]?.note), C('')]); mm.push(`C${map.length}:D${map.length}`); }
+      for (const i of items) { map.push([C(i.label), C(rating(s, i.id), 'r' + rating(s, i.id)), C(s.ratings[i.id]?.note), C('')]); mm.push(`C${map.length}:D${map.length}`); }
     }
     map.push([]);
   }
