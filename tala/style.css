@@ -215,3 +215,10 @@ select.cur-select { width: auto; padding: 3px 8px; font-size: .82rem; border-rad
 .doc .integ4 th { background: #eef4f2; font-size: .9em; }
 .doc .integ4 td { vertical-align: top; font-size: .9em; }
 .doc.integ-doc h3 { margin: 16px 0 6px; }
+/* Floating jump-to-top / bottom buttons */
+.jump { position: fixed; inset-inline-start: 14px; bottom: 18px; display: flex; flex-direction: column; gap: 8px; z-index: 40; }
+.jump[hidden] { display: none; }
+.jump button { width: 46px; height: 46px; border-radius: 50%; border: 1px solid var(--line); background: var(--brand); color: #fff;
+  font-size: 1.2rem; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,.18); opacity: .88; }
+.jump button:hover { opacity: 1; }
+.jump button:disabled { opacity: .3; cursor: default; }

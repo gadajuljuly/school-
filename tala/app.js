@@ -1833,3 +1833,25 @@ document.getElementById('backBtn').textContent = document.documentElement.dir ==
   try { await Cloud.init({ onAuth: boot, onStatusChange: showSync, onPasswordRecovery: () => { view = { name: 'newpw' }; render(); } }); } catch (e) { console.warn('cloud init failed', e); }
   boot();
 })();
+
+// Floating buttons: jump to the top / bottom of the page (shown when the page is long).
+(() => {
+  const box = document.getElementById('jump');
+  if (!box) return;
+  const top = document.getElementById('jumpTop'), bottom = document.getElementById('jumpBottom');
+  top.title = top.ariaLabel = T("לראש העמוד");
+  bottom.title = bottom.ariaLabel = T("לסוף העמוד");
+  const smooth = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+  top.onclick = () => scrollTo({ top: 0, behavior: smooth });
+  bottom.onclick = () => scrollTo({ top: document.documentElement.scrollHeight, behavior: smooth });
+  const update = () => {
+    const el = document.documentElement;
+    box.hidden = el.scrollHeight < innerHeight * 1.5;
+    top.disabled = scrollY < 100;
+    bottom.disabled = scrollY + innerHeight > el.scrollHeight - 100;
+  };
+  addEventListener('scroll', update, { passive: true });
+  addEventListener('resize', update);
+  new MutationObserver(update).observe(document.getElementById('app'), { childList: true, subtree: true });
+  update();
+})();
