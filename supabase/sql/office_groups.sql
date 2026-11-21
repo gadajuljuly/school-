@@ -157,56 +157,67 @@ create policy "invited phone resolves their own invite"
 -- permissive policies for the same command with OR, so this only ever
 -- ADDS access on top of "members manage their shared projects" - it
 -- can't weaken it.
+-- A project its members marked "פרטי" (hidden_from_office: family,
+-- friends...) is never the head office's to see or write - only its own
+-- members'.
+alter table shared_projects add column if not exists hidden_from_office boolean not null default false;
+
 create policy "office group heads can read members projects"
   on shared_projects for select
   using (
-    exists (
-      select 1 from office_group_invites ho
-      join office_group_invites mem on mem.group_id = ho.group_id
-      where ho.invited_phone = (auth.jwt() ->> 'phone_number') and ho.role = 'head_office' and ho.status = 'approved'
-        and mem.role = 'member' and mem.status = 'approved'
-        and mem.invited_phone = any(members)
-    )
-    or exists (
-      select 1 from office_groups g
-      join office_group_invites mem on mem.group_id = g.id
-      where g.creator_phone = (auth.jwt() ->> 'phone_number')
-        and mem.role = 'member' and mem.status = 'approved'
-        and mem.invited_phone = any(members)
+    not hidden_from_office and (
+      exists (
+        select 1 from office_group_invites ho
+        join office_group_invites mem on mem.group_id = ho.group_id
+        where ho.invited_phone = (auth.jwt() ->> 'phone_number') and ho.role = 'head_office' and ho.status = 'approved'
+          and mem.role = 'member' and mem.status = 'approved'
+          and mem.invited_phone = any(members)
+      )
+      or exists (
+        select 1 from office_groups g
+        join office_group_invites mem on mem.group_id = g.id
+        where g.creator_phone = (auth.jwt() ->> 'phone_number')
+          and mem.role = 'member' and mem.status = 'approved'
+          and mem.invited_phone = any(members)
+      )
     )
   );
 create policy "office group heads can write members projects"
   on shared_projects for update
   using (
-    exists (
-      select 1 from office_group_invites ho
-      join office_group_invites mem on mem.group_id = ho.group_id
-      where ho.invited_phone = (auth.jwt() ->> 'phone_number') and ho.role = 'head_office' and ho.status = 'approved'
-        and mem.role = 'member' and mem.status = 'approved'
-        and mem.invited_phone = any(members)
-    )
-    or exists (
-      select 1 from office_groups g
-      join office_group_invites mem on mem.group_id = g.id
-      where g.creator_phone = (auth.jwt() ->> 'phone_number')
-        and mem.role = 'member' and mem.status = 'approved'
-        and mem.invited_phone = any(members)
+    not hidden_from_office and (
+      exists (
+        select 1 from office_group_invites ho
+        join office_group_invites mem on mem.group_id = ho.group_id
+        where ho.invited_phone = (auth.jwt() ->> 'phone_number') and ho.role = 'head_office' and ho.status = 'approved'
+          and mem.role = 'member' and mem.status = 'approved'
+          and mem.invited_phone = any(members)
+      )
+      or exists (
+        select 1 from office_groups g
+        join office_group_invites mem on mem.group_id = g.id
+        where g.creator_phone = (auth.jwt() ->> 'phone_number')
+          and mem.role = 'member' and mem.status = 'approved'
+          and mem.invited_phone = any(members)
+      )
     )
   )
   with check (
-    exists (
-      select 1 from office_group_invites ho
-      join office_group_invites mem on mem.group_id = ho.group_id
-      where ho.invited_phone = (auth.jwt() ->> 'phone_number') and ho.role = 'head_office' and ho.status = 'approved'
-        and mem.role = 'member' and mem.status = 'approved'
-        and mem.invited_phone = any(members)
-    )
-    or exists (
-      select 1 from office_groups g
-      join office_group_invites mem on mem.group_id = g.id
-      where g.creator_phone = (auth.jwt() ->> 'phone_number')
-        and mem.role = 'member' and mem.status = 'approved'
-        and mem.invited_phone = any(members)
+    not hidden_from_office and (
+      exists (
+        select 1 from office_group_invites ho
+        join office_group_invites mem on mem.group_id = ho.group_id
+        where ho.invited_phone = (auth.jwt() ->> 'phone_number') and ho.role = 'head_office' and ho.status = 'approved'
+          and mem.role = 'member' and mem.status = 'approved'
+          and mem.invited_phone = any(members)
+      )
+      or exists (
+        select 1 from office_groups g
+        join office_group_invites mem on mem.group_id = g.id
+        where g.creator_phone = (auth.jwt() ->> 'phone_number')
+          and mem.role = 'member' and mem.status = 'approved'
+          and mem.invited_phone = any(members)
+      )
     )
   );
 

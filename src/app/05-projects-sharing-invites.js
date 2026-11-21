@@ -811,6 +811,7 @@
   var sheetActionMembersBtn = document.getElementById("sheetActionMembersBtn");
   var sheetActionMakeSharedBtn = document.getElementById("sheetActionMakeSharedBtn");
   var sheetActionLogoBtn = document.getElementById("sheetActionLogoBtn");
+  var sheetActionPrivateBtn = document.getElementById("sheetActionPrivateBtn");
   var sheetActionCancelBtn = document.getElementById("sheetActionCancelBtn");
   var pendingSheetActionId = null;
 
@@ -826,6 +827,9 @@
     sheetActionMakeSharedBtn.hidden = isShared;
     sheetActionEndBtn.hidden = !!(sheet && sheet.ended);
     sheetActionReactivateBtn.hidden = !(sheet && sheet.ended);
+    // "פרטי": a shared project kept from the head office (family, friends...)
+    sheetActionPrivateBtn.hidden = !isShared || isHeadOfficeMode;
+    if (isShared) sheetActionPrivateBtn.textContent = tr(sheet && sheet.hiddenFromOffice ? "sheetPrivateOff" : "sheetPrivateOn");
     sheetActionOverlay.hidden = false;
   }
   function closeSheetActionModal() {
@@ -866,6 +870,21 @@
     var id = pendingSheetActionId;
     closeSheetActionModal();
     openLogoPickerModal(id);
+  });
+  sheetActionPrivateBtn.addEventListener("click", function () {
+    var id = pendingSheetActionId;
+    closeSheetActionModal();
+    var sheet = sharedSheets.find(function (s) { return s.id === id; });
+    if (!sheet || !supabaseClient) return;
+    var on = !sheet.hiddenFromOffice;
+    supabaseClient.from(SHARED_TABLE).update({ hidden_from_office: on }).eq("id", id).select("id").then(function (res) {
+      if ((res && res.error) || !(res && res.data && res.data.length)) throw (res && res.error) || new Error("not changed");
+      var live = sharedSheets.find(function (s) { return s.id === id; });
+      if (live) live.hiddenFromOffice = on;
+      if (sharedRowCache[id]) sharedRowCache[id].hidden_from_office = on;
+      showToast(tr(on ? "sheetPrivateDone" : "sheetPrivateUndone"), 3500);
+      render();
+    }).catch(function () { alert(tr("sheetPrivateError")); });
   });
   sheetActionCancelBtn.addEventListener("click", closeSheetActionModal);
   sheetActionOverlay.addEventListener("click", function (e) {

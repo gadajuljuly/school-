@@ -154,6 +154,35 @@ begin
   raise notice 'PASS 6: stranger still sees nothing';
 end $$;
 
+-- 6b: a member marks the project "פרטי" (hidden_from_office): the head
+-- office can't see it any more; unmarked, it sees it again.
+select set_config('request.jwt.claims', '{"phone_number":"+972500000002"}', false);
+do $$
+declare affected int;
+begin
+  update shared_projects set hidden_from_office = true where id = 'proj1';
+  get diagnostics affected = row_count;
+  if affected <> 1 then raise exception 'FAIL 6b: a member should be able to mark the project private (updated %)', affected; end if;
+end $$;
+select set_config('request.jwt.claims', '{"phone_number":"+972500000003"}', false);
+do $$
+declare cnt int;
+begin
+  select count(*) into cnt from shared_projects where id = 'proj1';
+  if cnt <> 0 then raise exception 'FAIL 6b: Head Office must not see a private project (got %)', cnt; end if;
+  raise notice 'PASS 6b: a private project is hidden from Head Office';
+end $$;
+select set_config('request.jwt.claims', '{"phone_number":"+972500000002"}', false);
+update shared_projects set hidden_from_office = false where id = 'proj1';
+select set_config('request.jwt.claims', '{"phone_number":"+972500000003"}', false);
+do $$
+declare cnt int;
+begin
+  select count(*) into cnt from shared_projects where id = 'proj1';
+  if cnt <> 1 then raise exception 'FAIL 6c: Head Office should see it again once not private (got %)', cnt; end if;
+  raise notice 'PASS 6c: not private any more, Head Office sees it again';
+end $$;
+
 -- 7: a non-creator cannot delete another group's invites.
 select set_config('request.jwt.claims', '{"phone_number":"+972500000099"}', false);
 do $$

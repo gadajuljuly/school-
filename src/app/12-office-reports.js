@@ -3,7 +3,7 @@
   // whose member is in a group this account created or is the named Head
   // Office of, already unified in sharedSheets by loadSharedSheets().
   function officeReportSheets() {
-    return sharedSheets.filter(function (s) { return !s.ended; });
+    return sharedSheets.filter(function (s) { return !s.ended && !s.hiddenFromOffice; }); // ("פרטי": not the office's)
   }
 
   // Creates the "משרד ראשי" private sheet on first entry into Head Office

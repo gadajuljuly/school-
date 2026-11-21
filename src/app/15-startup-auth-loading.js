@@ -242,6 +242,7 @@
       members: row.members || [],
       memberNames: row.member_names || {},
       createdBy: row.created_by || null,
+      hiddenFromOffice: !!row.hidden_from_office, // "פרטי": not the head office's
       messages: row.messages || [],
       // The last state of this sheet we've actually confirmed the server
       // holds - refreshed both by this load and by our own successful
@@ -317,12 +318,20 @@
   // since the last read. Refetching everything every few seconds on every
   // open phone used up the server's monthly traffic quota.
   var SHARED_LIGHT_COLUMNS = "id, name, members, member_names, created_by, data_version, messages_version, updated_at";
+  // + "פרטי" (hidden_from_office - shared_projects_private.sql): asked for
+  // while the server has it; a server without it yet answers "no such
+  // column", and the lists are read without it from then on
+  var sharedPrivateColumn = true;
   var sharedRowCache = {}; // id -> the last full row read, as read
   function sharedRowStamp(row) {
-    return [row.data_version, row.messages_version, row.updated_at, row.name, JSON.stringify(row.members || []), JSON.stringify(row.member_names || {})].join("|");
+    return [row.data_version, row.messages_version, row.updated_at, row.name, JSON.stringify(row.members || []), JSON.stringify(row.member_names || {}), !!row.hidden_from_office].join("|");
   }
   function fetchSharedRows() {
-    return supabaseClient.from(SHARED_TABLE).select(SHARED_LIGHT_COLUMNS).then(function (light) {
+    return supabaseClient.from(SHARED_TABLE).select(SHARED_LIGHT_COLUMNS + (sharedPrivateColumn ? ", hidden_from_office" : "")).then(function (light) {
+      if (light && light.error && sharedPrivateColumn && /hidden_from_office/.test(light.error.message || "")) {
+        sharedPrivateColumn = false;
+        return fetchSharedRows();
+      }
       if (light && light.error) throw light.error;
       var list = (light && light.data) || [];
       var stale = list.filter(function (r) {

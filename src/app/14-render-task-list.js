@@ -22,6 +22,7 @@
     return allSheets().filter(function (s) {
       if (s.id === HEAD_OFFICE_SHEET_ID) return isHeadOfficeMode && !viewingArchive;
       if (isHeadOfficeMode && !s.shared) return false;
+      if (isHeadOfficeMode && s.hiddenFromOffice) return false; // "פרטי"
       return !!s.ended === viewingArchive;
     }).sort(compareSheetNames);
   }
@@ -87,7 +88,7 @@
 
     var label = document.createElement("span");
     label.className = "sheet-tab-label";
-    label.textContent = (sheet.shared ? "👥 " : "") + sheet.name;
+    label.textContent = (sheet.shared ? (sheet.hiddenFromOffice ? "🔒 " : "👥 ") : "") + sheet.name;
     tab.appendChild(label);
     tab.title = sheet.id === data.activeSheetId ? tr("clickToRename") : sheet.name;
 
