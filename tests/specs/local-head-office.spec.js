@@ -193,3 +193,14 @@ test("in a project's diary, Head Office's lists are suggested while typing a nam
   const cid = await page.locator("#siteLogContractorsList .site-log-add-input").getAttribute("list");
   expect(await page.locator(`#${cid} option`).evaluateAll((os) => os.map((o) => o.value))).toEqual(["צוות אלפא"]);
 });
+
+test("the Head Office's 'הזמנות רכש' tab holds orders only - no work-plan activities (they're in each project's own tab)", async ({ page }) => {
+  const plan = [{ id: "a", name: "ביצוע מעקף ראשון", start: TODAY, end: TODAY, status: "in_progress" }];
+  await openWithSharedProject(page, { phone: ME, sheet: Object.assign(project("p1", "רכבת נתניה"), { workPlan: plan }) });
+  await becomeHeadOffice(page);
+  await page.locator(".sheet-tab", { hasText: "הזמנות רכש" }).click();
+  await expect(page.locator("#taskList li.task", { hasText: "ביצוע מעקף ראשון" })).toHaveCount(0);
+  // ...and in the project's own tab, it's there
+  await page.locator(".sheet-tab", { hasText: "רכבת נתניה" }).click();
+  await expect(page.locator("#taskList li.task", { hasText: "ביצוע מעקף ראשון" })).toHaveCount(1);
+});

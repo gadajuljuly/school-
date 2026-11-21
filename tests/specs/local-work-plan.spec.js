@@ -175,26 +175,6 @@ test("an activity not shown in tasks has no task", async ({ page }) => {
   await expect(page.locator("#taskList li.task", { hasText: "בדיקת מפקח" })).toHaveCount(0);
 });
 
-test("Head Office lists every project's activities under way; ticking one updates that project's plan", async ({ page }) => {
-  await openWithSharedProject(page, { phone: ME, sheets: [
-    { id: "p1", name: "בניין A", members: [ME], tasks: [], workPlan: [
-      { id: "a1", name: "קירות", start: iso(-6), end: iso(-2), by: "", status: "prog", progress: 60 },
-      { id: "a2", name: "תקרה", start: iso(3), end: iso(5), by: "", status: "todo", progress: 0 }] },
-  ] });
-  await page.evaluate((me) => {
-    window.__backend.tables.office_groups = [{ id: "g1", creator_phone: me }];
-    return window.__hooks.loadMyOfficeGroups();
-  }, ME);
-  await page.locator("#headOfficeIconBtn").click();
-  const row = page.locator("#taskList li.task", { hasText: "בניין A: קירות" });
-  await expect(row).toBeVisible();
-  await expect(row).toHaveClass(/partial/);
-  await expect(page.locator("#taskList li.task", { hasText: "תקרה" })).toHaveCount(0);
-  await row.locator(".row-mark").click();
-  await expect(row).toHaveClass(/done/);
-  await expect.poll(async () => (await serverPlan(page, "p1")).find((x) => x.id === "a1").status).toBe("done");
-});
-
 test("voice: 'תוסיף לתוכנית ... מיום ... עד ..., צוות ...' adds an activity", async ({ page }) => {
   await openWithSharedProject(page, { phone: ME, native: true, sheets: [{ id: "p1", name: "בניין A", members: [ME], tasks: [] }] });
   await page.evaluate(() => { window.__voiceSay = "תוסיף לתוכנית יציקת תקרה קומה 3 ממחר עד מחרתיים, צוות טפסנות"; });
