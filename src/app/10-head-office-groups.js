@@ -32,6 +32,10 @@
     headOfficeIconBtn.hidden = !canBeHeadOffice;
     headOfficeIconBtn.classList.toggle("active", isHeadOfficeMode);
     headOfficeIconBtn.setAttribute("aria-pressed", String(isHeadOfficeMode));
+    // הרשאות (who sees the money - 10b-team.js): the head office's to give,
+    // in Head Office mode only; anyone else sees just the teams they're on
+    document.getElementById("teamBtn").hidden = !isHeadOfficeMode;
+    if (typeof renderTeamMyRoles === "function") renderTeamMyRoles();
   }
   function setHeadOfficeActive(on) {
     setHeadOfficeActivePref(on);

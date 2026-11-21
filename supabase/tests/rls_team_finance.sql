@@ -11,7 +11,21 @@ as $$
   select coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb
 $$;
 
+create extension if not exists pgcrypto;
+-- office groups (who's a head office): what office_groups.sql references
+create table if not exists shared_projects (
+  id text primary key,
+  members text[] not null default '{}'
+);
+alter table shared_projects enable row level security;
+
 \ir ../sql/team_and_finance.sql
+\ir ../sql/shared_projects_created_by.sql
+\ir ../sql/office_groups.sql
+\ir ../sql/team_roles_head_office_only.sql
+
+-- the owner is a head office (created an office group); added as postgres
+insert into office_groups (creator_phone) values ('+972500000001');
 
 do $$ begin
   if not exists (select from pg_roles where rolname = 'authenticated') then
@@ -116,4 +130,16 @@ begin
   select count(*) into cnt from project_finance;
   if cnt <> 0 then raise exception 'FAIL 14: a removed engineer must lose the money (got %)', cnt; end if;
   raise notice 'PASS 14: taken off the team, the money is gone';
+end $$;
+
+-- הרשאות are the head office's: a phone that isn't one can't add to a team
+select set_config('request.jwt.claims', '{"phone_number":"+972500000004"}', false);
+do $$
+begin
+  begin
+    insert into team_roles (owner_phone, phone, role) values ('+972500000004', '+972500000005', 'engineer');
+    raise exception 'FAIL: a phone that isn''t a head office must not give permissions';
+  exception when insufficient_privilege then
+    raise notice 'PASS: only a head office gives permissions';
+  end;
 end $$;

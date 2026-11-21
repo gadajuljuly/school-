@@ -54,6 +54,8 @@
       return tr(m.role === "engineer" ? "teamIAmEngineer" : "teamIAmSiteManager").replace("{name}", teamPersonName(m.owner, ""));
     }).join("\n");
     el.hidden = !teamMemberships.length;
+    // the menu's section: the head office's button, or the teams this phone is on
+    document.getElementById("teamMenuSection").hidden = !isHeadOfficeMode && !teamMemberships.length;
   }
 
   function teamEl(tag, cls, text) {

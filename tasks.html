@@ -625,9 +625,9 @@
             <div class="menu-label" data-i18n="archiveMenuLabel">פרויקטים</div>
             <button type="button" id="archiveBtn" data-i18n="archiveMenuBtn">📦 ארכיון פרויקטים שהסתיימו</button>
           </div>
-          <div class="menu-section menu-half" id="teamMenuSection">
-            <div class="menu-label" data-i18n="teamMenuLabel">צוות</div>
-            <button type="button" id="teamBtn" data-i18n="teamBtn">מהנדסים ומנהלי עבודה</button>
+          <div class="menu-section menu-half" id="teamMenuSection" hidden>
+            <div class="menu-label" data-i18n="teamMenuLabel">משרד ראשי</div>
+            <button type="button" id="teamBtn" data-i18n="teamBtn" hidden>🔐 הרשאות</button>
             <p class="team-my-roles" id="teamMyRoles" hidden></p>
           </div>
           <div class="menu-section menu-half">
@@ -1638,7 +1638,7 @@
   <div class="report-view team-view" id="teamView" hidden>
     <div class="report-head">
       <button type="button" class="report-back-btn" id="teamBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
-      <div class="report-head-title" data-i18n="teamTitle">הצוות</div>
+      <div class="report-head-title" data-i18n="teamTitle">הרשאות</div>
     </div>
     <div class="team-body">
       <section class="team-section">
@@ -1874,6 +1874,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=0361d0a15c"></script>
+<script src="tasks-app.js?v=f04c971fc4"></script>
 </body>
 </html>

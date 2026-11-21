@@ -10,7 +10,13 @@ const ME = "+972500000001";
 const rows = (page) => page.evaluate(() => (window.__backend.tables.team_roles || []).map((r) => [r.owner_phone, r.phone, r.name, r.role]));
 const SHEET = { id: "p1", name: "בניין A", members: [ME], tasks: [] };
 
+// הרשאות: the head office's (in Head Office mode only)
 async function openTeam(page) {
+  await page.evaluate((me) => {
+    window.__backend.tables.office_groups = [{ id: "g1", creator_phone: me }];
+    return window.__hooks.loadMyOfficeGroups();
+  }, ME);
+  await page.locator("#headOfficeIconBtn").click();
   await page.locator("#menuBtn").click();
   await page.locator("#teamBtn").click();
   await expect(page.locator("#teamView")).toBeVisible();
@@ -110,4 +116,20 @@ test("the footer's בקרה תקציבית button: for the project's owner and t
   // ...but not as a site manager
   await page.evaluate(() => { window.__backend.tables.team_roles[0].role = "site_manager"; return window.__hooks.loadTeam(); });
   await expect(tile).toBeHidden();
+});
+
+test("הרשאות: only in Head Office mode; anyone else sees just the teams they're on", async ({ page }) => {
+  await openWithSharedProject(page, { phone: ME, sheet: SHEET });
+  await page.locator("#menuBtn").click();
+  await expect(page.locator("#teamBtn")).toBeHidden();
+  await expect(page.locator("#teamMenuSection")).toBeHidden();
+  await page.locator("#menuBtn").click();
+  await page.evaluate((me) => {
+    window.__backend.tables.office_groups = [{ id: "g1", creator_phone: me }];
+    return window.__hooks.loadMyOfficeGroups();
+  }, ME);
+  await page.locator("#headOfficeIconBtn").click();
+  await page.locator("#menuBtn").click();
+  await expect(page.locator("#teamBtn")).toBeVisible();
+  await expect(page.locator("#teamBtn")).toHaveText("🔐 הרשאות");
 });
