@@ -707,7 +707,16 @@
         var textLabel = document.createElement("span");
         textLabel.className = "task-text-label";
         textLabel.textContent = t.text;
-        textEl.appendChild(textLabel);
+        if (t.planItemId || t.planRef) {
+          // the badge stays put; the text (scrolling when long) in its own box beside it
+          textEl.classList.add("has-badge");
+          var textClip = document.createElement("span");
+          textClip.className = "task-text-clip";
+          textClip.appendChild(textLabel);
+          textEl.appendChild(textClip);
+        } else {
+          textEl.appendChild(textLabel);
+        }
         if (rowEditable) {
           textEl.addEventListener("click", function (e) {
             e.stopPropagation();
@@ -799,12 +808,13 @@
       if (rowCalLink || rowAlarm) reminderRowsForIconsLayer.push({ task: t, editable: rowEditable, top: li.offsetTop, height: li.offsetHeight, calLink: rowCalLink, alarm: rowAlarm });
 
       if (!(rowEditable && state.editingTaskId === t.id)) {
-        var textOverflowPx = textLabel.scrollWidth - textEl.clientWidth;
+        var textBox = textLabel.parentNode; // (a work-plan task's: its own box beside the badge)
+        var textOverflowPx = textLabel.scrollWidth - textBox.clientWidth;
         if (textOverflowPx > 2) {
           var textGapPx = 32;
           var textTrack = document.createElement("span");
           textTrack.className = "marquee-track";
-          textEl.insertBefore(textTrack, textLabel);
+          textBox.insertBefore(textTrack, textLabel);
           textTrack.appendChild(textLabel);
           var textClone = textLabel.cloneNode(true);
           textClone.setAttribute("aria-hidden", "true");

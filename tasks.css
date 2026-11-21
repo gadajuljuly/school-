@@ -4075,3 +4075,6 @@ ol.task-list { background-color: var(--paper); background-image: repeating-linea
 .menu-panel .menu-row2 { display: flex; gap: 6px; }
 .menu-panel .menu-row2 button { text-align: center; padding: 6px 4px; font-size: 0.82rem; }
 .menu-panel > .menu-section + .menu-section { margin-top: 0; padding-top: 8px; padding-bottom: 8px; }
+/* a work-plan task: its badge, then the text in its own box (scrolling when long) */
+.task-text.has-badge { display: flex; align-items: center; }
+.task-text-clip { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
