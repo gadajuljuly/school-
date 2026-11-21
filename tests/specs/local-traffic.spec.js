@@ -20,7 +20,7 @@ test("a refresh fetches whole rows only for projects that changed", async ({ pag
   await refresh();
   await refresh();
   expect(await reads(page, "*")).toHaveLength(1); // nothing changed: light reads only
-  expect((await reads(page, "id, name, members, member_names, created_by, data_version, messages_version, updated_at")).length).toBe(3);
+  expect((await reads(page, "id, name, members, member_names, created_by, data_version, messages_version, updated_at, hidden_from_office")).length).toBe(3); // (with "פרטי")
 
   // another member changes בניין B
   await page.evaluate(() => {
