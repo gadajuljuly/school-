@@ -56,11 +56,25 @@
         var taskId = "ho-proc-" + s.id + "-" + log.date;
         if (dismissed.indexOf(taskId) !== -1) return;
         seenIds[taskId] = true;
-        if (!sheet.tasks.some(function (t) { return t.id === taskId; })) {
+        // its items marked purchased (the green circles): some -> half done
+        // (half the X), all -> done; none marked -> as ticked by hand
+        var items = filledProcurement(log);
+        var bought = items.filter(function (e) { return e.purchased; }).length;
+        var fromMarks = bought ? (bought === items.length ? 2 : 1) : 0;
+        var existing = sheet.tasks.find(function (t) { return t.id === taskId; });
+        if (existing) {
+          if ((fromMarks || existing.statusFromMarks) && existing.status !== fromMarks) {
+            existing.status = fromMarks;
+            changed = true;
+          }
+          if (!!existing.statusFromMarks !== !!fromMarks) { existing.statusFromMarks = !!fromMarks; changed = true; }
+        }
+        if (!existing) {
           sheet.tasks.push({
             id: taskId,
             text: tr("headOfficeProcurementTaskPrefix") + " " + s.name + " " + isoToFullDisplay(log.date),
-            status: 0,
+            status: fromMarks,
+            statusFromMarks: !!fromMarks,
             urgent: false,
             type: "task",
             date: today,
@@ -541,7 +555,12 @@
         mark.type = "button";
         mark.className = "purchased-mark clickable" + (entry.purchased ? " purchased" : "");
         mark.addEventListener("click", function () {
-          entry.purchased = !entry.purchased;
+          // the project as it is now (a refresh may have put a new copy in
+          // place since this list was drawn)
+          var liveSheet = allSheets().find(function (x) { return x.id === sheet.id; });
+          var liveLog = liveSheet && findSiteLog(liveSheet, log.date);
+          var liveEntry = (liveLog && (liveLog.procurement || []).find(function (x) { return x.id === entry.id; })) || entry;
+          liveEntry.purchased = !liveEntry.purchased;
           saveData();
           renderOfficeProcurementList(officeProcurementFilterSheetId);
         });

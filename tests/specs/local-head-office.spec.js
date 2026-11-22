@@ -204,3 +204,31 @@ test("the Head Office's 'הזמנות רכש' tab holds orders only - no work-pl
   await page.locator(".sheet-tab", { hasText: "רכבת נתניה" }).click();
   await expect(page.locator("#taskList li.task", { hasText: "ביצוע מעקף ראשון" })).toHaveCount(1);
 });
+
+test("an order's items marked purchased: some -> its task half done (half the X), all -> done; unmarked -> open again", async ({ page }) => {
+  const log = { date: TODAY, procurementSentDate: TODAY, procurement: [
+    { id: "r1", item: "ברזל 12", quantity: "3 טון" }, { id: "r2", item: "בטון ב-30", quantity: "24 קוב" }] };
+  await openWithSharedProject(page, { phone: ME, sheet: project("p1", "בניין A", [log]) });
+  await becomeHeadOffice(page);
+  await page.locator(".sheet-tab", { hasText: "הזמנות רכש" }).click();
+  const note = page.locator("#taskList li.task", { hasText: "בניין A" });
+  await expect(note).not.toHaveClass(/partial|done/);
+  const marks = page.locator("#officeProcurementView .purchased-mark");
+  const back = () => page.locator("#officeProcurementBackBtn").click();
+
+  await note.locator(".task-text").click();
+  await marks.nth(0).click();
+  await back();
+  await expect(note).toHaveClass(/partial/);
+
+  await note.locator(".task-text").click();
+  await marks.nth(1).click();
+  await back();
+  await expect(note).toHaveClass(/done/);
+
+  await note.locator(".task-text").click();
+  await marks.nth(0).click();
+  await marks.nth(1).click();
+  await back();
+  await expect(note).not.toHaveClass(/partial|done/);
+});
