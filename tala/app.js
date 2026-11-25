@@ -35,7 +35,7 @@ const fromAcademic = sec => ({ title: sec.sec, items: sec.items.map(([id, label,
 const fromFunctional = sec => ({ title: sec.sec, items: sec.items.map(([id, label, domain, goal]) => ({
   id, label, goals: [{ domain, area: domain, text: goal, ref: id }],
 })) });
-const fromDev = sec => ({ title: sec.label, source: true, items: sec.items.map(([id, label, goal]) => ({
+const fromDev = sec => ({ id: sec.id, title: sec.label, source: true, items: sec.items.map(([id, label, goal]) => ({
   id, label, goals: [{ domain: sec.domain, area: sec.domain, text: goal, ref: id }],
 })) });
 const acad = p => ACADEMIC.filter(p).map(fromAcademic);
@@ -97,7 +97,7 @@ function schoolYear() {
 
 function newStudent() {
   return {
-    id: uid(), firstName: '', lastName: '', gender: '', idNumber: '', birthDate: '',
+    id: uid(), mode: 'quick', firstName: '', lastName: '', gender: '', idNumber: '', birthDate: '',
     school: '', className: '', grade: '', city: '', homeroomTeacher: '', inclusionTeacher: '', aide: '',
     committee: '', committeeDate: '', parentsContact: '', familyStatus: '', familyPosition: '', health: '', previousSchools: '',
     year: schoolYear(), fillDate: new Date().toISOString().slice(0, 10),
@@ -111,6 +111,7 @@ function newStudent() {
 // Fill in fields added after a record was created.
 function normalize(raw) {
   const s = Object.assign(newStudent(), raw);
+  if (raw.mode !== 'quick') s.mode = 'full'; // students from before the quick mode keep the full screens
   ['team', 'supports', 'goals', 'meetings'].forEach(k => { if (!Array.isArray(s[k])) s[k] = []; });
   ['support', 'diagnoses', 'ratings', 'mapNotes', 'steps', 'profile', 'evalDates', 'assessments'].forEach(k => { if (!s[k] || typeof s[k] !== 'object') s[k] = {}; });
   if (typeof s.accommodations === 'string') {
@@ -562,9 +563,12 @@ const TABS = [
 ];
 
 function renderStudent(s) {
-  const body = { details: tabDetails, mapping: tabMapping, goals: tabGoals, tracking: tabTracking, doc: tabDoc }[view.tab](s);
+  const quick = s.mode === 'quick';
+  const tabs = quick ? QUICK_TABS : TABS;
+  if (!tabs.some(([k]) => k === view.tab)) view.tab = quick ? (s.goals.length ? 'q3' : 'q1') : 'details';
+  const body = { details: tabDetails, mapping: tabMapping, goals: tabGoals, tracking: tabTracking, doc: tabDoc, q1: tabQ1, q2: tabQ2, q3: tabQ3 }[view.tab](s);
   app.innerHTML = `
-    <div class="tabs">${TABS.map(([k, l]) => `<button class="tab ${view.tab === k ? 'active' : ''}" data-tab="${k}">${l}</button>`).join('')}</div>
+    <div class="tabs-row"><div class="tabs">${tabs.map(([k, l]) => `<button class="tab ${view.tab === k ? 'active' : ''}" data-tab="${k}">${l}</button>`).join('')}</div>${modeSwitch(s)}</div>
     ${body}`;
 }
 
@@ -1745,6 +1749,11 @@ document.addEventListener('click', e => {
       s.goals.push(newSection(s, domain));
       break;
     }
+    case 'mode': s.mode = d.v; view.tab = ''; break;
+    case 'quick-build': quickBuild(s, t); return;
+    case 'quick-add-goal': quickAddGoal(s, document.getElementById('qNewArea').value, t); return;
+    case 'quick-excel': quickExcel(s); return;
+    case 'quick-word': quickWord(s); return;
     case 'del-goal':
       if (!confirm(T("למחוק את התחום ואת כל היעדים שלו?"))) return;
       s.goals.splice(gi, 1); break;

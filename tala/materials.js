@@ -743,6 +743,22 @@ for (const sec of ACADEMIC) for (const it of sec.items) {
 }
 for (const st of STRATEGIES.slice(-8)) for (const g of st.goals) (STRATEGY_FOR[g] ??= []).push(st.t);
 
+// ---------- quick mode: the rubric of areas (strengths / areas to strengthen) ----------
+// key → plan domain; items are shown as chips the teacher can add to either list.
+const RUBRIC = [
+  { id: 'student', d: 'cognitive', title: 'תלמידאות (התארגנות וכישורים ניהוליים)', items: ['הגעה בזמן', 'כניסה עצמאית', 'ביקור סדיר', 'הבאה והוצאת ציוד', 'קצב עבודה', 'קשב', 'התעלמות מגירויים', 'ביצוע פעילויות ברצף', 'התגייסות והתמדה', 'הפעלת תהליכי בקרה'] },
+  { id: 'indep', d: 'cognitive', title: 'עצמאות בלמידה', items: ['עבודה עצמאית', 'מוטיבציה', 'השתתפות פעילה', 'ביצוע משימות', 'פתרון בעיות יעיל'] },
+  { id: 'reading', d: 'arabic', title: 'קריאה', items: ['שטף קריאה קולית – דיוק', 'שטף קריאה קולית – קצב', 'שטף קריאה קולית – הנגנה', 'הבנת הנקרא (טקסטים תואמי רמה)', 'הסקת מסקנות', 'מסר גלוי וסמוי'] },
+  { id: 'writing', d: 'arabic', title: 'כתיבה', items: ['העתקה מהלוח (גרפו-מוטורית)', 'שמירה על מוסכמות כתיבה', 'אחיזת כלי כתיבה', 'כתב קריא', 'התעייפות בכתיבה', 'הספק בכתיבה', 'הבעה בכתב', 'כתיב'] },
+  { id: 'language', d: 'arabic', title: 'שפה', items: ['תבניות מורפולוגיות', 'דקדוק', 'תחביר', 'הבעה בעל פה', 'אוצר מילים', 'ארגון ההבעה'] },
+  { id: 'math', d: 'math', title: 'מתמטיקה', items: ['תחום המספרים', 'פעולות חשבון', 'שברים', 'מספרים עשרוניים', 'גאומטריה'] },
+  { id: 'social', d: 'comm', title: 'חברתי-תקשורתי', items: ['יצירת קשרים', 'שיתוף פעולה', 'הבנת סיטואציות', 'פתרון בעיות חברתיות', 'התנהגות נורמטיבית (תור, נימוס)', 'כישורי שיח'] },
+  { id: 'emotional', d: 'emotional', title: 'התנהגותי-רגשי', items: ['מוטיבציה פנימית', 'ביטוי רגשי מותאם', 'שליטה עצמית', 'דחיית סיפוקים', 'קבלת סמכות', 'שמירה על כללים', 'התמודדות עם שינויים'] },
+  { id: 'motor', d: 'motor', title: 'תנועה, ניידות והנגשה', items: ['מוטוריקה עדינה (כלי כתיבה, מחדד, מחק, דבק, רוכסן קלמר)', 'מוטוריקה גסה (הפסקה, ספורט, טיולים)', 'הנגשה טכנולוגית'] },
+  { id: 'daily', d: 'daily', title: 'פעילויות יום-יום (ADL)', items: ['הוצאת אוכל', 'אכילה עצמאית', 'היגיינה בשירותים', 'לבישת מעיל', 'התנהלות עצמאית במרחב'] },
+  { id: 'self', d: 'emotional', title: 'ייצוג וסינגור עצמי', items: ['הבעת מטרות וצרכים'] },
+];
+
 // ---------- localization ----------
 // Every text above is written once, in the language of its source material. Here the texts that are
 // shown are put into the chosen language (dictionaries in i18n/). Ids and stored keys never change.
@@ -775,6 +791,7 @@ for (const sec of ACADEMIC) sec.kind = sec.sec.includes('الحسابية') ? 'm
   for (const k of Object.keys(PARENT_RECS)) { const v = PARENT_RECS[k].map(T); delete PARENT_RECS[k]; PARENT_RECS[T(k)] = v; }
   for (const st of PLAN_STEPS) st[1] = T(st[1]);
   for (const r of [...PROFILE_ROWS, ...FUNCTION_ROWS]) { r.title = T(r.title); r.desc = T(r.desc); }
+  for (const r of RUBRIC) { r.title = T(r.title); tr(r.items); }
   CURRICULUM.title = T(CURRICULUM.title); tr(CURRICULUM.domains);
 })();
 const curriculumStageText = g => T(curriculumStage(g));
