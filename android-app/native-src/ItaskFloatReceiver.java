@@ -182,6 +182,11 @@ public class ItaskFloatReceiver extends BroadcastReceiver {
     // in, 54.5dp down), and the card hangs higher than behind a machine
     private static void pullWithRope(Context c, View view) {
         float dp = c.getResources().getDisplayMetrics().density;
+        // the workers at their own size (the machines' view is bigger)
+        View puller = view.findViewById(R.id.itask_float_vehicle);
+        android.view.ViewGroup.LayoutParams vl = puller.getLayoutParams();
+        vl.width = vl.height = Math.round(105 * dp);
+        puller.setLayoutParams(vl);
         View rope = view.findViewById(R.id.itask_float_chain);
         rope.setBackgroundResource(R.drawable.itask_float_rope);
         android.widget.LinearLayout.LayoutParams rl = (android.widget.LinearLayout.LayoutParams) rope.getLayoutParams();

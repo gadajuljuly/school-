@@ -5,8 +5,9 @@
      start, cream with a gold border - on a short chain behind it.
      The animations' canvas has room above and behind the machine for its
      smoke (320 x 320, the machine in the 256 x 256 at its bottom left): the
-     view is 105dp so the machine stays 84dp, and the chain and the card sit
-     21dp lower / further in to stay at its back, as before. -->
+     view is 126dp, the machine 101dp (20% bigger than the first 84dp), and
+     the chain and the card sit lower / further in to stay at its back. The
+     workers style sets the view back to 105dp (ItaskFloatReceiver). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
@@ -18,23 +19,23 @@
 
     <com.airbnb.lottie.LottieAnimationView
         android:id="@+id/itask_float_vehicle"
-        android:layout_width="105dp"
-        android:layout_height="105dp"
+        android:layout_width="126dp"
+        android:layout_height="126dp"
         android:contentDescription="@null" />
 
     <View
         android:id="@+id/itask_float_chain"
         android:layout_width="22dp"
         android:layout_height="4dp"
-        android:layout_marginStart="-35dp"
-        android:layout_marginTop="35dp"
+        android:layout_marginStart="-42dp"
+        android:layout_marginTop="42dp"
         android:background="@drawable/itask_float_chain" />
 
     <LinearLayout
         android:id="@+id/itask_float_card"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="35dp"
+        android:layout_marginTop="42dp"
         android:background="@drawable/itask_float_bg"
         android:elevation="6dp"
         android:gravity="center_vertical"
