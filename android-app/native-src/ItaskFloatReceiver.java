@@ -178,19 +178,19 @@ public class ItaskFloatReceiver extends BroadcastReceiver {
     }
 
     // the worker pulls the card on a rope he holds at chest height: the rope
-    // goes on from his hands (the canvas's 256 x 256, at 84dp, from 21dp
-    // down), and the card hangs higher than behind a machine
+    // goes on from his hands (at 270, 166 of the 320 x 320 canvas - 88.6dp
+    // in, 54.5dp down), and the card hangs higher than behind a machine
     private static void pullWithRope(Context c, View view) {
         float dp = c.getResources().getDisplayMetrics().density;
         View rope = view.findViewById(R.id.itask_float_chain);
         rope.setBackgroundResource(R.drawable.itask_float_rope);
         android.widget.LinearLayout.LayoutParams rl = (android.widget.LinearLayout.LayoutParams) rope.getLayoutParams();
-        rl.setMarginStart(Math.round(-23 * dp));
-        rl.topMargin = Math.round(14 * dp);
+        rl.setMarginStart(Math.round(-19 * dp));
+        rl.topMargin = Math.round(4 * dp);
         rope.setLayoutParams(rl);
         View card = view.findViewById(R.id.itask_float_card);
         android.widget.LinearLayout.LayoutParams cl = (android.widget.LinearLayout.LayoutParams) card.getLayoutParams();
-        cl.topMargin = Math.round(14 * dp);
+        cl.topMargin = Math.round(4 * dp);
         card.setLayoutParams(cl);
     }
 
