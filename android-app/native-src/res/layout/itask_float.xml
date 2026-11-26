@@ -64,4 +64,17 @@
             android:textDirection="firstStrongRtl"
             android:textSize="14sp" />
     </LinearLayout>
+
+    <!-- the worker style only: a second worker pushing the card from behind
+         (his palms at 10, 76 of the 320 x 320 canvas - 3dp in, 25dp down;
+         37dp lower brings them to the card's upper half, his boots level
+         with the puller's) -->
+    <com.airbnb.lottie.LottieAnimationView
+        android:id="@+id/itask_float_pusher"
+        android:layout_width="105dp"
+        android:layout_height="105dp"
+        android:layout_marginStart="-3dp"
+        android:layout_marginTop="37dp"
+        android:contentDescription="@null"
+        android:visibility="gone" />
 </LinearLayout>

@@ -177,7 +177,7 @@ public class ItaskFloatReceiver extends BroadcastReceiver {
         nm.notify(LOCK_NOTICE_ID, b.build());
     }
 
-    // the worker pulls the card on a rope he holds at chest height: the rope
+    // the workers style: one pulls the card on a rope he holds at chest height: the rope
     // goes on from his hands (at 270, 166 of the 320 x 320 canvas - 88.6dp
     // in, 54.5dp down), and the card hangs higher than behind a machine
     private static void pullWithRope(Context c, View view) {
@@ -192,6 +192,16 @@ public class ItaskFloatReceiver extends BroadcastReceiver {
         android.widget.LinearLayout.LayoutParams cl = (android.widget.LinearLayout.LayoutParams) card.getLayoutParams();
         cl.topMargin = Math.round(4 * dp);
         card.setLayoutParams(cl);
+        // and a second worker pushes it from behind, in step with the first
+        try {
+            LottieAnimationView pusher = (LottieAnimationView) view.findViewById(R.id.itask_float_pusher);
+            pusher.setAnimation("lottie/itask_worker_push.json");
+            pusher.setRepeatCount(LottieDrawable.INFINITE);
+            pusher.setVisibility(View.VISIBLE);
+            pusher.playAnimation();
+        } catch (Throwable t) {
+            // the puller alone
+        }
     }
 
     // { project, task text, launch view, task id } - the one after the last shown
