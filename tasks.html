@@ -38,7 +38,7 @@
 <script src="vendor/supabase-js-2.118.0.js"></script>
 <script src="vendor/firebase-app-compat-10.7.1.js"></script>
 <script src="vendor/firebase-auth-compat-10.7.1.js"></script>
-<link rel="stylesheet" href="tasks.css?v=62e5e637db">
+<link rel="stylesheet" href="tasks.css?v=a74c1b798f">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -63,7 +63,8 @@
   <div class="cal-body" id="calBody"></div>
 </div>
 <div class="modal-overlay" id="calEventOverlay" hidden style="z-index:41">
-  <div class="modal-box cal-editor-box">
+  <div class="modal-box has-x cal-editor-box">
+    <button type="button" class="modal-x-btn" id="calEvCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
     <form class="cal-form" id="calEventForm">
       <input type="text" id="calEvTitle" data-i18n-ph="calEvTitlePlaceholder" placeholder="כותרת">
       <label class="cal-form-check"><input type="checkbox" id="calEvAllDay"> <span data-i18n="calEvAllDay">כל היום</span></label>
@@ -97,7 +98,6 @@
       <textarea id="calEvDescription" data-i18n-ph="calEvDescriptionPlaceholder" placeholder="תיאור"></textarea>
       <div class="modal-actions">
         <button type="submit" class="modal-btn modal-btn-primary" data-i18n="calSave">שמירה</button>
-        <button type="button" class="modal-btn modal-btn-no" id="calEvCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
       <button type="button" class="convert-to-note-btn danger-text-btn" id="calEvDeleteBtn" data-i18n="calEvDelete" hidden>מחיקת האירוע</button>
     </form>
@@ -113,20 +113,19 @@
   </div>
 </div>
 <div class="modal-overlay" id="calCopyOverlay" hidden style="z-index:41">
-  <div class="modal-box cal-editor-box">
+  <div class="modal-box has-x cal-editor-box">
+    <button type="button" class="modal-x-btn" id="calCopyCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
     <p class="modal-message" id="calCopyMessage"></p>
     <div class="move-task-mode" id="calCopyTypeRow">
       <button type="button" id="calCopyTaskBtn" data-i18n="addTypeTaskBtn">משימה</button>
       <button type="button" id="calCopyNoteBtn" data-i18n="addTypeNoteBtn">מזכרת</button>
     </div>
     <div class="cal-copy-projects" id="calCopyProjects" hidden></div>
-    <div class="modal-actions">
-      <button type="button" class="modal-btn modal-btn-no" id="calCopyCancelBtn" data-i18n="cancelBtn">ביטול</button>
-    </div>
   </div>
 </div>
 <div class="modal-overlay" id="workPlanEditOverlay" hidden>
-  <div class="modal-box cal-editor-box">
+  <div class="modal-box has-x cal-editor-box">
+    <button type="button" class="modal-x-btn" id="wpCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
     <form class="cal-form" id="workPlanEditForm">
       <p class="modal-message" id="workPlanEditTitle"></p>
       <div id="wpProjectRow" class="wp-field">
@@ -175,47 +174,43 @@
       <div class="modal-actions">
         <button type="submit" class="modal-btn modal-btn-primary" data-i18n="workPlanSave">שמירה</button>
         <button type="button" class="modal-btn modal-btn-danger" id="wpDeleteBtn" data-i18n="deleteBtn">מחיקה</button>
-        <button type="button" class="modal-btn modal-btn-no" id="wpCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </form>
   </div>
 </div>
 <div class="modal-overlay" id="wpBaselineOverlay" hidden style="z-index:41">
-  <div class="modal-box" role="alertdialog" aria-modal="true">
+  <div class="modal-box has-x" role="alertdialog" aria-modal="true">
+    <button type="button" class="modal-x-btn" id="wpBaselineCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
     <p class="modal-message" id="wpBaselineText"></p>
     <div class="move-task-projects">
       <button type="button" id="wpBaselineSaveBtn"></button>
       <button type="button" id="wpBaselineToggleBtn"></button>
       <button type="button" id="wpBaselineDeleteBtn" data-i18n="workPlanBaselineDelete">🗑 מחיקת קו הבסיס</button>
     </div>
-    <div class="modal-actions">
-      <button type="button" class="modal-btn modal-btn-no" id="wpBaselineCancelBtn" data-i18n="cancelBtn">ביטול</button>
-    </div>
   </div>
 </div>
 <div class="modal-overlay" id="wpHammockMenuOverlay" hidden style="z-index:41">
-  <div class="modal-box" role="alertdialog" aria-modal="true">
+  <div class="modal-box has-x" role="alertdialog" aria-modal="true">
+    <button type="button" class="modal-x-btn" id="wpHammockMenuCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
     <p class="modal-message" id="wpHammockMenuTitle"></p>
     <div class="move-task-projects" id="wpHammockMenuList"></div>
-    <div class="modal-actions">
-      <button type="button" class="modal-btn modal-btn-no" id="wpHammockMenuCancelBtn" data-i18n="cancelBtn">ביטול</button>
-    </div>
   </div>
 </div>
 <div class="modal-overlay" id="printTasksOverlay" hidden style="z-index:41">
-  <div class="modal-box">
+  <div class="modal-box has-x">
+    <button type="button" class="modal-x-btn" id="printTasksCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
     <p class="modal-message" data-i18n="printTasksTitle">הדפסת משימות</p>
     <label class="print-task-pick print-task-all"><input type="checkbox" id="printTasksAll"><span data-i18n="printTasksAllLabel">כל המשימות</span><small id="printTasksCount"></small></label>
     <div class="print-tasks-list" id="printTasksList"></div>
     <div class="modal-actions print-tasks-actions">
       <button type="button" class="modal-btn modal-btn-primary" id="printTasksPdfBtn" data-i18n="printTasksPdf">📄 PDF</button>
       <button type="button" class="modal-btn modal-btn-primary" id="printTasksPrinterBtn" data-i18n="printTasksPrinter">🖨 מדפסת</button>
-      <button type="button" class="modal-btn modal-btn-no" id="printTasksCancelBtn" data-i18n="cancelBtn">ביטול</button>
     </div>
   </div>
 </div>
 <div class="modal-overlay" id="wpGroupEditOverlay" hidden style="z-index:42">
-  <div class="modal-box" role="alertdialog" aria-modal="true">
+  <div class="modal-box has-x" role="alertdialog" aria-modal="true">
+    <button type="button" class="modal-x-btn" id="wpGroupEditCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
     <p class="modal-message" id="wpGroupEditTitle"></p>
     <input type="text" id="wpGroupName" maxlength="60" autocomplete="off" class="wp-hammock-name-input">
     <div class="wp-group-edit-tools" id="wpGroupEditTools">
@@ -224,24 +219,24 @@
       <button type="button" class="wp-small-btn wp-group-delete" id="wpGroupDeleteBtn" data-i18n="workPlanGroupDelete">🗑 מחיקת הקבוצה</button>
     </div>
     <div class="modal-actions">
-      <button type="button" class="modal-btn modal-btn-no" id="wpGroupEditCancelBtn" data-i18n="cancelBtn">ביטול</button>
       <button type="button" class="modal-btn modal-btn-primary" id="wpGroupEditOkBtn" data-i18n="workPlanSave">שמירה</button>
     </div>
   </div>
 </div>
 <div class="modal-overlay" id="wpHammockEditOverlay" hidden style="z-index:42">
-  <div class="modal-box" role="alertdialog" aria-modal="true">
+  <div class="modal-box has-x" role="alertdialog" aria-modal="true">
+    <button type="button" class="modal-x-btn" id="wpHammockEditCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
     <p class="modal-message" id="wpHammockEditTitle"></p>
     <input type="text" id="wpHammockName" maxlength="60" autocomplete="off" class="wp-hammock-name-input">
     <div class="wp-hammock-colors" id="wpHammockColors"></div>
     <div class="modal-actions">
-      <button type="button" class="modal-btn modal-btn-no" id="wpHammockEditCancelBtn" data-i18n="cancelBtn">ביטול</button>
       <button type="button" class="modal-btn modal-btn-primary" id="wpHammockEditOkBtn" data-i18n="workPlanSave">שמירה</button>
     </div>
   </div>
 </div>
 <div class="modal-overlay" id="workPlanLinkOverlay" hidden>
-  <div class="modal-box cal-editor-box">
+  <div class="modal-box has-x cal-editor-box">
+    <button type="button" class="modal-x-btn" id="wpLinkCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
     <div class="cal-form">
       <p class="modal-message" data-i18n="workPlanLinkTitle">קשירת פעילויות</p>
       <p class="wp-link-pair" id="wpLinkPair"></p>
@@ -251,26 +246,26 @@
       <div class="modal-actions">
         <button type="button" class="modal-btn modal-btn-primary" id="wpLinkSaveBtn" data-i18n="workPlanLinkSave">קשירה</button>
         <button type="button" class="modal-btn modal-btn-danger" id="wpLinkRemoveBtn" data-i18n="workPlanLinkRemove" hidden>הסרת קשירה</button>
-        <button type="button" class="modal-btn modal-btn-no" id="wpLinkCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </div>
   </div>
 </div>
 <div class="modal-overlay" id="sketchTextOverlay" hidden>
-  <div class="modal-box">
+  <div class="modal-box has-x">
+    <button type="button" class="modal-x-btn" id="sketchTextCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
     <form class="cal-form" id="sketchTextForm">
       <p class="modal-message" data-i18n="sketchTextTitle">טקסט</p>
       <input type="text" id="sketchTextInput" maxlength="80" autocomplete="off">
       <p class="cal-form-note" id="sketchTextHint" data-i18n="sketchDimTextHint" hidden>המידה לפי קנה המידה - אפשר לשנות למספר או מילה אחרים</p>
       <div class="modal-actions">
         <button type="submit" class="modal-btn modal-btn-primary" data-i18n="voiceSaveBtn">אישור</button>
-        <button type="button" class="modal-btn modal-btn-no" id="sketchTextCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </form>
   </div>
 </div>
 <div class="modal-overlay" id="sketchScaleOverlay" hidden>
-  <div class="modal-box">
+  <div class="modal-box has-x">
+    <button type="button" class="modal-x-btn" id="sketchScaleCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
     <div class="cal-form">
       <p class="modal-message" data-i18n="sketchScaleTitle">קנה מידה</p>
       <div class="sk-scale-row">
@@ -285,13 +280,13 @@
       <div class="modal-actions">
         <button type="button" class="modal-btn modal-btn-primary" id="sketchScaleSaveBtn" data-i18n="voiceSaveBtn">אישור</button>
         <button type="button" class="modal-btn" id="sketchScaleOffBtn" data-i18n="sketchScaleOff">בלי קנה מידה</button>
-        <button type="button" class="modal-btn modal-btn-no" id="sketchScaleCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </div>
   </div>
 </div>
 <div class="modal-overlay" id="scanOverlay" hidden>
-  <div class="modal-box cal-editor-box">
+  <div class="modal-box has-x cal-editor-box">
+    <button type="button" class="modal-x-btn" id="scanCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
     <div class="cal-form">
       <p class="modal-message" data-i18n="scanTitle">סריקת מסמך</p>
       <div class="scan-pages" id="scanPages"></div>
@@ -305,7 +300,6 @@
       <input type="text" id="scanName" maxlength="80">
       <div class="modal-actions">
         <button type="button" class="modal-btn modal-btn-primary" id="scanSaveBtn" data-i18n="scanSaveBtn" disabled>שמירה כ-PDF</button>
-        <button type="button" class="modal-btn modal-btn-no" id="scanCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </div>
   </div>
@@ -347,7 +341,8 @@
   <input type="file" accept="image/*" multiple id="scanGalleryInput" hidden>
 </div>
 <div class="modal-overlay" id="shareFilesOverlay" hidden style="z-index:41">
-  <div class="modal-box">
+  <div class="modal-box has-x">
+    <button type="button" class="modal-x-btn" id="shareFilesCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
     <form class="cal-form" id="shareFilesForm">
       <p class="modal-message" data-i18n="shareFilesTitle">שמירה בספריית הפרויקט</p>
       <ul class="share-files-list" id="shareFilesList"></ul>
@@ -357,13 +352,13 @@
       <select id="shareFilesFolder"></select>
       <div class="modal-actions">
         <button type="submit" class="modal-btn modal-btn-primary" id="shareFilesSaveBtn" data-i18n="shareFilesSave">שמירה</button>
-        <button type="button" class="modal-btn modal-btn-no" id="shareFilesCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </form>
   </div>
 </div>
 <div class="modal-overlay" id="shareTaskOverlay" hidden style="z-index:41">
-  <div class="modal-box cal-editor-box">
+  <div class="modal-box has-x cal-editor-box">
+    <button type="button" class="modal-x-btn" id="shareTaskCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
     <form class="cal-form" id="shareTaskForm">
       <p class="modal-message" data-i18n="shareTaskTitle">הוספת משימה</p>
       <textarea id="shareTaskText"></textarea>
@@ -374,7 +369,6 @@
       <div class="modal-actions">
         <button type="submit" class="modal-btn modal-btn-primary" data-i18n="shareTaskAdd">הוספה</button>
         <button type="button" class="modal-btn modal-btn-primary" id="shareTaskAssistantBtn" data-i18n="shareTaskAssistant">🤖 לעוזר</button>
-        <button type="button" class="modal-btn modal-btn-no" id="shareTaskCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </form>
   </div>
@@ -391,7 +385,8 @@
   </div>
 </div>
 <div class="modal-overlay" id="budgetFormOverlay" hidden style="z-index:41">
-  <div class="modal-box cal-editor-box">
+  <div class="modal-box has-x cal-editor-box">
+    <button type="button" class="modal-x-btn" id="budgetFormCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
     <form class="cal-form" id="budgetForm">
       <p class="modal-message" id="budgetFormTitle"></p>
       <div class="budget-form-fields" id="budgetFormFields"></div>
@@ -399,13 +394,13 @@
       <div class="modal-actions">
         <button type="submit" class="modal-btn modal-btn-primary" data-i18n="voiceSaveBtn">אישור</button>
         <button type="button" class="modal-btn modal-btn-no" id="budgetFormDeleteBtn" data-i18n="deleteBtn" hidden>מחיקה</button>
-        <button type="button" class="modal-btn modal-btn-no" id="budgetFormCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </form>
   </div>
 </div>
 <div class="modal-overlay" id="budgetReportOverlay" hidden style="z-index:41">
-  <div class="modal-box cal-editor-box">
+  <div class="modal-box has-x cal-editor-box">
+    <button type="button" class="modal-x-btn" id="brCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
     <form class="cal-form" id="budgetReportForm">
       <p class="modal-message" data-i18n="brTitle">דוחות</p>
       <div class="br-kinds">
@@ -441,7 +436,6 @@
       <div class="modal-actions">
         <button type="submit" class="modal-btn modal-btn-primary" data-i18n="brPdf">PDF</button>
         <button type="button" class="modal-btn" id="brExcelBtn" data-i18n="brExcel">אקסל</button>
-        <button type="button" class="modal-btn modal-btn-no" id="brCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </form>
   </div>
@@ -449,24 +443,20 @@
 <input type="file" id="clientBillInput" accept=".pdf,application/pdf,.xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
 <input type="file" id="budgetCsvInput" accept=".xlsx,.csv,.pdf,application/pdf,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
 <div class="modal-overlay" id="sketchShareOverlay" hidden style="z-index:41">
-  <div class="modal-box" role="alertdialog" aria-modal="true">
+  <div class="modal-box has-x" role="alertdialog" aria-modal="true">
+    <button type="button" class="modal-x-btn" id="sketchShareCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
     <p class="modal-message" data-i18n="sketchShareHow">איך לשתף את הסקיצה?</p>
     <div class="move-task-projects">
       <button type="button" id="sketchShareChatBtn" data-i18n="sketchShareToChat">💬 לצ'אט של הפרויקט</button>
       <button type="button" id="sketchShareAppsBtn" data-i18n="sketchShareToApps">📤 לאפליקציות אחרות</button>
     </div>
-    <div class="modal-actions">
-      <button type="button" class="modal-btn modal-btn-no" id="sketchShareCancelBtn" data-i18n="cancelBtn">ביטול</button>
-    </div>
   </div>
 </div>
 <div class="modal-overlay" id="chatSaveFolderOverlay" hidden style="z-index:41">
-  <div class="modal-box" role="alertdialog" aria-modal="true">
+  <div class="modal-box has-x" role="alertdialog" aria-modal="true">
+    <button type="button" class="modal-x-btn" id="chatSaveFolderCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
     <p class="modal-message" data-i18n="chatSaveFolderTitle">לאיזו תיקייה בספרייה לשמור?</p>
     <div class="move-task-projects" id="chatSaveFolderList"></div>
-    <div class="modal-actions">
-      <button type="button" class="modal-btn modal-btn-no" id="chatSaveFolderCancelBtn" data-i18n="cancelBtn">ביטול</button>
-    </div>
   </div>
 </div>
 <div class="image-viewer" id="imageViewerOverlay" hidden>
@@ -474,18 +464,19 @@
   <button type="button" class="image-viewer-close" data-i18n-title="cancelBtn" title="סגירה">&#10005;</button>
 </div>
 <div class="modal-overlay" id="calInviteOverlay" hidden style="z-index:41">
-  <div class="modal-box" role="alertdialog" aria-modal="true">
+  <div class="modal-box has-x" role="alertdialog" aria-modal="true">
+    <button type="button" class="modal-x-btn" id="calInviteCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
     <p class="modal-message" data-i18n="calInviteTitle">שיתוף האירוע בלוח השנה של:</p>
     <p class="modal-submessage" id="calInviteTaskText"></p>
     <div class="cal-invite-list" id="calInviteList"></div>
     <div class="modal-actions">
       <button type="button" class="modal-btn modal-btn-yes" id="calInviteOkBtn" data-i18n="confirmBtn">אישור</button>
-      <button type="button" class="modal-btn modal-btn-no" id="calInviteCancelBtn" data-i18n="cancelBtn">ביטול</button>
     </div>
   </div>
 </div>
 <div class="modal-overlay" id="datePickOverlay" hidden style="z-index:46">
-  <div class="modal-box date-pick-box">
+  <div class="modal-box has-x date-pick-box">
+    <button type="button" class="modal-x-btn" id="datePickCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
     <div class="date-pick-head">
       <button type="button" class="date-pick-nav" id="datePickPrev">&#8250;</button>
       <span class="date-pick-title" id="datePickTitle"></span>
@@ -494,7 +485,6 @@
     <div class="date-pick-grid" id="datePickGrid"></div>
     <div class="modal-actions">
       <button type="button" class="modal-btn modal-btn-primary" id="datePickTodayBtn" data-i18n="todayBtn">היום</button>
-      <button type="button" class="modal-btn modal-btn-no" id="datePickCancelBtn" data-i18n="cancelBtn">ביטול</button>
     </div>
   </div>
 </div>
@@ -868,14 +858,12 @@
   </div>
 
   <div class="modal-overlay" id="addTypeOverlay" hidden>
-    <div class="modal-box" role="alertdialog" aria-modal="true">
+    <div class="modal-box has-x" role="alertdialog" aria-modal="true">
+      <button type="button" class="modal-x-btn" id="addTypeCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
       <p class="modal-message" data-i18n="addTypeModalMessage">איך להוסיף את השורה?</p>
       <div class="move-task-mode">
         <button type="button" id="addTypeTaskBtn" data-i18n="addTypeTaskBtn">משימה</button>
         <button type="button" id="addTypeNoteBtn" data-i18n="addTypeNoteBtn">מזכרת</button>
-      </div>
-      <div class="modal-actions">
-        <button type="button" class="modal-btn modal-btn-no" id="addTypeCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </div>
   </div>
@@ -898,7 +886,8 @@
   </div>
 
   <div class="modal-overlay" id="reportActionOverlay" hidden>
-    <div class="modal-box" role="alertdialog" aria-modal="true">
+    <div class="modal-box has-x" role="alertdialog" aria-modal="true">
+      <button type="button" class="modal-x-btn" id="reportActionCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
       <p class="modal-message" data-i18n="reportActionModalMessage">מה לעשות עם הדוח?</p>
       <div class="move-task-mode">
         <button type="button" class="danger-btn" id="reportActionDeleteBtn" data-i18n="deleteBtn">מחיקה</button>
@@ -906,21 +895,16 @@
         <button type="button" id="reportActionShareBtn" data-i18n="shareBtn">שיתוף</button>
       </div>
       <button type="button" class="convert-to-note-btn" id="reportActionAddTasksBtn" data-i18n="reportActionAddTasksBtn">הוספת המשימות לרשימה</button>
-      <div class="modal-actions">
-        <button type="button" class="modal-btn modal-btn-no" id="reportActionCancelBtn" data-i18n="cancelBtn">ביטול</button>
-      </div>
     </div>
   </div>
 
   <div class="modal-overlay" id="reportRowActionOverlay" hidden>
-    <div class="modal-box" role="alertdialog" aria-modal="true">
+    <div class="modal-box has-x" role="alertdialog" aria-modal="true">
+      <button type="button" class="modal-x-btn" id="reportRowActionCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
       <p class="modal-message" data-i18n="reportRowActionModalMessage">מה לעשות עם השורה?</p>
       <div class="move-task-mode">
         <button type="button" class="danger-btn" id="reportRowActionDeleteBtn" data-i18n="deleteBtn">מחיקה</button>
         <button type="button" id="reportRowActionCopyBtn" data-i18n="reportRowActionCopyBtn">העתקה</button>
-      </div>
-      <div class="modal-actions">
-        <button type="button" class="modal-btn modal-btn-no" id="reportRowActionCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </div>
   </div>
@@ -937,86 +921,74 @@
   </div>
 
   <div class="modal-overlay" id="libraryFolderActionOverlay" hidden>
-    <div class="modal-box" role="alertdialog" aria-modal="true">
+    <div class="modal-box has-x" role="alertdialog" aria-modal="true">
+      <button type="button" class="modal-x-btn" id="libraryFolderActionCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
       <p class="modal-message" data-i18n="libraryFolderActionModalMessage">מה לעשות עם התיקייה?</p>
       <div class="move-task-mode">
         <button type="button" class="danger-btn" id="libraryFolderActionDeleteBtn" data-i18n="deleteBtn">מחיקה</button>
-      </div>
-      <div class="modal-actions">
-        <button type="button" class="modal-btn modal-btn-no" id="libraryFolderActionCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </div>
   </div>
 
   <div class="modal-overlay" id="sketchListOverlay" hidden style="z-index:41">
-    <div class="modal-box" role="alertdialog" aria-modal="true">
+    <div class="modal-box has-x" role="alertdialog" aria-modal="true">
+      <button type="button" class="modal-x-btn" id="sketchListCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
       <p class="modal-message" data-i18n="sketchListTitle">הסקיצות של הפרויקט</p>
       <div class="sk-list-rows" id="sketchListRows"></div>
       <div class="modal-actions">
-        <button type="button" class="modal-btn modal-btn-no" id="sketchListCancelBtn" data-i18n="cancelBtn">ביטול</button>
         <button type="button" class="modal-btn modal-btn-primary" id="sketchNewBtn" data-i18n="sketchNew">＋ סקיצה חדשה</button>
       </div>
     </div>
   </div>
   <div class="modal-overlay" id="sketchNameOverlay" hidden style="z-index:42">
-    <div class="modal-box" role="alertdialog" aria-modal="true">
+    <div class="modal-box has-x" role="alertdialog" aria-modal="true">
+      <button type="button" class="modal-x-btn" id="sketchNameCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
       <p class="modal-message" data-i18n="sketchRename">שינוי שם</p>
       <input type="text" id="sketchNameInput" maxlength="60" autocomplete="off" class="wp-hammock-name-input">
       <div class="modal-actions">
-        <button type="button" class="modal-btn modal-btn-no" id="sketchNameCancelBtn" data-i18n="cancelBtn">ביטול</button>
         <button type="button" class="modal-btn modal-btn-primary" id="sketchNameOkBtn" data-i18n="workPlanSave">שמירה</button>
       </div>
     </div>
   </div>
   <div class="modal-overlay" id="sketchAreaChoiceOverlay" hidden style="z-index:41">
-    <div class="modal-box" role="alertdialog" aria-modal="true">
+    <div class="modal-box has-x" role="alertdialog" aria-modal="true">
+      <button type="button" class="modal-x-btn" id="sketchAreaChoiceCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
       <p class="modal-message" id="sketchAreaChoiceTitle"></p>
       <div class="move-task-projects">
         <button type="button" id="sketchAreaAllBtn" data-i18n="sketchAreaAll">🗺 כל הסקיצה</button>
         <button type="button" id="sketchAreaPickBtn" data-i18n="sketchAreaPick">✂ תחימת אזור</button>
       </div>
-      <div class="modal-actions">
-        <button type="button" class="modal-btn modal-btn-no" id="sketchAreaChoiceCancelBtn" data-i18n="cancelBtn">ביטול</button>
-      </div>
     </div>
   </div>
   <div class="modal-overlay" id="sketchLibOverlay" hidden style="z-index:41">
-    <div class="modal-box" role="alertdialog" aria-modal="true">
+    <div class="modal-box has-x" role="alertdialog" aria-modal="true">
+      <button type="button" class="modal-x-btn" id="sketchLibCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
       <p class="modal-message" id="sketchLibTitle">איזה קובץ מהספרייה לשים ברקע?</p>
       <div class="move-task-projects sk-lib-list" id="sketchLibList"></div>
-      <div class="modal-actions">
-        <button type="button" class="modal-btn modal-btn-no" id="sketchLibCancelBtn" data-i18n="cancelBtn">ביטול</button>
-      </div>
     </div>
   </div>
   <div class="modal-overlay" id="sketchPdfPageOverlay" hidden style="z-index:41">
-    <div class="modal-box" role="alertdialog" aria-modal="true">
+    <div class="modal-box has-x" role="alertdialog" aria-modal="true">
+      <button type="button" class="modal-x-btn" id="sketchPdfPageCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
       <p class="modal-message" data-i18n="sketchPdfPageTitle">איזה עמוד מהקובץ לשים ברקע?</p>
       <div class="move-task-projects" id="sketchPdfPageList"></div>
-      <div class="modal-actions">
-        <button type="button" class="modal-btn modal-btn-no" id="sketchPdfPageCancelBtn" data-i18n="cancelBtn">ביטול</button>
-      </div>
     </div>
   </div>
   <div class="modal-overlay" id="libraryMoveOverlay" hidden>
-    <div class="modal-box" role="alertdialog" aria-modal="true">
+    <div class="modal-box has-x" role="alertdialog" aria-modal="true">
+      <button type="button" class="modal-x-btn" id="libraryMoveCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
       <p class="modal-message" data-i18n="libraryMoveToFolderTitle">לאיזו תיקייה להעביר?</p>
       <div class="move-task-projects" id="libraryMoveList"></div>
-      <div class="modal-actions">
-        <button type="button" class="modal-btn modal-btn-no" id="libraryMoveCancelBtn" data-i18n="cancelBtn">ביטול</button>
-      </div>
     </div>
   </div>
   <div class="modal-overlay" id="libraryFileActionOverlay" hidden>
-    <div class="modal-box" role="alertdialog" aria-modal="true">
+    <div class="modal-box has-x" role="alertdialog" aria-modal="true">
+      <button type="button" class="modal-x-btn" id="libraryFileActionCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
       <p class="modal-message" data-i18n="libraryFileActionModalMessage">מה לעשות עם הקובץ?</p>
       <div class="move-task-mode">
         <button type="button" class="modal-btn modal-btn-primary" id="libraryFileActionShareBtn" data-i18n="shareBtn">שיתוף</button>
         <button type="button" class="modal-btn modal-btn-primary" id="libraryFileActionMoveBtn" data-i18n="libraryMoveToFolderBtn">📁 העברה לתיקייה</button>
         <button type="button" class="danger-btn" id="libraryFileActionDeleteBtn" data-i18n="deleteBtn">מחיקה</button>
-      </div>
-      <div class="modal-actions">
-        <button type="button" class="modal-btn modal-btn-no" id="libraryFileActionCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </div>
   </div>
@@ -1054,17 +1026,16 @@
   </div>
 
   <div class="modal-overlay" id="moveTaskProjectsOverlay" hidden>
-    <div class="modal-box" role="alertdialog" aria-modal="true">
+    <div class="modal-box has-x" role="alertdialog" aria-modal="true">
+      <button type="button" class="modal-x-btn" id="moveTaskProjectsCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
       <p class="modal-message" id="moveTaskProjectsTitle" data-i18n="moveTaskProjectsTitle">בחירת פרויקט יעד</p>
       <div class="move-task-projects" id="moveTaskProjects"></div>
-      <div class="modal-actions">
-        <button type="button" class="modal-btn modal-btn-no" id="moveTaskProjectsCancelBtn" data-i18n="cancelBtn">ביטול</button>
-      </div>
     </div>
   </div>
 
   <div class="modal-overlay" id="taskReminderOverlay" hidden>
-    <div class="modal-box" role="alertdialog" aria-modal="true">
+    <div class="modal-box has-x" role="alertdialog" aria-modal="true">
+      <button type="button" class="modal-x-btn" id="taskReminderCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
       <p class="modal-message" data-i18n="taskReminderModalMessage">תדירות ההתראה</p>
       <p class="reminder-status" id="taskReminderCurrentStatus" hidden></p>
       <div class="move-task-mode">
@@ -1078,21 +1049,16 @@
         <button type="button" id="taskReminderTimeConfirmBtn" data-i18n="confirmBtn">אישור</button>
       </div>
       <button type="button" class="convert-to-note-btn danger-text-btn" id="taskReminderOffBtn" data-i18n="taskReminderTurnOff" hidden>כיבוי התראה</button>
-      <div class="modal-actions">
-        <button type="button" class="modal-btn modal-btn-no" id="taskReminderCancelBtn" data-i18n="cancelBtn">ביטול</button>
-      </div>
     </div>
   </div>
 
   <div class="modal-overlay" id="reportTypeOverlay" hidden>
-    <div class="modal-box" role="alertdialog" aria-modal="true">
+    <div class="modal-box has-x" role="alertdialog" aria-modal="true">
+      <button type="button" class="modal-x-btn" id="reportTypeCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
       <p class="modal-message" data-i18n="reportTypeModalMessage">פגישה או סיור?</p>
       <div class="move-task-mode">
         <button type="button" id="reportTypeMeetingBtn" data-i18n="reportTypeMeeting">פגישה</button>
         <button type="button" id="reportTypeTourBtn" data-i18n="reportTypeTour">סיור</button>
-      </div>
-      <div class="modal-actions">
-        <button type="button" class="modal-btn modal-btn-no" id="reportTypeCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </div>
   </div>
@@ -1151,13 +1117,13 @@
   </div>
 
   <div class="modal-overlay" id="officeGroupMembersOverlay" hidden>
-    <div class="modal-box" role="alertdialog" aria-modal="true">
+    <div class="modal-box has-x" role="alertdialog" aria-modal="true">
+      <button type="button" class="modal-x-btn" id="officeGroupMembersCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
       <p class="modal-message" data-i18n="officeGroupMembersTitle">חברי הקבוצה</p>
       <div id="officeGroupMembersList"></div>
       <button type="button" class="convert-to-note-btn" id="officeGroupMembersPickContactsBtn" data-i18n="sharedProjectPickContactsBtn" hidden>בחירה מאנשי הקשר</button>
       <div class="modal-actions">
         <button type="button" class="modal-btn modal-btn-primary" id="officeGroupMembersNextBtn" data-i18n="nextBtn">הבא</button>
-        <button type="button" class="modal-btn modal-btn-no" id="officeGroupMembersCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </div>
   </div>
@@ -1176,7 +1142,8 @@
   </div>
 
   <div class="modal-overlay" id="officeNameReportOverlay" hidden>
-    <div class="modal-box" role="alertdialog" aria-modal="true">
+    <div class="modal-box has-x" role="alertdialog" aria-modal="true">
+      <button type="button" class="modal-x-btn" id="officeNameReportCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
       <p class="modal-message" id="officeNameReportModalMessage"></p>
       <div class="modal-submessage" id="officeNameReportNameLabel" data-i18n="officeNameReportNameLabel">שם</div>
       <input type="text" id="officeNameReportNameInput" class="auth-input" data-i18n-ph="officeNameReportNamePlaceholder" placeholder="שם" maxlength="60">
@@ -1188,7 +1155,6 @@
       <input type="date" id="officeNameReportToInput" class="auth-input">
       <div class="modal-actions">
         <button type="button" class="modal-btn modal-btn-primary" id="officeNameReportGenerateBtn" data-i18n="officeNameReportGenerateBtn">הפקה</button>
-        <button type="button" class="modal-btn modal-btn-no" id="officeNameReportCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </div>
   </div>
@@ -1203,40 +1169,41 @@
   </div>
 
   <div class="modal-overlay" id="reportTitleOverlay" hidden>
-    <div class="modal-box" role="alertdialog" aria-modal="true">
+    <div class="modal-box has-x" role="alertdialog" aria-modal="true">
+      <button type="button" class="modal-x-btn" id="reportTitleCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
       <p class="modal-message" data-i18n="reportTitleModalMessage">כותרת</p>
       <input type="text" id="reportTitleInput" class="auth-input" data-i18n-ph="reportTitlePlaceholder" placeholder="כותרת">
       <div class="modal-actions">
         <button type="button" class="modal-btn modal-btn-yes" id="reportTitleSaveBtn" data-i18n="confirmBtn">אישור</button>
-        <button type="button" class="modal-btn modal-btn-no" id="reportTitleCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </div>
   </div>
 
   <div class="modal-overlay" id="reportDateOverlay" hidden>
-    <div class="modal-box" role="alertdialog" aria-modal="true">
+    <div class="modal-box has-x" role="alertdialog" aria-modal="true">
+      <button type="button" class="modal-x-btn" id="reportDateCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
       <p class="modal-message" data-i18n="reportDateModalMessage">תאריך</p>
       <input type="date" id="reportDateInput" class="auth-input">
       <div class="modal-actions">
         <button type="button" class="modal-btn modal-btn-yes" id="reportDateSaveBtn" data-i18n="confirmBtn">אישור</button>
-        <button type="button" class="modal-btn modal-btn-no" id="reportDateCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </div>
   </div>
 
   <div class="modal-overlay" id="reportParticipantsOverlay" hidden>
-    <div class="modal-box" role="alertdialog" aria-modal="true">
+    <div class="modal-box has-x" role="alertdialog" aria-modal="true">
+      <button type="button" class="modal-x-btn" id="reportParticipantsCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
       <p class="modal-message" data-i18n="reportParticipantsModalMessage">משתתפים</p>
       <div class="report-participants-list" id="reportParticipantsList"></div>
       <div class="modal-actions">
         <button type="button" class="modal-btn modal-btn-yes" id="reportParticipantsSaveBtn" data-i18n="confirmBtn">אישור</button>
-        <button type="button" class="modal-btn modal-btn-no" id="reportParticipantsCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </div>
   </div>
 
   <div class="modal-overlay" id="sharedProjectOverlay" hidden>
-    <div class="modal-box" role="alertdialog" aria-modal="true">
+    <div class="modal-box has-x" role="alertdialog" aria-modal="true">
+      <button type="button" class="modal-x-btn" id="sharedProjectCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
       <p class="modal-message" id="sharedProjectModalMessage" data-i18n="sharedProjectModalMessage">פרויקט משותף חדש</p>
       <input type="text" id="sharedProjectNameInput" class="auth-input" data-i18n-ph="sharedProjectNamePlaceholder" placeholder="שם הפרויקט" maxlength="40">
       <p class="modal-submessage" data-i18n="sharedProjectMembersLabel">מספרי טלפון של המשתתפים</p>
@@ -1244,20 +1211,19 @@
       <div class="report-participants-list" id="sharedProjectMembersList"></div>
       <div class="modal-actions">
         <button type="button" class="modal-btn modal-btn-yes" id="sharedProjectSaveBtn" data-i18n="confirmBtn">אישור</button>
-        <button type="button" class="modal-btn modal-btn-no" id="sharedProjectCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </div>
   </div>
 
   <div class="modal-overlay" id="projectInviteSendOverlay" hidden>
-    <div class="modal-box" role="alertdialog" aria-modal="true">
+    <div class="modal-box has-x" role="alertdialog" aria-modal="true">
+      <button type="button" class="modal-x-btn" id="projectInviteSendCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
       <p class="modal-message" id="projectInviteSendMessage">שיתוף פרויקט</p>
       <p class="modal-submessage" data-i18n="sharedProjectMembersLabel">מספרי טלפון של המשתתפים</p>
       <button type="button" class="convert-to-note-btn" id="projectInvitePickContactsBtn" data-i18n="sharedProjectPickContactsBtn" hidden>בחירה מאנשי הקשר</button>
       <div class="report-participants-list" id="projectInviteSendList"></div>
       <div class="modal-actions">
         <button type="button" class="modal-btn modal-btn-yes" id="projectInviteSendBtn" data-i18n="projectInviteSendBtn">שליחה</button>
-        <button type="button" class="modal-btn modal-btn-no" id="projectInviteSendCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </div>
   </div>
@@ -1294,7 +1260,8 @@
 
 
   <div class="modal-overlay" id="chatMsgActionOverlay" hidden>
-    <div class="modal-box" role="alertdialog" aria-modal="true">
+    <div class="modal-box has-x" role="alertdialog" aria-modal="true">
+      <button type="button" class="modal-x-btn" id="chatMsgActionCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
       <p class="modal-message" data-i18n="chatMsgActionModalMessage">מה לעשות עם ההודעה?</p>
       <div class="move-task-mode">
         <button type="button" id="chatMsgCopyBtn" data-i18n="chatMsgCopyBtn">העתקה</button>
@@ -1302,19 +1269,16 @@
         <button type="button" id="chatMsgEditBtn" data-i18n="chatMsgEditBtn">עריכה</button>
         <button type="button" id="chatMsgDeleteBtn" class="danger-btn" data-i18n="chatMsgDeleteBtn">מחיקה</button>
       </div>
-      <div class="modal-actions">
-        <button type="button" class="modal-btn modal-btn-no" id="chatMsgActionCancelBtn" data-i18n="cancelBtn">ביטול</button>
-      </div>
     </div>
   </div>
 
   <div class="modal-overlay" id="libraryFolderNameOverlay" hidden>
-    <div class="modal-box" role="alertdialog" aria-modal="true">
+    <div class="modal-box has-x" role="alertdialog" aria-modal="true">
+      <button type="button" class="modal-x-btn" id="libraryFolderNameCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
       <p class="modal-message" data-i18n="libraryNewFolderPrompt">שם התיקייה</p>
       <input type="text" id="libraryFolderNameInput" class="auth-input" maxlength="30" autocomplete="off">
       <div class="modal-actions">
         <button type="button" class="modal-btn modal-btn-primary" id="libraryFolderNameOkBtn" data-i18n="libraryFolderCreateBtn">יצירה</button>
-        <button type="button" class="modal-btn modal-btn-no" id="libraryFolderNameCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </div>
   </div>
@@ -1699,7 +1663,8 @@
        back button of its own - switching away goes through the footer
        icons like everything else on the main page. -->
   <div class="modal-overlay" id="siteLogPeriodicRangeOverlay" hidden>
-    <div class="modal-box" role="alertdialog" aria-modal="true">
+    <div class="modal-box has-x" role="alertdialog" aria-modal="true">
+      <button type="button" class="modal-x-btn" id="siteLogPeriodicCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
       <p class="modal-message" data-i18n="siteLogPeriodicRangeTitle">הפקת דו"ח יומנים תקופתי</p>
       <div class="modal-submessage" data-i18n="siteLogPeriodicFromLabel">מתאריך</div>
       <input type="date" id="siteLogPeriodicFromInput" class="auth-input">
@@ -1707,7 +1672,6 @@
       <input type="date" id="siteLogPeriodicToInput" class="auth-input">
       <div class="modal-actions">
         <button type="button" class="modal-btn modal-btn-primary" id="siteLogPeriodicGenerateBtn" data-i18n="siteLogPeriodicGenerateBtn">הפקת דו"ח</button>
-        <button type="button" class="modal-btn modal-btn-no" id="siteLogPeriodicCancelBtn" data-i18n="cancelBtn">ביטול</button>
       </div>
     </div>
   </div>
@@ -1860,12 +1824,10 @@
   <input type="file" accept="image/*" id="logoFileInput" style="display:none">
 
   <div class="modal-overlay" id="logoPickerOverlay" hidden>
-    <div class="modal-box" role="alertdialog" aria-modal="true">
+    <div class="modal-box has-x" role="alertdialog" aria-modal="true">
+      <button type="button" class="modal-x-btn" id="logoPickerCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
       <p class="modal-message" data-i18n="chooseLogoTitle">בחר לוגו</p>
       <div class="logo-picker-grid" id="logoPickerGrid"></div>
-      <div class="modal-actions">
-        <button type="button" class="modal-btn modal-btn-no" id="logoPickerCancelBtn" data-i18n="cancelBtn">ביטול</button>
-      </div>
     </div>
   </div>
 

@@ -2556,6 +2556,9 @@
   /* a long-press menu (a task's, a project's): closed by the ✕ in its
      top-left corner, no "ביטול" row */
   .modal-box.has-x { position: relative; padding-top: 26px; }
+  /* boxes whose first row runs across the whole width (a form's field, the
+     date picker's arrows): that row starts below the ✕ */
+  .modal-box.has-x.cal-editor-box, .modal-box.has-x.date-pick-box { padding-top: 44px; }
   .modal-x-btn {
     position: absolute;
     top: 6px;
