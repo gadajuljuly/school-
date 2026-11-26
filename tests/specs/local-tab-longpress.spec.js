@@ -15,6 +15,17 @@ const serverChange = () => {
   return window.__hooks.loadSharedSheets();
 };
 
+// a long-press menu: no "ביטול" button - an ✕ at the box's top-left corner, which closes it
+async function expectCloseX(page, overlay, x) {
+  await expect(page.locator(overlay + " .modal-box button", { hasText: "ביטול" })).toHaveCount(0);
+  const box = await page.locator(overlay + " .modal-box").boundingBox();
+  const xb = await page.locator(x).boundingBox();
+  expect(xb.x - box.x).toBeLessThan(16);
+  expect(xb.y - box.y).toBeLessThan(16);
+  await page.locator(x).click();
+  await expect(page.locator(overlay)).toBeHidden();
+}
+
 async function longPressWithRedraw(page, tab, redraw) {
   const box = await tab.boundingBox();
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
@@ -35,7 +46,8 @@ test("a long press on a project's tab opens its menu even when the tabs are redr
   await expect(page.locator("#sheetActionOverlay")).toBeVisible();
   // the press didn't also count as a tap (which would open the renaming)
   await expect(page.locator("#sheetsBarPrivate .rename-input")).toHaveCount(0);
-  await page.locator("#sheetActionCancelBtn").click().catch(() => page.keyboard.press("Escape"));
+  // no "ביטול" row: the ✕ in the box's top-left corner closes it
+  await expectCloseX(page, "#sheetActionOverlay", "#sheetActionCancelBtn");
 });
 
 test("a short press (a tap) with a redraw in the middle is still just a tap", async ({ page }) => {
@@ -59,6 +71,7 @@ test("a long press on a task opens its menu even when the list is redrawn during
   await longPressWithRedraw(page, row.locator(".task-text, span").first(), serverChange);
   await expect(page.locator("#moveTaskOverlay")).toBeVisible();
   await expect(page.locator("#taskList li.task", { hasText: "להזמין בטון" })).not.toHaveClass(/partial|done/);
+  await expectCloseX(page, "#moveTaskOverlay", "#moveTaskCancelBtn");
 });
 
 test("a new project's tab stays in sight once it gets its name (the tabs are in name order), and its long press works", async ({ page }) => {

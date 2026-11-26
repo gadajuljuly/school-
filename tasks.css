@@ -2553,6 +2553,25 @@
     width: 100%;
     max-width: 320px;
   }
+  /* a long-press menu (a task's, a project's): closed by the ✕ in its
+     top-left corner, no "ביטול" row */
+  .modal-box.has-x { position: relative; padding-top: 26px; }
+  .modal-x-btn {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    width: 34px;
+    height: 34px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--ink, #333);
+    font-size: 20px;
+    line-height: 34px;
+    padding: 0;
+    cursor: pointer;
+  }
+  .modal-x-btn:active { background: rgba(0, 0, 0, 0.08); }
   /* simple date picker for the native app (the WebView stopped opening its
      own one for the invisible date inputs) */
   .date-pick-box { max-width: 300px; padding: 14px; }

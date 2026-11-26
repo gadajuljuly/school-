@@ -1,9 +1,9 @@
 // ITASK
 // © 2026 Ahmad Juljoly. All rights reserved.
-var CACHE_NAME = "tasks-app-v567";
+var CACHE_NAME = "tasks-app-v568";
 var CORE_ASSETS = [
   "./tasks-app.js?v=844e3979a1",
-  "./tasks.css?v=08af683a82",
+  "./tasks.css?v=62e5e637db",
   "./tasks.html",
   "./tasks-manifest.json",
   "./tasks-icon-192.png",
