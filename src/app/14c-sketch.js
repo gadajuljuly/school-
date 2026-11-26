@@ -1201,18 +1201,29 @@
   document.getElementById("sketchBgLibraryBtn").addEventListener("click", function () {
     skBgMenu.hidden = true;
     var sheet = allSheets().find(function (s) { return s.id === sk.sheetId; });
+    openLibraryFilePicker(sheet, tr("sketchLibTitle"), function (entry, file) {
+      if (!skIsImg(entry)) skPdfBackground(file);
+      else scanLoadImage(file).then(function (canvas) { skPlaceBackground(canvas, 1400); });
+    });
+  });
+  // A picture or PDF from the project's library (the sketch's background,
+  // a tour report's plan - 13b-report-plans.js): onFile(entry, file) once
+  // it's downloaded
+  var skLibPick = { rootTitle: "", onFile: null };
+  function openLibraryFilePicker(sheet, rootTitle, onFile) {
     if (!sheet || !supabaseClient) return;
+    skLibPick = { rootTitle: rootTitle, onFile: onFile };
     ensureLibraryFolders(sheet, function (folders) {
       skLibShow(folders, null);
       skLibOverlay.hidden = false;
     });
-  });
+  }
   // one folder at a time, like the library: its folders, then its pictures
   // and PDFs; null = the library's first screen (folders only)
   function skLibShow(folders, folder) {
     var list = document.getElementById("sketchLibList");
     list.innerHTML = "";
-    document.getElementById("sketchLibTitle").textContent = folder ? "📂 " + libraryFolderPath(folders, folder) : tr("sketchLibTitle");
+    document.getElementById("sketchLibTitle").textContent = folder ? "📂 " + libraryFolderPath(folders, folder) : skLibPick.rootTitle;
     var button = function (text, cls, onClick) {
       var b = document.createElement("button");
       b.type = "button";
@@ -1232,10 +1243,9 @@
       button((skIsImg(entry) ? "🖼 " : "📄 ") + entry.name, "sk-lib-file", function () {
         skLibOverlay.hidden = true;
         showToast(tr("sketchPdfLoading"));
+        var onFile = skLibPick.onFile;
         resolveFileUrl(entry.path).then(fetchFileBlob).then(function (blob) {
-          var file = new File([blob], entry.name, { type: entry.type || blob.type });
-          if (!skIsImg(entry)) skPdfBackground(file);
-          else scanLoadImage(file).then(function (canvas) { skPlaceBackground(canvas, 1400); });
+          onFile(entry, new File([blob], entry.name, { type: entry.type || blob.type }));
         }).catch(function (err) {
           console.error("sketch library background failed:", err);
           alert(tr("chatFileOpenError"));
@@ -1273,12 +1283,17 @@
   var skPdfPageOverlay = document.getElementById("sketchPdfPageOverlay");
   document.getElementById("sketchPdfPageCancelBtn").addEventListener("click", function () { skPdfPageOverlay.hidden = true; });
   function skPdfBackground(file) {
+    pickPdfPageCanvas(file, function (c) { skPlaceBackground(c, 2200); });
+  }
+  // a PDF's page, drawn sharp (one page: that one; several: the user picks)
+  // -> onCanvas(canvas, pageNumber)
+  function pickPdfPageCanvas(file, onCanvas) {
     showToast(tr("sketchPdfLoading"));
     file.arrayBuffer().then(function (buf) {
       return skLoadPdf().then(function (lib) { return lib.getDocument({ data: new Uint8Array(buf) }).promise; });
     }).then(function (pdf) {
       var use = function (n) {
-        skPdfPageCanvas(pdf, n).then(function (c) { skPlaceBackground(c, 2200); }, function () { alert(tr("sketchPdfError")); });
+        skPdfPageCanvas(pdf, n).then(function (c) { onCanvas(c, n, pdf.numPages); }, function () { alert(tr("sketchPdfError")); });
       };
       if (pdf.numPages === 1) { use(1); return; }
       var list = document.getElementById("sketchPdfPageList");

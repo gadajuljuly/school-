@@ -38,7 +38,7 @@
 <script src="vendor/supabase-js-2.118.0.js"></script>
 <script src="vendor/firebase-app-compat-10.7.1.js"></script>
 <script src="vendor/firebase-auth-compat-10.7.1.js"></script>
-<link rel="stylesheet" href="tasks.css?v=e4f3521b5d">
+<link rel="stylesheet" href="tasks.css?v=025b42c365">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -1635,6 +1635,7 @@
     <div class="report-head">
       <button type="button" class="report-back-btn" id="reportBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
       <div class="report-head-title" id="reportHeadTitle"></div>
+      <button type="button" class="report-share-btn" id="reportByRespBtn" data-i18n-title="reportByRespTitle" title="שליחה לפי אחראי">&#128119;</button>
       <button type="button" class="report-share-btn" id="reportEditBtn" data-i18n-title="editReportBtnTitle" title="עריכת הדוח">&#9998;</button>
       <button type="button" class="report-share-btn" id="reportSaveBtn" data-i18n-title="saveBtnTitle" title="שמירת קובץ">&#128190;</button>
       <button type="button" class="report-share-btn" id="reportShareBtn" data-i18n-title="shareBtn" title="שיתוף">&#128228;</button>
@@ -1650,6 +1651,7 @@
             <th data-i18n="reportColDue">עד</th>
             <th data-i18n="reportColStatus">סטטוס</th>
             <th data-i18n="reportColPriority">עדיפות</th>
+            <th data-i18n="reportColLocation" class="report-col-location">מיקום</th>
             <th data-i18n="reportColImage">תמונה</th>
           </tr>
         </thead>
@@ -1657,6 +1659,58 @@
       </table>
     </div>
     <button type="button" class="report-close-btn" id="reportCloseBtn" data-i18n="reportCloseBtn">סגירת הדוח</button>
+  </div>
+
+  <!-- a tour report's row on its plan (13b-report-plans.js): the plan, its
+       rows' numbered pins; a tap marks this row's place -->
+  <div class="report-view report-plan-view" id="reportPlanView" hidden>
+    <div class="report-head">
+      <button type="button" class="report-back-btn" id="reportPlanBackBtn" data-i18n-title="backBtn" title="חזרה">&#8594;</button>
+      <div class="report-head-title" id="reportPlanTitle"></div>
+      <button type="button" class="report-share-btn" id="reportPlanRemoveBtn" data-i18n-title="reportPlanRemove" title="הסרת המיקום">&#128465;</button>
+    </div>
+    <div class="report-plan-bar">
+      <span class="report-plan-name" id="reportPlanName"></span>
+      <button type="button" class="report-plan-switch" id="reportPlanSwitchBtn" data-i18n="reportPlanSwitch">החלפת תוכנית</button>
+    </div>
+    <div class="report-plan-stage" id="reportPlanStage">
+      <div class="report-plan-inner" id="reportPlanInner"><img id="reportPlanImg" alt=""></div>
+    </div>
+    <div class="report-plan-hint" id="reportPlanHint"></div>
+  </div>
+  <div class="modal-overlay" id="reportPlanPickOverlay" hidden>
+    <div class="modal-box has-x" role="alertdialog" aria-modal="true">
+      <button type="button" class="modal-x-btn" id="reportPlanPickCloseBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
+      <p class="modal-message" data-i18n="reportPlanPickTitle">איזו תוכנית?</p>
+      <div class="move-task-projects" id="reportPlanPickList"></div>
+      <div class="move-task-projects">
+        <button type="button" id="reportPlanFromLibraryBtn" data-i18n="reportPlanFromLibrary">📚 מהספרייה</button>
+        <button type="button" id="reportPlanFromCameraBtn" data-i18n="reportPlanFromCamera">📷 צילום</button>
+        <button type="button" id="reportPlanFromFileBtn" data-i18n="reportPlanFromFile">🖼 תמונה או PDF מהמכשיר</button>
+      </div>
+      <input type="file" id="reportPlanCameraInput" accept="image/*" capture="environment" hidden>
+      <input type="file" id="reportPlanFileInput" accept="image/*,application/pdf,.pdf" hidden>
+    </div>
+  </div>
+  <div class="modal-overlay" id="reportByRespOverlay" hidden>
+    <div class="modal-box has-x" role="alertdialog" aria-modal="true">
+      <button type="button" class="modal-x-btn" id="reportByRespCloseBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
+      <p class="modal-message" data-i18n="reportByRespTitle">שליחה לפי אחראי</p>
+      <div class="report-by-resp-list" id="reportByRespList"></div>
+      <label class="report-by-resp-open"><input type="checkbox" id="reportByRespOpenOnly" checked> <span data-i18n="reportByRespOpenOnly">רק מה שלא בוצע</span></label>
+    </div>
+  </div>
+  <div class="modal-overlay" id="reportCarryOverlay" hidden>
+    <div class="modal-box has-x" role="alertdialog" aria-modal="true">
+      <button type="button" class="modal-x-btn" id="reportCarryCloseBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
+      <p class="modal-message" data-i18n="reportCarryTitle">להעתיק מהסיור הקודם?</p>
+      <div class="modal-submessage" id="reportCarrySub"></div>
+      <div class="report-carry-list" id="reportCarryList"></div>
+      <div class="modal-actions">
+        <button type="button" class="modal-btn modal-btn-primary" id="reportCarryCopyBtn" data-i18n="reportCarryCopy">העתקה לסיור החדש</button>
+        <button type="button" class="modal-btn" id="reportCarrySkipBtn" data-i18n="reportCarrySkip">סיור ריק</button>
+      </div>
+    </div>
   </div>
 
   <!-- Diary (יומן) category icons - moved inline into the main tasks page's
@@ -1835,6 +1889,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=8d824e7ac0"></script>
+<script src="tasks-app.js?v=52a855c493"></script>
 </body>
 </html>

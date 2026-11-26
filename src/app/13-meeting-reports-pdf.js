@@ -99,9 +99,11 @@
       reportId = report.id;
     }
     saveData();
+    var isNew = !pendingReportDraft.editId;
     pendingReportDraft = null;
     reportParticipantsOverlay.hidden = true;
     openReportView(reportId);
+    if (isNew) offerTourCarryOver(findReport(reportId)); // 13b-report-plans.js
   });
   reportParticipantsCancelBtn.addEventListener("click", closeReportParticipantsModal);
   reportParticipantsOverlay.addEventListener("click", function (e) {
@@ -156,6 +158,9 @@
     var metaText = typeLabel + " · " + isoToFullDisplay(report.date);
     if (report.participants) metaText += " — " + tr("reportShareParticipantsLabel") + report.participants;
     reportMeta.textContent = metaText;
+    // a tour: each row's place on the plan (13b-report-plans.js)
+    var showLoc = reportShowsLocations(report);
+    reportView.classList.toggle("report-with-locations", showLoc);
 
     reportTableBody.innerHTML = "";
     report.rows.forEach(function (row, index) {
@@ -228,6 +233,12 @@
           renderReportView();
         });
         taskTd.appendChild(taskBtn);
+        if (row.carriedFrom) {
+          var carriedTag = document.createElement("span");
+          carriedTag.className = "report-carried-tag";
+          carriedTag.textContent = tr("reportCarriedFrom").replace("{date}", isoToDisplay(row.carriedFrom));
+          taskTd.appendChild(carriedTag);
+        }
       }
       rowEl.appendChild(taskTd);
 
@@ -326,6 +337,8 @@
       });
       rowEl.appendChild(priorityTd);
 
+      if (showLoc) rowEl.appendChild(buildReportLocationCell(report, row, index));
+
       var imageTd = document.createElement("td");
       imageTd.style.position = "relative";
       if (row.image) {
@@ -369,7 +382,7 @@
     }, { passive: false });
     addNumTd.appendChild(addBtn);
     addRowEl.appendChild(addNumTd);
-    for (var i = 0; i < 6; i++) {
+    for (var i = 0; i < (showLoc ? 7 : 6); i++) {
       addRowEl.appendChild(document.createElement("td"));
     }
     reportTableBody.appendChild(addRowEl);
@@ -541,7 +554,15 @@
     renderReportView();
   }
 
-  function buildReportPdfElement(report) {
+  // opts (👷 שליחה לפי אחראי - 13b-report-plans.js): { responsible: name
+  // ("" = the unassigned), openOnly: only what isn't done }
+  function buildReportPdfElement(report, opts) {
+    opts = opts || {};
+    var pdfRows = report.rows.map(function (row, index) { return { row: row, number: index + 1 }; }).filter(function (x) {
+      if (opts.responsible != null && (x.row.responsible || "").trim() !== opts.responsible) return false;
+      if (opts.openOnly && x.row.status === 2) return false;
+      return true;
+    });
     var typeLabel = report.type === "meeting" ? tr("reportTypeMeeting") : tr("reportTypeTour");
     var pdfTitle = report.type === "meeting" ? tr("reportPdfTitleMeeting") : tr("reportPdfTitleTour");
 
@@ -555,6 +576,12 @@
     infoTitle.className = "pdf-doc-info-title";
     infoTitle.textContent = report.title || typeLabel;
     doc.appendChild(infoTitle);
+    if (opts.responsible != null) {
+      var forEl = document.createElement("div");
+      forEl.className = "pdf-doc-info-title pdf-doc-for";
+      forEl.textContent = tr("reportPdfForResponsible").replace("{name}", opts.responsible || tr("reportByRespNone"));
+      doc.appendChild(forEl);
+    }
 
     var infoDate = document.createElement("div");
     infoDate.className = "pdf-doc-info-date";
@@ -584,7 +611,7 @@
     table.appendChild(thead);
 
     var tbody = document.createElement("tbody");
-    if (!report.rows.length) {
+    if (!pdfRows.length) {
       var emptyRow = document.createElement("tr");
       var emptyTd = document.createElement("td");
       emptyTd.className = "pdf-doc-empty";
@@ -593,11 +620,14 @@
       emptyRow.appendChild(emptyTd);
       tbody.appendChild(emptyRow);
     } else {
-      report.rows.forEach(function (row, index) {
+      pdfRows.forEach(function (x) {
+        var row = x.row;
         var rowEl = document.createElement("tr");
 
         var numTd = document.createElement("td");
-        numTd.textContent = String(index + 1);
+        // a row with a place on the plan: its number as the plan's pin
+        if (row.loc && reportPlan(report, row.loc.planId)) numTd.appendChild(makePin(x.number, row.status, "report-pin-inline"));
+        else numTd.textContent = String(x.number);
         rowEl.appendChild(numTd);
 
         var taskTd = document.createElement("td");
@@ -640,6 +670,7 @@
     }
     table.appendChild(tbody);
     doc.appendChild(table);
+    appendReportPlansPdfSection(doc, report, pdfRows);
 
     var footerEl = document.createElement("div");
     footerEl.className = "pdf-doc-footer";

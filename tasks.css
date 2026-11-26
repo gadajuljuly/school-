@@ -4102,3 +4102,54 @@ ol.task-list { background-color: var(--paper); background-image: repeating-linea
 .task-text-clip { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
   /* "ניהול קבוצת המשרד": each group's name, editable in place */
   .office-group-name-input { width: 100%; margin: 0 0 6px; font-weight: 700; }
+/* a tour report's places on the plan (src/app/13b-report-plans.js) */
+#reportView:not(.report-with-locations) th.report-col-location { display: none; }
+.report-loc-btn { border: none; background: none; padding: 2px; cursor: pointer; min-width: 30px; min-height: 30px; display: inline-flex; align-items: center; justify-content: center; }
+.report-loc-empty { font-size: 1rem; opacity: 0.35; }
+.report-pin {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
+  color: #fff; font: 700 11px/1 "Rubik", "Assistant", sans-serif;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35); border: 1.5px solid #fff; box-sizing: border-box;
+}
+.report-pin > span { transform: rotate(45deg); }
+.report-pin.pin-open { background: var(--accent, #35618f); }
+.report-pin.pin-partial { background: #d9902a; }
+.report-pin.pin-done { background: #3c8a5c; }
+.report-pin-small { width: 18px; height: 18px; font-size: 9px; flex: none; }
+.report-pin-inline { width: 22px; height: 22px; font-size: 10px; }
+.report-carried-tag { display: block; font-size: 0.66rem; color: var(--accent, #35618f); margin-top: 2px; }
+.report-plan-view { z-index: 30; }
+.report-plan-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 14px 8px; font-size: 0.85rem; }
+.report-plan-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.report-plan-switch { flex: none; border: 1px solid var(--rule); background: var(--paper); color: var(--accent); border-radius: 8px; padding: 4px 10px; font: inherit; font-size: 0.8rem; cursor: pointer; }
+.report-plan-stage { flex: 1; position: relative; overflow: hidden; margin: 0 10px; background: #fff; border: 1px solid var(--rule); border-radius: 8px; touch-action: none; cursor: crosshair; }
+.report-plan-inner { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+.report-plan-inner img { width: 100%; height: 100%; display: block; user-select: none; -webkit-user-drag: none; pointer-events: none; }
+.report-plan-inner .report-pin { position: absolute; transform-origin: 50% 50%; pointer-events: none; }
+.report-plan-inner .report-pin.report-pin-current { box-shadow: 0 0 0 3px #e0a030, 0 1px 3px rgba(0, 0, 0, 0.35); }
+.report-plan-hint { margin: 8px 12px 14px; background: #fff3d6; border: 1px dashed #e0a030; border-radius: 10px; padding: 8px; font-size: 0.85rem; text-align: center; }
+.report-plan-pick.current { border-color: var(--accent); font-weight: 700; }
+.report-by-resp-row { display: flex; align-items: center; gap: 8px; border: 1px solid var(--rule); border-radius: 10px; padding: 8px 10px; margin-bottom: 8px; }
+.report-by-resp-row.all-done { opacity: 0.55; }
+.report-by-resp-name { flex: 1; font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
+.report-by-resp-counts { font-size: 0.75rem; color: var(--ink-muted); white-space: nowrap; }
+.report-by-resp-send { flex: none; border: none; border-radius: 8px; background: #25d366; color: #fff; font: inherit; font-size: 0.8rem; font-weight: 700; padding: 6px 10px; cursor: pointer; min-width: 58px; }
+.report-by-resp-send:disabled { background: #b9c7bd; cursor: default; }
+.report-by-resp-open { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; margin-top: 4px; }
+.report-by-resp-empty { color: var(--ink-muted); text-align: center; padding: 10px; }
+.report-carry-list { max-height: 45vh; overflow-y: auto; margin: 6px 0 4px; }
+.report-carry-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--rule); font-size: 0.85rem; }
+.report-carry-row input { flex: none; width: 18px; height: 18px; }
+/* in the PDF: the plan with its pins */
+.pdf-doc-plan { position: relative; border: 1px solid #c2d9ec; border-radius: 6px; overflow: hidden; margin-bottom: 8px; }
+.pdf-doc-plan img { display: block; width: 100%; }
+.pdf-doc-plan .report-pin { position: absolute; width: 32px; height: 32px; font-size: 14px; transform: translate(-50%, -50%) translateY(-23px) rotate(-45deg); }
+.pdf-doc-for { font-size: 0.95rem; color: #b6473f; }
+/* a tour's extra column: the table a little tighter, so it still fits a phone */
+#reportView.report-with-locations .report-table th, #reportView.report-with-locations .report-table td { padding: 6px 2px; }
+#reportView.report-with-locations .report-table th { font-size: 0.7rem; }
+#reportView.report-with-locations .report-cell-btn { font-size: 0.8rem; padding-left: 2px; padding-right: 2px; }
+#reportView.report-with-locations .report-table-wrap { padding: 0 6px; }
+#reportView.report-with-locations .report-priority-tag { padding: 2px 4px; }
+.report-col-location .report-loc-btn { min-width: 26px; padding: 0; }
