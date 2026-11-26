@@ -411,6 +411,7 @@
   }
 
   var chatWasActiveLastRender = false;
+  var renderToolboxKey = "";
   function render() {
     try { updateUrgentDot(); } catch (e) {}
     updateBudgetTile(); // the footer's budget button: for whoever may see the money
@@ -490,7 +491,11 @@
     libraryFoldersView.hidden = !libraryMode;
     chatView.hidden = !chatMode;
     document.getElementById("sketchBtn").hidden = libraryMode; // no sketch icon in the library
-    closeToolbox(); // (on every page, the library's too - its scanner is in it)
+    // the toolbox closes when the page or the project changes - not on every
+    // render (a quiet refresh a second after opening it closed it)
+    var toolboxKey = state.viewMode + "|" + data.activeSheetId;
+    if (toolboxKey !== renderToolboxKey) closeToolbox();
+    renderToolboxKey = toolboxKey;
     ruledBodyEl.classList.toggle("chat-mode", chatMode);
     ruledBodyEl.classList.toggle("diary-mode", diaryMode); // its title is in the diary's own top row
     ruledBodyEl.classList.toggle("tasks-mode", !(reportsMode || diaryMode || libraryMode || chatMode)); // 🖨 only on the tasks page
