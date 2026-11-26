@@ -114,12 +114,65 @@ public class ItaskFloatReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         Context c = context.getApplicationContext();
         schedule(c); // the next one
-        if (!isOn(c) || !canDraw(c)) return;
+        if (!isOn(c)) return;
         PowerManager pm = c.getSystemService(PowerManager.class);
-        if (pm != null && !pm.isInteractive()) return;
+        android.app.KeyguardManager km = c.getSystemService(android.app.KeyguardManager.class);
+        boolean screenOff = pm != null && !pm.isInteractive();
+        boolean locked = km != null && km.isKeyguardLocked();
+        // the screen off or locked (an overlay can't show there): a quiet
+        // notification instead, like a WhatsApp message - shown on the lock
+        // screen and the always-on display (version 36)
+        if (screenOff || locked) {
+            String[] task = nextTask(c);
+            if (task != null) showLockScreen(c, task);
+            return;
+        }
+        if (!canDraw(c)) return;
+        // the screen is on again: the lock-screen notice has done its job
+        android.app.NotificationManager nm = c.getSystemService(android.app.NotificationManager.class);
+        if (nm != null) nm.cancel(LOCK_NOTICE_ID);
         String[] task = nextTask(c);
         if (task == null) return;
         show(c, task, goAsync());
+    }
+
+    // the screen off or locked: the task as a notification - one at a time
+    // (each replaces the last), silent, gone before the next, on the lock
+    // screen and the always-on display; tapping it opens the task
+    private static final String LOCK_CHANNEL_ID = "itask_float_lock";
+    private static final int LOCK_NOTICE_ID = 7302;
+    private static void showLockScreen(Context c, String[] task) {
+        if (Build.VERSION.SDK_INT >= 33 &&
+                c.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        android.app.NotificationManager nm = c.getSystemService(android.app.NotificationManager.class);
+        if (nm == null) return;
+        if (Build.VERSION.SDK_INT >= 26 && nm.getNotificationChannel(LOCK_CHANNEL_ID) == null) {
+            android.app.NotificationChannel ch = new android.app.NotificationChannel(LOCK_CHANNEL_ID, "משימה צפה (מסך כבוי)",
+                    android.app.NotificationManager.IMPORTANCE_DEFAULT);
+            ch.setDescription("כשהמסך כבוי או נעול: המשימה הבאה, בשקט, על מסך הנעילה ובמסך הכבוי");
+            ch.setSound(null, null);
+            ch.enableVibration(false);
+            ch.setLockscreenVisibility(android.app.Notification.VISIBILITY_PUBLIC);
+            nm.createNotificationChannel(ch);
+        }
+        PendingIntent open = PendingIntent.getActivity(c, LOCK_NOTICE_ID, ItaskAlarmPlugin.openAppIntent(c, task[2]),
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        androidx.core.app.NotificationCompat.Builder b = new androidx.core.app.NotificationCompat.Builder(c, LOCK_CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.ic_menu_agenda)
+                .setContentTitle(task[0])
+                .setContentText(task[1])
+                .setStyle(new androidx.core.app.NotificationCompat.BigTextStyle().bigText(task[1]))
+                .setPriority(androidx.core.app.NotificationCompat.PRIORITY_DEFAULT)
+                .setCategory(androidx.core.app.NotificationCompat.CATEGORY_REMINDER)
+                .setVisibility(androidx.core.app.NotificationCompat.VISIBILITY_PUBLIC)
+                .setSilent(true)
+                .setOnlyAlertOnce(true)
+                .setTimeoutAfter(9 * 60 * 1000L)
+                .setContentIntent(open)
+                .setAutoCancel(true);
+        nm.notify(LOCK_NOTICE_ID, b.build());
     }
 
     // { project, task text, launch view, task id } - the one after the last shown
