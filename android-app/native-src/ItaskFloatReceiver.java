@@ -57,7 +57,7 @@ public class ItaskFloatReceiver extends BroadcastReceiver {
     private static final int DAY_FROM = 6, DAY_TO = 18; // every 10 minutes; else every 30
     private static final long CROSS_MS = 12000; // right edge to left edge, one slow steady drive
     private static final String KEY_LAST_VEHICLE = "lastVehicle";
-    private static final String[] VEHICLES = { "lottie/itask_loader.json", "lottie/itask_roller.json", "lottie/itask_excavator.json" };
+    private static final String[] VEHICLES = { "lottie/itask_loader.json", "lottie/itask_roller.json", "lottie/itask_excavator.json", "lottie/itask_worker.json" };
     private static final int REQUEST_CODE = 7301;
 
     private static SharedPreferences prefs(Context c) {
@@ -177,6 +177,23 @@ public class ItaskFloatReceiver extends BroadcastReceiver {
         nm.notify(LOCK_NOTICE_ID, b.build());
     }
 
+    // the worker pulls the card on a rope he holds at chest height: the rope
+    // goes on from his hands (the canvas's 256 x 256, at 84dp, from 21dp
+    // down), and the card hangs higher than behind a machine
+    private static void pullWithRope(Context c, View view) {
+        float dp = c.getResources().getDisplayMetrics().density;
+        View rope = view.findViewById(R.id.itask_float_chain);
+        rope.setBackgroundResource(R.drawable.itask_float_rope);
+        android.widget.LinearLayout.LayoutParams rl = (android.widget.LinearLayout.LayoutParams) rope.getLayoutParams();
+        rl.setMarginStart(Math.round(-23 * dp));
+        rl.topMargin = Math.round(14 * dp);
+        rope.setLayoutParams(rl);
+        View card = view.findViewById(R.id.itask_float_card);
+        android.widget.LinearLayout.LayoutParams cl = (android.widget.LinearLayout.LayoutParams) card.getLayoutParams();
+        cl.topMargin = Math.round(14 * dp);
+        card.setLayoutParams(cl);
+    }
+
     // { project, task text, launch view, task id } - the one after the last shown
     static String[] nextTask(Context c) {
         JSONArray projects = ItaskWidgetProvider.loadData(c).optJSONArray("projects");
@@ -236,6 +253,7 @@ public class ItaskFloatReceiver extends BroadcastReceiver {
             String pick = choices.get((int) (Math.random() * choices.size()));
             prefs(c).edit().putString(KEY_LAST_VEHICLE, pick).apply();
             vehicle.setAnimation(pick);
+            if (pick.contains("worker")) pullWithRope(c, view);
             vehicle.setRepeatCount(LottieDrawable.INFINITE);
             vehicle.playAnimation();
         } catch (Throwable t) {

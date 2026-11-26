@@ -17,7 +17,7 @@ call npx cap sync android || goto :error
 echo === copying native sources ===
 copy /Y native-src\*.java android\app\src\main\java\com\gadajuljuly\itask\ || goto :error
 xcopy /E /Y /I native-src\res android\app\src\main\res || goto :error
-rem the floating task's machines (Lottie animations, version 35)
+rem the floating task's machines and worker (Lottie animations, version 35-36)
 xcopy /E /Y /I native-src\assets android\app\src\main\assets || goto :error
 rem Gemini Nano plugin - only once enable-gemini-nano.bat has added it
 if exist android\app\src\main\java\com\gadajuljuly\itask\ItaskAIPlugin.kt copy /Y native-src-ai\*.kt android\app\src\main\java\com\gadajuljuly\itask\ || goto :error
