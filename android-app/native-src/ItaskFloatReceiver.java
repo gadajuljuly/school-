@@ -137,7 +137,8 @@ public class ItaskFloatReceiver extends BroadcastReceiver {
     }
 
     // the screen off or locked: the task as a notification - one at a time
-    // (each replaces the last), silent, gone before the next, on the lock
+    // (each replaces the last), a heads-up one (drops in from the top for a
+    // few seconds, like WhatsApp's) but with no sound, gone before the next, on the lock
     // screen and the always-on display; tapping it opens the task
     private static final String LOCK_CHANNEL_ID = "itask_float_lock";
     private static final int LOCK_NOTICE_ID = 7302;
@@ -150,7 +151,7 @@ public class ItaskFloatReceiver extends BroadcastReceiver {
         if (nm == null) return;
         if (Build.VERSION.SDK_INT >= 26 && nm.getNotificationChannel(LOCK_CHANNEL_ID) == null) {
             android.app.NotificationChannel ch = new android.app.NotificationChannel(LOCK_CHANNEL_ID, "משימה צפה (מסך כבוי)",
-                    android.app.NotificationManager.IMPORTANCE_DEFAULT);
+                    android.app.NotificationManager.IMPORTANCE_HIGH);
             ch.setDescription("כשהמסך כבוי או נעול: המשימה הבאה, בשקט, על מסך הנעילה ובמסך הכבוי");
             ch.setSound(null, null);
             ch.enableVibration(false);
@@ -164,10 +165,11 @@ public class ItaskFloatReceiver extends BroadcastReceiver {
                 .setContentTitle(task[0])
                 .setContentText(task[1])
                 .setStyle(new androidx.core.app.NotificationCompat.BigTextStyle().bigText(task[1]))
-                .setPriority(androidx.core.app.NotificationCompat.PRIORITY_DEFAULT)
+                .setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH)
                 .setCategory(androidx.core.app.NotificationCompat.CATEGORY_REMINDER)
                 .setVisibility(androidx.core.app.NotificationCompat.VISIBILITY_PUBLIC)
-                .setSilent(true)
+                .setSound(null)
+                .setVibrate(null)
                 .setOnlyAlertOnce(true)
                 .setTimeoutAfter(9 * 60 * 1000L)
                 .setContentIntent(open)
