@@ -4100,3 +4100,5 @@ ol.task-list { background-color: var(--paper); background-image: repeating-linea
 /* a work-plan task: its badge, then the text in its own box (scrolling when long) */
 .task-text.has-badge { display: flex; align-items: center; }
 .task-text-clip { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  /* "ניהול קבוצת המשרד": each group's name, editable in place */
+  .office-group-name-input { width: 100%; margin: 0 0 6px; font-weight: 700; }

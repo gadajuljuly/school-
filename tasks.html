@@ -38,7 +38,7 @@
 <script src="vendor/supabase-js-2.118.0.js"></script>
 <script src="vendor/firebase-app-compat-10.7.1.js"></script>
 <script src="vendor/firebase-auth-compat-10.7.1.js"></script>
-<link rel="stylesheet" href="tasks.css?v=a74c1b798f">
+<link rel="stylesheet" href="tasks.css?v=e4f3521b5d">
 </head>
 <body>
 <div class="cal-view" id="calView" hidden>
@@ -1119,6 +1119,8 @@
   <div class="modal-overlay" id="officeGroupMembersOverlay" hidden>
     <div class="modal-box has-x" role="alertdialog" aria-modal="true">
       <button type="button" class="modal-x-btn" id="officeGroupMembersCancelBtn" data-i18n-title="closeBtn" title="סגירה" aria-label="סגירה">&#10005;</button>
+      <p class="modal-message" data-i18n="officeGroupNameTitle">שם הקבוצה</p>
+      <input type="text" id="officeGroupNameInput" class="auth-input" maxlength="60" data-i18n-ph="officeGroupNamePlaceholder" placeholder="למשל: משרד ראשי - צפון">
       <p class="modal-message" data-i18n="officeGroupMembersTitle">חברי הקבוצה</p>
       <div id="officeGroupMembersList"></div>
       <button type="button" class="convert-to-note-btn" id="officeGroupMembersPickContactsBtn" data-i18n="sharedProjectPickContactsBtn" hidden>בחירה מאנשי הקשר</button>
@@ -1833,6 +1835,6 @@
 
 </div>
 
-<script src="tasks-app.js?v=844e3979a1"></script>
+<script src="tasks-app.js?v=8d824e7ac0"></script>
 </body>
 </html>

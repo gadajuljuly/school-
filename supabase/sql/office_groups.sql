@@ -30,6 +30,10 @@ create table if not exists office_group_invites (
   resolved_at timestamptz
 );
 
+-- the group's name, and its copy on each invite (office_groups_name.sql)
+alter table office_groups add column if not exists name text;
+alter table office_group_invites add column if not exists group_name text;
+
 -- A plain subquery inside a policy that reads the SAME table it's
 -- attached to (see the office_group_invites policy below) makes Postgres
 -- re-evaluate that table's row security recursively while resolving it,

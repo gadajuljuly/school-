@@ -89,6 +89,27 @@
   officeGroupHeadOfficePickContactsBtn.hidden = !contactPickerSupported;
 
   var pendingOfficeGroupMembers = [];
+  var officeGroupNameInput = document.getElementById("officeGroupNameInput");
+
+  // the group's name (office_groups.name; a copy on each invite,
+  // office_group_invites.group_name, for the invited to see) - until
+  // supabase/sql/office_groups_name.sql has been run there are no such
+  // columns: then the rows go without it, as before
+  function missingColumn(error) {
+    var msg = String((error && (error.message || error.details)) || "");
+    return !!error && (error.code === "42703" || error.code === "PGRST204" || /column/i.test(msg));
+  }
+  function insertTolerant(table, rows, extraKeys) {
+    return supabaseClient.from(table).insert(rows).select().then(function (result) {
+      if (!(result && missingColumn(result.error))) return result;
+      var bare = [].concat(rows).map(function (r) {
+        var o = Object.assign({}, r);
+        extraKeys.forEach(function (k) { delete o[k]; });
+        return o;
+      });
+      return supabaseClient.from(table).insert(Array.isArray(rows) ? bare : bare[0]).select();
+    });
+  }
 
   function renderOfficeGroupMembersList() {
     officeGroupMembersList.innerHTML = "";
@@ -140,6 +161,7 @@
 
   function openOfficeGroupCreateFlow() {
     pendingOfficeGroupMembers = [];
+    officeGroupNameInput.value = "";
     renderOfficeGroupMembersList();
     state.menuOpen = false;
     render();
@@ -175,6 +197,7 @@
   officeGroupMembersPickContactsBtn.addEventListener("click", pickContactsForOfficeGroupMembers);
 
   officeGroupMembersNextBtn.addEventListener("click", function () {
+    if (!officeGroupNameInput.value.trim()) { alert(tr("officeGroupNoNameMsg")); officeGroupNameInput.focus(); return; }
     if (!pendingOfficeGroupMembers.length) { alert(tr("officeGroupNoMembersMsg")); return; }
     officeGroupMembersOverlay.hidden = true;
     officeGroupHeadOfficeInput.value = "";
@@ -221,7 +244,8 @@
     var headOfficePhone = rawHeadOfficeInput ? normalizePhoneDigits(rawHeadOfficeInput) : myPhoneNumber;
     if (!headOfficePhone) { alert(tr("headOfficeMemberInvalidMsg")); return; }
     if (!supabaseClient || !myPhoneNumber) return;
-    supabaseClient.from("office_groups").insert({ creator_phone: myPhoneNumber }).select().then(function (result) {
+    var groupName = officeGroupNameInput.value.trim();
+    insertTolerant("office_groups", { creator_phone: myPhoneNumber, name: groupName }, ["name"]).then(function (result) {
       if ((result && result.error) || !result.data || !result.data[0]) {
         console.error("office_groups insert failed:", result && result.error);
         alert(tr("officeGroupCreateErrorMsg"));
@@ -235,6 +259,7 @@
           invited_phone: phone,
           invited_by_phone: myPhoneNumber,
           invited_by_name: myPhoneNumber,
+          group_name: groupName,
           status: phone === myPhoneNumber ? "approved" : "pending"
         };
       });
@@ -244,9 +269,10 @@
         invited_phone: headOfficePhone,
         invited_by_phone: myPhoneNumber,
         invited_by_name: myPhoneNumber,
+        group_name: groupName,
         status: headOfficePhone === myPhoneNumber ? "approved" : "pending"
       });
-      supabaseClient.from("office_group_invites").insert(invites).then(function (inviteResult) {
+      insertTolerant("office_group_invites", invites, ["group_name"]).then(function (inviteResult) {
         if (inviteResult && inviteResult.error) {
           console.error("office_group_invites insert failed:", inviteResult.error);
           alert(tr("officeGroupCreateErrorMsg"));
@@ -293,7 +319,9 @@
     var template = activeOfficeGroupInvite.role === "head_office"
       ? tr("officeGroupInviteHeadOfficeMsgTemplate")
       : tr("officeGroupInviteMemberMsgTemplate");
-    officeGroupInviteReceivedMessage.textContent = template.replace("{name}", senderLabel);
+    officeGroupInviteReceivedMessage.textContent = template.replace("{name}", senderLabel) +
+      (activeOfficeGroupInvite.group_name ? "\n" + tr("officeGroupLabel") + ": " + activeOfficeGroupInvite.group_name : "");
+    officeGroupInviteReceivedMessage.style.whiteSpace = "pre-line";
     officeGroupInviteReceivedOverlay.hidden = false;
   }
   function closeOfficeGroupInviteReceivedModal() {
@@ -356,16 +384,17 @@
     }, function () {});
   }
 
-  function addOfficeGroupMember(groupId, phone, existingMembers) {
+  function addOfficeGroupMember(group, phone, existingMembers) {
     if (existingMembers.some(function (m) { return m.invited_phone === phone; })) return;
-    supabaseClient.from("office_group_invites").insert({
-      group_id: groupId,
+    insertTolerant("office_group_invites", {
+      group_id: group.id,
       role: "member",
       invited_phone: phone,
       invited_by_phone: myPhoneNumber,
       invited_by_name: myPhoneNumber,
+      group_name: group.name || null,
       status: phone === myPhoneNumber ? "approved" : "pending"
-    }).then(function (result) {
+    }, ["group_name"]).then(function (result) {
       if (result && result.error) {
         console.error("office_group_invites insert failed:", result.error);
         alert(tr("officeGroupCreateErrorMsg"));
@@ -391,8 +420,29 @@
       var headOfficeText = headOffice
         ? headOffice.invited_phone + (headOffice.status !== "approved" ? " (" + officeGroupStatusLabel(headOffice.status) + ")" : "")
         : "-";
-      title.textContent = (groups.length > 1 ? tr("officeGroupLabel") + " " + (idx + 1) + " - " : "") + tr("officeGroupHeadOfficeLabel") + " " + headOfficeText;
+      title.textContent = tr("officeGroupHeadOfficeLabel") + " " + headOfficeText;
       title.dir = "auto";
+      // the group's name, editable (blank, or no name column yet: "קבוצה 2")
+      var nameInput = document.createElement("input");
+      nameInput.type = "text";
+      nameInput.className = "auth-input office-group-name-input";
+      nameInput.maxLength = 60;
+      nameInput.value = group.name || "";
+      nameInput.placeholder = tr("officeGroupLabel") + (groups.length > 1 ? " " + (idx + 1) : "");
+      nameInput.setAttribute("aria-label", tr("officeGroupNameTitle"));
+      function saveName() {
+        var v = nameInput.value.trim();
+        if (v === (group.name || "")) return;
+        if (!v) { nameInput.value = group.name || ""; return; }
+        supabaseClient.from("office_groups").update({ name: v }).eq("id", group.id).then(function (r) {
+          if (r && r.error) { console.error("office_groups rename failed:", r.error); alert(tr("officeGroupCreateErrorMsg")); nameInput.value = group.name || ""; return; }
+          group.name = v;
+          showToast(tr("officeGroupNameSavedMsg"));
+        }, function () {});
+      }
+      nameInput.addEventListener("change", saveName);
+      nameInput.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); nameInput.blur(); } });
+      card.appendChild(nameInput);
       card.appendChild(title);
 
       members.forEach(function (m) {
@@ -429,7 +479,7 @@
       function submitAdd() {
         var phone = normalizePhoneDigits(addInput.value);
         if (!phone) { alert(tr("headOfficeMemberInvalidMsg")); return; }
-        addOfficeGroupMember(group.id, phone, members);
+        addOfficeGroupMember(group, phone, members);
       }
       addBtn.addEventListener("click", submitAdd);
       addInput.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); submitAdd(); } });
@@ -442,7 +492,12 @@
 
   function loadAndRenderOfficeGroupManage() {
     if (!supabaseClient || !myPhoneNumber) return;
-    supabaseClient.from("office_groups").select("id, created_at").eq("creator_phone", myPhoneNumber).order("created_at")
+    function groupsQuery(cols) {
+      return supabaseClient.from("office_groups").select(cols).eq("creator_phone", myPhoneNumber).order("created_at");
+    }
+    groupsQuery("id, created_at, name").then(function (r) {
+      return r && missingColumn(r.error) ? groupsQuery("id, created_at") : r;
+    })
       .then(function (groupsResult) {
         var groups = (groupsResult && groupsResult.data) || [];
         if (!groups.length) { officeGroupManageList.innerHTML = ""; return; }
