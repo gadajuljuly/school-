@@ -185,19 +185,20 @@ public class ItaskFloatReceiver extends BroadcastReceiver {
         // the workers at their own size (the machines' view is bigger)
         View puller = view.findViewById(R.id.itask_float_vehicle);
         android.view.ViewGroup.LayoutParams vl = puller.getLayoutParams();
-        vl.width = vl.height = Math.round(105 * dp);
+        vl.width = vl.height = Math.round(94.5f * dp);
         puller.setLayoutParams(vl);
         View rope = view.findViewById(R.id.itask_float_chain);
         rope.setBackgroundResource(R.drawable.itask_float_rope);
         android.widget.LinearLayout.LayoutParams rl = (android.widget.LinearLayout.LayoutParams) rope.getLayoutParams();
-        // (placed from the top: the rope in his hands, 54.5dp down; the
-        // 38dp card centred on it)
-        rl.setMarginStart(Math.round(-18 * dp));
-        rl.topMargin = Math.round(52.5f * dp);
+        // (placed from the top: the rope in his hands - 270, 166 of the
+        // 320 x 320 canvas, at 94.5dp: 79.7dp in, 49dp down; the 38dp card
+        // centred on it)
+        rl.setMarginStart(Math.round(-17 * dp));
+        rl.topMargin = Math.round(47 * dp);
         rope.setLayoutParams(rl);
         View card = view.findViewById(R.id.itask_float_card);
         android.widget.LinearLayout.LayoutParams cl = (android.widget.LinearLayout.LayoutParams) card.getLayoutParams();
-        cl.topMargin = Math.round(35.5f * dp);
+        cl.topMargin = Math.round(30 * dp);
         card.setLayoutParams(cl);
         // and a second worker pushes it from behind, in step with the first
         try {
@@ -303,7 +304,10 @@ public class ItaskFloatReceiver extends BroadcastReceiver {
             lp.height = view.getMeasuredHeight();
         }
         lp.x = screenW; // off the right edge to start
-        lp.y = Math.round(24 * dp);
+        // the card 100dp from the top whatever is around it (the machines'
+        // smoke takes room above it, the workers none)
+        int cardTop = ((android.widget.LinearLayout.LayoutParams) view.findViewById(R.id.itask_float_card).getLayoutParams()).topMargin;
+        lp.y = Math.round(98 * dp) - cardTop;
 
         final boolean[] gone = { false };
         final ValueAnimator[] drive = { null };

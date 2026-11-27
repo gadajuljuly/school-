@@ -3,12 +3,13 @@
      animation, a different one each time) drives across the screen from
      right to left, pulling the card - "project: task", the ITASK mark at its
      start, cream with a gold border - on a short chain behind it.
-     The animations' canvas has room above and behind the machine for its
-     smoke (320 x 320, the machine in the 256 x 256 at its bottom left): the
-     view is 113dp (the machine 90dp). Everything is placed from the top
-     (gravity top: a child's top = its marginTop) - the chain at the
-     machine's back, 150 of its 256 down (75.6dp), the 38dp card centred on
-     it. The workers style (ItaskFloatReceiver.pullWithRope) sets its own. -->
+     The machines' canvas has room above and behind for their coal-train
+     smoke (576 x 406, the machine in the 256 x 256 at its bottom left): the
+     view is 203 x 143dp (the machine 90dp). Everything is placed from the
+     top (gravity top: a child's top = its marginTop) - the chain at the
+     machine's back, 150 of its 256 down (105.7dp), the 38dp card centred on
+     it. The workers style (ItaskFloatReceiver.pullWithRope) sets its own;
+     the window is raised so the card is at the same height either way. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
@@ -20,23 +21,23 @@
 
     <com.airbnb.lottie.LottieAnimationView
         android:id="@+id/itask_float_vehicle"
-        android:layout_width="113dp"
-        android:layout_height="113dp"
+        android:layout_width="203dp"
+        android:layout_height="143dp"
         android:contentDescription="@null" />
 
     <View
         android:id="@+id/itask_float_chain"
         android:layout_width="22dp"
         android:layout_height="4dp"
-        android:layout_marginStart="-38dp"
-        android:layout_marginTop="74dp"
+        android:layout_marginStart="-128dp"
+        android:layout_marginTop="103.5dp"
         android:background="@drawable/itask_float_chain" />
 
     <LinearLayout
         android:id="@+id/itask_float_card"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="57dp"
+        android:layout_marginTop="86.5dp"
         android:background="@drawable/itask_float_bg"
         android:elevation="6dp"
         android:gravity="center_vertical"
@@ -68,15 +69,15 @@
     </LinearLayout>
 
     <!-- the worker style only: a second worker pushing the card from behind
-         (94.5dp - 10% smaller than the puller; his palms at 10, 76 of the
-         320 x 320 canvas: 3dp in, 22.4dp down - from 22dp down they're
-         at 44dp, the card's upper half) -->
+         (94.5dp, like the puller; his palms at 10, 76 of the 320 x 320
+         canvas: 3dp in, 22.4dp down - from 14dp down they're at 36dp, the
+         card's upper part, his boots level with the puller's) -->
     <com.airbnb.lottie.LottieAnimationView
         android:id="@+id/itask_float_pusher"
         android:layout_width="94.5dp"
         android:layout_height="94.5dp"
         android:layout_marginStart="-3dp"
-        android:layout_marginTop="22dp"
+        android:layout_marginTop="14dp"
         android:contentDescription="@null"
         android:visibility="gone" />
 </LinearLayout>
