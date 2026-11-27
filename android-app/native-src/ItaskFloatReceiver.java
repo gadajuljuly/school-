@@ -304,10 +304,17 @@ public class ItaskFloatReceiver extends BroadcastReceiver {
             lp.height = view.getMeasuredHeight();
         }
         lp.x = screenW; // off the right edge to start
-        // the card 100dp from the top whatever is around it (the machines'
-        // smoke takes room above it, the workers none)
+        // the card as high as it goes: just under the status bar (the clock
+        // and the icons), whatever is around it - the machines' smoke rises
+        // over the status bar, and above the screen's edge
         int cardTop = ((android.widget.LinearLayout.LayoutParams) view.findViewById(R.id.itask_float_card).getLayoutParams()).topMargin;
-        lp.y = Math.round(98 * dp) - cardTop;
+        int statusBar = Math.round(24 * dp);
+        int sbId = c.getResources().getIdentifier("status_bar_height", "dimen", "android");
+        if (sbId > 0) {
+            try { statusBar = c.getResources().getDimensionPixelSize(sbId); } catch (Exception e) { /* the default */ }
+        }
+        // (the layout's own 2dp padding on top, then the card's margin)
+        lp.y = statusBar + Math.round(4 * dp) - Math.round(2 * dp) - cardTop;
 
         final boolean[] gone = { false };
         final ValueAnimator[] drive = { null };
