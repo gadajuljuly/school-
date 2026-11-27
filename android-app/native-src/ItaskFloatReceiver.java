@@ -190,12 +190,14 @@ public class ItaskFloatReceiver extends BroadcastReceiver {
         View rope = view.findViewById(R.id.itask_float_chain);
         rope.setBackgroundResource(R.drawable.itask_float_rope);
         android.widget.LinearLayout.LayoutParams rl = (android.widget.LinearLayout.LayoutParams) rope.getLayoutParams();
-        rl.setMarginStart(Math.round(-19 * dp));
-        rl.topMargin = Math.round(4 * dp);
+        // (placed from the top: the rope in his hands, 54.5dp down; the
+        // 38dp card centred on it)
+        rl.setMarginStart(Math.round(-18 * dp));
+        rl.topMargin = Math.round(52.5f * dp);
         rope.setLayoutParams(rl);
         View card = view.findViewById(R.id.itask_float_card);
         android.widget.LinearLayout.LayoutParams cl = (android.widget.LinearLayout.LayoutParams) card.getLayoutParams();
-        cl.topMargin = Math.round(4 * dp);
+        cl.topMargin = Math.round(35.5f * dp);
         card.setLayoutParams(cl);
         // and a second worker pushes it from behind, in step with the first
         try {
@@ -290,6 +292,16 @@ public class ItaskFloatReceiver extends BroadcastReceiver {
         lp.gravity = Gravity.TOP | Gravity.LEFT;
         float dp = c.getResources().getDisplayMetrics().density;
         final int screenW = c.getResources().getDisplayMetrics().widthPixels;
+        // its own full size, even wider than the screen (the workers and a
+        // long task are): a WRAP_CONTENT window is cut to the screen's width,
+        // which squeezed or cut off the last one in the row (the pusher)
+        view.measure(View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+        final int fullW = view.getMeasuredWidth();
+        if (fullW > 0) {
+            lp.width = fullW;
+            lp.height = view.getMeasuredHeight();
+        }
         lp.x = screenW; // off the right edge to start
         lp.y = Math.round(24 * dp);
 
@@ -324,7 +336,7 @@ public class ItaskFloatReceiver extends BroadcastReceiver {
             @Override
             public void run() {
                 if (gone[0]) return;
-                int w = view.getWidth();
+                int w = Math.max(fullW, view.getWidth());
                 ValueAnimator a = ValueAnimator.ofInt(screenW, -w);
                 a.setDuration(CROSS_MS);
                 a.setInterpolator(new LinearInterpolator());
